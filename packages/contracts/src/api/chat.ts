@@ -120,10 +120,14 @@ export interface ReactionView {
   readonly userIds: readonly string[];
 }
 
-/** Voice notes: duration and a 64-sample waveform (0–100). System messages: a type and its params. */
+/**
+ * Voice notes: duration and a 64-sample waveform (0–100). System messages: a type and its params.
+ * Files: `asFile` when a picture was sent as a document rather than a photo.
+ */
 export type MessageMeta =
   | { readonly durationSec: number; readonly waveform: readonly number[] }
-  | { readonly type: string; readonly params: Readonly<Record<string, string>> };
+  | { readonly type: string; readonly params: Readonly<Record<string, string>> }
+  | { readonly asFile: true };
 
 export interface MessageView {
   readonly id: string;
@@ -167,6 +171,8 @@ export interface SendMessageBody {
   /** Voice notes only. */
   readonly durationSec?: number;
   readonly waveform?: readonly number[];
+  /** Files only: a picture sent as a document (its original bytes, shown as a download card). */
+  readonly asFile?: boolean;
 }
 
 /** The ack of a send: persisted, with its place in the conversation. */

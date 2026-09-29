@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import type { Recorded } from '@/hooks/useVoiceRecorder';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
 import type { Conversation, Message, TaskDraft } from '@taskin/contracts';
@@ -19,7 +19,8 @@ import {
 import { taskDraft } from '@/store/drafts';
 import { AvatarStack, Badge, EmptyState, IconButton, Input, Tooltip } from '@/components/ui';
 import { MessageBubble, SystemLine } from './MessageBubble';
-import { ChatComposer } from './ChatComposer';
+import { ChatComposer, MAX_FILE_BYTES } from './ChatComposer';
+import { AttachmentPreviewModal, type OutgoingFile } from './AttachmentPreviewModal';
 import { MessageActionSheet } from './MessageActionSheet';
 import {
   ArrowBackwardIcon,
@@ -44,8 +45,12 @@ export interface ChatViewProps {
   /** Who else is typing in this conversation right now (live only). */
   readonly typingNames?: readonly string[];
   readonly onTyping?: (active: boolean) => void;
-  readonly onAttach?: (files: readonly File[]) => void;
+  /** Files picked or dropped, after their preview: one message each, a caption on one of them. */
+  readonly onAttach?: (files: readonly OutgoingFile[]) => void;
   readonly onVoice?: (recording: Recorded) => void;
+  /** An unsent message of this member's: send it again, or let it go. */
+  readonly onResend?: (messageId: string) => void;
+  readonly onDiscard?: (messageId: string) => void;
   /** A message to scroll to and highlight (a task's «پیام مبدأ»); `onFocusShown` clears it. */
   readonly focusedMessageId?: string | null;
   readonly onFocusShown?: () => void;
@@ -72,6 +77,8 @@ export function ChatView({
   onTyping,
   onAttach,
   onVoice,
+  onResend,
+  onDiscard,
   focusedMessageId = null,
   onFocusShown,
 }: ChatViewProps) {
@@ -80,6 +87,10 @@ export function ChatView({
   const [inChatQuery, setInChatQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [sheetMessage, setSheetMessage] = useState<Message | null>(null);
+  // Files picked or dropped, waiting in the preview until they are sent (or dropped again).
+  const [queued, setQueued] = useState<readonly File[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const draggingFiles = (event: DragEvent<HTMLElement>) => onAttach !== undefined && event.dataTransfer.types.includes('Files');
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   /** What was on screen last render, to tell "opened a thread" from "a message arrived". */
@@ -153,7 +164,35 @@ export function ChatView({
     });
 
   return (
-    <section className="flex h-full min-h-0 flex-1 flex-col bg-canvas" aria-label={`گفتگوی ${conversation.title}`}>
+    <section
+      className="relative flex h-full min-h-0 flex-1 flex-col bg-canvas"
+      aria-label={`گفتگوی ${conversation.title}`}
+      // Files dropped anywhere on the conversation join the preview, as picked ones do.
+      onDragOver={(event) => {
+        if (!draggingFiles(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        setDragging(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+      }}
+      onDrop={(event) => {
+        if (!draggingFiles(event)) return;
+        event.preventDefault();
+        setDragging(false);
+        const dropped = [...event.dataTransfer.files].filter((file) => file.size > 0 && file.size <= MAX_FILE_BYTES);
+        if (dropped.length > 0) setQueued((current) => [...current, ...dropped]);
+      }}
+    >
+      {dragging && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-2 z-10 flex items-center justify-center rounded-2xl border-2 border-dashed border-brand bg-brand-subtle/80 text-title font-semibold text-fg-brand"
+        >
+          فایل‌ها را اینجا رها کنید
+        </div>
+      )}
       <header className="flex shrink-0 flex-col gap-2 border-b border-secondary bg-surface px-3 py-2.5 sm:px-4">
         <div className="flex items-center gap-3">
           {onBack && (
@@ -294,6 +333,8 @@ export function ChatView({
                         onToggleReaction={onToggleReaction}
                         onOpenLinkedTask={onOpenTask}
                         onLongPress={setSheetMessage}
+                        {...(onResend ? { onResend } : {})}
+                        {...(onDiscard ? { onDiscard } : {})}
                       />
                     </div>
                   );
@@ -318,13 +359,17 @@ export function ChatView({
         replyPreview={replyPreview}
         onCancelReply={() => setReplyToId(null)}
         {...(onTyping ? { onTyping } : {})}
-        {...(onAttach ? { onAttach } : {})}
+        {...(onAttach ? { onAttach: (files: readonly File[]) => setQueued((current) => [...current, ...files]) } : {})}
         {...(onVoice ? { onVoice } : {})}
         onSend={(text) => {
           onSend(text, replyToId);
           setReplyToId(null);
         }}
       />
+
+      {onAttach && (
+        <AttachmentPreviewModal files={queued} onFilesChange={setQueued} onSend={onAttach} maxBytes={MAX_FILE_BYTES} />
+      )}
 
       <MessageActionSheet
         message={sheetMessage}

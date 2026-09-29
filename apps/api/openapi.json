@@ -9616,6 +9616,10 @@
             "items": {
               "type": "number"
             }
+          },
+          "asFile": {
+            "type": "boolean",
+            "description": "Files only: a picture sent as a document (a download card, not an inline photo)"
           }
         },
         "required": [

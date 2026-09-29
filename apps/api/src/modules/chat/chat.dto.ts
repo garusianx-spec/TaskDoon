@@ -126,6 +126,10 @@ export class SendMessageDto implements SendMessageBody {
   @Min(0, { each: true })
   @Max(100, { each: true })
   readonly waveform?: number[];
+  @ApiPropertyOptional({ description: 'Files only: a picture sent as a document (a download card, not an inline photo)' })
+  @IsOptional()
+  @IsBoolean()
+  readonly asFile?: boolean;
 }
 
 export class EditMessageDto implements EditMessageBody {

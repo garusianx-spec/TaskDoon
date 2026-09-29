@@ -15,7 +15,10 @@
  * menu signs out and the session stays gone after a reload. M4 adds files and images sent in the
  * chat (live, previewed, downloaded under their Persian names), a voice note from the microphone,
  * the shared-media tabs, «تبدیل پیام به وظیفه» with its chip and the task's «پیام مبدأ» link,
- * subtask reordering, task attachments and a workspace icon. Any console error or warning —
+ * subtask reordering, task attachments and a workspace icon. Phase 2 adds a message whose
+ * acknowledgement is lost (marked unsent, then sent again once with the same client id), files
+ * waiting in a preview, a picture sent as a file, voice-note speed, notes that reach the server
+ * only with their first words, and the free plan's project limit. Any console error or warning —
  * hydration mismatches included — fails the run.
  */
 import { readFileSync, statSync } from 'node:fs';
@@ -210,6 +213,52 @@ try {
   check(await eventually(async () => (await guest.getByRole('region', { name: `گفتگوی ${ownerName}` }).getByRole('button', { name: '❤️ — ۱ نفر' }).count()) === 1, 15_000), 'the ❤️ is stored: still there after a reload');
   await owner.screenshot({ path: `${out}/live_chat.png` });
 
+  /* ------------------------------------------------ Phase 2: an unsent message, sent again once */
+
+  // The owner's socket now runs through a relay that can lose one send's acknowledgement: the API
+  // stores the message, but the owner's app hears nothing back, times out and marks its copy
+  // unsent. «ارسال دوباره» repeats the send with its first client id, so the guest has it once.
+  let loseNextAck = false;
+  let relayed = false;
+  const lostAcks = new Set();
+  await owner.routeWebSocket(/\/rt\//, (socket) => {
+    const server = socket.connectToServer();
+    socket.onMessage((frame) => {
+      const send = typeof frame === 'string' ? /^42(?:\/[^,]*,)?(\d+)\["message:send"/.exec(frame) : null;
+      if (send?.[1] && loseNextAck) {
+        loseNextAck = false;
+        lostAcks.add(send[1]);
+      }
+      server.send(frame);
+    });
+    server.onMessage((frame) => {
+      const ack = typeof frame === 'string' ? /^43(?:\/[^,]*,)?(\d+)\[/.exec(frame) : null;
+      if (ack?.[1] && lostAcks.delete(ack[1])) return;
+      if (ack) relayed = true;
+      socket.send(frame);
+    });
+  });
+  await owner.reload();
+  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click();
+  check(await eventually(() => relayed, 20_000), 'the owner’s socket reconnects through the relay');
+  const unsent = `پیامی که پاسخش گم شد ${runId}`;
+  loseNextAck = true;
+  await ownerComposer.fill(unsent);
+  await ownerComposer.press('Enter');
+  check(await visible(guestThread.getByText(unsent), 10_000), 'the API stores the message: the guest has it');
+  const unsentRow = ownerThread.getByRole('group', { name: 'پیام ارسال نشد' });
+  check(await visible(unsentRow, 20_000), 'with no acknowledgement the owner’s copy is marked «ارسال نشد», with «ارسال دوباره»');
+  await owner.screenshot({ path: `${out}/live_unsent.png` });
+  await unsentRow.getByRole('button', { name: 'ارسال دوباره' }).click();
+  check(await eventually(async () => (await unsentRow.count()) === 0, 10_000), '«ارسال دوباره» goes through');
+  check(
+    await eventually(async () => (await ownerThread.getByText(unsent).count()) === 1 && (await guestThread.getByText(unsent).count()) === 1),
+    'the resend keeps its client id: one message for both, not two',
+  );
+  await guest.reload();
+  await guestEntry.click();
+  check(await eventually(async () => (await guestThread.getByText(unsent).count()) === 1, 15_000), 'the server holds it once: still one after a reload');
+
   /* ------------------------------------------------ M4: files and images in the chat */
 
   const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64');
@@ -219,6 +268,9 @@ try {
     { name: 'گزارش فصل.pdf', mimeType: 'application/pdf', buffer: PDF },
     { name: 'نمودار.png', mimeType: 'image/png', buffer: PNG },
   ]);
+  // Picked files wait in the preview (Phase 2) until they are sent.
+  let preview = owner.getByRole('dialog', { name: 'ارسال پیوست' });
+  await preview.getByRole('button', { name: 'ارسال', exact: true }).click();
   check(await visible(ownerThread.getByText('گزارش فصل.pdf')), 'a picked file shows in the thread at once');
   check(await visible(guestChat.getByText('گزارش فصل.pdf'), 15_000), 'the file arrives live for the guest');
   const shownImage = guestChat.getByRole('img', { name: 'نمودار.png' });
@@ -232,6 +284,14 @@ try {
   ]);
   check(download.suggestedFilename() === 'گزارش فصل.pdf', `the guest downloads it under its Persian name (${download.suggestedFilename()})`);
 
+  // Phase 2: «ارسال تصویر به صورت فایل» is stored with the message.
+  await owner.getByTestId('chat-file-input').setInputFiles({ name: 'نقشه.png', mimeType: 'image/png', buffer: PNG });
+  preview = owner.getByRole('dialog', { name: 'ارسال پیوست' });
+  await preview.getByRole('checkbox', { name: 'ارسال تصویر به صورت فایل' }).click();
+  await preview.getByRole('button', { name: 'ارسال', exact: true }).click();
+  check(await visible(guestChat.getByRole('button', { name: 'دانلود نقشه.png' }), 15_000), 'a picture sent as a file reaches the guest as a download card');
+  check((await guestChat.getByRole('img', { name: 'نقشه.png' }).count()) === 0, '…not as an inline photo');
+
   /* ------------------------------------------------ M4: a voice note */
 
   await owner.getByRole('button', { name: 'ضبط پیام صوتی' }).click();
@@ -244,6 +304,8 @@ try {
     await eventually(async () => ((await guestChat.locator('audio').last().getAttribute('src')) ?? '').startsWith('http'), 15_000),
     'the guest’s player streams the stored recording',
   );
+  await guestChat.getByRole('button', { name: `سرعت پیام صوتی ${ownerName}: ۱×` }).click();
+  check(await eventually(async () => (await guestChat.locator('audio').last().evaluate((audio) => audio.playbackRate)) === 1.5), 'the speed button plays the recording at ۱٫۵×');
 
   /* ------------------------------------------------ M4: shared media from the server */
 
@@ -343,6 +405,64 @@ try {
   check(!cookies.some((cookie) => /taskin_rt$/.test(cookie.name) && cookie.value), 'the refresh cookie is cleared');
   await guest.reload();
   check(await visible(guest.getByRole('heading', { name: 'ورود به تسکین' }), 30_000), 'the session stays gone after a reload');
+
+  /* ------------------------------------------------ Phase 2: a note is stored with its first words */
+
+  const notePosts = [];
+  const countNotePost = (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/notes')) notePosts.push(request.url());
+  };
+  owner.on('request', countNotePost);
+  await railOf(owner).getByRole('link', { name: 'یادداشت‌ها' }).click();
+  await owner.waitForURL('**/notes');
+  const notebook = owner.getByRole('complementary', { name: 'ستون زمینه' });
+  const noteList = owner.getByRole('region', { name: 'فهرست همه یادداشت‌ها' }).getByRole('listitem');
+  await notebook.getByRole('button', { name: 'یادداشت جدید' }).waitFor({ timeout: 15_000 });
+  const notesBefore = await noteList.count();
+  await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
+  await owner.waitForTimeout(1_500); // past the autosave delay
+  check(notePosts.length === 0, 'a new, blank note is not sent to the server');
+  const noteTitle = owner.getByRole('textbox', { name: /عنوان/ }).first();
+  await noteTitle.pressSequentially('جلسه هفتگی', { delay: 60 });
+  check(await eventually(() => notePosts.length === 1, 10_000), 'its first words create it: one POST /notes');
+  await owner.waitForTimeout(1_500);
+  check(notePosts.length === 1, '…and only one, however many keystrokes follow');
+  check(
+    (await noteTitle.inputValue()) === 'جلسه هفتگی' && (await noteTitle.evaluate((element) => element === document.activeElement)),
+    'the editor keeps its text and focus while the note is stored',
+  );
+  await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
+  await owner.waitForTimeout(1_000);
+  await noteList.filter({ hasText: 'جلسه هفتگی' }).getByRole('button').click();
+  check(await eventually(async () => (await noteList.count()) === notesBefore + 1), 'switching away drops a blank draft');
+  check(notePosts.length === 1, '…which never reached the server');
+  owner.off('request', countNotePost);
+  await owner.waitForTimeout(1_000);
+  await owner.reload();
+  check(
+    await eventually(async () => (await noteList.count()) === notesBefore + 1 && (await noteList.filter({ hasText: 'جلسه هفتگی' }).count()) === 1, 20_000),
+    'after a reload: the note with words, and no blank one',
+  );
+
+  /* ------------------------------------------------ Phase 2: the plan's project limit */
+
+  // The free plan allows five projects; the workspace has one.
+  for (let index = 2; index <= 5; index += 1) {
+    await quickCreate(owner, 'پروژه جدید');
+    dialog = owner.getByRole('dialog', { name: 'پروژه جدید' });
+    await dialog.getByLabel('نام پروژه').fill(`پروژه ${index}`);
+    await dialog.getByRole('button', { name: 'ایجاد پروژه' }).click();
+    await dialog.waitFor({ state: 'detached' });
+  }
+  check(await eventually(async () => (await tree.getByRole('button', { name: /پروژه (5|۵)/ }).count()) === 1, 15_000), 'five projects: the free plan is full');
+  await quickCreate(owner, 'پروژه جدید');
+  const limitAlert = owner.getByRole('alertdialog', { name: 'سقف پروژه‌های این فضای کاری پر شده است' });
+  check(await visible(limitAlert), 'at the limit «پروژه جدید» shows an alert instead of the form');
+  check((await owner.getByRole('dialog', { name: 'پروژه جدید' }).count()) === 0, '…and the form never opens');
+  check(await visible(limitAlert.getByText(/«رایگان» حداکثر ۵ پروژه/)), 'the alert names the plan and its limit');
+  await owner.screenshot({ path: `${out}/live_project_limit.png` });
+  await limitAlert.getByRole('button', { name: 'متوجه شدم' }).click();
+  check(await eventually(async () => (await limitAlert.count()) === 0), 'the alert closes');
 
   /* ------------------------------------------------ M4: a workspace icon, uploaded */
 

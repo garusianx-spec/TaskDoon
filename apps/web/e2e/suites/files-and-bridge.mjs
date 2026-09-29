@@ -16,6 +16,10 @@ await page.getByTestId('chat-file-input').setInputFiles([
   { name: 'طرح صفحه.png', mimeType: 'image/png', buffer: PNG },
   { name: 'صورت‌جلسه.pdf', mimeType: 'application/pdf', buffer: PDF },
 ]);
+// Picked files wait in the preview (Phase 2) until they are sent.
+const preview = page.getByRole('dialog', { name: 'ارسال پیوست' });
+check(await visible(preview), 'picked files wait in the preview');
+await preview.getByRole('button', { name: 'ارسال', exact: true }).click();
 const picture = chat.getByRole('img', { name: 'طرح صفحه.png' });
 check(await eventually(async () => picture.evaluate((image) => image.complete && image.naturalWidth > 0).catch(() => false)), 'a picked image shows as a picture at once');
 check(await visible(chat.getByText('صورت‌جلسه.pdf')), 'a picked document shows as a file card');

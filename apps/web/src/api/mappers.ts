@@ -121,6 +121,7 @@ export function workspaceFromView(view: WorkspaceView): Workspace {
     tone: view.tone,
     iconUrl: view.iconUrl,
     plan: PLAN_LABELS[view.planId] ?? view.planId,
+    projectLimit: view.limits.maxProjects,
     memberCount: view.memberCount,
     ownerId: view.ownerId,
   };
@@ -283,7 +284,12 @@ function messageBody(view: MessageView, nameOf: (userId: string) => string | und
     }
     case 'file':
       return view.attachment
-        ? { kind: 'file', attachment: attachmentFromView(view.attachment), caption: view.text }
+        ? {
+            kind: 'file',
+            attachment: attachmentFromView(view.attachment),
+            caption: view.text,
+            ...(view.meta && 'asFile' in view.meta && view.meta.asFile ? { asFile: true } : {}),
+          }
         : { kind: 'text', text: view.text ?? '' };
     case 'system':
       return { kind: 'system', text: systemText(view) };

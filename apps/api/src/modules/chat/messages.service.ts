@@ -329,7 +329,9 @@ export class MessagesService implements OnModuleDestroy {
     const meta =
       body.kind === 'voice'
         ? { durationSec: Math.round(body.durationSec ?? 0), waveform: (body.waveform ?? []).slice(0, 64).map((value) => Math.max(0, Math.min(100, Math.round(value)))) }
-        : null;
+        : body.kind === 'file' && body.asFile === true
+          ? { asFile: true }
+          : null;
     return { kind: body.kind, text, meta, attachment, replyTo, mentions: mentionedIds(text) };
   }
 

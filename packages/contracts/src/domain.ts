@@ -54,6 +54,8 @@ export interface Workspace {
   /** Uploaded icon as a data URL (kept client-side in this front end), or `null`. */
   readonly iconUrl: string | null;
   readonly plan: string;
+  /** How many projects the plan allows; `null` (or absent) when it sets no limit. */
+  readonly projectLimit?: number | null;
   readonly memberCount: number;
   /** The Owner — the only member who may delete the workspace. */
   readonly ownerId: string;
@@ -253,7 +255,13 @@ export type MessageBody =
       /** The stored recording, when it lives on the server (the player asks for a link). */
       readonly attachmentId?: string;
     }
-  | { readonly kind: 'file'; readonly attachment: Attachment; readonly caption: string | null }
+  | {
+      readonly kind: 'file';
+      readonly attachment: Attachment;
+      readonly caption: string | null;
+      /** A picture sent as a document: a download card, never shown inline as a photo. */
+      readonly asFile?: boolean;
+    }
   | { readonly kind: 'system'; readonly text: string };
 
 export interface MessageReaction {
@@ -273,6 +281,8 @@ export interface Message {
   /** Populated once the message has been promoted to a task. */
   readonly linkedTaskId: string | null;
   readonly readByIds: readonly string[];
+  /** The sender's own copy of a message that did not reach the server; it can be sent again. */
+  readonly failed?: boolean;
 }
 
 export interface Conversation {

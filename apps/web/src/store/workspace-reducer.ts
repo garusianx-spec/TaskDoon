@@ -139,6 +139,8 @@ export type WorkspaceAction =
       readonly picked: PickedFile;
       readonly caption: string | null;
       readonly replyToId: string | null;
+      /** A picture sent as a document: its own bytes, shown as a download card. */
+      readonly asFile?: boolean;
     }
   | {
       readonly type: 'send-voice';
@@ -147,6 +149,9 @@ export type WorkspaceAction =
       readonly messageId: string;
       readonly recording: VoiceRecording;
     }
+  /** An unsent message of this member's: try it again (the same send), or let it go. */
+  | { readonly type: 'resend-message'; readonly messageId: string }
+  | { readonly type: 'discard-message'; readonly messageId: string }
   | { readonly type: 'focus-message'; readonly conversationId: string; readonly messageId: string }
   | { readonly type: 'clear-message-focus' }
   | { readonly type: 'toggle-reaction'; readonly messageId: string; readonly emoji: string; readonly userId: string }
@@ -162,6 +167,8 @@ export type WorkspaceAction =
   | { readonly type: 'delete-note-category'; readonly categoryId: string }
   | { readonly type: 'update-note'; readonly noteId: string; readonly patch: NotePatch }
   | { readonly type: 'delete-note'; readonly noteId: string }
+  /** A new note left blank: it goes quietly, as if it had never been started. */
+  | { readonly type: 'discard-note'; readonly noteId: string }
   | { readonly type: 'mark-notification-read'; readonly notificationId: string }
   | { readonly type: 'mark-all-notifications-read' }
   | { readonly type: 'invite-members'; readonly draft: InvitationDraft; readonly invitedById: string }
@@ -209,6 +216,7 @@ export type SyncAction =
   | { readonly type: 'sync/remove-conversation'; readonly conversationId: string }
   | { readonly type: 'sync/upsert-messages'; readonly messages: readonly Message[]; readonly replaceId?: string }
   | { readonly type: 'sync/remove-message'; readonly messageId: string }
+  | { readonly type: 'sync/message-failed'; readonly messageId: string }
   | { readonly type: 'sync/reaction'; readonly messageId: string; readonly emoji: string; readonly userIds: readonly string[] }
   | { readonly type: 'sync/read'; readonly userId: string; readonly messageIds: readonly string[] }
   | { readonly type: 'sync/unread'; readonly conversationId: string; readonly count: number }
@@ -759,7 +767,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         conversationId: action.conversationId,
         authorId: action.authorId,
         sentAt: nowIso(),
-        body: { kind: 'file', attachment: pickedAttachment(picked, action.authorId), caption: action.caption },
+        body: { kind: 'file', attachment: pickedAttachment(picked, action.authorId), caption: action.caption, ...(action.asFile ? { asFile: true } : {}) },
         replyToId: action.replyToId,
         reactions: [],
         edited: false,
@@ -785,6 +793,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       };
       return { ...state, messages: [...state.messages, message] };
     }
+
+    case 'resend-message':
+      return { ...state, messages: state.messages.map((message) => (message.id === action.messageId ? { ...message, failed: false } : message)) };
+
+    case 'discard-message':
+      return { ...state, messages: state.messages.filter((message) => message.id !== action.messageId) };
 
     case 'focus-message':
       return { ...state, activeConversationId: action.conversationId, focusedMessageId: action.messageId, inspector: { kind: 'none' } };
@@ -956,6 +970,9 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         announcement: `یادداشت «${note.title || 'بدون عنوان'}» حذف شد.`,
       };
     }
+
+    case 'discard-note':
+      return { ...state, notes: state.notes.filter((entry) => entry.id !== action.noteId) };
 
     case 'mark-notification-read':
       return {
@@ -1154,6 +1171,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'sync/remove-conversation':
     case 'sync/upsert-messages':
     case 'sync/remove-message':
+    case 'sync/message-failed':
     case 'sync/reaction':
     case 'sync/read':
     case 'sync/unread':
@@ -1259,6 +1277,9 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
 
     case 'sync/remove-message':
       return { ...state, messages: state.messages.filter((message) => message.id !== action.messageId) };
+
+    case 'sync/message-failed':
+      return { ...state, messages: state.messages.map((message) => (message.id === action.messageId ? { ...message, failed: true } : message)) };
 
     case 'sync/reaction':
       return {

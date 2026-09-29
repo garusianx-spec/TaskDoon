@@ -1,5 +1,6 @@
 import type {
   AppNotification,
+  AttachmentView,
   BoardColumn,
   ConversationDetail,
   ConversationView,
@@ -124,6 +125,8 @@ export class LiveStore {
    * two adds in flight at once could take the same key and come back in either order.
    */
   private readonly subtaskAdds = new Map<string, Promise<void>>();
+  /** This member's messages that did not reach the server: how to send each again, or let it go. */
+  private readonly unsent = new Map<string, { readonly retry: () => void; readonly discard: () => void }>();
 
   private getState: () => WorkspaceState = () => LIVE_EMPTY_STATE;
   private apply: Apply = () => undefined;
@@ -244,6 +247,8 @@ export class LiveStore {
     this.lastEventId = null;
     this.buffered = null;
     this.links.clear();
+    for (const entry of this.unsent.values()) entry.discard();
+    this.unsent.clear();
     for (const timer of this.typingTimers.values()) clearTimeout(timer);
     this.typingTimers.clear();
   }
@@ -338,7 +343,11 @@ export class LiveStore {
           tasks: orderedCards.map((card) => taskFromCard(card, columns, previous.get(card.id))),
           archivedTasks: [],
           conversations: conversationList,
-          messages: conversations.flatMap((entry) => (entry.lastMessage ? [previewMessage(entry, nameOf)] : [])),
+          messages: [
+            ...conversations.flatMap((entry) => (entry.lastMessage ? [previewMessage(entry, nameOf)] : [])),
+            // Unsent messages of this member's stay, with their «ارسال دوباره», through a re-read.
+            ...state.messages.filter((message) => message.failed && conversations.some((entry) => entry.id === message.conversationId)),
+          ],
           unreadByConversation: Object.fromEntries(conversations.map((entry) => [entry.id, entry.unreadCount])),
           pinnedConversationIds: conversationList.filter((entry) => entry.pinned).map((entry) => entry.id),
           mutedConversationIds: conversationList.filter((entry) => entry.muted).map((entry) => entry.id),
@@ -552,7 +561,14 @@ export class LiveStore {
         }, () => this.refreshTask(action.taskId));
         return;
       case 'send-file':
-        this.sendFile(action.conversationId, action.messageId, action.picked, action.caption, action.replyToId, next);
+        this.sendFile(action.conversationId, action.messageId, action.picked, action.caption, action.replyToId, action.asFile ?? false, next);
+        return;
+      case 'resend-message':
+        this.unsent.get(action.messageId)?.retry();
+        return;
+      case 'discard-message':
+        this.unsent.get(action.messageId)?.discard();
+        this.unsent.delete(action.messageId);
         return;
       case 'send-voice':
         this.sendVoice(action.conversationId, action.messageId, action.recording, next);
@@ -614,24 +630,18 @@ export class LiveStore {
         return;
       }
       case 'create-note':
-        this.track(action.noteId, async () => {
-          // No notebook named: the server files it in «شخصی» while that exists.
-          const created = await api.notes.create(this.workspaceId, {
-            ...(action.categoryId !== null ? { categoryId: await this.serverId(action.categoryId) } : {}),
-            title: '',
-            body: '',
-          });
-          this.noteVersions.set(created.id, created.version);
-          const current = this.getState().notes.find((note) => note.id === action.noteId);
-          this.apply({ type: 'sync/upsert-note', note: { ...noteFromView(created), ...(current ? { title: current.title, body: current.body, colors: current.colors, pinned: current.pinned } : {}) }, replaceId: action.noteId });
-          if (current && (current.title || current.body)) this.saveNote(created.id);
-          return created.id;
-        });
+        // A blank note stays on this page: it reaches the server with its first words (`update-note`).
         return;
       case 'update-note':
-        this.saveNote(action.noteId);
+        if (this.isNoteDraft(action.noteId)) this.createNote(action.noteId);
+        else this.saveNote(action.noteId);
         return;
       case 'delete-note':
+      case 'discard-note':
+        clearTimeout(this.noteTimers.get(action.noteId));
+        this.noteTimers.delete(action.noteId);
+        // A draft never stored has nothing to delete on the server.
+        if (this.isNoteDraft(action.noteId)) return;
         this.run(async () => api.notes.remove(this.workspaceId, await this.serverId(action.noteId)), () => this.load(this.workspaceId, true));
         return;
       case 'create-note-category':
@@ -999,26 +1009,11 @@ export class LiveStore {
     const local = next.messages.find((message) => message.conversationId === conversationId && !prev.messages.some((entry) => entry.id === message.id));
     if (!local) return;
     this.typing(conversationId, false);
-    this.track(local.id, async () => {
+    // One client id for every attempt: a resend after a lost acknowledgement is stored once.
+    const clientMsgId = crypto.randomUUID();
+    this.deliver(local.id, async () => {
+      const sent = await this.post(conversationId, { clientMsgId, kind: 'text', text, ...(replyToId ? { replyToId: await this.serverId(replyToId) } : {}) });
       const id = await this.serverId(conversationId);
-      const body = { clientMsgId: crypto.randomUUID(), kind: 'text' as const, text, ...(replyToId ? { replyToId: await this.serverId(replyToId) } : {}) };
-      let sent = await this.realtime.send(id, body);
-      if (!sent.ok && sent.code === 'SERVICE_UNAVAILABLE' && !this.realtime.connected) {
-        // No socket right now: the same send over HTTP (the client id keeps it single).
-        try {
-          const rest = await http.post<{ readonly id: string; readonly seq: number; readonly createdAt: string; readonly duplicate: boolean }>(`/workspaces/${this.workspaceId}/conversations/${id}/messages`, body, { idempotent: true });
-          sent = { ok: true, ...rest };
-        } catch (error) {
-          sent = { ok: false, code: error instanceof ApiProblem && error.code !== 'NETWORK' ? error.code : 'SERVICE_UNAVAILABLE' };
-        }
-      }
-      if (!sent.ok) {
-        this.apply({ type: 'sync/remove-message', messageId: local.id });
-        this.notify(problemMessage(new ApiProblem(0, sent.code, sent.message ?? '', null), 'پیام ارسال نشد.'));
-        throw new Error(sent.code);
-      }
-      this.seqOf.set(sent.id, sent.seq);
-      this.lastSeq.set(id, Math.max(this.lastSeq.get(id) ?? 0, sent.seq));
       const current = this.getState().messages.find((message) => message.id === local.id) ?? local;
       this.apply({ type: 'sync/upsert-messages', messages: [{ ...current, id: sent.id, conversationId: id, sentAt: sent.createdAt, readByIds: this.readersOf(id, sent.seq, next.meId) }], replaceId: local.id });
       return sent.id;
@@ -1026,89 +1021,122 @@ export class LiveStore {
   }
 
   /** Uploads the file, then sends it as a message (socket first, HTTP when the socket is down). */
-  private sendFile(conversationId: string, localId: string, picked: PickedFile, caption: string | null, replyToId: string | null, next: WorkspaceState): void {
-    this.track(localId, async () => {
-      const stored = await this.upload(localId, picked.file, picked.name);
-      const sent = await this.post(conversationId, localId, {
-        kind: 'file',
-        attachmentId: stored.id,
-        ...(caption ? { text: caption } : {}),
-        ...(replyToId ? { replyToId: await this.serverId(replyToId) } : {}),
-      });
-      const current = this.getState().messages.find((message) => message.id === localId);
-      const id = await this.serverId(conversationId);
-      this.apply({
-        type: 'sync/upsert-messages',
-        messages: [
-          {
-            ...(current ?? { conversationId: id, authorId: next.meId, replyToId, reactions: [], edited: false, linkedTaskId: null }),
-            id: sent.id,
-            conversationId: id,
-            sentAt: sent.createdAt,
-            body: { kind: 'file', attachment: attachmentFromView(stored), caption },
-            readByIds: this.readersOf(id, sent.seq, next.meId),
-          } as Message,
-        ],
-        replaceId: localId,
-      });
-      URL.revokeObjectURL(picked.previewUrl);
-      return sent.id;
-    });
+  private sendFile(conversationId: string, localId: string, picked: PickedFile, caption: string | null, replyToId: string | null, asFile: boolean, next: WorkspaceState): void {
+    const clientMsgId = crypto.randomUUID();
+    // Kept across attempts: a resend after a failed send does not upload the file again.
+    let stored: AttachmentView | null = null;
+    this.deliver(
+      localId,
+      async () => {
+        const attachment = stored ?? (await this.upload(picked.file, picked.name));
+        stored = attachment;
+        const sent = await this.post(conversationId, {
+          clientMsgId,
+          kind: 'file',
+          attachmentId: attachment.id,
+          ...(caption ? { text: caption } : {}),
+          ...(asFile ? { asFile: true } : {}),
+          ...(replyToId ? { replyToId: await this.serverId(replyToId) } : {}),
+        });
+        const current = this.getState().messages.find((message) => message.id === localId);
+        const id = await this.serverId(conversationId);
+        this.apply({
+          type: 'sync/upsert-messages',
+          messages: [
+            {
+              ...(current ?? { conversationId: id, authorId: next.meId, replyToId, reactions: [], edited: false, linkedTaskId: null }),
+              id: sent.id,
+              conversationId: id,
+              sentAt: sent.createdAt,
+              body: { kind: 'file', attachment: attachmentFromView(attachment), caption, ...(asFile ? { asFile: true } : {}) },
+              readByIds: this.readersOf(id, sent.seq, next.meId),
+            } as Message,
+          ],
+          replaceId: localId,
+        });
+        URL.revokeObjectURL(picked.previewUrl);
+        return sent.id;
+      },
+      () => URL.revokeObjectURL(picked.previewUrl),
+    );
   }
 
   /** Uploads the recording, then sends it as a voice note. */
   private sendVoice(conversationId: string, localId: string, recording: VoiceRecording, next: WorkspaceState): void {
-    this.track(localId, async () => {
-      const extension = recording.blob.type.includes('ogg') ? 'ogg' : recording.blob.type.includes('mp4') ? 'm4a' : 'webm';
-      const stored = await this.upload(localId, recording.blob, `voice-${Date.now()}.${extension}`);
-      const sent = await this.post(conversationId, localId, { kind: 'voice', attachmentId: stored.id, durationSec: recording.durationSec, waveform: recording.waveform });
-      const id = await this.serverId(conversationId);
-      const current = this.getState().messages.find((message) => message.id === localId);
-      this.apply({
-        type: 'sync/upsert-messages',
-        messages: [
-          {
-            ...(current ?? { conversationId: id, authorId: next.meId, replyToId: null, reactions: [], edited: false, linkedTaskId: null }),
-            id: sent.id,
-            conversationId: id,
-            sentAt: sent.createdAt,
-            // The local recording keeps playing until the page reloads; then the stored copy does.
-            body: { kind: 'voice', durationSec: recording.durationSec, waveform: recording.waveform, src: recording.previewUrl, attachmentId: stored.id },
-            readByIds: this.readersOf(id, sent.seq, next.meId),
-          } as Message,
-        ],
-        replaceId: localId,
-      });
-      return sent.id;
-    });
+    const clientMsgId = crypto.randomUUID();
+    let stored: AttachmentView | null = null;
+    this.deliver(
+      localId,
+      async () => {
+        const extension = recording.blob.type.includes('ogg') ? 'ogg' : recording.blob.type.includes('mp4') ? 'm4a' : 'webm';
+        const attachment = stored ?? (await this.upload(recording.blob, `voice-${Date.now()}.${extension}`));
+        stored = attachment;
+        const sent = await this.post(conversationId, { clientMsgId, kind: 'voice', attachmentId: attachment.id, durationSec: recording.durationSec, waveform: recording.waveform });
+        const id = await this.serverId(conversationId);
+        const current = this.getState().messages.find((message) => message.id === localId);
+        this.apply({
+          type: 'sync/upsert-messages',
+          messages: [
+            {
+              ...(current ?? { conversationId: id, authorId: next.meId, replyToId: null, reactions: [], edited: false, linkedTaskId: null }),
+              id: sent.id,
+              conversationId: id,
+              sentAt: sent.createdAt,
+              // The local recording keeps playing until the page reloads; then the stored copy does.
+              body: { kind: 'voice', durationSec: recording.durationSec, waveform: recording.waveform, src: recording.previewUrl, attachmentId: attachment.id },
+              readByIds: this.readersOf(id, sent.seq, next.meId),
+            } as Message,
+          ],
+          replaceId: localId,
+        });
+        return sent.id;
+      },
+      () => URL.revokeObjectURL(recording.previewUrl),
+    );
   }
 
-  /** An upload for a message; a failure takes the optimistic message away and says why. */
-  private async upload(localId: string, blob: Blob, name: string) {
+  /**
+   * Sends one of this member's messages. A failure keeps it in the thread, marked unsent: «ارسال
+   * دوباره» runs the same send again — the same client id, so the server stores it once however
+   * many tries it takes — and «حذف» lets it go (`discard` frees what it held).
+   */
+  private deliver(localId: string, send: () => Promise<string>, discard?: () => void): void {
+    const attempt = () => {
+      this.unsent.delete(localId);
+      this.track(localId, send, () => {
+        // Gone meanwhile (the workspace changed): nothing left to resend.
+        if (!this.getState().messages.some((message) => message.id === localId)) return discard?.();
+        this.apply({ type: 'sync/message-failed', messageId: localId });
+        this.unsent.set(localId, { retry: attempt, discard: () => discard?.() });
+      });
+    };
+    attempt();
+  }
+
+  /** An upload for a message; a failure is said, and fails the send. */
+  private async upload(blob: Blob, name: string): Promise<AttachmentView> {
     try {
       return await uploadFile(this.workspaceId, blob, name);
     } catch (error) {
-      this.apply({ type: 'sync/remove-message', messageId: localId });
       this.notify(problemMessage(error, 'بارگذاری فایل ممکن نشد.'));
       throw new Error('UPLOAD_FAILED');
     }
   }
 
-  /** One send (socket, else HTTP with the same client id); a refusal removes the optimistic message. */
-  private async post(conversationId: string, localId: string, body: Omit<SendMessageBody, 'clientMsgId'>): Promise<{ readonly id: string; readonly seq: number; readonly createdAt: string }> {
+  /** One send (socket, else HTTP with the same client id); a refusal is said, and fails the send. */
+  private async post(conversationId: string, body: SendMessageBody): Promise<{ readonly id: string; readonly seq: number; readonly createdAt: string }> {
     const id = await this.serverId(conversationId);
-    const full: SendMessageBody = { clientMsgId: crypto.randomUUID(), ...body };
-    let sent = await this.realtime.send(id, full);
+    let sent = await this.realtime.send(id, body);
     if (!sent.ok && sent.code === 'SERVICE_UNAVAILABLE' && !this.realtime.connected) {
+      // No socket right now: the same send over HTTP (the client id keeps it single).
       try {
-        const rest = await http.post<{ readonly id: string; readonly seq: number; readonly createdAt: string; readonly duplicate: boolean }>(`/workspaces/${this.workspaceId}/conversations/${id}/messages`, full, { idempotent: true });
+        const rest = await http.post<{ readonly id: string; readonly seq: number; readonly createdAt: string; readonly duplicate: boolean }>(`/workspaces/${this.workspaceId}/conversations/${id}/messages`, body, { idempotent: true });
         sent = { ok: true, ...rest };
       } catch (error) {
         sent = { ok: false, code: error instanceof ApiProblem && error.code !== 'NETWORK' ? error.code : 'SERVICE_UNAVAILABLE' };
       }
     }
     if (!sent.ok) {
-      this.apply({ type: 'sync/remove-message', messageId: localId });
       this.notify(problemMessage(new ApiProblem(0, sent.code, sent.message ?? '', null), 'پیام ارسال نشد.'));
       throw new Error(sent.code);
     }
@@ -1170,6 +1198,38 @@ export class LiveStore {
   }
 
   /* ---------------------------------------------------------------- notes, roles, sessions */
+
+  /** A new note not yet sent: nothing of it exists on the server. */
+  private isNoteDraft(noteId: string): boolean {
+    return isLocal(noteId) && !this.pending.has(noteId);
+  }
+
+  /**
+   * Stores a new note once it has a non-blank title or body, with everything set on it so far;
+   * until then it is only a draft on this page, and an empty one is discarded, never saved.
+   */
+  private createNote(noteId: string): void {
+    const draft = this.getState().notes.find((note) => note.id === noteId);
+    if (!draft || (!draft.title.trim() && !draft.body.trim())) return;
+    this.track(noteId, async () => {
+      // No notebook named: the server files it in «شخصی» while that exists.
+      const created = await api.notes.create(this.workspaceId, {
+        ...(draft.categoryId !== null ? { categoryId: await this.serverId(draft.categoryId) } : {}),
+        title: draft.title,
+        body: draft.body,
+        colors: draft.colors,
+        pinned: draft.pinned,
+      });
+      this.noteVersions.set(created.id, created.version);
+      // Deleted while it was being stored: `delete-note` removes it from the server too.
+      const current = this.getState().notes.find((note) => note.id === noteId);
+      if (!current) return created.id;
+      this.apply({ type: 'sync/upsert-note', note: { ...noteFromView(created), title: current.title, body: current.body, colors: current.colors, pinned: current.pinned }, replaceId: noteId });
+      // Typed on while the note was being created: the usual autosave sends the rest.
+      if (current.title !== draft.title || current.body !== draft.body || current.colors !== draft.colors || current.pinned !== draft.pinned) this.saveNote(noteId);
+      return created.id;
+    });
+  }
 
   private saveNote(noteId: string): void {
     clearTimeout(this.noteTimers.get(noteId));
@@ -1443,13 +1503,15 @@ export class LiveStore {
   }
 
   /** Runs a create and remembers which server id the local one becomes, for changes made meanwhile. */
-  private track(localId: string, create: () => Promise<string>): void {
+  private track(localId: string, create: () => Promise<string>, failed?: () => void): void {
     const created = create();
     this.pending.set(localId, created);
     created.catch((error: unknown) => {
       this.pending.delete(localId);
       if (!(error instanceof Error && /^[A-Z_]+$/.test(error.message))) this.fail(error);
-      void this.load(this.workspaceId, true);
+      // By default the workspace is re-read; `failed` handles it instead (an unsent message stays).
+      if (failed) failed();
+      else void this.load(this.workspaceId, true);
     });
   }
 

@@ -14,13 +14,13 @@ export interface ChatComposerProps {
   readonly conversationTitle: string;
   /** The draft became non-empty (`true`, repeated while typing) or empty again (`false`). */
   readonly onTyping?: (active: boolean) => void;
-  /** Files picked with the paperclip, sent one message each. */
+  /** Files picked with the paperclip: they wait in the preview, then go one message each. */
   readonly onAttach?: (files: readonly File[]) => void;
   /** A voice note recorded with the microphone button. */
   readonly onVoice?: (recording: Recorded) => void;
 }
 
-const MAX_FILE_BYTES = 100 * 1024 * 1024;
+export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 
 const EMOJI_PALETTE = ['👍', '🙏', '🔥', '✅', '👀', '🎉', '❤️', '😀', '🤝', '⚡️'] as const;
 

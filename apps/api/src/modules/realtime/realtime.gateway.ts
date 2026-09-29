@@ -46,6 +46,7 @@ const schemas = {
       replyToId: UUID.optional(),
       durationSec: z.number().int().min(1).max(3600).optional(),
       waveform: z.array(z.number().int().min(0).max(100)).max(64).optional(),
+      asFile: z.boolean().optional(),
     })
     .strict(),
   edit: z.object({ messageId: UUID, text: z.string().min(1).max(8000) }).strict(),

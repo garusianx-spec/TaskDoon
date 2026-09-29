@@ -7,7 +7,7 @@ import { QUICK_REACTIONS } from '@/data/reference';
 import { downloadAttachment } from '@/lib/download';
 import { useFileUrl } from '@/store/files';
 import { formatCount, formatFileSize } from '@/lib/format';
-import { Avatar, Badge, ClockTime, IconButton, Popover, Tooltip } from '@/components/ui';
+import { Avatar, Badge, Button, ClockTime, IconButton, Popover, Tooltip } from '@/components/ui';
 import { MenuItem, MenuList } from '@/components/ui/Menu';
 import { StoredVoicePlayer } from './VoicePlayer';
 import {
@@ -17,8 +17,11 @@ import {
   DownloadIcon,
   EmojiIcon,
   MoreHorizontalIcon,
+  RefreshIcon,
   ReplyIcon,
   TaskSquareIcon,
+  TrashIcon,
+  WarningIcon,
   ATTACHMENT_ICONS,
 } from '@/components/icons';
 
@@ -38,6 +41,9 @@ export interface MessageBubbleProps {
   readonly onOpenLinkedTask: (taskId: string) => void;
   /** Mobile long-press (≥500ms) opens the action sheet. */
   readonly onLongPress: (message: Message) => void;
+  /** An unsent message of this member's (`message.failed`): send it again, or let it go. */
+  readonly onResend?: (messageId: string) => void;
+  readonly onDiscard?: (messageId: string) => void;
 }
 
 export function MessageBubble({
@@ -52,6 +58,8 @@ export function MessageBubble({
   onToggleReaction,
   onOpenLinkedTask,
   onLongPress,
+  onResend,
+  onDiscard,
 }: MessageBubbleProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const longPressTimer = useRef<number | null>(null);
@@ -59,6 +67,8 @@ export function MessageBubble({
   if (message.body.kind === 'system') return <SystemLine text={message.body.text} />;
 
   const startLongPress = () => {
+    // An unsent message offers only its own two actions, shown under it.
+    if (message.failed) return;
     longPressTimer.current = window.setTimeout(() => onLongPress(message), 500);
   };
   const cancelLongPress = () => {
@@ -77,7 +87,7 @@ export function MessageBubble({
       onContextMenu={(event) => {
         // The long-press gesture doubles as the desktop context menu.
         event.preventDefault();
-        onLongPress(message);
+        if (!message.failed) onLongPress(message);
       }}
     >
       <div className="w-8 shrink-0">
@@ -132,9 +142,13 @@ export function MessageBubble({
               />
             )}
 
-            {message.body.kind === 'file' && (
-              <FileCard attachment={message.body.attachment} caption={message.body.caption} outgoing={outgoing} />
-            )}
+            {message.body.kind === 'file' &&
+              (message.body.attachment.kind === 'image' && !message.body.asFile ? (
+                <PhotoCard attachment={message.body.attachment} caption={message.body.caption} outgoing={outgoing} />
+              ) : (
+                // A picture sent as a file is a document like any other: no inline preview.
+                <FileCard attachment={message.body.attachment} caption={message.body.caption} outgoing={outgoing} preview={!message.body.asFile} />
+              ))}
 
             <div
               className={cn(
@@ -151,13 +165,16 @@ export function MessageBubble({
                 iso={message.sentAt}
                 className={cn('numeric text-micro', outgoing ? 'text-fg-on-brand/70' : 'text-fg-quaternary')}
               />
-              {outgoing && (
-                <DoubleCheckIcon
-                  size={14}
-                  className={message.readByIds.length > 0 ? 'text-white' : 'text-fg-on-brand/60'}
-                  label={message.readByIds.length > 0 ? 'خوانده شد' : 'ارسال شد'}
-                />
-              )}
+              {outgoing &&
+                (message.failed ? (
+                  <WarningIcon size={14} className="text-white" label="ارسال نشد" />
+                ) : (
+                  <DoubleCheckIcon
+                    size={14}
+                    className={message.readByIds.length > 0 ? 'text-white' : 'text-fg-on-brand/60'}
+                    label={message.readByIds.length > 0 ? 'خوانده شد' : 'ارسال شد'}
+                  />
+                ))}
             </div>
           </div>
 
@@ -166,6 +183,8 @@ export function MessageBubble({
               // Pointer layouts only: touch users get the same actions from the
               // long-press bottom sheet, and :hover sticks after a tap on mobile.
               'hidden items-center gap-0.5 opacity-0 transition-opacity lg:flex',
+              // An unsent message has nothing on the server to reply to, react to or convert.
+              message.failed && 'lg:hidden',
               'group-hover/message:opacity-100 group-focus-within/message:opacity-100',
               menuOpen && 'opacity-100',
             )}
@@ -268,6 +287,25 @@ export function MessageBubble({
           </div>
         </div>
 
+        {message.failed && (
+          <div role="group" aria-label="پیام ارسال نشد" className={cn('flex flex-wrap items-center gap-1.5', outgoing && 'justify-end')}>
+            <span className="inline-flex items-center gap-1 text-caption font-medium text-status-blocked">
+              <WarningIcon size={14} />
+              ارسال نشد
+            </span>
+            {onResend && (
+              <Button size="xs" variant="secondary" iconStart={<RefreshIcon size={14} />} onClick={() => onResend(message.id)}>
+                ارسال دوباره
+              </Button>
+            )}
+            {onDiscard && (
+              <Button size="xs" variant="ghost" iconStart={<TrashIcon size={14} />} onClick={() => onDiscard(message.id)}>
+                حذف
+              </Button>
+            )}
+          </div>
+        )}
+
         {message.reactions.length > 0 && (
           <div className={cn('flex flex-wrap gap-1', outgoing && 'justify-end')}>
             {message.reactions.map((reaction) => {
@@ -322,9 +360,11 @@ interface FileCardProps {
   readonly attachment: Attachment;
   readonly caption: string | null;
   readonly outgoing: boolean;
+  /** Show a picture under its card; off for a picture sent as a file. */
+  readonly preview?: boolean;
 }
 
-function FileCard({ attachment, caption, outgoing }: FileCardProps) {
+function FileCard({ attachment, caption, outgoing, preview = true }: FileCardProps) {
   const Icon = ATTACHMENT_ICONS[attachment.kind];
 
   return (
@@ -358,7 +398,33 @@ function FileCard({ attachment, caption, outgoing }: FileCardProps) {
         />
       </div>
       {caption && <p className="text-body-sm leading-6">{caption}</p>}
-      {attachment.kind === 'image' && <ImagePreview attachment={attachment} outgoing={outgoing} />}
+      {preview && attachment.kind === 'image' && <ImagePreview attachment={attachment} outgoing={outgoing} />}
+    </div>
+  );
+}
+
+/**
+ * A picture sent as a photo: the picture itself, with its caption under it and a download
+ * button over its corner. Until there is a link to its bytes (none for the demo's fixtures) it
+ * shows as a file card.
+ */
+function PhotoCard({ attachment, caption, outgoing }: Omit<FileCardProps, 'preview'>) {
+  const url = useFileUrl(attachment, 'inline');
+  if (!url) return <FileCard attachment={attachment} caption={caption} outgoing={outgoing} />;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="relative">
+        {/* eslint-disable-next-line @next/next/no-img-element -- a signed, short-lived link to an upload */}
+        <img src={url} alt={attachment.name} loading="lazy" className="max-h-80 w-60 rounded-lg bg-sunken object-cover sm:w-72" />
+        <IconButton
+          label={`دانلود ${attachment.name}`}
+          icon={<DownloadIcon size={16} />}
+          size="xs"
+          onClick={() => void downloadAttachment(attachment)}
+          className="absolute bottom-1.5 end-1.5 bg-black/45 text-white hover:bg-black/60"
+        />
+      </div>
+      {caption && <p className="whitespace-pre-wrap break-words text-body-sm leading-6">{caption}</p>}
     </div>
   );
 }

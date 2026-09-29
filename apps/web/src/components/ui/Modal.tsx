@@ -23,6 +23,8 @@ export interface ModalProps {
   /** Set false for destructive flows that must be dismissed with an explicit choice. */
   readonly dismissOnOverlayClick?: boolean;
   readonly className?: string;
+  /** `alertdialog` for a message that interrupts the user and waits for an acknowledgement. */
+  readonly role?: 'dialog' | 'alertdialog';
 }
 
 const SIZES: Readonly<Record<ModalSize, string>> = {
@@ -48,6 +50,7 @@ export function Modal({
   icon,
   dismissOnOverlayClick = true,
   className,
+  role = 'dialog',
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const id = useNamespacedId('modal-');
@@ -77,7 +80,7 @@ export function Modal({
       />
       <div
         ref={panelRef}
-        role="dialog"
+        role={role}
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descId : undefined}

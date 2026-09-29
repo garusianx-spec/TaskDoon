@@ -17,8 +17,13 @@ export interface VoicePlayerProps {
   readonly variant?: 'bubble' | 'inline';
 }
 
+/** Playback speeds, in the order the speed button steps through them. */
+const RATES = [1, 1.5, 2] as const;
+type Rate = (typeof RATES)[number];
+const RATE_LABELS: Readonly<Record<Rate, string>> = { 1: '۱×', 1.5: '۱٫۵×', 2: '۲×' };
+
 /**
- * Voice-memo player with a scrubbable waveform.
+ * Voice-memo player with a scrubbable waveform and a speed button (۱× → ۱٫۵× → ۲×).
  *
  * Two transports, one UI:
  *  - `src` present  → a real `HTMLAudioElement` drives `currentTime`, seeking and duration.
@@ -33,6 +38,9 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
   const rafRef = useRef<number | null>(null);
   const startedAtRef = useRef<number>(0);
   const offsetRef = useRef<number>(0);
+  const [rate, setRate] = useState<Rate>(1);
+  // The clock reads the speed from here, so a change applies without restarting it.
+  const rateRef = useRef<Rate>(1);
 
   const stopClock = useCallback(() => {
     if (rafRef.current !== null) {
@@ -44,7 +52,7 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
   // Simulated transport: advance `elapsed` from a monotonic clock until the memo ends.
   const runClock = useCallback(() => {
     const tick = () => {
-      const seconds = offsetRef.current + (performance.now() - startedAtRef.current) / 1000;
+      const seconds = offsetRef.current + ((performance.now() - startedAtRef.current) / 1000) * rateRef.current;
       if (seconds >= durationSec) {
         setElapsed(durationSec);
         setPlaying(false);
@@ -103,6 +111,20 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
     [durationSec, playing, runClock, stopClock],
   );
 
+  const cycleRate = () => {
+    const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length] ?? 1;
+    const audio = audioRef.current;
+    if (audio) {
+      audio.playbackRate = next;
+    } else if (playing) {
+      // The simulated clock carries on from here at the new speed.
+      offsetRef.current += ((performance.now() - startedAtRef.current) / 1000) * rateRef.current;
+      startedAtRef.current = performance.now();
+    }
+    rateRef.current = next;
+    setRate(next);
+  };
+
   const progress = durationSec > 0 ? elapsed / durationSec : 0;
   const remaining = Math.max(0, durationSec - elapsed);
 
@@ -114,6 +136,10 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
           src={src}
           preload="metadata"
           onTimeUpdate={(event) => setElapsed(event.currentTarget.currentTime)}
+          // A new source resets the element's speed: keep the one chosen.
+          onLoadedMetadata={(event) => {
+            event.currentTarget.playbackRate = rateRef.current;
+          }}
           onEnded={() => {
             setPlaying(false);
             setElapsed(0);
@@ -203,6 +229,19 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
       >
         {formatDuration(playing || elapsed > 0 ? remaining : durationSec)}
       </span>
+
+      <button
+        type="button"
+        onClick={cycleRate}
+        // Not «سرعت پخش …»: the play button's name must not be a part of this one.
+        aria-label={`سرعت ${label}: ${RATE_LABELS[rate]}`}
+        className={cn(
+          'numeric flex h-6 min-w-10 shrink-0 items-center justify-center rounded-full px-1.5 text-micro font-semibold transition-colors',
+          outgoing ? 'bg-white/20 text-fg-on-brand hover:bg-white/30' : 'bg-sunken text-fg-secondary hover:bg-hover',
+        )}
+      >
+        {RATE_LABELS[rate]}
+      </button>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
 import { CreateProjectModal } from '@/components/tasks/CreateProjectModal';
+import { ProjectLimitDialog } from '@/components/tasks/ProjectLimitDialog';
 import { GlobalSearchModal } from '@/components/layout/GlobalSearchModal';
 import { NewConversationModal } from '@/components/chat/NewConversationModal';
 import { CalendarEventModal } from '@/components/calendar/CalendarEventModal';
@@ -41,6 +42,11 @@ export function OverlayHost() {
     goTo('/chats');
   };
 
+  // Every «پروژه جدید» (the project tree's +, quick create, the task composer) comes through
+  // here: at the plan's limit the member is told so, and the form never opens.
+  const projectLimit = activeWorkspace.projectLimit ?? null;
+  const atProjectLimit = projectLimit !== null && state.projects.length >= projectLimit;
+
   const pendingDeletion =
     active?.kind === 'workspace-delete'
       ? (state.workspaces.find((workspace) => workspace.id === active.workspaceId) ?? null)
@@ -60,8 +66,15 @@ export function OverlayHost() {
         }}
       />
 
+      <ProjectLimitDialog
+        open={active?.kind === 'project-composer' && atProjectLimit}
+        limit={projectLimit ?? 0}
+        plan={activeWorkspace.plan}
+        onClose={close}
+      />
+
       <CreateProjectModal
-        open={active?.kind === 'project-composer'}
+        open={active?.kind === 'project-composer' && !atProjectLimit}
         projectCount={state.projects.length}
         onClose={close}
         onSubmit={(draft) => {

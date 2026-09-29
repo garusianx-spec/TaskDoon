@@ -120,19 +120,22 @@ function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatContentPro
         dispatch({ type: 'open-conversation-details', conversationId: conversation.id })
       }
       typingNames={(state.typingByConversation[conversation.id] ?? []).map((userId) => userById(userId)?.fullName ?? 'کسی')}
-      onAttach={(files) => {
-        for (const file of files) {
+      onAttach={(items) => {
+        for (const { file, caption, asFile } of items) {
           dispatch({
             type: 'send-file',
             conversationId: conversation.id,
             authorId: currentUserId,
             messageId: nextLocalId('m'),
             picked: { attachmentId: nextLocalId('att'), file, name: file.name, previewUrl: URL.createObjectURL(file) },
-            caption: null,
+            caption,
             replyToId: null,
+            ...(asFile ? { asFile } : {}),
           });
         }
       }}
+      onResend={(messageId) => dispatch({ type: 'resend-message', messageId })}
+      onDiscard={(messageId) => dispatch({ type: 'discard-message', messageId })}
       onVoice={(recorded) =>
         dispatch({
           type: 'send-voice',

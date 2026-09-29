@@ -235,6 +235,34 @@ describe('M3: conversations and messages over REST', () => {
     expect(await tab('audio')).toEqual([]);
   });
 
+  it('remembers a picture sent as a file, and a retry of it stays one message', async () => {
+    const group = await createConversation(t, ali, workspace.id, { kind: 'group', title: 'عکس به صورت فایل', memberIds: [sara.userId] });
+    const picture = async (name: string) =>
+      (
+        await t.admin.query<{ id: string }>(
+          `insert into attachments (workspace_id, uploader_id, bucket, object_key, file_name, mime_type, kind, size_bytes, status)
+           values ($1::uuid, $2, 'taskin-files', 'ws/' || $1::text || '/att/' || gen_random_uuid(), $3, 'image/png', 'image', 10, 'ready') returning id`,
+          [workspace.id, ali.userId, name],
+        )
+      ).rows[0]?.id as string;
+    const clientMsgId = randomUUID();
+    const original = await picture('اصل.png');
+    const sent = await sendRest(t, ali, workspace.id, group.id, { clientMsgId, kind: 'file', attachmentId: original, asFile: true });
+    const retried = await sendRest(t, ali, workspace.id, group.id, { clientMsgId, kind: 'file', attachmentId: original, asFile: true }, 200);
+    expect(retried).toMatchObject({ id: sent.id, duplicate: true });
+    await sendRest(t, ali, workspace.id, group.id, { kind: 'file', attachmentId: await picture('عکس.png') });
+    // Only files carry it: a text message says nothing of it.
+    await sendRest(t, ali, workspace.id, group.id, { text: 'متن', asFile: true });
+    const page = await history(t, sara, workspace.id, group.id);
+    expect(page.items.map((item) => [item.attachment?.name ?? item.text, item.meta])).toEqual([
+      ['اصل.png', { asFile: true }],
+      ['عکس.png', null],
+      ['متن', null],
+    ]);
+    const wrong = await t.http().post(`${base()}/${group.id}/messages`).set(bearer(ali)).send({ clientMsgId: randomUUID(), kind: 'file', attachmentId: await picture('x.png'), asFile: 'yes' });
+    expectStatus(wrong, 400);
+  });
+
   it('serves only the history the plan keeps', async () => {
     const group = await createConversation(t, ali, workspace.id, { kind: 'group', title: 'تاریخچه', memberIds: [sara.userId] });
     const old = await sendRest(t, ali, workspace.id, group.id, { text: 'خیلی قدیمی' });
