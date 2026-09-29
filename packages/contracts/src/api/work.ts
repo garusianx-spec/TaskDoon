@@ -88,14 +88,19 @@ export interface ColumnView {
   readonly position: string;
 }
 
+/** A project's board columns: every project has a workflow of its own. */
 export interface WorkflowView {
   readonly id: string;
+  /** The project the workflow belongs to. */
+  readonly projectId: string;
   /** Bumped by every column change; a board is stale when its version is older. */
   readonly version: number;
   readonly columns: readonly ColumnView[];
 }
 
 export interface CreateColumnBody {
+  /** The project whose board gets the column; no other project's board changes. */
+  readonly projectId: string;
   readonly title: string;
   readonly tone?: TagTone | null;
   /** Defaults to `in-progress`, the status of the stages between picked up and finished. */

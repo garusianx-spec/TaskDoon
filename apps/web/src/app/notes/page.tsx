@@ -62,8 +62,10 @@ export default function NotesPage() {
 
   const createNote = () => {
     const noteId = nextLocalId('note');
-    // A new note belongs to the category being viewed; under "همه" it starts as personal.
-    dispatch({ type: 'create-note', noteId, categoryId: categoryId === 'all' ? DEFAULT_NOTE_CATEGORY_ID : categoryId });
+    // A new note belongs to the category being viewed; under "همه" it starts as personal while
+    // that notebook exists (the server picks it in the live app), else in no notebook.
+    const personal = categories.some((category) => category.id === DEFAULT_NOTE_CATEGORY_ID) ? DEFAULT_NOTE_CATEGORY_ID : null;
+    dispatch({ type: 'create-note', noteId, categoryId: categoryId === 'all' ? personal : categoryId });
     // A colour or search filter would hide the blank note; clear them so it stays in view.
     setColor(null);
     setSearch('');

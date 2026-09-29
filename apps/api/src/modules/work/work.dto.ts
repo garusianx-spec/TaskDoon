@@ -144,11 +144,13 @@ export class ColumnViewDto implements ColumnView {
 
 export class WorkflowViewDto implements WorkflowView {
   @ApiProperty({ format: 'uuid' }) readonly id!: string;
+  @ApiProperty({ format: 'uuid', description: 'The project the workflow belongs to' }) readonly projectId!: string;
   @ApiProperty() readonly version!: number;
   @ApiProperty({ type: ColumnViewDto, isArray: true }) readonly columns!: ColumnViewDto[];
 }
 
 export class CreateColumnDto implements CreateColumnBody {
+  @ApiProperty({ format: 'uuid', description: 'The project whose board gets the column' }) @IsUUID() readonly projectId!: string;
   @ApiProperty({ minLength: 1, maxLength: 32 }) @IsString() @Length(1, 32) readonly title!: string;
   @ApiPropertyOptional({ enum: TAG_TONES, nullable: true }) @IsOptional() @ValidateIf((_, value) => value !== null) @IsIn(TAG_TONES) readonly tone?: TagTone | null;
   @ApiPropertyOptional({ enum: TASK_STATUSES }) @IsOptional() @IsIn(TASK_STATUSES) readonly status?: TaskStatus;
@@ -299,6 +301,10 @@ export class TaskPreviewDto implements TaskPreview {
 
 export class BoardQueryDto {
   @ApiProperty({ format: 'uuid' }) @IsUUID() readonly projectId!: string;
+}
+
+export class WorkflowQueryDto {
+  @ApiProperty({ format: 'uuid', description: 'Every project has its own workflow' }) @IsUUID() readonly projectId!: string;
 }
 
 export class TaskListQueryDto {

@@ -3,8 +3,18 @@ const browser = await launch();
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
 watchConsole(page);
 await page.goto(base + '/tasks', { waitUntil: 'networkidle' });
+const projectTree = page.getByRole('navigation', { name: 'درخت پروژه‌ها' });
+const openProject = (name) => projectTree.getByRole('button', { name }).first().click();
+const board = page.getByRole('application', { name: 'بورد کانبان وظایف' });
 
-// 1. Add a custom column
+// 0. «همه وظایف» groups every card by status: four status columns, nothing to add or edit.
+check(
+  await eventually(async () => (await board.locator('section[aria-label^="ستون "]').count()) === 4 && (await page.getByRole('button', { name: 'افزودن ستون جدید' }).count()) === 0),
+  'all tasks: four status columns, no column editing',
+);
+
+// 1. Add a custom column: columns belong to a project, so on the mobile app's board.
+await openProject(/اپلیکیشن موبایل/);
 await page.getByRole('button', { name: 'افزودن ستون جدید' }).click();
 await page.getByLabel('نام ستون').fill('تست کیفیت');
 await page.getByRole('radio', { name: 'قرمز' }).click();
@@ -20,6 +30,11 @@ await page.getByLabel('نام ستون').fill('تست کیفیت');
 await page.getByRole('button', { name: 'افزودن ستون', exact: true }).click();
 check(await visible(page.getByText('ستونی با این نام وجود دارد.')), 'duplicate column name rejected');
 await page.keyboard.press('Escape');
+
+// Another project's board never gets it.
+await openProject(/نسخه وب/);
+check(await eventually(async () => (await page.getByRole('region', { name: 'ستون برای انجام' }).count()) === 1 && (await qa.count()) === 0), 'the web project’s board does not get the column');
+await openProject(/اپلیکیشن موبایل/);
 
 // 2. Drag a todo card into the new column. Columns keep a fixed width, so the new column sits
 // past the board's visible end: the board scrolls mid-drag, as the browser's edge auto-scroll would.
@@ -50,7 +65,8 @@ await done.getByRole('checkbox', { name: /تهیه سند معماری/ }).click
 await page.waitForTimeout(200);
 check(await eventually(async () => (await qa.getByRole('group', { name: /تهیه سند معماری/ }).count()) === 1), 'unchecked card returned to custom column');
 
-// 5. Uncheck a seeded done card with no history → To Do
+// 5. Uncheck a seeded done card with no history → To Do (a web-project card: «همه وظایف»)
+await page.getByRole('button', { name: /^همه وظایف/ }).click();
 await done.getByRole('checkbox', { name: /بهینه‌سازی زمان بارگذاری/ }).click();
 const todo = page.getByRole('region', { name: 'ستون برای انجام' });
 check(await eventually(async () => (await todo.getByRole('group', { name: /بهینه‌سازی زمان بارگذاری/ }).count()) === 1), 'seeded done card unchecked → To Do');
@@ -68,6 +84,7 @@ const prog = page.getByRole('region', { name: 'ستون در حال انجام' 
 check(await eventually(async () => (await prog.getByRole('group', { name: /رفع آسیب‌پذیری/ }).count()) === 1), 'keyboard move to next column');
 
 // 8. Remove custom column → confirm migrate; the default target keeps the cards in progress
+await openProject(/اپلیکیشن موبایل/);
 await qa.getByRole('button', { name: 'اقدام‌های ستون تست کیفیت' }).click();
 await page.getByRole('menuitem', { name: 'حذف ستون' }).click();
 const confirmDelete = page.getByRole('dialog', { name: 'حذف ستون «تست کیفیت»' });

@@ -74,17 +74,36 @@ describe('M2: notes', () => {
     expectStatus(await t.http().patch(`${base()}/notes/${note.id}`).set(bearer(owner)).send({ body: 'بی‌نسخه' }), 428);
   });
 
-  it('deletes a notebook only when it is custom and empty', async () => {
-    const [personal] = await categories(owner);
-    expectStatus(await t.http().delete(`${base()}/note-categories/${personal?.id}`).set(bearer(owner)), 409);
-    const custom = await t.http().post(`${base()}/note-categories`).set(bearer(owner)).send({ label: 'پروژه‌ها' });
+  it('deletes any notebook, built-ins too, keeping its notes in no notebook', async () => {
+    const ideas = (await categories(owner)).find((category) => category.key === 'ideas') as NoteCategoryView;
+    const idea = await createNote(owner, { categoryId: ideas.id, title: 'ایده ماندگار' });
+    expectStatus(await t.http().delete(`${base()}/note-categories/${ideas.id}`).set(bearer(owner)), 204);
+    // Gone for good: seeding the built-ins (on every read) does not bring it back.
+    expect((await categories(owner)).map((category) => category.id)).not.toContain(ideas.id);
+    expect((await categories(owner)).map((category) => category.id)).not.toContain(ideas.id);
+    const kept = (await t.http().get(`${base()}/notes/${idea.id}`).set(bearer(owner))).body as NoteView;
+    expect(kept).toMatchObject({ title: 'ایده ماندگار', categoryId: null, version: idea.version + 1 });
+
+    // Its name is free for a notebook of one's own; a note can be filed there, or nowhere.
+    const custom = await t.http().post(`${base()}/note-categories`).set(bearer(owner)).send({ label: ideas.label });
     expectStatus(custom, 201);
     const note = await createNote(owner, { categoryId: custom.body.id, title: 'درون دفتر' });
-    const inUse = await t.http().delete(`${base()}/note-categories/${custom.body.id}`).set(bearer(owner));
-    expectStatus(inUse, 409);
-    expect(inUse.body.code).toBe('NOTE_CATEGORY_IN_USE');
-    expectStatus(await t.http().delete(`${base()}/notes/${note.id}`).set(bearer(owner)), 204);
+    const unfiled = await t.http().patch(`${base()}/notes/${note.id}`).set(bearer(owner)).set('If-Match', `"${note.version}"`).send({ categoryId: null });
+    expectStatus(unfiled, 200);
+    expect(unfiled.body.categoryId).toBeNull();
+    const refiled = await t.http().patch(`${base()}/notes/${note.id}`).set(bearer(owner)).set('If-Match', `"${unfiled.body.version}"`).send({ categoryId: custom.body.id });
+    expectStatus(refiled, 200);
+
+    // A custom notebook holding notes goes too; the note stays.
     expectStatus(await t.http().delete(`${base()}/note-categories/${custom.body.id}`).set(bearer(owner)), 204);
+    expect(((await t.http().get(`${base()}/notes/${note.id}`).set(bearer(owner))).body as NoteView).categoryId).toBeNull();
+    // A deleted notebook takes no notes.
+    expectStatus(await t.http().post(`${base()}/notes`).set(bearer(owner)).set('Idempotency-Key', idempotencyKey()).send({ categoryId: ideas.id, title: 'دیر' }), 400);
+
+    // Once «شخصی» is gone, a note with no notebook named lands in none.
+    const personal = (await categories(member)).find((category) => category.key === 'personal') as NoteCategoryView;
+    expectStatus(await t.http().delete(`${base()}/note-categories/${personal.id}`).set(bearer(member)), 204);
+    expect((await createNote(member, { title: 'بی‌دفتر' })).categoryId).toBeNull();
   });
 
   it('finds notes with Persian normalisation', async () => {
@@ -246,7 +265,7 @@ describe('M2: notifications and the activity feed', () => {
 
   it('collapses a card dragged around into one unread status notification', async () => {
     const task = await createTask(t, owner, workspace.id, { projectId: project.id, title: 'جابه‌جایی' });
-    const columns = (await getWorkflow(t, owner, workspace.id)).columns;
+    const columns = (await getWorkflow(t, owner, workspace.id, project.id)).columns;
     let card: TaskCard = task;
     for (const status of ['in-progress', 'review', 'done'] as const) {
       const column = columns.find((entry) => entry.status === status);

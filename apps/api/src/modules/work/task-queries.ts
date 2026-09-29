@@ -149,16 +149,20 @@ export interface BoardHeaderRow extends Record<string, unknown> {
   visible: boolean;
 }
 
-/** The default workflow with its live columns, and whether `projectId` is visible to the member. */
+/**
+ * The project's own workflow with its live columns; no row when the member cannot see the
+ * project. (Sub-project cards keep their own columns; the web board places them by status.)
+ */
 export function boardHeaderQuery(member: MembershipContext, projectId: string): SQL {
   return sql`
     select w.id as workflow_id, w.version,
       (select json_agg(json_build_object('id', c.id, 'title', c.title, 'status', c.status, 'tone', c.tone,
                                          'builtIn', c.is_builtin, 'position', c.position) order by c.position, c.id)
          from board_columns c where c.workflow_id = w.id and c.deleted_at is null) as columns,
-      exists (select 1 from projects p where p.workspace_id = w.workspace_id and p.id = ${projectId} and ${projectVisibleSql(member)}) as visible
-    from workflows w
-    where w.workspace_id = ${member.workspaceId} and w.is_default`;
+      true as visible
+    from projects p
+    join workflows w on w.workspace_id = p.workspace_id and w.id = p.workflow_id
+    where p.workspace_id = ${member.workspaceId} and p.id = ${projectId} and ${projectVisibleSql(member)}`;
 }
 
 export function toColumns(rows: BoardHeaderRow['columns']): ColumnView[] {

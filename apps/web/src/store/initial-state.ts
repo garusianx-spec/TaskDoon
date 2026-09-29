@@ -17,7 +17,7 @@ import {
   USERS,
   WORKSPACES,
 } from '@/data/workspace';
-import { BUILT_IN_COLUMNS, BUILT_IN_NOTE_CATEGORIES, DEFAULT_PERMISSION_MATRIX } from '@/data/reference';
+import { builtInColumnsFor, BUILT_IN_NOTE_CATEGORIES, DEFAULT_PERMISSION_MATRIX } from '@/data/reference';
 import { IS_LIVE } from '@/lib/data-source';
 
 /** The demo workspace (`NEXT_PUBLIC_DATA_SOURCE=demo`): the fixtures in `src/data`. */
@@ -35,7 +35,8 @@ export const DEMO_WORKSPACE_STATE: WorkspaceState = {
   activity: ACTIVITY,
   tasks: TASKS,
   archivedTasks: [],
-  boardColumns: BUILT_IN_COLUMNS,
+  // Every project has a board of its own, starting with the four built-in columns.
+  boardColumns: PROJECTS.flatMap((project) => builtInColumnsFor(project.id)),
   conversations: CONVERSATIONS,
   messages: MESSAGES,
   calendarEvents: CALENDAR_EVENTS,

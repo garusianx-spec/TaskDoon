@@ -23,6 +23,11 @@ export interface KanbanBoardProps {
   /** Every task, unfiltered: deleting a column must account for cards the filters hide. */
   readonly allTasks: readonly Task[];
   readonly columns: readonly BoardColumn[];
+  /**
+   * A project's own board: its columns can be added, renamed and deleted. Views across projects
+   * group cards by status, so their (status) columns are not edited. Defaults to `true`.
+   */
+  readonly editable?: boolean;
   readonly onOpenTask: (taskId: string) => void;
   readonly onMoveTask: (taskId: string, columnId: string) => void;
   readonly onToggleComplete: (taskId: string, completed: boolean) => void;
@@ -51,6 +56,7 @@ export function KanbanBoard({
   tasks,
   allTasks,
   columns,
+  editable = true,
   onOpenTask,
   onMoveTask,
   onToggleComplete,
@@ -90,7 +96,13 @@ export function KanbanBoard({
     if (added) requestAnimationFrame(revealBoardEnd);
   }, [columns, revealBoardEnd]);
 
-  const columnLoad = (column: BoardColumn): number => tasksInColumn(allTasks, columns, column).length;
+  // A column holds its own project's cards only (a sub-project's cards keep their own board).
+  const columnLoad = (column: BoardColumn): number =>
+    tasksInColumn(
+      allTasks.filter((task) => column.projectId === undefined || task.projectId === column.projectId),
+      columns,
+      column,
+    ).length;
 
   const requestDelete = (column: BoardColumn) => {
     if (columnLoad(column) === 0) {
@@ -203,6 +215,7 @@ export function KanbanBoard({
               column={column}
               count={columnTasks.length}
               renaming={renamingId === column.id}
+              editable={editable}
               canDelete={columns.length > 1}
               existingTitles={columns.filter((entry) => entry.id !== column.id).map((entry) => entry.title)}
               onStartRename={() => setRenamingId(column.id)}
@@ -265,11 +278,17 @@ export function KanbanBoard({
         );
       })}
 
-      <AddColumnCard
-        existingTitles={columns.map((column) => column.title)}
-        onAdd={onAddColumn}
-        onOpen={revealBoardEnd}
-      />
+      {editable ? (
+        <AddColumnCard
+          existingTitles={columns.map((column) => column.title)}
+          onAdd={onAddColumn}
+          onOpen={revealBoardEnd}
+        />
+      ) : (
+        <p className="flex w-56 shrink-0 items-center rounded-2xl border-2 border-dashed border-secondary px-4 text-center text-caption leading-6 text-fg-tertiary">
+          هر پروژه ستون‌های خودش را دارد. برای افزودن یا ویرایش ستون، پروژه‌ای را از فهرست کنار انتخاب کنید.
+        </p>
+      )}
 
       <DeleteColumnDialog
         column={deleting}
@@ -289,6 +308,8 @@ interface ColumnHeaderProps {
   readonly column: BoardColumn;
   readonly count: number;
   readonly renaming: boolean;
+  /** `false` on the status columns of views across projects: no ⋯ menu. */
+  readonly editable: boolean;
   readonly canDelete: boolean;
   readonly existingTitles: readonly string[];
   readonly onStartRename: () => void;
@@ -303,6 +324,7 @@ function ColumnHeader({
   column,
   count,
   renaming,
+  editable,
   canDelete,
   existingTitles,
   onStartRename,
@@ -388,45 +410,47 @@ function ColumnHeader({
             onClick={onCreateTask}
           />
         </Tooltip>
-        <Popover
-          label={`اقدام‌های ستون ${column.title}`}
-          haspopup="menu"
-          align="end"
-          panelClassName="min-w-48"
-          trigger={
-            <IconButton
-              ref={menuTriggerRef}
-              label={`اقدام‌های ستون ${column.title}`}
-              icon={<MoreHorizontalIcon size={16} />}
-              size="xs"
-            />
-          }
-        >
-          {(close) => (
-            <MenuList>
-              <MenuItem
-                icon={<EditIcon size={16} />}
-                onSelect={() => {
-                  close();
-                  onStartRename();
-                }}
-              >
-                تغییر نام ستون
-              </MenuItem>
-              <MenuItem
-                icon={<TrashIcon size={16} />}
-                tone="danger"
-                disabled={!canDelete}
-                onSelect={() => {
-                  close();
-                  onDelete();
-                }}
-              >
-                {canDelete ? 'حذف ستون' : 'حذف ستون (آخرین ستون بورد)'}
-              </MenuItem>
-            </MenuList>
-          )}
-        </Popover>
+        {editable && (
+          <Popover
+            label={`اقدام‌های ستون ${column.title}`}
+            haspopup="menu"
+            align="end"
+            panelClassName="min-w-48"
+            trigger={
+              <IconButton
+                ref={menuTriggerRef}
+                label={`اقدام‌های ستون ${column.title}`}
+                icon={<MoreHorizontalIcon size={16} />}
+                size="xs"
+              />
+            }
+          >
+            {(close) => (
+              <MenuList>
+                <MenuItem
+                  icon={<EditIcon size={16} />}
+                  onSelect={() => {
+                    close();
+                    onStartRename();
+                  }}
+                >
+                  تغییر نام ستون
+                </MenuItem>
+                <MenuItem
+                  icon={<TrashIcon size={16} />}
+                  tone="danger"
+                  disabled={!canDelete}
+                  onSelect={() => {
+                    close();
+                    onDelete();
+                  }}
+                >
+                  {canDelete ? 'حذف ستون' : 'حذف ستون (آخرین ستون بورد)'}
+                </MenuItem>
+              </MenuList>
+            )}
+          </Popover>
+        )}
       </span>
     </header>
   );

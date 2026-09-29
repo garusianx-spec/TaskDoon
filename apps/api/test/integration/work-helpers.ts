@@ -40,8 +40,9 @@ export async function createTask(t: TestApp, as: Session, workspaceId: string, b
   return response.body as TaskDetail;
 }
 
-export async function getWorkflow(t: TestApp, as: Session, workspaceId: string): Promise<WorkflowView> {
-  const response = await t.http().get(`${wsPath(workspaceId)}/workflow`).set(bearer(as));
+/** A project's own workflow: every project has one. */
+export async function getWorkflow(t: TestApp, as: Session, workspaceId: string, projectId: string): Promise<WorkflowView> {
+  const response = await t.http().get(`${wsPath(workspaceId)}/workflow?projectId=${projectId}`).set(bearer(as));
   expectStatus(response, 200);
   return response.body as WorkflowView;
 }

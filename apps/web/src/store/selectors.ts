@@ -16,6 +16,7 @@ import type {
   TaskStatus,
   User,
 } from '@taskin/contracts';
+import { BUILT_IN_COLUMNS } from '@/data/reference';
 import { directory } from './directory';
 import { daysBetween, parseISODate, toISODate } from '@taskin/jalali';
 
@@ -136,8 +137,22 @@ export function columnForPlacement(
   );
 }
 
-export const columnForTask = (columns: readonly BoardColumn[], task: Task): BoardColumn | undefined =>
-  columnForPlacement(columns, task);
+/**
+ * The column a task shows in. From a list holding the task's own project's columns, only
+ * those count (no other project's column is ever its); from any other list — the status
+ * columns of «همه وظایف», or a parent project's board showing a sub-project's cards — the
+ * task sits in the column of its status.
+ */
+export function columnForTask(columns: readonly BoardColumn[], task: Task): BoardColumn | undefined {
+  const own = columns.filter((column) => column.projectId === task.projectId);
+  return own.length > 0 ? columnForPlacement(own, task) : columnForPlacement(columns, { status: task.status, boardColumnId: null });
+}
+
+/** A project's own board columns, start to end; the status columns while it has none yet. */
+export function projectColumns(columns: readonly BoardColumn[], projectId: string): readonly BoardColumn[] {
+  const own = columns.filter((column) => column.projectId === projectId);
+  return own.length > 0 ? own : BUILT_IN_COLUMNS;
+}
 
 export const tasksInColumn = (
   tasks: readonly Task[],
@@ -215,7 +230,7 @@ export function filterNotifications(
 
 /* ------------------------------ Notes ------------------------------ */
 
-export const noteCategoryLabel = (categories: readonly NoteCategory[], id: string): string =>
+export const noteCategoryLabel = (categories: readonly NoteCategory[], id: string | null): string =>
   categories.find((category) => category.id === id)?.label ?? 'بدون دسته';
 
 export interface NoteFilter {

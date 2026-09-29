@@ -36,6 +36,9 @@ import {
 import { NoteMarkdown } from './NoteMarkdown';
 import { NoteBlockEditor, type NoteBlockEditorHandle } from './NoteBlockEditor';
 
+/** The category picker's value for «بدون دسته» (a note whose notebook was deleted). */
+const NO_NOTEBOOK = 'none';
+
 export interface NoteEditorProps {
   readonly note: Note;
   readonly categories: readonly NoteCategory[];
@@ -77,9 +80,12 @@ export function NoteEditor({ note, categories, linkedTask, onPatch, onDelete, on
           <Select
             label="دسته"
             size="sm"
-            value={note.categoryId}
-            onValueChange={(categoryId) => onPatch({ categoryId })}
-            options={categories.map((category) => ({ value: category.id, label: category.label }))}
+            value={note.categoryId ?? NO_NOTEBOOK}
+            onValueChange={(categoryId) => onPatch({ categoryId: categoryId === NO_NOTEBOOK ? null : categoryId })}
+            options={[
+              ...categories.map((category) => ({ value: category.id, label: category.label })),
+              { value: NO_NOTEBOOK, label: 'بدون دسته' },
+            ]}
           />
         </div>
         <Tooltip content={note.pinned ? 'برداشتن سنجاق' : 'سنجاق کردن'}>

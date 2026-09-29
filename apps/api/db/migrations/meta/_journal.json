@@ -57,6 +57,20 @@
       "when": 1790364295363,
       "tag": "0007_chat_security_and_links",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790689825966,
+      "tag": "0008_notebook_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790689830728,
+      "tag": "0009_project_workflows",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import type { Task, TaskViewMode } from '@taskin/contracts';
 import { useWorkspace } from '@/store/WorkspaceProvider';
-import { filterTasks } from '@/store/selectors';
+import { filterTasks, projectColumns } from '@/store/selectors';
+import { BUILT_IN_COLUMNS } from '@/data/reference';
 import { taskDraft } from '@/store/drafts';
 import { formatJalali } from '@taskin/jalali';
 import { formatCount } from '@/lib/format';
@@ -101,6 +102,11 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
   const [postponeTarget, setPostponeTarget] = useState<Task | null>(null);
 
   const selectedTaskId = state.inspector.kind === 'task' ? state.inspector.taskId : null;
+  // A project's board shows its own columns (its sub-projects' cards sit in the column of their
+  // status); views across projects group every card by status, and their columns are not edited.
+  const boardProjectId = state.projectFilterId;
+  const boardColumns = boardProjectId ? projectColumns(state.boardColumns, boardProjectId) : BUILT_IN_COLUMNS;
+  const columnsEditable = boardProjectId !== null && state.boardColumns.some((column) => column.projectId === boardProjectId);
   const openTask = (taskId: string) => dispatch({ type: 'open-task', taskId });
   const toggleComplete = (taskId: string, completed: boolean) =>
     dispatch({ type: 'set-task-completed', taskId, completed });
@@ -162,7 +168,8 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
           <KanbanBoard
             tasks={tasks}
             allTasks={state.tasks}
-            columns={state.boardColumns}
+            columns={boardColumns}
+            editable={columnsEditable}
             selectedTaskId={selectedTaskId}
             onOpenTask={openTask}
             onMoveTask={(taskId, columnId) => dispatch({ type: 'move-task-to-column', taskId, columnId })}
@@ -176,7 +183,9 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
                 }),
               )
             }
-            onAddColumn={(title, tone) => dispatch({ type: 'add-board-column', title, tone })}
+            onAddColumn={(title, tone) => {
+              if (boardProjectId) dispatch({ type: 'add-board-column', projectId: boardProjectId, title, tone });
+            }}
             onRenameColumn={(columnId, title) => dispatch({ type: 'rename-board-column', columnId, title })}
             onRemoveColumn={(columnId, disposition) =>
               dispatch({ type: 'remove-board-column', columnId, disposition })
@@ -187,7 +196,7 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
         {view === 'list' && (
           <TaskListView
             tasks={tasks}
-            columns={state.boardColumns}
+            columns={boardColumns}
             onOpenTask={openTask}
             onToggleComplete={toggleComplete}
             selectedTaskId={selectedTaskId}

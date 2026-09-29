@@ -33,10 +33,11 @@ export interface OutboxEventMap {
   'project.updated': { readonly projectId: string; readonly fields: readonly string[] };
   'project.deleted': { readonly projectId: string };
   'project.member.changed': { readonly projectId: string; readonly userId: string; readonly role: string | null };
-  'board.column.added': { readonly workflowId: string; readonly columnId: string; readonly version: number };
-  'board.column.updated': { readonly workflowId: string; readonly columnId: string; readonly version: number };
+  'board.column.added': { readonly workflowId: string; readonly projectId: string; readonly columnId: string; readonly version: number };
+  'board.column.updated': { readonly workflowId: string; readonly projectId: string; readonly columnId: string; readonly version: number };
   'board.column.removed': {
     readonly workflowId: string;
+    readonly projectId: string;
     readonly columnId: string;
     readonly version: number;
     readonly disposition: 'migrate' | 'archive' | 'empty';

@@ -37,6 +37,7 @@ import type {
   TaskDetail,
   TaskStatus,
   User,
+  WorkflowView,
   Workspace,
   WorkspaceView,
 } from '@taskin/contracts';
@@ -139,9 +140,17 @@ export function projectFromView(view: ProjectView, departmentName: (id: string |
   };
 }
 
-export function columnFromView(view: ColumnView): BoardColumn {
-  return { id: view.id, title: view.title, status: view.status, tone: view.tone, custom: !view.builtIn };
+/** A column of `projectId`'s board (every project has its own columns). */
+export function columnFromView(view: ColumnView, projectId: string): BoardColumn {
+  return { id: view.id, title: view.title, status: view.status, tone: view.tone, custom: !view.builtIn, projectId };
 }
+
+/** Every column of the given workflows, each project's in board order. */
+export function columnsFromWorkflows(views: readonly WorkflowView[]): BoardColumn[] {
+  return views.flatMap((view) => [...view.columns].sort(byColumnPosition).map((column) => columnFromView(column, view.projectId)));
+}
+
+const byColumnPosition = (a: ColumnView, b: ColumnView): number => (a.position < b.position ? -1 : a.position > b.position ? 1 : a.id < b.id ? -1 : 1);
 
 /** In the UI a card on a built-in column carries `boardColumnId: null` (its status names the column). */
 export function boardColumnIdFor(columns: readonly BoardColumn[], columnId: string): string | null {

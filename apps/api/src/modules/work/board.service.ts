@@ -10,10 +10,14 @@ import { ApiError } from '../../platform/http/api-error.js';
 import type { MembershipContext } from '../../platform/http/request.js';
 import { OutboxWriter } from '../../platform/outbox/outbox-writer.js';
 import { AbilityFactory } from '../rbac/ability.js';
+import { BUILT_IN_COLUMNS } from '../workspaces/workspace-seed.js';
+import { projectVisibleSql } from './access.js';
 import { keyBetween, keysBetween } from './positions.js';
 
 type ColumnRow = typeof boardColumns.$inferSelect;
 type WorkflowRow = typeof workflows.$inferSelect;
+/** A project's workflow, as the column routes resolve it. */
+type ProjectWorkflow = WorkflowRow & { readonly projectId: string };
 
 /** Tasks listed in a `board.column.removed` event; beyond this, clients resync the board. */
 const EVENT_TASK_LIMIT = 500;
@@ -23,7 +27,18 @@ export function columnView(row: ColumnRow): ColumnView {
 }
 
 /**
- * The workspace workflow's columns (every project shares it in v1). Column changes lock the
+ * A new project's own workflow with the four built-in columns; returns its id. Every project has
+ * a workflow of its own, so no column change on one board reaches another.
+ */
+export async function createProjectWorkflow(tx: Tx, workspaceId: string, name: string): Promise<string> {
+  const [workflow] = await tx.insert(workflows).values({ workspaceId, name, isDefault: false }).returning({ id: workflows.id });
+  if (!workflow) throw new Error('workflow insert returned nothing');
+  await tx.insert(boardColumns).values(BUILT_IN_COLUMNS.map((column) => ({ workspaceId, workflowId: workflow.id, ...column, isBuiltin: true })));
+  return workflow.id;
+}
+
+/**
+ * Each project's columns: every project has a workflow of its own. Column changes lock the
  * workflow row first (the canonical lock order: workflow → column → task) and bump its version.
  */
 @Injectable()
@@ -35,17 +50,33 @@ export class BoardService {
     private readonly abilities: AbilityFactory,
   ) {}
 
-  async workflow(member: MembershipContext): Promise<WorkflowView> {
+  async workflow(member: MembershipContext, projectId: string): Promise<WorkflowView> {
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
-      const workflow = await this.defaultWorkflow(tx, member.workspaceId);
-      return { id: workflow.id, version: workflow.version, columns: (await this.liveColumns(tx, workflow.id)).map(columnView) };
+      const workflow = await this.projectWorkflow(tx, member, projectId);
+      return { id: workflow.id, projectId, version: workflow.version, columns: (await this.liveColumns(tx, workflow.id)).map(columnView) };
+    });
+  }
+
+  /** The workflow of every project the member can see, in one statement (the web app's first load). */
+  async workflows(member: MembershipContext): Promise<WorkflowView[]> {
+    return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
+      const result = await tx.execute<{ id: string; project_id: string; version: number; columns: ColumnRowJson[] | null }>(sql`
+        select w.id, p.id as project_id, w.version,
+          (select json_agg(json_build_object('id', c.id, 'title', c.title, 'status', c.status, 'tone', c.tone,
+                                             'builtIn', c.is_builtin, 'position', c.position) order by c.position, c.id)
+             from board_columns c where c.workflow_id = w.id and c.deleted_at is null) as columns
+        from projects p
+        join workflows w on w.workspace_id = p.workspace_id and w.id = p.workflow_id
+        where p.workspace_id = ${member.workspaceId} and ${projectVisibleSql(member)}
+        order by p.created_at, p.id`);
+      return result.rows.map((row) => ({ id: row.id, projectId: row.project_id, version: row.version, columns: (row.columns ?? []).map((column) => ({ ...column })) }));
     });
   }
 
   async addColumn(member: MembershipContext, body: CreateColumnBody): Promise<WorkflowView> {
     if (!this.abilities.forMember(member).can('create', 'BoardColumn')) throw ApiError.forbidden();
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
-      const workflow = await this.defaultWorkflow(tx, member.workspaceId, true);
+      const workflow = await this.projectWorkflow(tx, member, body.projectId, true);
       const columns = await this.liveColumns(tx, workflow.id);
       const position = this.positionAfter(columns, body.afterColumnId ?? null, null, body.afterColumnId === undefined || body.afterColumnId === null ? 'end' : 'after');
       try {
@@ -74,9 +105,9 @@ export class BoardService {
           aggregateType: 'workflow',
           aggregateId: workflow.id,
           workspaceId: member.workspaceId,
-          payload: { workflowId: workflow.id, columnId: created.id, version },
+          payload: { workflowId: workflow.id, projectId: workflow.projectId, columnId: created.id, version },
         });
-        return { id: workflow.id, version, columns: [...columns, created].sort(byPosition).map(columnView) };
+        return { id: workflow.id, projectId: workflow.projectId, version, columns: [...columns, created].sort(byPosition).map(columnView) };
       } catch (error) {
         if (isUniqueViolation(error, 'board_columns_title_uq')) throw new ApiError('CONFLICT', 'A column with that name exists.');
         throw error;
@@ -87,7 +118,7 @@ export class BoardService {
   async updateColumn(member: MembershipContext, columnId: string, body: UpdateColumnBody): Promise<WorkflowView> {
     if (!this.abilities.forMember(member).can('edit', 'BoardColumn')) throw ApiError.forbidden();
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
-      const workflow = await this.defaultWorkflow(tx, member.workspaceId, true);
+      const workflow = await this.columnWorkflow(tx, member, columnId);
       const columns = await this.liveColumns(tx, workflow.id);
       const column = columns.find((entry) => entry.id === columnId);
       if (!column) throw new ApiError('COLUMN_GONE');
@@ -117,9 +148,9 @@ export class BoardService {
           aggregateType: 'workflow',
           aggregateId: workflow.id,
           workspaceId: member.workspaceId,
-          payload: { workflowId: workflow.id, columnId, version },
+          payload: { workflowId: workflow.id, projectId: workflow.projectId, columnId, version },
         });
-        return { id: workflow.id, version, columns: [...others, updated].sort(byPosition).map(columnView) };
+        return { id: workflow.id, projectId: workflow.projectId, version, columns: [...others, updated].sort(byPosition).map(columnView) };
       } catch (error) {
         if (isUniqueViolation(error, 'board_columns_title_uq')) throw new ApiError('CONFLICT', 'A column with that name exists.');
         throw error;
@@ -135,7 +166,7 @@ export class BoardService {
   async removeColumn(member: MembershipContext, columnId: string, disposition: ColumnDisposition | undefined): Promise<void> {
     if (!this.abilities.forMember(member).can('delete', 'BoardColumn')) throw ApiError.forbidden();
     await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
-      const workflow = await this.defaultWorkflow(tx, member.workspaceId, true);
+      const workflow = await this.columnWorkflow(tx, member, columnId);
       const target = disposition?.kind === 'migrate' ? disposition.targetColumnId : null;
       if (target === columnId) throw ApiError.validation([{ field: 'disposition.targetColumnId', message: 'must be another column' }]);
       // Lock the columns involved in id order, so moves into them wait for (and then see) this change.
@@ -201,6 +232,7 @@ export class BoardService {
         workspaceId: member.workspaceId,
         payload: {
           workflowId: workflow.id,
+          projectId: workflow.projectId,
           columnId,
           version,
           disposition: kind,
@@ -214,14 +246,29 @@ export class BoardService {
 
   /* ------------------------------------------------------------------ helpers */
 
-  async defaultWorkflow(tx: Tx, workspaceId: string, lock = false): Promise<WorkflowRow> {
-    const query = tx
-      .select()
-      .from(workflows)
-      .where(and(eq(workflows.workspaceId, workspaceId), eq(workflows.isDefault, true)));
+  /** The workflow of a project the member can see (404 otherwise), locked when columns change. */
+  private async projectWorkflow(tx: Tx, member: MembershipContext, projectId: string, lock = false): Promise<ProjectWorkflow> {
+    const result = await tx.execute<{ id: string }>(sql`
+      select p.workflow_id as id from projects p
+      where p.workspace_id = ${member.workspaceId} and p.id = ${projectId} and ${projectVisibleSql(member)}`);
+    const found = result.rows[0];
+    if (!found) throw ApiError.notFound('The project');
+    const query = tx.select().from(workflows).where(and(eq(workflows.workspaceId, member.workspaceId), eq(workflows.id, found.id)));
     const [workflow] = lock ? await query.for('update') : await query;
-    if (!workflow) throw new Error('the workspace has no default workflow');
-    return workflow;
+    if (!workflow) throw ApiError.notFound('The project');
+    return { ...workflow, projectId };
+  }
+
+  /** The (locked) workflow a column belongs to, through its project; an unknown column is 409 COLUMN_GONE. */
+  private async columnWorkflow(tx: Tx, member: MembershipContext, columnId: string): Promise<ProjectWorkflow> {
+    const result = await tx.execute<{ project_id: string }>(sql`
+      select p.id as project_id from board_columns c
+      join projects p on p.workspace_id = c.workspace_id and p.workflow_id = c.workflow_id
+      where c.workspace_id = ${member.workspaceId} and c.id = ${columnId}
+      order by p.created_at limit 1`);
+    const found = result.rows[0];
+    if (!found) throw new ApiError('COLUMN_GONE');
+    return this.projectWorkflow(tx, member, found.project_id, true);
   }
 
   async liveColumns(tx: Tx, workflowId: string): Promise<ColumnRow[]> {
@@ -249,6 +296,15 @@ export class BoardService {
     if (index < 0 || afterId === self) throw ApiError.validation([{ field: 'afterColumnId', message: 'unknown column' }]);
     return keyBetween(columns[index]?.position ?? null, columns[index + 1]?.position ?? null);
   }
+}
+
+interface ColumnRowJson {
+  id: string;
+  title: string;
+  status: ColumnView['status'];
+  tone: ColumnView['tone'];
+  builtIn: boolean;
+  position: string;
 }
 
 const byPosition = (a: ColumnRow, b: ColumnRow) => (a.position < b.position ? -1 : a.position > b.position ? 1 : a.id < b.id ? -1 : 1);

@@ -133,7 +133,7 @@ export class ContentController {
 
   @Delete('note-categories/:categoryId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete an empty custom category (409 NOTE_CATEGORY_IN_USE otherwise)' })
+  @ApiOperation({ summary: 'Delete a notebook, built-in or custom; its notes are kept, filed in no notebook' })
   removeCategory(@CurrentMember() member: MembershipContext, @Param('categoryId', UUID) categoryId: string): Promise<void> {
     return this.notes.removeCategory(member, categoryId);
   }

@@ -13,7 +13,7 @@ import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import type { Tx } from '../../platform/db/database.js';
 import { isUniqueViolation, PG, pgError } from '../../platform/db/pg-errors.js';
 import { iso, num } from '../../platform/db/rows.js';
-import { plans, projectMembers, projects, projectStars, workflows, workspaces } from '../../platform/db/schema/all.js';
+import { plans, projectMembers, projects, projectStars, workspaces } from '../../platform/db/schema/all.js';
 import { type Unit, UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { MembershipContext } from '../../platform/http/request.js';
@@ -21,6 +21,7 @@ import { OutboxWriter } from '../../platform/outbox/outbox-writer.js';
 import { AbilityFactory, effectiveProjectRole, PROJECT_ROLE_ACTIONS, projectActions } from '../rbac/ability.js';
 import { MembershipService } from '../rbac/membership.service.js';
 import { AccessService, assertAction, type ProjectRow, projectVisibleSql } from './access.js';
+import { createProjectWorkflow } from './board.service.js';
 
 interface ProjectListRow extends Record<string, unknown> {
   id: string;
@@ -90,11 +91,8 @@ export class ProjectsService {
         if ((live?.n ?? 0) >= workspace.maxProjects) throw new ApiError('PLAN_LIMIT_REACHED', `This plan allows ${workspace.maxProjects} projects.`);
       }
       if (body.parentId) await this.assertParent(tx, member, body.parentId, null);
-      const [workflow] = await tx
-        .select({ id: workflows.id })
-        .from(workflows)
-        .where(and(eq(workflows.workspaceId, member.workspaceId), eq(workflows.isDefault, true)));
-      if (!workflow) throw new Error('the workspace has no default workflow');
+      // Every project owns its board: its own workflow, starting with the four built-in columns.
+      const workflow = { id: await createProjectWorkflow(tx, member.workspaceId, body.key) };
       try {
         const [created] = await tx
           .insert(projects)

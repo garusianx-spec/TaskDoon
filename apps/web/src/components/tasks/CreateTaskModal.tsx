@@ -8,7 +8,7 @@ import { formatFileSize } from '@/lib/format';
 import { formatJalali, toISODate } from '@taskin/jalali';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { taskDraft } from '@/store/drafts';
-import { columnForPlacement } from '@/store/selectors';
+import { columnForPlacement, projectColumns } from '@/store/selectors';
 import { Avatar, Badge, Button, Checkbox, IconButton, Input, Modal, Select, Textarea } from '@/components/ui';
 import { JalaliDatePicker } from './JalaliDatePicker';
 import { ColumnDot } from './ColumnDot';
@@ -25,7 +25,7 @@ import {
 export interface CreateTaskModalProps {
   readonly open: boolean;
   readonly draft: TaskDraft | null;
-  /** Board columns, custom ones included, offered as the task's starting column. */
+  /** Every project's board columns, custom ones included; the chosen project's are offered. */
   readonly columns: readonly BoardColumn[];
   readonly onClose: () => void;
   readonly onSubmit: (draft: TaskDraft) => void;
@@ -56,7 +56,9 @@ export function CreateTaskModal({ open, draft, columns, onClose, onSubmit, onCre
 
   const fromMessage = form.sourceMessageId !== null;
   const fromNote = form.sourceNoteId !== null;
-  const columnValue = columnForPlacement(columns, form)?.id ?? '';
+  // Each project has its own board: offer the chosen project's columns only.
+  const boardColumns = projectColumns(columns, form.projectId);
+  const columnValue = columnForPlacement(boardColumns, form)?.id ?? '';
   const presetDate = draft !== null && draft.dueDate !== null && !fromMessage && !fromNote;
   const titleError = touched && form.title.trim().length === 0 ? 'عنوان وظیفه الزامی است.' : undefined;
 
@@ -138,7 +140,14 @@ export function CreateTaskModal({ open, draft, columns, onClose, onSubmit, onCre
             label="پروژه"
             hideLabel={false}
             value={form.projectId}
-            onValueChange={(projectId) => setForm((current) => ({ ...current, projectId }))}
+            onValueChange={(projectId) =>
+              setForm((current) => ({
+                ...current,
+                projectId,
+                // Another project's custom column is not on this board; its status still holds.
+                boardColumnId: projectColumns(columns, projectId).some((column) => column.id === current.boardColumnId) ? current.boardColumnId : null,
+              }))
+            }
             options={projects.map((project) => ({
               value: project.id,
               label: project.name,
@@ -151,7 +160,7 @@ export function CreateTaskModal({ open, draft, columns, onClose, onSubmit, onCre
             hideLabel={false}
             value={columnValue}
             onValueChange={(columnId) => {
-              const column = columns.find((entry) => entry.id === columnId);
+              const column = boardColumns.find((entry) => entry.id === columnId);
               if (!column) return;
               setForm((current) => ({
                 ...current,
@@ -159,7 +168,7 @@ export function CreateTaskModal({ open, draft, columns, onClose, onSubmit, onCre
                 boardColumnId: column.custom ? column.id : null,
               }));
             }}
-            options={columns.map((column) => ({
+            options={boardColumns.map((column) => ({
               value: column.id,
               label: column.title,
               icon: <ColumnDot column={column} />,

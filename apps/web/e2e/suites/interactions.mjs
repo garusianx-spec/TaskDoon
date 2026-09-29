@@ -99,6 +99,9 @@ await pause(500);
 check(await eventually(async () => (await page.getByRole('button', { name: 'وظیفه جدید', exact: true }).count()) === 1), 'single primary «وظیفه جدید» button');
 check(await page.getByRole('complementary').getByRole('searchbox').count() === 0, 'sidebar search removed');
 const board = page.getByRole('application', { name: 'بورد کانبان وظایف' });
+// Columns belong to a project: edit the web project's board.
+await page.getByRole('navigation', { name: 'درخت پروژه‌ها' }).getByRole('button', { name: /نسخه وب/ }).first().click();
+await pause(200);
 await page.getByRole('button', { name: 'افزودن ستون جدید' }).click();
 await pause(900);
 const boardScroll = () => board.evaluate((el) => ({ left: el.scrollLeft, max: el.scrollWidth - el.clientWidth }));
@@ -220,7 +223,7 @@ await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
 await pause(300);
 const categorySelect = page.getByRole('combobox', { name: 'دسته' });
 check(await eventually(async () => (await categorySelect.textContent()).includes('پژوهش')), 'new note auto-assigned to the active category');
-check(await eventually(async () => (await categoryNav.getByRole('button', { name: 'حذف دسته پژوهش' }).count()) === 0), 'category with a note is no longer deletable');
+check(await eventually(async () => (await categoryNav.getByRole('button', { name: 'حذف دسته پژوهش' }).count()) === 1), 'a category holding a note can still be deleted');
 await page.getByRole('textbox', { name: /عنوان/ }).first().fill('برنامه مصاحبه');
 await page.getByRole('toolbar', { name: 'قالب‌بندی متن' }).getByRole('button', { name: 'چک‌لیست', exact: true }).click();
 await pause(150);
@@ -248,8 +251,18 @@ await page.getByRole('textbox', { name: 'نام دسته' }).fill('موقت');
 await page.getByRole('button', { name: 'ایجاد دسته' }).click();
 await pause(200);
 await categoryNav.getByRole('button', { name: 'حذف دسته موقت' }).click();
+const confirmCategory = page.getByRole('dialog', { name: 'آیا از حذف این دسته‌بندی اطمینان دارید؟' });
+check(await visible(confirmCategory) && (await categoryNav.getByRole('button', { name: /^موقت/ }).count()) === 1, 'deleting a category asks first');
+await confirmCategory.getByRole('button', { name: 'حذف دسته' }).click();
 await pause(200);
 check(await eventually(async () => (await categoryNav.getByRole('button', { name: /^موقت/ }).count()) === 0), 'empty custom category deleted');
+// A built-in category goes too, after the same question; its note stays, in no category.
+await categoryNav.getByRole('button', { name: 'حذف دسته ایده' }).click();
+await page.getByRole('dialog', { name: 'آیا از حذف این دسته‌بندی اطمینان دارید؟' }).getByRole('button', { name: 'حذف دسته' }).click();
+check(
+  await eventually(async () => (await categoryNav.getByRole('button', { name: /^ایده/ }).count()) === 0 && (await page.getByRole('button', { name: /خلاصه هوشمند گفتگوها/ }).count()) >= 1),
+  'a built-in category can be deleted; its note is kept',
+);
 
 // ---------- 8. Workspace CRUD ----------
 const switcher = rail.getByRole('button', { name: /^فضای کاری فعال/ });

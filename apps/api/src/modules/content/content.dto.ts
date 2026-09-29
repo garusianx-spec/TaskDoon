@@ -137,7 +137,8 @@ export class UpdateNoteCategoryDto implements UpdateNoteCategoryBody {
 
 export class NoteViewDto implements NoteView {
   @ApiProperty({ format: 'uuid' }) readonly id!: string;
-  @ApiProperty({ format: 'uuid' }) readonly categoryId!: string;
+  @ApiProperty({ type: String, nullable: true, format: 'uuid', description: 'null: filed in no notebook (its notebook was deleted)' })
+  readonly categoryId!: string | null;
   @ApiProperty() readonly title!: string;
   @ApiProperty() readonly body!: string;
   @ApiProperty({ enum: TAG_TONES, isArray: true }) readonly colors!: TagTone[];
@@ -159,7 +160,9 @@ export class NoteListQueryDto extends PageQueryDto {
 }
 
 export class CreateNoteDto implements CreateNoteBody {
-  @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID() readonly categoryId?: string;
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid', description: 'Omitted: «شخصی» while it exists; null: no notebook' })
+  @OptionalNullableUuid()
+  readonly categoryId?: string | null;
   @ApiPropertyOptional({ maxLength: 200 }) @IsOptional() @IsString() @MaxLength(200) readonly title?: string;
   @ApiPropertyOptional({ maxLength: 100000 }) @IsOptional() @IsString() @MaxLength(100000) readonly body?: string;
   @ApiPropertyOptional({ enum: TAG_TONES, isArray: true }) @IsOptional() @IsArray() @ArrayMaxSize(8) @IsIn(TAG_TONES, { each: true }) readonly colors?: TagTone[];
@@ -167,7 +170,9 @@ export class CreateNoteDto implements CreateNoteBody {
 }
 
 export class UpdateNoteDto implements UpdateNoteBody {
-  @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID() readonly categoryId?: string;
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid', description: 'null takes the note out of every notebook' })
+  @OptionalNullableUuid()
+  readonly categoryId?: string | null;
   @ApiPropertyOptional({ maxLength: 200 }) @IsOptional() @IsString() @MaxLength(200) readonly title?: string;
   @ApiPropertyOptional({ maxLength: 100000 }) @IsOptional() @IsString() @MaxLength(100000) readonly body?: string;
   @ApiPropertyOptional({ enum: TAG_TONES, isArray: true }) @IsOptional() @IsArray() @ArrayMaxSize(8) @IsIn(TAG_TONES, { each: true }) readonly colors?: TagTone[];

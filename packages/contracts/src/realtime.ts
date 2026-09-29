@@ -66,10 +66,11 @@ export interface RealtimeEventMap {
     readonly position: string;
   };
   'task:deleted': { readonly taskId: string; readonly projectId: string };
-  'board:column_added': { readonly workflowId: string; readonly columnId: string };
-  'board:column_updated': { readonly workflowId: string; readonly columnId: string };
+  'board:column_added': { readonly workflowId: string; readonly projectId: string; readonly columnId: string };
+  'board:column_updated': { readonly workflowId: string; readonly projectId: string; readonly columnId: string };
   'board:column_removed': {
     readonly workflowId: string;
+    readonly projectId: string;
     readonly columnId: string;
     readonly disposition: 'migrate' | 'archive' | 'empty';
     readonly targetColumnId: string | null;

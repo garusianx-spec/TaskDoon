@@ -1867,6 +1867,16 @@
         "operationId": "Work_workflow",
         "parameters": [
           {
+            "name": "projectId",
+            "required": true,
+            "in": "query",
+            "description": "Every project has its own workflow",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "workspaceId",
             "required": true,
             "in": "path",
@@ -1892,6 +1902,46 @@
             "bearer": []
           }
         ],
+        "summary": "A project board’s columns (every project has its own workflow)",
+        "tags": [
+          "work"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/workflows": {
+      "get": {
+        "operationId": "Work_workflows",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowViewDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The columns of every project the caller can see",
         "tags": [
           "work"
         ]
@@ -3677,7 +3727,7 @@
             "bearer": []
           }
         ],
-        "summary": "Delete an empty custom category (409 NOTE_CATEGORY_IN_USE otherwise)",
+        "summary": "Delete a notebook, built-in or custom; its notes are kept, filed in no notebook",
         "tags": [
           "content"
         ]
@@ -6934,6 +6984,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The project the workflow belongs to"
+          },
           "version": {
             "type": "number"
           },
@@ -6946,6 +7001,7 @@
         },
         "required": [
           "id",
+          "projectId",
           "version",
           "columns"
         ]
@@ -6953,6 +7009,11 @@
       "CreateColumnDto": {
         "type": "object",
         "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The project whose board gets the column"
+          },
           "title": {
             "type": "string",
             "minLength": 1,
@@ -6988,6 +7049,7 @@
           }
         },
         "required": [
+          "projectId",
           "title"
         ]
       },
@@ -8250,7 +8312,9 @@
           },
           "categoryId": {
             "type": "string",
-            "format": "uuid"
+            "nullable": true,
+            "format": "uuid",
+            "description": "null: filed in no notebook (its notebook was deleted)"
           },
           "title": {
             "type": "string"
@@ -8331,7 +8395,9 @@
         "properties": {
           "categoryId": {
             "type": "string",
-            "format": "uuid"
+            "nullable": true,
+            "format": "uuid",
+            "description": "Omitted: «شخصی» while it exists; null: no notebook"
           },
           "title": {
             "type": "string",
@@ -8367,7 +8433,9 @@
         "properties": {
           "categoryId": {
             "type": "string",
-            "format": "uuid"
+            "nullable": true,
+            "format": "uuid",
+            "description": "null takes the note out of every notebook"
           },
           "title": {
             "type": "string",

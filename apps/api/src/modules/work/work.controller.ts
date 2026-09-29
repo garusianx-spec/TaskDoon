@@ -54,6 +54,7 @@ import {
   UpdateSubtaskDto,
   MoveSubtaskDto,
   UpdateTaskDto,
+  WorkflowQueryDto,
   WorkflowViewDto,
 } from './work.dto.js';
 
@@ -156,9 +157,17 @@ export class WorkController {
   /* ----------------------------------------------------------- workflow */
 
   @Get('workflow')
+  @ApiOperation({ summary: 'A project board’s columns (every project has its own workflow)' })
   @ApiOkResponse({ type: WorkflowViewDto })
-  workflow(@CurrentMember() member: MembershipContext): Promise<WorkflowView> {
-    return this.board.workflow(member);
+  workflow(@CurrentMember() member: MembershipContext, @Query() query: WorkflowQueryDto): Promise<WorkflowView> {
+    return this.board.workflow(member, query.projectId);
+  }
+
+  @Get('workflows')
+  @ApiOperation({ summary: 'The columns of every project the caller can see' })
+  @ApiOkResponse({ type: WorkflowViewDto, isArray: true })
+  workflows(@CurrentMember() member: MembershipContext): Promise<WorkflowView[]> {
+    return this.board.workflows(member);
   }
 
   @Post('workflow/columns')

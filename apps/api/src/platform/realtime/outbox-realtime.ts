@@ -59,9 +59,10 @@ export function realtimeFor(row: OutboxRow): RealtimeItem[] {
         emit({
           type: type === 'board.column.added' ? 'board:column_added' : 'board:column_updated',
           workspaceId,
-          rooms: [rooms.workspace(workspaceId)],
+          // A column is its project's alone: only people who can see the project hear of it.
+          rooms: [rooms.project(data.projectId)],
           version: data.version,
-          data: { workflowId: data.workflowId, columnId: data.columnId },
+          data: { workflowId: data.workflowId, projectId: data.projectId, columnId: data.columnId },
         }),
       ];
     }
@@ -71,10 +72,11 @@ export function realtimeFor(row: OutboxRow): RealtimeItem[] {
         emit({
           type: 'board:column_removed',
           workspaceId,
-          rooms: [rooms.workspace(workspaceId)],
+          rooms: [rooms.project(data.projectId)],
           version: data.version,
           data: {
             workflowId: data.workflowId,
+            projectId: data.projectId,
             columnId: data.columnId,
             disposition: data.disposition,
             targetColumnId: data.targetColumnId,

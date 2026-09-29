@@ -7,17 +7,17 @@ import { cn } from '@/lib/cn';
 import { formatCount } from '@/lib/format';
 import { TAG_DOT } from '@/lib/tag-tone';
 import { notePreview } from '@taskin/text';
-import { Button, Input, Popover, Tooltip } from '@/components/ui';
+import { Button, Input, Modal, Popover, Tooltip } from '@/components/ui';
 import {
   AddIcon,
   BriefcaseIcon,
   CalendarIcon,
-  CloseIcon,
   FolderAddIcon,
   FolderIcon,
   NotebookIcon,
   PinIcon,
   StarIcon,
+  TrashIcon,
   UserIcon,
 } from '@/components/icons';
 
@@ -44,7 +44,7 @@ export interface NotesSidebarProps {
   readonly onSelectNote: (noteId: string) => void;
   readonly onCreateNote: () => void;
   readonly onCreateCategory: (label: string) => void;
-  /** Only a team's own category that holds no notes can be removed. */
+  /** Any notebook but «همه یادداشت‌ها» can be deleted (after a confirmation); its notes stay. */
   readonly onDeleteCategory: (categoryId: string) => void;
 }
 
@@ -67,6 +67,8 @@ export function NotesSidebar({
   onDeleteCategory,
 }: NotesSidebarProps) {
   const pinned = notes.filter((note) => note.pinned);
+  // The notebook waiting for «آیا از حذف این دسته‌بندی اطمینان دارید؟».
+  const [deleting, setDeleting] = useState<{ readonly id: string; readonly label: string } | null>(null);
   const countFor = (id: string) =>
     id === 'all' ? notes.length : notes.filter((note) => note.categoryId === id).length;
 
@@ -75,7 +77,8 @@ export function NotesSidebar({
     ...categories.map((category) => ({
       id: category.id,
       label: category.label,
-      removable: !category.builtIn && countFor(category.id) === 0,
+      // Built-ins too: only the «همه یادداشت‌ها» filter itself stays.
+      removable: true,
     })),
   ];
 
@@ -106,34 +109,31 @@ export function NotesSidebar({
                   className={cn(
                     'flex flex-1 items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-body-sm font-medium transition-colors',
                     active ? 'bg-brand-subtle text-fg-brand' : 'text-fg-secondary hover:bg-hover',
+                    // Room for the delete button that sits over the row's end.
+                    removable && 'pe-10',
                   )}
                 >
                   <Icon size={18} variant={active ? 'twotone' : 'linear'} />
                   <span className="flex-1 truncate">{label}</span>
-                  {/* An empty removable category shows its ✕ in place of the (zero) count. */}
-                  {removable ? (
-                    <span className="size-6" aria-hidden="true" />
-                  ) : (
-                    <span
-                      className={cn(
-                        'numeric rounded-full px-1.5 py-0.5 text-micro font-semibold',
-                        active ? 'bg-surface text-fg-brand' : 'bg-sunken text-fg-tertiary',
-                      )}
-                    >
-                      {formatCount(countFor(id))}
-                    </span>
-                  )}
+                  <span
+                    className={cn(
+                      'numeric rounded-full px-1.5 py-0.5 text-micro font-semibold',
+                      active ? 'bg-surface text-fg-brand' : 'bg-sunken text-fg-tertiary',
+                    )}
+                  >
+                    {formatCount(countFor(id))}
+                  </span>
                 </button>
                 {removable && (
                   <span className="absolute end-2">
-                    <Tooltip content="حذف دسته خالی">
+                    <Tooltip content="حذف دسته">
                       <button
                         type="button"
                         aria-label={`حذف دسته ${label}`}
-                        onClick={() => onDeleteCategory(id)}
+                        onClick={() => setDeleting({ id, label })}
                         className="flex size-6 items-center justify-center rounded-full text-fg-quaternary transition-colors hover:bg-status-blocked-subtle hover:text-status-blocked"
                       >
-                        <CloseIcon size={14} />
+                        <TrashIcon size={14} />
                       </button>
                     </Tooltip>
                   </span>
@@ -212,7 +212,64 @@ export function NotesSidebar({
           )}
         </section>
       </div>
+
+      <DeleteCategoryDialog
+        category={deleting}
+        noteCount={deleting ? countFor(deleting.id) : 0}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => {
+          if (deleting) onDeleteCategory(deleting.id);
+          setDeleting(null);
+        }}
+      />
     </div>
+  );
+}
+
+/**
+ * Asks before a notebook goes. Nothing is deleted on the first click; and deleting a notebook
+ * never deletes its notes: they stay in «همه یادداشت‌ها», filed in no notebook.
+ */
+function DeleteCategoryDialog({
+  category,
+  noteCount,
+  onClose,
+  onConfirm,
+}: {
+  readonly category: { readonly id: string; readonly label: string } | null;
+  readonly noteCount: number;
+  readonly onClose: () => void;
+  readonly onConfirm: () => void;
+}) {
+  return (
+    <Modal
+      open={category !== null}
+      onClose={onClose}
+      size="sm"
+      title="آیا از حذف این دسته‌بندی اطمینان دارید؟"
+      description={
+        category
+          ? noteCount > 0
+            ? `دسته «${category.label}» حذف می‌شود. ${formatCount(noteCount)} یادداشت آن حذف نمی‌شود و بدون دسته در «همه یادداشت‌ها» می‌ماند.`
+            : `دسته «${category.label}» حذف می‌شود. این دسته یادداشتی ندارد.`
+          : ''
+      }
+      icon={<TrashIcon size={20} />}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            انصراف
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            حذف دسته
+          </Button>
+        </>
+      }
+    >
+      <p className="text-body-sm text-fg-secondary">
+        دسته‌های پیش‌فرض هم حذف‌شدنی‌اند؛ هر وقت خواستید می‌توانید با «افزودن دسته» دوباره بسازیدشان.
+      </p>
+    </Modal>
   );
 }
 

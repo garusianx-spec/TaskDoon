@@ -353,8 +353,12 @@ the rail, and میز کار · وظایف من · گفتگوها · تقویم �
   counts and empty states: files and documents (size, time, download), photos and videos (a
   grid with a preview dialog), audio (an inline mini player with a scrubber) and links (site,
   title and host, parsed from message text).
-- **Tasks** — board, list and Jalali Gantt. The board's columns live in state: the four
-  built-ins plus any added from the dashed «افزودن ستون جدید» card (name + accent colour),
+- **Tasks** — board, list and Jalali Gantt. Every project has a board of its own: it starts
+  with its own copy of the four built-in columns, and a column added, renamed, moved or
+  deleted on one project's board never reaches another's. A project's board also shows its
+  sub-projects' cards, each in the column of its status. «همه وظایف» and the smart views group
+  every card by status in four columns, which are not edited there. Columns are added from the
+  dashed «افزودن ستون جدید» card (name + accent colour),
   which scrolls the board to its far (left, in RTL) end and focuses the name field. Every
   column is 320px wide, so a new column extends the board, which scrolls sideways, instead
   of narrowing the others. A task opens in a centred dialog: the work (description,
@@ -380,7 +384,9 @@ the rail, and میز کار · وظایف من · گفتگوها · تقویم �
   from live tasks, never stored twice.
 - **Notes** — the notebook column holds its actions: «یادداشت جدید» beside the «دفترچه
   یادداشت» title, and a dashed «افزودن دسته» row above the categories («همه یادداشت‌ها» first
-  and active by default; custom categories with no notes carry a delete ✕). The list header
+  and active by default). Every category but «همه یادداشت‌ها», the built-ins included, has a
+  delete button; it asks «آیا از حذف این دسته‌بندی اطمینان دارید؟» first, and the category's
+  notes are never deleted with it: they stay under «همه یادداشت‌ها» as «بدون دسته». The list header
   keeps the expanding search (and, on phones, the categories button and a new-note button).
   A new note lands in the active category, and the editor has a category switcher. In
   edit mode, `- [ ]` / `- [x]` lines render as real checkboxes with inline text inputs —

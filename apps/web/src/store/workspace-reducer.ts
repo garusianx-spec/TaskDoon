@@ -37,6 +37,8 @@ import type {
   WorkspaceDraft,
 } from '@taskin/contracts';
 import {
+  BUILT_IN_COLUMNS,
+  builtInColumnsFor,
   CUSTOM_COLUMN_STATUS,
   PERMISSION_ACTIONS,
   PERMISSION_MODULES,
@@ -44,7 +46,7 @@ import {
 } from '@/data/reference';
 import { toPersianDigits } from '@taskin/jalali';
 import { attachmentKindOf } from '@/lib/attachments';
-import { columnForTask } from './selectors';
+import { columnForTask, projectColumns } from './selectors';
 import { nextLocalId as nextId } from './ids';
 import { INITIAL_WORKSPACE_STATE } from './initial-state';
 import { EMPTY_SCOPE, scopeOf, type WorkspaceScope } from './workspace-scope';
@@ -113,7 +115,8 @@ export type WorkspaceAction =
   | { readonly type: 'move-task'; readonly taskId: string; readonly status: TaskStatus }
   | { readonly type: 'move-task-to-column'; readonly taskId: string; readonly columnId: string }
   | { readonly type: 'set-task-completed'; readonly taskId: string; readonly completed: boolean }
-  | { readonly type: 'add-board-column'; readonly title: string; readonly tone: TagTone }
+  /** Adds a column to one project's board; no other board changes. */
+  | { readonly type: 'add-board-column'; readonly projectId: string; readonly title: string; readonly tone: TagTone }
   | { readonly type: 'rename-board-column'; readonly columnId: string; readonly title: string }
   | { readonly type: 'remove-board-column'; readonly columnId: string; readonly disposition: ColumnDisposition }
   | { readonly type: 'patch-task'; readonly taskId: string; readonly patch: TaskPatch }
@@ -152,7 +155,8 @@ export type WorkspaceAction =
   | { readonly type: 'toggle-conversation-mute'; readonly conversationId: string }
   | { readonly type: 'create-calendar-event'; readonly draft: CalendarEventDraft }
   | { readonly type: 'clear-calendar-focus' }
-  | { readonly type: 'create-note'; readonly noteId: string; readonly categoryId: string }
+  /** `categoryId: null` files the note in no notebook. */
+  | { readonly type: 'create-note'; readonly noteId: string; readonly categoryId: string | null }
   | { readonly type: 'create-note-category'; readonly categoryId: string; readonly label: string }
   | { readonly type: 'create-project'; readonly projectId: string; readonly draft: ProjectDraft; readonly ownerId: string }
   | { readonly type: 'delete-note-category'; readonly categoryId: string }
@@ -411,11 +415,17 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       };
 
     case 'move-task-to-column': {
-      const placement = placementForColumn(state.boardColumns, action.columnId);
-      if (!placement) return state;
+      // The status columns of views across projects count as targets too.
+      const target = [...state.boardColumns, ...BUILT_IN_COLUMNS].find((column) => column.id === action.columnId);
+      const placement = placementForColumn([...state.boardColumns, ...BUILT_IN_COLUMNS], action.columnId);
+      if (!target || !placement) return state;
       return {
         ...state,
-        tasks: mapTask(state.tasks, action.taskId, (task) => placeTask(task, placement)),
+        tasks: mapTask(state.tasks, action.taskId, (task) =>
+          // Another project's column (a sub-project's card on its parent's board) only lends its
+          // status: the card lands in its own project's column for that status.
+          placeTask(task, target.projectId === undefined || target.projectId === task.projectId ? placement : { status: target.status, boardColumnId: null }),
+        ),
       };
     }
 
@@ -450,7 +460,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         tasks: mapTask(state.tasks, action.taskId, (entry) => placeTask(entry, target)),
-        announcement: `وظیفه «${task.title}» به ستون ${columnTitle(state.boardColumns, target)} بازگشت.`,
+        announcement: `وظیفه «${task.title}» به ستون ${columnTitle(projectColumns(state.boardColumns, task.projectId), target)} بازگشت.`,
       };
     }
 
@@ -463,6 +473,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         status: CUSTOM_COLUMN_STATUS,
         tone: action.tone,
         custom: true,
+        projectId: action.projectId,
       };
       return {
         ...state,
@@ -475,7 +486,8 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const title = action.title.trim();
       const column = state.boardColumns.find((entry) => entry.id === action.columnId);
       if (!column || !title || title === column.title) return state;
-      const taken = state.boardColumns.some((entry) => entry.id !== column.id && entry.title.trim() === title);
+      // Names are unique per board: another project may use the same one.
+      const taken = state.boardColumns.some((entry) => entry.id !== column.id && entry.projectId === column.projectId && entry.title.trim() === title);
       if (taken) return state;
       return {
         ...state,
@@ -486,11 +498,15 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case 'remove-board-column': {
       const column = state.boardColumns.find((entry) => entry.id === action.columnId);
+      const board = column ? state.boardColumns.filter((entry) => entry.projectId === column.projectId) : [];
       // The board always keeps one column, so every card keeps somewhere to render.
-      if (!column || state.boardColumns.length <= 1) return state;
+      if (!column || board.length <= 1) return state;
 
+      // Only the project's own cards can be in its column.
       const inColumn = new Set(
-        state.tasks.filter((task) => columnForTask(state.boardColumns, task)?.id === column.id).map((task) => task.id),
+        state.tasks
+          .filter((task) => task.projectId === column.projectId && columnForTask(board, task)?.id === column.id)
+          .map((task) => task.id),
       );
       const remaining = state.boardColumns.filter((entry) => entry.id !== column.id);
       const forget = (task: Task): Task =>
@@ -888,7 +904,13 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         parentId: null,
         memberIds: [action.ownerId],
       };
-      return { ...state, projects: [...state.projects, project], announcement: `پروژه «${name}» ایجاد شد.` };
+      return {
+        ...state,
+        projects: [...state.projects, project],
+        // Every project starts with a board of its own: its copy of the four built-in columns.
+        boardColumns: [...state.boardColumns, ...builtInColumnsFor(project.id)],
+        announcement: `پروژه «${name}» ایجاد شد.`,
+      };
     }
 
     case 'create-note-category': {
@@ -903,13 +925,17 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case 'delete-note-category': {
       const category = state.noteCategories.find((entry) => entry.id === action.categoryId);
-      // Only a team's own, empty categories go; built-ins and anything holding notes stay.
-      if (!category || category.builtIn) return state;
-      if (state.notes.some((note) => note.categoryId === category.id)) return state;
+      if (!category) return state;
+      // Any notebook can go, built-ins included; its notes stay, filed in no notebook.
+      const released = state.notes.filter((note) => note.categoryId === category.id).length;
       return {
         ...state,
         noteCategories: state.noteCategories.filter((entry) => entry.id !== category.id),
-        announcement: `دسته «${category.label}» حذف شد.`,
+        notes: state.notes.map((note) => (note.categoryId === category.id ? { ...note, categoryId: null } : note)),
+        announcement:
+          released > 0
+            ? `دسته «${category.label}» حذف شد و ${toPersianDigits(released)} یادداشت آن بدون دسته ماند.`
+            : `دسته «${category.label}» حذف شد.`,
       };
     }
 

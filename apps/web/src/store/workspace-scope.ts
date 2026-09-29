@@ -1,5 +1,5 @@
 import type { WorkspaceState } from './workspace-reducer';
-import { BUILT_IN_COLUMNS, BUILT_IN_NOTE_CATEGORIES } from '@/data/reference';
+import { BUILT_IN_NOTE_CATEGORIES } from '@/data/reference';
 
 /**
  * The slices that belong to one workspace. Switching workspaces parks the current values and
@@ -30,7 +30,8 @@ export type WorkspaceScope = Pick<WorkspaceState, (typeof SCOPED_KEYS)[number]>;
 export const EMPTY_SCOPE: WorkspaceScope = {
   tasks: [],
   archivedTasks: [],
-  boardColumns: BUILT_IN_COLUMNS,
+  // A new workspace has no projects yet, so no boards: each project brings its own columns.
+  boardColumns: [],
   conversations: [],
   messages: [],
   calendarEvents: [],

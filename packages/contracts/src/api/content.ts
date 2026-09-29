@@ -54,7 +54,8 @@ export interface UpdateNoteCategoryBody {
 
 export interface NoteView {
   readonly id: string;
-  readonly categoryId: string;
+  /** `null` when the note's notebook was deleted: the note is kept, without a category. */
+  readonly categoryId: string | null;
   readonly title: string;
   readonly body: string;
   readonly colors: readonly TagTone[];
@@ -72,8 +73,8 @@ export interface NotePage {
 }
 
 export interface CreateNoteBody {
-  /** Defaults to the `personal` category. */
-  readonly categoryId?: string;
+  /** Defaults to the `personal` category while it exists; `null` files the note nowhere. */
+  readonly categoryId?: string | null;
   readonly title?: string;
   readonly body?: string;
   readonly colors?: readonly TagTone[];
@@ -81,7 +82,8 @@ export interface CreateNoteBody {
 }
 
 export interface UpdateNoteBody {
-  readonly categoryId?: string;
+  /** `null` takes the note out of every notebook. */
+  readonly categoryId?: string | null;
   readonly title?: string;
   readonly body?: string;
   readonly colors?: readonly TagTone[];

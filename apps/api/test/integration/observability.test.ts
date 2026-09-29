@@ -153,7 +153,7 @@ describe('M1 checklist: audit trail and correlation', () => {
     await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/members/{userId}', `${pj}/members/${joiner.userId}`, (r) => r.set(bearer(user)));
     await traced('put', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/star', `${pj}/star`, (r) => r.set(bearer(user)));
     await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/star', `${pj}/star`, (r) => r.set(bearer(user)));
-    const workflow = (await traced('post', '/api/v1/workspaces/{workspaceId}/workflow/columns', `${ws}/workflow/columns`, (r) => idem(r).send({ title: 'موقت' })))
+    const workflow = (await traced('post', '/api/v1/workspaces/{workspaceId}/workflow/columns', `${ws}/workflow/columns`, (r) => idem(r).send({ projectId: project.id, title: 'موقت' })))
       .body as WorkflowView;
     const column = workflow.columns.find((entry) => entry.title === 'موقت');
     const col = `${ws}/workflow/columns/${column?.id}`;

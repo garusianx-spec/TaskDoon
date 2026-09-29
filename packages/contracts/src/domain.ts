@@ -217,6 +217,11 @@ export interface BoardColumn {
   /** Custom columns paint with a picked tag tone; built-ins (`null`) use their status tone. */
   readonly tone: TagTone | null;
   readonly custom: boolean;
+  /**
+   * The project whose board this column is on: every project has columns of its own. Absent on
+   * the four status columns that views across projects («همه وظایف») group tasks by.
+   */
+  readonly projectId?: string;
 }
 
 export interface Project {
@@ -321,8 +326,8 @@ export interface CalendarEventDraft {
 /* ============================== Notes ============================== */
 
 /**
- * A note category ("دفترچه"). The four built-ins ship with every workspace and cannot be
- * deleted; teams add their own, which can be removed once empty.
+ * A note category ("دفترچه"). The four built-ins ship with every workspace and teams add their
+ * own; any of them can be deleted, and its notes stay, filed in no notebook.
  */
 export interface NoteCategory {
   readonly id: string;
@@ -332,7 +337,8 @@ export interface NoteCategory {
 
 export interface Note {
   readonly id: string;
-  readonly categoryId: string;
+  /** `null`: filed in no notebook (its notebook was deleted); it still shows under «همه یادداشت‌ها». */
+  readonly categoryId: string | null;
   readonly title: string;
   /** Markdown subset: headings, emphasis, bullet lists and `- [ ]` checklists. */
   readonly body: string;
@@ -347,7 +353,7 @@ export interface Note {
 export interface NotePatch {
   readonly title?: string;
   readonly body?: string;
-  readonly categoryId?: string;
+  readonly categoryId?: string | null;
   readonly colors?: readonly TagTone[];
   readonly pinned?: boolean;
 }

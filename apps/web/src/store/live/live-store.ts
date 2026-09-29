@@ -26,7 +26,7 @@ import {
   activityFromView,
   apiColumnFor,
   attachmentFromView,
-  columnFromView,
+  columnsFromWorkflows,
   conversationFromView,
   eventFromView,
   invitationFromView,
@@ -290,7 +290,7 @@ export class LiveStore {
         api.workspaces.members(w),
         optional(http.get<Array<{ readonly id: string; readonly name: string }>>(`/workspaces/${w}/departments`), []),
         api.projects.list(w),
-        api.workflow.get(w),
+        api.workflow.list(w),
         api.tasks.all(w),
         optional(api.conversations.list(w), []),
         optional(api.me.notifications({ workspaceId: w, limit: 100 }), { items: [], nextCursor: null, unreadCount: 0 }),
@@ -308,8 +308,8 @@ export class LiveStore {
       const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
       const users = members.filter((member) => member.status === 'active').map((member) => memberToUser(member, departmentName));
       const nameOf = (userId: string) => users.find((user) => user.id === userId)?.fullName;
-      const columns = [...workflow.columns].sort(byPosition).map(columnFromView);
-      const columnOrder = new Map(workflow.columns.map((column) => [column.id, column.position]));
+      const columns = columnsFromWorkflows(workflow);
+      const columnOrder = new Map(workflow.flatMap((view) => view.columns.map((column) => [column.id, column.position] as const)));
       const orderedCards = [...cards].sort((a, b) => {
         const byColumn = (columnOrder.get(a.columnId) ?? '').localeCompare(columnOrder.get(b.columnId) ?? '');
         return byColumn !== 0 ? byColumn : byPosition(a, b);
@@ -574,6 +574,8 @@ export class LiveStore {
             ...(departmentId ? { departmentId } : {}),
           });
           this.apply({ type: 'sync/upsert-project', project: projectFromView(created, (id) => (id ? this.departments.get(id) : undefined)), replaceId: action.projectId });
+          // The server gave the project its own four columns: they replace the local stand-ins.
+          await this.refreshWorkflow();
           return created.id;
         });
         return;
@@ -613,7 +615,12 @@ export class LiveStore {
       }
       case 'create-note':
         this.track(action.noteId, async () => {
-          const created = await api.notes.create(this.workspaceId, { categoryId: await this.serverId(action.categoryId), title: '', body: '' });
+          // No notebook named: the server files it in «شخصی» while that exists.
+          const created = await api.notes.create(this.workspaceId, {
+            ...(action.categoryId !== null ? { categoryId: await this.serverId(action.categoryId) } : {}),
+            title: '',
+            body: '',
+          });
           this.noteVersions.set(created.id, created.version);
           const current = this.getState().notes.find((note) => note.id === action.noteId);
           this.apply({ type: 'sync/upsert-note', note: { ...noteFromView(created), ...(current ? { title: current.title, body: current.body, colors: current.colors, pinned: current.pinned } : {}) }, replaceId: action.noteId });
@@ -637,7 +644,11 @@ export class LiveStore {
         return;
       case 'delete-note-category':
         if (next.noteCategories.some((category) => category.id === action.categoryId)) return;
-        this.run(async () => api.notes.removeCategory(this.workspaceId, await this.serverId(action.categoryId)), () => this.load(this.workspaceId, true));
+        this.run(async () => {
+          await api.notes.removeCategory(this.workspaceId, await this.serverId(action.categoryId));
+          // Its notes were filed in no notebook, each with a new version: autosave needs them.
+          for (const note of await api.notes.all(this.workspaceId)) this.noteVersions.set(note.id, note.version);
+        }, () => this.load(this.workspaceId, true));
         return;
       case 'mark-notification-read':
         if (prev.notifications.find((notification) => notification.id === action.notificationId)?.read) return;
@@ -753,7 +764,7 @@ export class LiveStore {
     const local = next.tasks.find((task) => !prev.tasks.some((entry) => entry.id === task.id));
     if (!local) return;
     this.track(local.id, async () => {
-      const column = apiColumnFor(this.getState().boardColumns, { status: local.status, boardColumnId: local.boardColumnId });
+      const column = apiColumnFor(serverColumnsOf(this.getState(), local.projectId), { status: local.status, boardColumnId: local.boardColumnId });
       let detail: TaskDetail;
       const source = draft.sourceMessageId ? this.getState().messages.find((message) => message.id === draft.sourceMessageId) : undefined;
       if (draft.sourceMessageId && source) {
@@ -801,7 +812,7 @@ export class LiveStore {
   private async place(taskId: string, next: WorkspaceState): Promise<void> {
     const task = next.tasks.find((entry) => entry.id === taskId);
     if (!task) return;
-    const column = apiColumnFor(next.boardColumns, { status: task.status, boardColumnId: task.boardColumnId });
+    const column = apiColumnFor(serverColumnsOf(next, task.projectId), { status: task.status, boardColumnId: task.boardColumnId });
     if (!column) return;
     await this.attempt(taskId, async (id, version) => {
       const card = await api.tasks.move(this.workspaceId, id, { columnId: column.id, expectedVersion: version });
@@ -914,22 +925,27 @@ export class LiveStore {
 
   private async addColumn(prev: WorkspaceState, next: WorkspaceState, title: string, tone: BoardColumn['tone']): Promise<void> {
     const local = next.boardColumns.find((column) => !prev.boardColumns.some((entry) => entry.id === column.id));
-    if (!local) return;
+    if (!local?.projectId) return;
+    const projectId = local.projectId;
     this.track(local.id, async () => {
-      const view = await api.workflow.addColumn(this.workspaceId, { title: title.trim(), tone, status: local.status });
+      const view = await api.workflow.addColumn(this.workspaceId, { projectId: await this.serverId(projectId), title: title.trim(), tone, status: local.status });
       const created = view.columns.find((column) => !this.getState().boardColumns.some((entry) => entry.id === column.id));
       this.applyWorkflow(view, created ? { from: local.id, to: created.id } : undefined);
       return created?.id ?? local.id;
     });
   }
 
+  /** One project's workflow, as a column change returned it; the other boards stay as they are. */
   private applyWorkflow(view: WorkflowView, rename?: { readonly from: string; readonly to: string }): void {
-    const columns = [...view.columns].sort(byPosition).map(columnFromView);
+    const columns = columnsFromWorkflows([view]);
     const state = this.getState();
     this.apply({
       type: 'sync/merge',
       patch: {
-        boardColumns: columns,
+        boardColumns: [
+          ...state.boardColumns.filter((column) => column.projectId !== view.projectId && (!rename || column.id !== rename.from)),
+          ...columns,
+        ],
         tasks: rename
           ? state.tasks.map((task) => (task.boardColumnId === rename.from ? { ...task, boardColumnId: rename.to } : task))
           : state.tasks,
@@ -937,9 +953,10 @@ export class LiveStore {
     });
   }
 
+  /** Every project's columns (one request), and the cards too after a column took some with it. */
   private async refreshWorkflow(withTasks = false): Promise<void> {
-    const [view, cards] = await Promise.all([api.workflow.get(this.workspaceId), withTasks ? api.tasks.all(this.workspaceId) : Promise.resolve(null)]);
-    const columns = [...view.columns].sort(byPosition).map(columnFromView);
+    const [views, cards] = await Promise.all([api.workflow.list(this.workspaceId), withTasks ? api.tasks.all(this.workspaceId) : Promise.resolve(null)]);
+    const columns = columnsFromWorkflows(views);
     const state = this.getState();
     const previous = new Map(state.tasks.map((task) => [task.id, task]));
     if (cards) for (const card of cards) this.versions.set(card.id, card.version);
@@ -1169,7 +1186,7 @@ export class LiveStore {
             body: note.body,
             colors: note.colors,
             pinned: note.pinned,
-            categoryId: await this.serverId(note.categoryId),
+            categoryId: note.categoryId === null ? null : await this.serverId(note.categoryId),
           });
           this.noteVersions.set(saved.id, saved.version);
         }, () => this.load(this.workspaceId, true));
@@ -1456,6 +1473,10 @@ export class LiveStore {
 /* ================================================================== module helpers */
 
 const isLocal = (id: string): boolean => id.includes('-local-');
+
+/** A project's board columns the server knows (not ones still being created). */
+const serverColumnsOf = (state: WorkspaceState, projectId: string): BoardColumn[] =>
+  state.boardColumns.filter((column) => column.projectId === projectId && !isLocal(column.id));
 
 /** A call whose refusal (no permission, not found) just means "nothing to show". */
 async function optional<T>(call: Promise<T>, fallback: T): Promise<T> {

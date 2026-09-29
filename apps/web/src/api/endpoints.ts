@@ -124,7 +124,10 @@ export const api = {
   },
 
   workflow: {
-    get: (workspaceId: string) => http.get<WorkflowView>(`${ws(workspaceId)}/workflow`),
+    /** One project's board columns: every project has its own. */
+    get: (workspaceId: string, projectId: string) => http.get<WorkflowView>(`${ws(workspaceId)}/workflow?projectId=${projectId}`),
+    /** Every visible project's board columns, in one request. */
+    list: (workspaceId: string) => http.get<WorkflowView[]>(`${ws(workspaceId)}/workflows`),
     addColumn: (workspaceId: string, body: CreateColumnBody) => http.post<WorkflowView>(`${ws(workspaceId)}/workflow/columns`, body, { idempotent: true }),
     updateColumn: (workspaceId: string, columnId: string, body: UpdateColumnBody) =>
       http.patch<WorkflowView>(`${ws(workspaceId)}/workflow/columns/${columnId}`, body),

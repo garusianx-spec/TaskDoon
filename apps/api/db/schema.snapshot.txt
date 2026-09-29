@@ -176,6 +176,7 @@ messages.seq bigint not null
 messages.source_event_id bigint
 messages.workspace_id uuid not null
 note_categories.created_at timestamp with time zone not null default now()
+note_categories.deleted_at timestamp with time zone
 note_categories.id uuid not null default app.uuidv7()
 note_categories.is_builtin boolean not null default false
 note_categories.key text
@@ -184,7 +185,7 @@ note_categories.owner_id uuid not null
 note_categories.position integer not null default 0
 note_categories.workspace_id uuid not null
 notes.body text not null default ''::text
-notes.category_id uuid not null
+notes.category_id uuid
 notes.colors tag_tone[] not null default '{}'::tag_tone[]
 notes.created_at timestamp with time zone not null default now()
 notes.id uuid not null default app.uuidv7()
@@ -617,7 +618,6 @@ note_categories note_categories_ws_id_uq: UNIQUE (workspace_id, id)
 notes notes_body_len: CHECK ((char_length(body) <= 100000))
 notes notes_body_not_null: NOT NULL body
 notes notes_category_fk: FOREIGN KEY (workspace_id, category_id) REFERENCES note_categories(workspace_id, id)
-notes notes_category_id_not_null: NOT NULL category_id
 notes notes_colors_not_null: NOT NULL colors
 notes notes_created_at_not_null: NOT NULL created_at
 notes notes_id_not_null: NOT NULL id
@@ -954,7 +954,7 @@ messages CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id)
 messages CREATE UNIQUE INDEX messages_source_event_uq ON public.messages USING btree (conversation_id, source_event_id) WHERE (source_event_id IS NOT NULL)
 messages CREATE UNIQUE INDEX messages_ws_id_uq ON public.messages USING btree (workspace_id, id)
 note_categories CREATE UNIQUE INDEX note_categories_key_uq ON public.note_categories USING btree (workspace_id, owner_id, key) WHERE (key IS NOT NULL)
-note_categories CREATE UNIQUE INDEX note_categories_label_uq ON public.note_categories USING btree (workspace_id, owner_id, lower(label))
+note_categories CREATE UNIQUE INDEX note_categories_label_uq ON public.note_categories USING btree (workspace_id, owner_id, lower(label)) WHERE (deleted_at IS NULL)
 note_categories CREATE UNIQUE INDEX note_categories_pkey ON public.note_categories USING btree (id)
 note_categories CREATE UNIQUE INDEX note_categories_ws_id_uq ON public.note_categories USING btree (workspace_id, id)
 notes CREATE INDEX notes_owner_category_idx ON public.notes USING btree (workspace_id, owner_id, category_id, updated_at DESC NULLS LAST)

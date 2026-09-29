@@ -98,8 +98,9 @@ export const priorityTone = (priority: TaskPriority): SemanticTone =>
 /* ------------------------------ Board ------------------------------ */
 
 /**
- * The four built-in columns, one per workflow status. Their ids are the status ids, so a
- * task with `boardColumnId: null` resolves to the column whose id is its status.
+ * The four built-in columns, one per workflow status, as views across projects («همه وظایف»,
+ * the smart views) show them: every task sits in the column of its status. Their ids are the
+ * status ids, so a task with `boardColumnId: null` resolves to the column whose id is its status.
  */
 export const BUILT_IN_COLUMNS: readonly BoardColumn[] = TASK_STATUSES.map((entry) => ({
   id: entry.id,
@@ -108,6 +109,10 @@ export const BUILT_IN_COLUMNS: readonly BoardColumn[] = TASK_STATUSES.map((entry
   tone: null,
   custom: false,
 }));
+
+/** A project's own copy of the four built-in columns: every project's board starts with these. */
+export const builtInColumnsFor = (projectId: string): BoardColumn[] =>
+  BUILT_IN_COLUMNS.map((column) => ({ ...column, id: `${projectId}:${column.id}`, projectId }));
 
 /**
  * Status a task takes when it is dropped into a user-made column. Custom columns model the

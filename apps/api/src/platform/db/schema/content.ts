@@ -164,7 +164,7 @@ export const calendarEventAttendees = pgTable(
   ],
 );
 
-/** Notebooks, per member. The four built-ins are created on first use and cannot be deleted. */
+/** Notebooks, per member. The four built-ins are created on first use; any notebook can be deleted. */
 export const noteCategories = pgTable(
   'note_categories',
   {
@@ -177,19 +177,25 @@ export const noteCategories = pgTable(
     isBuiltin: boolean().notNull().default(false),
     position: integer().notNull().default(0),
     createdAt: createdAt(),
+    /**
+     * A deleted built-in stays as a tombstone, so seeding the built-ins (which runs on every
+     * read) never brings it back; a custom category is removed outright.
+     */
+    deletedAt: instant(),
   },
   (t) => [
     unique('note_categories_ws_id_uq').on(t.workspaceId, t.id),
     member('note_categories_owner_fk', [t.workspaceId, t.ownerId]),
-    uniqueIndex('note_categories_label_uq').on(t.workspaceId, t.ownerId, sql`lower(${t.label})`),
+    // A deleted built-in's name is free again for a notebook of one's own.
+    uniqueIndex('note_categories_label_uq').on(t.workspaceId, t.ownerId, sql`lower(${t.label})`).where(sql`${t.deletedAt} is null`),
     uniqueIndex('note_categories_key_uq').on(t.workspaceId, t.ownerId, t.key).where(sql`${t.key} is not null`),
     check('note_categories_label_len', sql`char_length(${t.label}) between 1 and 40`),
   ],
 );
 
 /**
- * Private notes. Deleting one removes it (no tombstone), which is what lets the category foreign
- * key enforce "a category can only be deleted when it is empty".
+ * Private notes. Deleting one removes it (no tombstone). A note whose notebook was deleted keeps
+ * everything else and has no category (`category_id` null) until it is filed again.
  */
 export const notes = pgTable(
   'notes',
@@ -197,7 +203,7 @@ export const notes = pgTable(
     id: uuidPk(),
     workspaceId: tenant(),
     ownerId: uuid().notNull(),
-    categoryId: uuid().notNull(),
+    categoryId: uuid(),
     title: text().notNull().default(''),
     body: text().notNull().default(''),
     colors: tagTone().array().notNull().default(sql`'{}'`),

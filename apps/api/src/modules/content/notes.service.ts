@@ -93,7 +93,7 @@ export class NotesService {
         select c.id, c.key, c.label, c.is_builtin, c.position,
           (select count(*) from notes n where n.workspace_id = c.workspace_id and n.category_id = c.id) as note_count
         from note_categories c
-        where c.workspace_id = ${member.workspaceId} and c.owner_id = ${member.userId}
+        where c.workspace_id = ${member.workspaceId} and c.owner_id = ${member.userId} and c.deleted_at is null
         order by c.is_builtin desc, c.position, c.created_at, c.id`);
       return result.rows.map((row) => ({ id: row.id, key: row.key, label: row.label, builtIn: row.is_builtin, position: row.position, noteCount: num(row.note_count) }));
     });
@@ -139,19 +139,35 @@ export class NotesService {
     });
   }
 
-  /** Only an empty custom category can go; the foreign key from its notes enforces "empty". */
+  /**
+   * Any notebook can go, built-ins included. Its notes are kept, filed in no notebook
+   * (`category_id` null, a new version each). A built-in stays as a tombstone, so seeding the
+   * built-ins never brings it back; a custom notebook is removed outright.
+   */
   async removeCategory(member: MembershipContext, categoryId: string): Promise<void> {
     await this.uow.run(this.scope(member), async ({ tx }) => {
       const current = await this.category(tx, member, categoryId);
-      if (current.isBuiltin) throw new ApiError('CONFLICT', 'Built-in categories cannot be deleted.');
+      const released = await tx
+        .update(notes)
+        .set({ categoryId: null, version: sql`${notes.version} + 1` })
+        .where(and(eq(notes.workspaceId, member.workspaceId), eq(notes.ownerId, member.userId), eq(notes.categoryId, categoryId)))
+        .returning({ id: notes.id });
+      const where = and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.id, categoryId));
       try {
-        await tx.delete(noteCategories).where(and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.id, categoryId)));
+        if (current.isBuiltin) await tx.update(noteCategories).set({ deletedAt: sql`now()` }).where(where);
+        else await tx.delete(noteCategories).where(where);
       } catch (error) {
         const code = pgError(error)?.code;
         if (code === PG.foreignKeyViolation || code === PG.restrictViolation) throw new ApiError('NOTE_CATEGORY_IN_USE');
         throw error;
       }
-      await this.audit.write(tx, { action: 'note.category.delete', workspaceId: member.workspaceId, resourceType: 'note_category', resourceId: categoryId, changes: { before: { label: current.label } } });
+      await this.audit.write(tx, {
+        action: 'note.category.delete',
+        workspaceId: member.workspaceId,
+        resourceType: 'note_category',
+        resourceId: categoryId,
+        changes: { before: { label: current.label, builtIn: current.isBuiltin }, uncategorisedNotes: released.length },
+      });
     });
   }
 
@@ -206,8 +222,9 @@ export class NotesService {
   async create(member: MembershipContext, body: CreateNoteBody): Promise<NoteView> {
     return this.uow.run(this.scope(member), async ({ tx }) => {
       await this.ensureBuiltIns(tx, member);
-      const categoryId = body.categoryId ?? (await this.builtIn(tx, member, 'personal'));
-      await this.category(tx, member, categoryId);
+      // Unsaid: «شخصی» while it exists. `null`, or no «شخصی» left: filed in no notebook.
+      const categoryId = body.categoryId === undefined ? await this.builtIn(tx, member, 'personal') : body.categoryId;
+      if (categoryId !== null) await this.category(tx, member, categoryId);
       const title = body.title?.trim() ?? '';
       const text = body.body ?? '';
       const [row] = await tx
@@ -234,7 +251,7 @@ export class NotesService {
     return this.uow.run(this.scope(member), async ({ tx }) => {
       const current = await this.note(tx, member, noteId, true);
       if (current.version !== ifMatch) throw ApiError.stale(noteView(current, await this.linkedTask(tx, member, noteId)));
-      if (body.categoryId !== undefined) await this.category(tx, member, body.categoryId);
+      if (body.categoryId !== undefined && body.categoryId !== null) await this.category(tx, member, body.categoryId);
       const title = body.title?.trim() ?? current.title;
       const text = body.body ?? current.body;
       const [row] = await tx
@@ -326,20 +343,20 @@ export class NotesService {
       on conflict do nothing`);
   }
 
-  private async builtIn(tx: Tx, member: MembershipContext, key: string): Promise<string> {
+  /** A built-in notebook's id, or `null` once the member has deleted it. */
+  private async builtIn(tx: Tx, member: MembershipContext, key: string): Promise<string | null> {
     const [row] = await tx
       .select({ id: noteCategories.id })
       .from(noteCategories)
-      .where(and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.ownerId, member.userId), eq(noteCategories.key, key)));
-    if (!row) throw new Error(`the built-in category ${key} is missing`);
-    return row.id;
+      .where(and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.ownerId, member.userId), eq(noteCategories.key, key), isNull(noteCategories.deletedAt)));
+    return row?.id ?? null;
   }
 
   private async category(tx: Tx, member: MembershipContext, categoryId: string): Promise<typeof noteCategories.$inferSelect> {
     const [row] = await tx
       .select()
       .from(noteCategories)
-      .where(and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.ownerId, member.userId), eq(noteCategories.id, categoryId)));
+      .where(and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.ownerId, member.userId), eq(noteCategories.id, categoryId), isNull(noteCategories.deletedAt)));
     if (!row) throw ApiError.validation([{ field: 'categoryId', message: 'unknown category' }]);
     return row;
   }

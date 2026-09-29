@@ -1273,3 +1273,24 @@ Locks are taken in the order project → column → task → conversation (the s
 - Project ↔ channel links with membership sync and task digests.
 - Search and the message search lookup, link previews, and the audit-log query API.
 - The one-hour soak, the restore drill, and the dashboards and alerts.
+
+## Addendum E. Phase 1.5: a board per project, deletable notebooks
+
+**One workflow per project** (§6.1 said every project used the workspace default in v1)
+
+- **Why.** With one shared workflow, a column added, renamed or deleted on one board changed every project's board.
+- **Data.** Migration `0009_project_workflows` gives every existing project its own copy of the columns it showed, deleted ones included, and moves its tasks' `column_id` and `reopen_column_id` to the copies. Updated-at stamps are kept (the touch triggers are paused), and the default workflow stays, used by no project.
+- **New projects** get their own workflow with the four built-in columns, in the project's own transaction.
+- **API.** Columns are addressed through their project:
+  - `GET /workflow?projectId=…` and `POST /workflow/columns {projectId, …}` (the project is required);
+  - `PATCH` / `DELETE /workflow/columns/:id` find the project through the column;
+  - `GET /workflows` returns every visible project's workflow in one statement, for the web app's first load.
+- **Events.** `board:column_*` events carry `projectId` and go to the project's room instead of the workspace's.
+- **Boards and views.** A project's board (`GET /board`) shows the project's own columns. Its sub-projects' cards keep their own columns; the web board places them by status. Views across projects («همه وظایف», the smart views) group cards by status in four columns, and those columns are not edited.
+
+**Any notebook can be deleted** (§8: "the four built-ins … cannot be deleted")
+
+- **Why.** People asked to remove the built-ins as well; only the «همه یادداشت‌ها» filter, which is not a notebook, stays.
+- **Notes are never deleted with their notebook.** They stay with `category_id` null («بدون دسته»), each with a new version. `notes.category_id` is now nullable (migration `0008_notebook_categories`).
+- **Tombstones.** A deleted built-in keeps a row with `deleted_at`, so seeding the built-ins, which runs on every read, never brings it back. Its name is free again: the label index covers live notebooks only. A custom notebook is removed outright.
+- **Defaults.** A new note with no notebook named goes to «شخصی» while it exists, else to none.

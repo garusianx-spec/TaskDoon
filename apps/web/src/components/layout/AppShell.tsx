@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
-import { conversationById, messagePreview, taskById, userById } from '@/store/selectors';
+import { conversationById, messagePreview, projectColumns, taskById, userById } from '@/store/selectors';
 import { nextLocalId } from '@/store/ids';
 import { NavRail } from './NavRail';
 import { TopAppBar } from './TopAppBar';
@@ -144,7 +144,7 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
           <TaskInspector
             task={inspectorTask}
             currentUser={currentUser}
-            columns={state.boardColumns}
+            columns={projectColumns(state.boardColumns, inspectorTask.projectId)}
             onClose={closeInspector}
             onPatch={(patch) => dispatch({ type: 'patch-task', taskId: inspectorTask.id, patch })}
             onMoveToColumn={(columnId) =>
