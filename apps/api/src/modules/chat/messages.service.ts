@@ -507,11 +507,12 @@ export class MessagesService implements OnModuleDestroy {
       post_policy: 'everyone' | 'admins';
       last_seq: string;
       archived: boolean;
+      membership_mode: 'manual' | 'project_synced';
       my_role: 'owner' | 'admin' | 'member' | null;
     }>(sql`
       select m.conversation_id, m.author_id, m.kind, m.seq, m.deleted_at is not null as deleted,
              extract(epoch from now() - m.created_at) / 3600 as age_hours, coalesce(char_length(m.body_text), 0) as length,
-             c.id as c_id, c.workspace_id, c.kind as c_kind, c.title, c.is_private, c.post_policy, c.last_seq, c.archived_at is not null as archived,
+             c.id as c_id, c.workspace_id, c.kind as c_kind, c.title, c.is_private, c.post_policy, c.last_seq, c.archived_at is not null as archived, c.membership_mode,
              (select cm.role from conversation_members cm
                where cm.workspace_id = c.workspace_id and cm.conversation_id = c.id and cm.user_id = ${member.userId} and cm.left_at is null) as my_role
       from messages m
@@ -529,6 +530,7 @@ export class MessagesService implements OnModuleDestroy {
       post_policy: row.post_policy,
       last_seq: row.last_seq,
       archived: row.archived,
+      membership_mode: row.membership_mode,
       my_role: row.my_role,
     });
     return { ...row, age_hours: Number(row.age_hours), access };

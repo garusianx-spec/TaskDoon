@@ -22,7 +22,9 @@ import { daysBetween, parseISODate, toISODate } from '@taskin/jalali';
 
 /* ------------------------------ People & projects ------------------------------ */
 
-export const userById = (id: string): User | undefined => directory.users().find((user) => user.id === id);
+/** A member, or a former one (`former: true`) for the messages, tasks and activity they left. */
+export const userById = (id: string): User | undefined =>
+  directory.users().find((user) => user.id === id) ?? directory.former().find((user) => user.id === id);
 
 export const usersByIds = (ids: readonly string[]): User[] =>
   ids.map(userById).filter((user): user is User => user !== undefined);
@@ -35,23 +37,9 @@ export const conversationById = (
   id: string,
 ): Conversation | undefined => conversations.find((conversation) => conversation.id === id);
 
-/** Root projects with their children attached, for the sidebar tree. */
-export interface ProjectNode {
-  readonly project: Project;
-  readonly children: readonly Project[];
-}
-
-export function buildProjectTree(): readonly ProjectNode[] {
-  return directory.projects().filter((project) => project.parentId === null).map((project) => ({
-    project,
-    children: directory.projects().filter((child) => child.parentId === project.id),
-  }));
-}
-
-/** A project id plus every descendant id — used when filtering the board by a parent. */
-export function projectWithDescendants(projectId: string): readonly string[] {
-  const children = directory.projects().filter((project) => project.parentId === projectId).map((p) => p.id);
-  return [projectId, ...children];
+/** The sidebar's projects. Projects are flat (Phase 3.1): every one is at the top level. */
+export function projectList(): readonly Project[] {
+  return directory.projects();
 }
 
 /* ------------------------------ Tasks ------------------------------ */
@@ -65,7 +53,7 @@ export interface TaskFilter {
 
 export function filterTasks(tasks: readonly Task[], filter: TaskFilter): readonly Task[] {
   const query = filter.search.trim().toLowerCase();
-  const scope = filter.projectId ? projectWithDescendants(filter.projectId) : null;
+  const scope = filter.projectId ? [filter.projectId] : null;
   const today = new Date();
 
   return tasks.filter((task) => {

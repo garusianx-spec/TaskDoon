@@ -11,6 +11,7 @@ import type {
   TaskDetail,
   TaskPage,
   TaskPreview,
+  TrashedProjectView,
   WorkflowView,
 } from '@taskin/contracts';
 import { requireIfMatch } from '../../platform/http/api-error.js';
@@ -32,6 +33,7 @@ import {
   CreateCommentDto,
   CreateLabelDto,
   CreateProjectDto,
+  TrashedProjectViewDto,
   CreateSubtaskDto,
   CreateTaskDto,
   DeleteColumnDto,
@@ -98,6 +100,21 @@ export class WorkController {
     return this.projects.create(member, body);
   }
 
+  @Get('projects/trash')
+  @ApiOperation({ summary: 'The project trash (workspace owner): deleted projects, restorable for 40 days' })
+  @ApiOkResponse({ type: TrashedProjectViewDto, isArray: true })
+  projectTrash(@CurrentMember() member: MembershipContext): Promise<TrashedProjectView[]> {
+    return this.projects.trash(member);
+  }
+
+  @Post('projects/:projectId/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Bring a project back from the trash (workspace owner)' })
+  @ApiOkResponse({ type: ProjectViewDto })
+  restoreProject(@CurrentMember() member: MembershipContext, @Param('projectId', UUID) projectId: string): Promise<ProjectView> {
+    return this.projects.restore(member, projectId);
+  }
+
   @Get('projects/:projectId')
   @ApiOkResponse({ type: ProjectViewDto })
   getProject(@CurrentMember() member: MembershipContext, @Param('projectId', UUID) projectId: string): Promise<ProjectView> {
@@ -113,6 +130,7 @@ export class WorkController {
 
   @Delete('projects/:projectId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Move a project to the trash (workspace owner); purged after 40 days' })
   @ApiNoContentResponse()
   removeProject(@CurrentMember() member: MembershipContext, @Param('projectId', UUID) projectId: string): Promise<void> {
     return this.projects.remove(member, projectId);

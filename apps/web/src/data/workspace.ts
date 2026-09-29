@@ -226,7 +226,7 @@ export const PROJECTS: readonly Project[] = [
     departmentId: 'engineering',
     color: 'violet',
     starred: true,
-    parentId: 'p-core',
+    parentId: null,
     memberIds: ['u-arash', 'u-payam'],
   },
   {
@@ -235,7 +235,7 @@ export const PROJECTS: readonly Project[] = [
     departmentId: 'engineering',
     color: 'teal',
     starred: false,
-    parentId: 'p-core',
+    parentId: null,
     memberIds: ['u-arash', 'u-nasim'],
   },
   {

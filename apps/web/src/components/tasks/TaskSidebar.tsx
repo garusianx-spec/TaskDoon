@@ -5,17 +5,18 @@ import type { DepartmentId, SmartViewId, Task } from '@taskin/contracts';
 import { cn } from '@/lib/cn';
 import { formatCount } from '@/lib/format';
 import { DEPARTMENTS } from '@/data/reference';
-import { buildProjectTree, projectWithDescendants } from '@/store/selectors';
-import { IconButton } from '@/components/ui';
+import { projectList } from '@/store/selectors';
+import { IconButton, Tooltip } from '@/components/ui';
 import {
   AddIcon,
+  ArchiveIcon,
   BriefcaseIcon,
-  ChevronDownIcon,
   ClockIcon,
   FolderAddIcon,
   FolderIcon,
   StarIcon,
   TaskSquareIcon,
+  TrashIcon,
   UserIcon,
 } from '@/components/icons';
 
@@ -27,6 +28,10 @@ export interface TaskSidebarProps {
   readonly onSmartViewChange: (view: SmartViewId) => void;
   readonly onProjectChange: (projectId: string | null) => void;
   readonly onCreateProject?: () => void;
+  /** Workspace owner only: moves a project to the trash (after a confirmation). */
+  readonly onDeleteProject?: (projectId: string) => void;
+  /** Workspace owner only: «آرشیو / سطل زباله», deleted projects restorable for 40 days. */
+  readonly onOpenTrash?: () => void;
 }
 
 const SMART_VIEWS: ReadonlyArray<{
@@ -52,9 +57,11 @@ export function TaskSidebar({
   onSmartViewChange,
   onProjectChange,
   onCreateProject,
+  onDeleteProject,
+  onOpenTrash,
 }: TaskSidebarProps) {
-  const tree = buildProjectTree();
-  const [expanded, setExpanded] = useState<readonly string[]>(tree.map((node) => node.project.id));
+  // Projects are flat (Phase 3.1): one list, no sub-projects.
+  const projects = projectList();
   const [departmentFilter, setDepartmentFilter] = useState<DepartmentId | null>(null);
 
   const countFor = (view: SmartViewId): number => {
@@ -75,18 +82,9 @@ export function TaskSidebar({
     }
   };
 
-  const projectCount = (projectId: string): number => {
-    const scope = projectWithDescendants(projectId);
-    return tasks.filter((task) => scope.includes(task.projectId)).length;
-  };
+  const projectCount = (projectId: string): number => tasks.filter((task) => task.projectId === projectId).length;
 
-  const visibleTree = departmentFilter
-    ? tree.filter(
-        (node) =>
-          node.project.departmentId === departmentFilter ||
-          node.children.some((child) => child.departmentId === departmentFilter),
-      )
-    : tree;
+  const visibleProjects = departmentFilter ? projects.filter((project) => project.departmentId === departmentFilter) : projects;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -133,7 +131,7 @@ export function TaskSidebar({
               <IconButton label="پروژه جدید" size="xs" variant="ghost" icon={<AddIcon size={14} />} onClick={onCreateProject} />
             )}
           </div>
-          {visibleTree.length === 0 && onCreateProject && (
+          {visibleProjects.length === 0 && onCreateProject && (
             <button
               type="button"
               onClick={onCreateProject}
@@ -144,89 +142,54 @@ export function TaskSidebar({
             </button>
           )}
 
-          {visibleTree.map(({ project, children }) => {
-            const isExpanded = expanded.includes(project.id);
+          {visibleProjects.map((project) => {
             const active = projectFilterId === project.id;
-
             return (
-              <div key={project.id} className="flex flex-col gap-0.5">
-                <div
-                  className={cn(
-                    'flex items-center gap-1 rounded-lg transition-colors',
-                    active ? 'bg-brand-subtle' : 'hover:bg-hover',
-                  )}
+              <div
+                key={project.id}
+                className={cn('group/project relative flex items-center rounded-lg transition-colors', active ? 'bg-brand-subtle' : 'hover:bg-hover')}
+              >
+                <button
+                  type="button"
+                  onClick={() => onProjectChange(active ? null : project.id)}
+                  aria-current={active ? 'true' : undefined}
+                  className={cn('flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-start', onDeleteProject && 'pe-9')}
                 >
-                  {children.length > 0 ? (
-                    <button
-                      type="button"
-                      aria-expanded={isExpanded}
-                      aria-label={isExpanded ? `بستن ${project.name}` : `باز کردن ${project.name}`}
-                      onClick={() =>
-                        setExpanded((current) =>
-                          current.includes(project.id)
-                            ? current.filter((id) => id !== project.id)
-                            : [...current, project.id],
-                        )
-                      }
-                      className="flex size-6 shrink-0 items-center justify-center rounded text-fg-quaternary"
-                    >
-                      <ChevronDownIcon size={14} className={cn('transition-transform', !isExpanded && 'rotate-90 rtl:-rotate-90')} />
-                    </button>
-                  ) : (
-                    <span className="size-6 shrink-0" aria-hidden="true" />
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => onProjectChange(active ? null : project.id)}
-                    aria-current={active ? 'true' : undefined}
-                    className="flex min-w-0 flex-1 items-center gap-2 py-2 pe-2.5 text-start"
-                  >
-                    <FolderIcon
-                      size={17}
-                      variant="twotone"
-                      className={active ? 'text-fg-brand' : 'text-fg-quaternary'}
-                    />
-                    <span
-                      className={cn(
-                        'flex-1 truncate text-body-sm font-medium',
-                        active ? 'text-fg-brand' : 'text-fg-secondary',
-                      )}
-                    >
-                      {project.name}
-                    </span>
-                    {project.starred && <StarIcon size={13} className="shrink-0 text-status-progress" />}
-                    <span className="numeric shrink-0 text-micro text-fg-tertiary">
-                      {formatCount(projectCount(project.id))}
-                    </span>
-                  </button>
-                </div>
-
-                {isExpanded &&
-                  children.map((child) => {
-                    const childActive = projectFilterId === child.id;
-                    return (
+                  <FolderIcon size={17} variant="twotone" className={active ? 'text-fg-brand' : 'text-fg-quaternary'} />
+                  <span className={cn('flex-1 truncate text-body-sm font-medium', active ? 'text-fg-brand' : 'text-fg-secondary')}>
+                    {project.name}
+                  </span>
+                  {project.starred && <StarIcon size={13} className="shrink-0 text-status-progress" />}
+                  <span className="numeric shrink-0 text-micro text-fg-tertiary">{formatCount(projectCount(project.id))}</span>
+                </button>
+                {onDeleteProject && (
+                  <span className="absolute end-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/project:opacity-100">
+                    <Tooltip content="حذف پروژه">
                       <button
-                        key={child.id}
                         type="button"
-                        onClick={() => onProjectChange(childActive ? null : child.id)}
-                        aria-current={childActive ? 'true' : undefined}
-                        className={cn(
-                          'ms-6 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-start transition-colors',
-                          childActive ? 'bg-brand-subtle text-fg-brand' : 'text-fg-tertiary hover:bg-hover',
-                        )}
+                        aria-label={`حذف پروژه ${project.name}`}
+                        onClick={() => onDeleteProject(project.id)}
+                        className="flex size-6 items-center justify-center rounded-full text-fg-quaternary transition-colors hover:bg-status-blocked-subtle hover:text-status-blocked"
                       >
-                        <span className="size-1.5 shrink-0 rounded-full bg-gray-300" aria-hidden="true" />
-                        <span className="flex-1 truncate text-caption font-medium">{child.name}</span>
-                        <span className="numeric shrink-0 text-micro">
-                          {formatCount(projectCount(child.id))}
-                        </span>
+                        <TrashIcon size={14} />
                       </button>
-                    );
-                  })}
+                    </Tooltip>
+                  </span>
+                )}
               </div>
             );
           })}
+
+          {onOpenTrash && (
+            <button
+              type="button"
+              onClick={onOpenTrash}
+              className="mt-1 flex items-center gap-2 rounded-lg px-2.5 py-2 text-start text-caption font-medium text-fg-tertiary transition-colors hover:bg-hover"
+            >
+              <ArchiveIcon size={16} />
+              <span className="flex-1">آرشیو / سطل زباله</span>
+            </button>
+          )}
         </nav>
 
         <div className="my-3 border-t border-secondary" />

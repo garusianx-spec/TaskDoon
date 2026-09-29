@@ -52,6 +52,7 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   CONVERSATION_ARCHIVED: { status: 409, title: 'The conversation is archived' },
   POSTING_RESTRICTED: { status: 403, title: 'Only the channel admins can post here' },
   DIRECT_CONVERSATION: { status: 409, title: 'A direct chat always has exactly its two people' },
+  PROJECT_CHANNEL: { status: 409, title: 'A project channel\'s members are the project\'s: add or remove them in the project' },
   EDIT_WINDOW_CLOSED: { status: 409, title: 'The message can no longer be edited' },
   MESSAGE_GONE: { status: 410, title: 'The message was deleted' },
   MESSAGE_NOT_CONVERTIBLE: { status: 422, title: 'Only a text, file or voice message becomes a task' },

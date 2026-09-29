@@ -14,6 +14,9 @@ export type Overlay =
   | { readonly kind: 'event-composer'; readonly date: string | null }
   | { readonly kind: 'invite-member' }
   | { readonly kind: 'project-composer' }
+  /** Workspace owner only: a project to the trash, and the trash itself. */
+  | { readonly kind: 'project-delete'; readonly projectId: string }
+  | { readonly kind: 'project-trash' }
   | { readonly kind: 'workspace-create' }
   | { readonly kind: 'workspace-settings' }
   | { readonly kind: 'workspace-delete'; readonly workspaceId: string }

@@ -23,6 +23,8 @@ import { SmsService } from '../platform/sms/sms.js';
 import { CalendarService } from '../modules/content/calendar.service.js';
 import { FeedService } from '../modules/content/feed.service.js';
 import { FilesService } from '../modules/content/files.service.js';
+import { ProjectsService } from '../modules/work/projects.service.js';
+import { MembersService } from '../modules/workspaces/members.service.js';
 import { WorkspacesService } from '../modules/workspaces/workspaces.service.js';
 
 /** Opens the sealed values (invitation links) only at the moment of sending. */
@@ -116,6 +118,8 @@ export class MaintenanceProcessor {
     private readonly workspaces: WorkspacesService,
     private readonly relay: OutboxRelay,
     private readonly files: FilesService,
+    private readonly projects: ProjectsService,
+    private readonly members: MembersService,
   ) {}
 
   async handle(name: MaintenanceJob): Promise<unknown> {
@@ -128,6 +132,10 @@ export class MaintenanceProcessor {
       }
       case 'workspace.purge':
         return { purged: await this.workspaces.purgeDue() };
+      case 'projects.purge':
+        return { purged: await this.projects.purgeDue() };
+      case 'members.purge':
+        return { purged: await this.members.purgeDeparted() };
       case 'files.gc':
         return this.files.collectGarbage();
       case 'cleanup': {
@@ -185,6 +193,8 @@ export class QueueWorkers implements OnApplicationBootstrap, OnModuleDestroy {
     }
     await this.queues.maintenance.upsertJobScheduler('audit-partitions', { every: 24 * 3600 * 1000 }, { name: 'audit.partitions' });
     await this.queues.maintenance.upsertJobScheduler('workspace-purge', { every: 10 * 60 * 1000 }, { name: 'workspace.purge' });
+    await this.queues.maintenance.upsertJobScheduler('projects-purge', { every: 3600 * 1000 }, { name: 'projects.purge' });
+    await this.queues.maintenance.upsertJobScheduler('members-purge', { every: 3600 * 1000 }, { name: 'members.purge' });
     await this.queues.maintenance.upsertJobScheduler('cleanup', { every: 3600 * 1000 }, { name: 'cleanup' });
     await this.queues.maintenance.upsertJobScheduler('files-gc', { every: 3600 * 1000 }, { name: 'files.gc' });
   }

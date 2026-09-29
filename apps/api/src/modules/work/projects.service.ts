@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { and, count, eq, isNull, sql } from 'drizzle-orm';
+import { Injectable, Logger } from '@nestjs/common';
+import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import type {
   CreateProjectBody,
   PermissionActionId,
@@ -7,21 +7,26 @@ import type {
   ProjectRole,
   ProjectView,
   ProjectVisibility,
+  TrashedProjectView,
   UpdateProjectBody,
 } from '@taskin/contracts';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import type { Tx } from '../../platform/db/database.js';
 import { isUniqueViolation, PG, pgError } from '../../platform/db/pg-errors.js';
 import { iso, num } from '../../platform/db/rows.js';
-import { plans, projectMembers, projects, projectStars, workspaces } from '../../platform/db/schema/all.js';
+import { calendarEvents, plans, projectMembers, projects, projectStars, tasks, workflows, workspaces } from '../../platform/db/schema/all.js';
 import { type Unit, UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { MembershipContext } from '../../platform/http/request.js';
 import { OutboxWriter } from '../../platform/outbox/outbox-writer.js';
+import { openProjectChannel, renameProjectChannels, setProjectChannelsArchived, syncProjectChannelMember } from '../chat/project-channels.js';
 import { AbilityFactory, effectiveProjectRole, PROJECT_ROLE_ACTIONS, projectActions } from '../rbac/ability.js';
 import { MembershipService } from '../rbac/membership.service.js';
-import { AccessService, assertAction, type ProjectRow, projectVisibleSql } from './access.js';
+import { AccessService, assertAction, projectVisibleSql } from './access.js';
 import { createProjectWorkflow } from './board.service.js';
+
+/** Days a deleted project stays in the trash, restorable by the workspace owner, before its purge. */
+export const PROJECT_TRASH_DAYS = 40;
 
 interface ProjectListRow extends Record<string, unknown> {
   id: string;
@@ -46,8 +51,26 @@ function assertCanGrant(actorActions: readonly PermissionActionId[], role: Proje
   if (!PROJECT_ROLE_ACTIONS[role].every((action) => actorActions.includes(action))) throw new ApiError('PRIVILEGE_ESCALATION');
 }
 
+/** Deleting, restoring and emptying the trash are the workspace owner's alone. */
+function assertWorkspaceOwner(member: MembershipContext): void {
+  if (!member.isOwner) throw ApiError.forbidden('Only the workspace owner can delete or restore projects.');
+}
+
+interface TrashRow extends Record<string, unknown> {
+  id: string;
+  key: string;
+  name: string;
+  color: TrashedProjectView['color'];
+  department_id: string | null;
+  task_count: string | number;
+  deleted_at: string;
+  deleted_by: string | null;
+}
+
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger('ProjectsService');
+
   constructor(
     private readonly uow: UnitOfWork,
     private readonly audit: AuditWriter,
@@ -90,7 +113,9 @@ export class ProjectsService {
         const [live] = await tx.select({ n: count() }).from(projects).where(and(eq(projects.workspaceId, member.workspaceId), isNull(projects.deletedAt)));
         if ((live?.n ?? 0) >= workspace.maxProjects) throw new ApiError('PLAN_LIMIT_REACHED', `This plan allows ${workspace.maxProjects} projects.`);
       }
-      if (body.parentId) await this.assertParent(tx, member, body.parentId, null);
+      // Everyone named joins as a contributor (the most a guest may be); they must be active members.
+      const others = [...new Set(body.memberIds ?? [])].filter((userId) => userId !== member.userId);
+      for (const userId of others) await this.targetMember(tx, member.workspaceId, null, userId);
       // Every project owns its board: its own workflow, starting with the four built-in columns.
       const workflow = { id: await createProjectWorkflow(tx, member.workspaceId, body.key) };
       try {
@@ -103,7 +128,6 @@ export class ProjectsService {
             description: body.description?.trim() ?? '',
             departmentId: body.departmentId ?? null,
             color: body.color ?? 'brand',
-            parentId: body.parentId ?? null,
             visibility: body.visibility ?? 'workspace',
             workflowId: workflow.id,
             createdBy: member.userId,
@@ -111,7 +135,20 @@ export class ProjectsService {
           .returning({ id: projects.id, key: projects.key, name: projects.name, visibility: projects.visibility });
         if (!created) throw new Error('project insert returned nothing');
         // The creator leads the project (a guest creator is capped at contributor by the ability).
-        await tx.insert(projectMembers).values({ workspaceId: member.workspaceId, projectId: created.id, userId: member.userId, role: 'lead', addedBy: member.userId });
+        await tx.insert(projectMembers).values([
+          { workspaceId: member.workspaceId, projectId: created.id, userId: member.userId, role: 'lead', addedBy: member.userId },
+          ...others.map((userId) => ({ workspaceId: member.workspaceId, projectId: created.id, userId, role: 'contributor' as const, addedBy: member.userId })),
+        ]);
+        // Its chat channel opens with it, with the same people (RFC §4.3, `project_synced`).
+        await openProjectChannel(tx, this.outbox, {
+          workspaceId: member.workspaceId,
+          projectId: created.id,
+          name: created.name,
+          description: body.description ?? '',
+          color: body.color ?? 'brand',
+          createdBy: member.userId,
+          members: others.map((userId) => ({ userId, role: 'contributor' as const })),
+        });
         await this.memberships.bump(unit, member.workspaceId);
         await this.audit.write(tx, {
           action: 'project.create',
@@ -138,7 +175,6 @@ export class ProjectsService {
       const { project, actions } = await this.access.project(tx, member, projectId, { lock: 'update' });
       assertAction(actions, 'edit');
       if (body.visibility !== undefined && body.visibility !== project.visibility) assertAction(actions, 'delete', 'Changing who can see a project needs the delete permission.');
-      if (body.parentId) await this.assertParent(tx, member, body.parentId, project.id);
       const fields = Object.entries(body)
         .filter(([, value]) => value !== undefined)
         .map(([key]) => key);
@@ -150,7 +186,6 @@ export class ProjectsService {
             ...(body.description !== undefined ? { description: body.description.trim() } : {}),
             ...(body.departmentId !== undefined ? { departmentId: body.departmentId } : {}),
             ...(body.color !== undefined ? { color: body.color } : {}),
-            ...(body.parentId !== undefined ? { parentId: body.parentId } : {}),
             ...(body.visibility !== undefined ? { visibility: body.visibility } : {}),
             ...(body.archived !== undefined ? { archivedAt: body.archived ? (project.archivedAt ?? sql`now()`) : null } : {}),
           })
@@ -160,6 +195,7 @@ export class ProjectsService {
         throw error;
       }
       if (body.visibility !== undefined && body.visibility !== project.visibility) await this.memberships.bump(unit, member.workspaceId);
+      if (body.name !== undefined && body.name.trim() !== project.name) await renameProjectChannels(tx, this.outbox, member.workspaceId, projectId, body.name);
       await this.audit.write(tx, {
         action: 'project.update',
         workspaceId: member.workspaceId,
@@ -172,22 +208,130 @@ export class ProjectsService {
     return this.get(member, projectId);
   }
 
-  /** Soft delete; its tasks disappear with it. A project with live sub-projects cannot go. */
+  /**
+   * Moves the project to the trash (workspace owner only). It disappears at once — tree, boards,
+   * tasks, calendar, search and its chat channel — and stays restorable for {@link PROJECT_TRASH_DAYS}
+   * days, when the purge removes it and its tasks for good.
+   */
   async remove(member: MembershipContext, projectId: string): Promise<void> {
-    await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async (unit) => {
+    assertWorkspaceOwner(member);
+    await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId, includeDeleted: true }, async (unit) => {
       const tx = unit.tx;
-      const { project, actions } = await this.access.project(tx, member, projectId, { lock: 'update' });
-      assertAction(actions, 'delete');
-      const [children] = await tx
-        .select({ n: count() })
-        .from(projects)
-        .where(and(eq(projects.workspaceId, member.workspaceId), eq(projects.parentId, projectId), isNull(projects.deletedAt)));
-      if ((children?.n ?? 0) > 0) throw new ApiError('CONFLICT', 'Delete or move its sub-projects first.');
-      await tx.update(projects).set({ deletedAt: sql`now()` }).where(and(eq(projects.workspaceId, member.workspaceId), eq(projects.id, projectId)));
+      const { project } = await this.access.project(tx, member, projectId, { lock: 'update' });
+      await tx
+        .update(projects)
+        .set({ deletedAt: sql`now()`, deletedBy: member.userId })
+        .where(and(eq(projects.workspaceId, member.workspaceId), eq(projects.id, projectId)));
+      await setProjectChannelsArchived(tx, this.outbox, member.workspaceId, projectId, true);
       await this.memberships.bump(unit, member.workspaceId);
       await this.audit.write(tx, { action: 'project.delete', workspaceId: member.workspaceId, resourceType: 'project', resourceId: projectId, changes: { before: { key: project.key, name: project.name } } });
       await this.outbox.add(tx, { type: 'project.deleted', aggregateType: 'project', aggregateId: projectId, workspaceId: member.workspaceId, payload: { projectId } });
     });
+  }
+
+  /** The trash: projects deleted in the last {@link PROJECT_TRASH_DAYS} days, newest first (owner only). */
+  async trash(member: MembershipContext): Promise<TrashedProjectView[]> {
+    assertWorkspaceOwner(member);
+    const result = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId, includeDeleted: true }, ({ tx }) =>
+      tx.execute<TrashRow>(sql`
+        select p.id, p.key, p.name, p.color, p.department_id, p.deleted_at, p.deleted_by,
+          (select count(*) from tasks t where t.workspace_id = p.workspace_id and t.project_id = p.id and t.deleted_at is null) as task_count
+        from projects p
+        where p.workspace_id = ${member.workspaceId} and p.deleted_at is not null
+        order by p.deleted_at desc, p.id`),
+    );
+    return result.rows.map((row) => {
+      const deletedAt = new Date(row.deleted_at);
+      return {
+        id: row.id,
+        key: row.key,
+        name: row.name,
+        color: row.color,
+        departmentId: row.department_id,
+        taskCount: num(row.task_count),
+        deletedAt: deletedAt.toISOString(),
+        deletedBy: row.deleted_by,
+        purgeAt: new Date(deletedAt.getTime() + PROJECT_TRASH_DAYS * 86_400_000).toISOString(),
+      };
+    });
+  }
+
+  /**
+   * «بازیابی»: brings a project back from the trash as it was — tasks, board, members and its
+   * channel. It counts against the plan again, and its key must still be free.
+   */
+  async restore(member: MembershipContext, projectId: string): Promise<ProjectView> {
+    assertWorkspaceOwner(member);
+    await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId, includeDeleted: true }, async (unit) => {
+      const tx = unit.tx;
+      // The workspace row first (canonical lock order): it serialises the plan's project count.
+      const [workspace] = await tx
+        .select({ maxProjects: sql<number | null>`(${plans.limits} ->> 'maxProjects')::int` })
+        .from(workspaces)
+        .innerJoin(plans, eq(plans.id, workspaces.planId))
+        .where(eq(workspaces.id, member.workspaceId))
+        .for('update', { of: workspaces });
+      if (!workspace) throw ApiError.notFound('The workspace');
+      const [project] = await tx
+        .select({ id: projects.id, key: projects.key, name: projects.name })
+        .from(projects)
+        .where(and(eq(projects.workspaceId, member.workspaceId), eq(projects.id, projectId), isNotNull(projects.deletedAt)))
+        .for('update');
+      if (!project) throw ApiError.notFound('The project in the trash');
+      if (workspace.maxProjects !== null) {
+        const [live] = await tx.select({ n: count() }).from(projects).where(and(eq(projects.workspaceId, member.workspaceId), isNull(projects.deletedAt)));
+        if ((live?.n ?? 0) >= workspace.maxProjects) throw new ApiError('PLAN_LIMIT_REACHED', `This plan allows ${workspace.maxProjects} projects.`);
+      }
+      try {
+        await tx.update(projects).set({ deletedAt: null, deletedBy: null }).where(and(eq(projects.workspaceId, member.workspaceId), eq(projects.id, projectId)));
+      } catch (error) {
+        if (isUniqueViolation(error, 'projects_ws_key_uq')) throw new ApiError('PROJECT_KEY_TAKEN', `Another project now uses the key ${project.key}.`);
+        throw error;
+      }
+      await setProjectChannelsArchived(tx, this.outbox, member.workspaceId, projectId, false);
+      await this.memberships.bump(unit, member.workspaceId);
+      await this.audit.write(tx, { action: 'project.restore', workspaceId: member.workspaceId, resourceType: 'project', resourceId: projectId, changes: { after: { key: project.key, name: project.name } } });
+      await this.outbox.add(tx, { type: 'project.restored', aggregateType: 'project', aggregateId: projectId, workspaceId: member.workspaceId, payload: { projectId } });
+    });
+    return this.get(member, projectId);
+  }
+
+  /**
+   * Worker: removes projects that spent {@link PROJECT_TRASH_DAYS} days in the trash — their tasks
+   * (with subtasks, comments and links), board and memberships. Calendar events and the chat
+   * channel stay, no longer linked to a project; messages are never deleted with a project.
+   */
+  async purgeDue(limit = 20): Promise<number> {
+    const due = await this.uow.run({ workspaceId: null, userId: null }, ({ tx }) =>
+      tx.execute<{ workspace_id: string; project_id: string }>(sql`select * from app.projects_due_for_purge(${PROJECT_TRASH_DAYS}, ${limit})`),
+    );
+    let purged = 0;
+    for (const { workspace_id: workspaceId, project_id: projectId } of due.rows) {
+      await this.uow.run({ workspaceId, userId: null, includeDeleted: true }, async (unit) => {
+        const tx = unit.tx;
+        const [project] = await tx
+          .select({ key: projects.key, name: projects.name, workflowId: projects.workflowId })
+          .from(projects)
+          .where(and(eq(projects.workspaceId, workspaceId), eq(projects.id, projectId), isNotNull(projects.deletedAt)))
+          .for('update');
+        if (!project) return; // Restored meanwhile.
+        await tx.delete(tasks).where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.projectId, projectId)));
+        await tx.update(calendarEvents).set({ projectId: null }).where(and(eq(calendarEvents.workspaceId, workspaceId), eq(calendarEvents.projectId, projectId)));
+        await tx.delete(projects).where(and(eq(projects.workspaceId, workspaceId), eq(projects.id, projectId)));
+        await tx.delete(workflows).where(and(eq(workflows.workspaceId, workspaceId), eq(workflows.id, project.workflowId)));
+        await this.audit.write(tx, {
+          action: 'project.purge',
+          workspaceId,
+          actorUserId: null,
+          resourceType: 'project',
+          resourceId: projectId,
+          changes: { before: { key: project.key, name: project.name } },
+        });
+      });
+      this.logger.log({ workspaceId, projectId }, 'project purged');
+      purged += 1;
+    }
+    return purged;
   }
 
   /* ------------------------------------------------------------------ members */
@@ -225,6 +369,7 @@ export class ProjectsService {
         .onConflictDoUpdate({ target: [projectMembers.projectId, projectMembers.userId], set: { role } })
         .returning();
       if (!row) throw new Error('project member upsert returned nothing');
+      await syncProjectChannelMember(tx, this.outbox, { workspaceId: member.workspaceId, projectId, userId, role });
       await this.membershipChanged(unit, member, projectId, userId, role, target.projectRole);
       return { userId: row.userId, role: row.role, addedAt: row.addedAt.toISOString() };
     });
@@ -242,6 +387,7 @@ export class ProjectsService {
         .returning({ role: projectMembers.role });
       if (!existing) throw ApiError.notFound('The project member');
       if (userId !== member.userId) assertCanGrant(actions, existing.role);
+      await syncProjectChannelMember(tx, this.outbox, { workspaceId: member.workspaceId, projectId, userId, role: null });
       await this.membershipChanged(unit, member, projectId, userId, null, existing.role);
     });
   }
@@ -268,14 +414,16 @@ export class ProjectsService {
         p.archived_at is not null as archived,
         exists (select 1 from project_stars s where s.user_id = ${member.userId} and s.project_id = p.id) as starred,
         (select pm.role from project_members pm where pm.project_id = p.id and pm.user_id = ${member.userId}) as my_role,
-        coalesce((select array_agg(pm.user_id order by pm.added_at, pm.user_id) from project_members pm where pm.project_id = p.id), '{}') as member_ids,
+        coalesce((select array_agg(pm.user_id order by pm.added_at, pm.user_id) from project_members pm
+                  join workspace_members m on m.workspace_id = pm.workspace_id and m.user_id = pm.user_id and m.status <> 'left'
+                  where pm.project_id = p.id), '{}') as member_ids,
         (select count(*) from tasks t where t.workspace_id = p.workspace_id and t.project_id = p.id and t.deleted_at is null and t.archived_at is null) as task_count,
         (select count(*) from tasks t where t.workspace_id = p.workspace_id and t.project_id = p.id and t.deleted_at is null and t.archived_at is null and t.status <> 'done') as open_task_count,
         p.created_at
       from projects p
       where p.workspace_id = ${member.workspaceId} and ${projectVisibleSql(member)}
         ${projectId ? sql`and p.id = ${projectId}` : sql``}
-      order by p.parent_id nulls first, p.name, p.id`;
+      order by p.name, p.id`;
   }
 
   private view(member: MembershipContext, row: ProjectListRow): ProjectView {
@@ -286,7 +434,8 @@ export class ProjectsService {
       description: row.description,
       departmentId: row.department_id,
       color: row.color,
-      parentId: row.parent_id,
+      // Projects are flat (Phase 3.1).
+      parentId: null,
       visibility: row.visibility,
       archived: row.archived,
       starred: row.starred,
@@ -299,26 +448,7 @@ export class ProjectsService {
     };
   }
 
-  /** Projects nest one level deep: the parent must be a visible top-level project, not `self`. */
-  private async assertParent(tx: Tx, member: MembershipContext, parentId: string, self: string | null): Promise<void> {
-    if (parentId === self) throw ApiError.validation([{ field: 'parentId', message: 'a project cannot be its own parent' }]);
-    let parent: ProjectRow;
-    try {
-      ({ project: parent } = await this.access.project(tx, member, parentId));
-    } catch {
-      throw ApiError.validation([{ field: 'parentId', message: 'unknown project' }]);
-    }
-    if (parent.parentId) throw ApiError.validation([{ field: 'parentId', message: 'sub-projects cannot have sub-projects' }]);
-    if (self) {
-      const [children] = await tx
-        .select({ n: count() })
-        .from(projects)
-        .where(and(eq(projects.workspaceId, member.workspaceId), eq(projects.parentId, self), isNull(projects.deletedAt)));
-      if ((children?.n ?? 0) > 0) throw ApiError.validation([{ field: 'parentId', message: 'a project with sub-projects cannot become one' }]);
-    }
-  }
-
-  private async targetMember(tx: Tx, workspaceId: string, projectId: string, userId: string): Promise<{ roleKey: string; projectRole: ProjectRole | null }> {
+  private async targetMember(tx: Tx, workspaceId: string, projectId: string | null, userId: string): Promise<{ roleKey: string; projectRole: ProjectRole | null }> {
     const result = await tx.execute<{ status: string; role_key: string; project_role: ProjectRole | null }>(sql`
       select m.status, r.key as role_key,
         (select pm.role from project_members pm where pm.project_id = ${projectId} and pm.user_id = m.user_id) as project_role

@@ -38,6 +38,7 @@ import {
   noteFromView,
   notificationFromView,
   projectFromView,
+  trashedProjectFromView,
   sessionFromView,
   taskFromCard,
   taskFromDetail,
@@ -292,7 +293,7 @@ export class LiveStore {
       const to = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 54));
       const [view, members, departments, projects, workflow, cards, conversations, inbox, activity, calendar, invitations, roles, categories, notes, sessions] = await Promise.all([
         api.workspaces.get(w),
-        api.workspaces.members(w),
+        api.workspaces.members(w, true),
         optional(http.get<Array<{ readonly id: string; readonly name: string }>>(`/workspaces/${w}/departments`), []),
         api.projects.list(w),
         api.workflow.list(w),
@@ -312,7 +313,9 @@ export class LiveStore {
       this.departments = new Map(departments.map((department) => [department.id, department.name]));
       const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
       const users = members.filter((member) => member.status === 'active').map((member) => memberToUser(member, departmentName));
-      const nameOf = (userId: string) => users.find((user) => user.id === userId)?.fullName;
+      // Removed members are still named on what they left behind (as former members).
+      const formerUsers = members.filter((member) => member.status === 'left').map((member) => memberToUser(member, departmentName));
+      const nameOf = (userId: string) => [...users, ...formerUsers].find((user) => user.id === userId)?.fullName;
       const columns = columnsFromWorkflows(workflow);
       const columnOrder = new Map(workflow.flatMap((view) => view.columns.map((column) => [column.id, column.position] as const)));
       const orderedCards = [...cards].sort((a, b) => {
@@ -335,6 +338,9 @@ export class LiveStore {
           session: 'active',
           meId: me.user.id,
           users: users.length > 0 ? users : [meToUser(me.user)],
+          formerUsers,
+          // Read from the server when «آرشیو / سطل زباله» opens.
+          projectTrash: [],
           projects: projects.filter((project) => !project.archived).map((project) => projectFromView(project, departmentName)),
           workspaces: me.workspaces.map((entry) => (entry.id === w ? workspaceFromView(view) : workspaceFromMe(entry, me.user.id))),
           activeWorkspaceId: w,
@@ -597,6 +603,30 @@ export class LiveStore {
         return;
       case 'create-conversation':
         this.createConversation(action.draft, prev, next);
+        return;
+      case 'delete-project':
+        this.run(async () => {
+          await api.projects.remove(this.workspaceId, await this.serverId(action.projectId));
+          // Its channel went with it: the server archived it.
+          await this.refreshProjectTrash();
+        }, () => this.load(this.workspaceId, true));
+        return;
+      case 'restore-project':
+        this.run(async () => {
+          await api.projects.restore(this.workspaceId, action.projectId);
+          // Its tasks, board and channel come back from the server.
+          await this.load(this.workspaceId, true);
+        }, () => this.load(this.workspaceId, true));
+        return;
+      case 'load-project-trash':
+        void this.refreshProjectTrash();
+        return;
+      case 'remove-member':
+        this.run(async () => {
+          // Removing someone is a step-up action: the admin password confirms it.
+          if (action.password) await session.stepUp(action.password);
+          await api.workspaces.removeMember(this.workspaceId, action.userId);
+        }, () => this.load(this.workspaceId, true));
         return;
       case 'send-message':
         this.sendMessage(action.conversationId, action.text, action.replyToId, prev, next);
@@ -1278,9 +1308,27 @@ export class LiveStore {
   }
 
   private async refreshMembers(): Promise<void> {
-    const members = await api.workspaces.members(this.workspaceId);
+    const members = await api.workspaces.members(this.workspaceId, true);
     const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
-    this.apply({ type: 'sync/merge', patch: { users: members.filter((member) => member.status === 'active').map((member) => memberToUser(member, departmentName)) } });
+    this.apply({
+      type: 'sync/merge',
+      patch: {
+        users: members.filter((member) => member.status === 'active').map((member) => memberToUser(member, departmentName)),
+        formerUsers: members.filter((member) => member.status === 'left').map((member) => memberToUser(member, departmentName)),
+      },
+    });
+  }
+
+  /** «آرشیو / سطل زباله»: the owner's view of deleted projects, as the server keeps them. */
+  private async refreshProjectTrash(): Promise<void> {
+    if (!this.getState().workspaces.some((workspace) => workspace.id === this.workspaceId && workspace.ownerId === this.getState().meId)) return;
+    const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
+    try {
+      const trashed = await api.projects.trash(this.workspaceId);
+      this.apply({ type: 'sync/project-trash', entries: trashed.map((entry) => trashedProjectFromView(entry, departmentName)) });
+    } catch (error) {
+      this.fail(error);
+    }
   }
 
   private async refreshProjects(): Promise<void> {
@@ -1452,6 +1500,11 @@ export class LiveStore {
   private async refreshConversation(conversationId: string): Promise<void> {
     try {
       const detail = await api.conversations.get(this.workspaceId, conversationId);
+      // Archived (a project's channel while the project is in the trash): out of the list.
+      if (detail.archived) {
+        this.apply({ type: 'sync/remove-conversation', conversationId });
+        return;
+      }
       this.cursorsFrom(detail);
       this.lastSeq.set(detail.id, Math.max(this.lastSeq.get(detail.id) ?? 0, detail.lastSeq));
       this.apply({ type: 'sync/upsert-conversation', conversation: this.conversationFrom(detail) });
@@ -1463,8 +1516,8 @@ export class LiveStore {
   /* ================================================================ helpers */
 
   private conversationFrom(view: ConversationView): ReturnType<typeof conversationFromView> {
-    const users = this.getState().users;
-    return conversationFromView(view, this.getState().meId, (userId) => users.find((user) => user.id === userId)?.fullName);
+    const { users, formerUsers } = this.getState();
+    return conversationFromView(view, this.getState().meId, (userId) => [...users, ...formerUsers].find((user) => user.id === userId)?.fullName);
   }
 
   private messageFrom(view: MessageView): Message {

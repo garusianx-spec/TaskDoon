@@ -151,7 +151,6 @@ export function CreateTaskModal({ open, draft, columns, onClose, onSubmit, onCre
             options={projects.map((project) => ({
               value: project.id,
               label: project.name,
-              ...(project.parentId ? { description: 'زیرپروژه' } : {}),
             }))}
           />
 

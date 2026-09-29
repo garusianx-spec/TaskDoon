@@ -28,6 +28,7 @@ export interface ProjectView {
   readonly description: string;
   readonly departmentId: string | null;
   readonly color: AvatarTone;
+  /** Always `null`: projects are flat (Phase 3.1). Kept so older clients still read the view. */
   readonly parentId: string | null;
   readonly visibility: ProjectVisibility;
   readonly archived: boolean;
@@ -49,9 +50,12 @@ export interface CreateProjectBody {
   readonly description?: string;
   readonly departmentId?: string | null;
   readonly color?: AvatarTone;
-  /** Projects nest one level: a sub-project's parent cannot itself have a parent. */
-  readonly parentId?: string | null;
   readonly visibility?: ProjectVisibility;
+  /**
+   * Members besides the creator (who leads it), as contributors. The project's chat channel
+   * starts with all of them.
+   */
+  readonly memberIds?: readonly string[];
 }
 
 export interface UpdateProjectBody {
@@ -59,9 +63,24 @@ export interface UpdateProjectBody {
   readonly description?: string;
   readonly departmentId?: string | null;
   readonly color?: AvatarTone;
-  readonly parentId?: string | null;
   readonly visibility?: ProjectVisibility;
   readonly archived?: boolean;
+}
+
+/**
+ * A project in the trash: deleted by the workspace owner, hidden everywhere, and restorable until
+ * `purgeAt` (40 days after deletion), when it and its tasks are removed for good.
+ */
+export interface TrashedProjectView {
+  readonly id: string;
+  readonly key: string;
+  readonly name: string;
+  readonly color: AvatarTone;
+  readonly departmentId: string | null;
+  readonly taskCount: number;
+  readonly deletedAt: string;
+  readonly deletedBy: string | null;
+  readonly purgeAt: string;
 }
 
 export interface ProjectMemberView {

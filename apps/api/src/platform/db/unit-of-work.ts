@@ -11,6 +11,8 @@ export interface TenantScope {
   /** `null` for global work (sign-in, the workspace list); tenant tables then show no rows. */
   readonly workspaceId: string | null;
   readonly userId: string | null;
+  /** Trashed rows (projects) become visible: only the trash itself, its restore and purge. */
+  readonly includeDeleted?: boolean;
 }
 
 export interface Unit {
@@ -59,6 +61,7 @@ export class UnitOfWork {
                 set_config('app.workspace_id', ${scope.workspaceId ?? ''}, true),
                 set_config('app.user_id', ${scope.userId ?? ''}, true),
                 set_config('app.request_id', ${this.context.requestId ?? ''}, true),
+                set_config('app.include_deleted', ${scope.includeDeleted ? 'on' : ''}, true),
                 set_config('statement_timeout', '15s', true)`);
               return work({ tx, afterCommit: (effect) => effects.push(effect) });
             },

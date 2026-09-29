@@ -1294,3 +1294,30 @@ Locks are taken in the order project → column → task → conversation (the s
 - **Notes are never deleted with their notebook.** They stay with `category_id` null («بدون دسته»), each with a new version. `notes.category_id` is now nullable (migration `0008_notebook_categories`).
 - **Tombstones.** A deleted built-in keeps a row with `deleted_at`, so seeding the built-ins, which runs on every read, never brings it back. Its name is free again: the label index covers live notebooks only. A custom notebook is removed outright.
 - **Defaults.** A new note with no notebook named goes to «شخصی» while it exists, else to none.
+
+## Addendum F. Phase 3.1: flat projects, project channels, 40-day retention
+
+**Projects are flat** (§7 nested them one level)
+
+- **API.** `parentId` is no longer accepted when creating or changing a project (400); `ProjectView.parentId` is always `null`, kept so older clients still read the view.
+- **Data.** Migration `0010_flat_projects_and_trash` makes every sub-project a top-level project (its tasks, board and members untouched; updated-at kept) and adds `CHECK projects_flat (parent_id IS NULL)`. The column stays until a later release drops it.
+- **Web.** The project tree is a single list; a project's board shows its own cards only.
+
+**Every project has its own channel** (§4.3 `project_synced`, previously open)
+
+- **Creation.** `POST /projects` opens a private channel named after the project, in the same transaction: the creator owns it, and everyone in the new `memberIds` (contributors) joins it.
+- **Sync.** Adding a project member, changing their role or removing them changes the channel in the same transaction. Leads are channel admins; others are members; the owner stays owner, and hands over like any channel when they leave. A renamed project renames its channel.
+- **Guard.** The channel's own member routes refuse changes with `409 PROJECT_CHANNEL`: people join and leave through the project. `ConversationView.membershipMode` tells clients which channels these are.
+
+**The project trash: 40 days, workspace owner only**
+
+- **Delete.** `DELETE /projects/:id` is the workspace owner's alone. It sets `deleted_at` and `deleted_by` and archives the project's channel; the project, its tasks, board and channel disappear from every list, board, calendar and search at once.
+- **Row-level security agrees.** A restrictive policy, `projects_hide_deleted`, hides trashed projects from every query unless the transaction sets `app.include_deleted` (`UnitOfWork` scope `includeDeleted`): only the trash, delete, restore and purge do.
+- **Trash and restore.** `GET /projects/trash` lists deleted projects with `purgeAt` (deletion + 40 days). `POST /projects/:id/restore` brings one back with its tasks, board, members and channel, if its key is still free (`409 PROJECT_KEY_TAKEN`) and the plan has room (`402 PLAN_LIMIT_REACHED`).
+- **Purge.** The worker's hourly `projects.purge` removes projects 40 days in the trash: tasks (with subtasks, comments and links), board, memberships and stars. Calendar events and the channel stay, unlinked; messages are never deleted with a project.
+
+**Departed members keep their history**
+
+- **Nothing they wrote is deleted.** Messages, tasks, comments and activity keep their author; the member row stays (`status = 'left'`) as the anchor of that history.
+- **Names.** `GET /members?includeFormer=true` adds former members with their name and `leftAt`; their phone and email are withheld. A direct chat keeps both its people in `memberIds`, so it stays named after the former member. The web app shows them as «عضو سابق».
+- **40 days to come back.** Removal closes every conversation membership at the same instant as the member row; re-inviting them within 40 days reopens exactly those conversations. Project memberships are kept for those 40 days, then the hourly `members.purge` forgets them (and their project stars); a later invitation starts afresh.

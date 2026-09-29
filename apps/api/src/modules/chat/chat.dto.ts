@@ -28,6 +28,7 @@ import type {
   EditMessageBody,
   MediaItem,
   MediaPage,
+  MembershipMode,
   MediaTab,
   MessageKind,
   MessagePage,
@@ -178,6 +179,7 @@ export class ConversationViewDto implements ConversationView {
   @ApiProperty() readonly isPrivate!: boolean;
   @ApiProperty({ enum: POST_POLICIES }) readonly postPolicy!: PostPolicy;
   @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly projectId!: string | null;
+  @ApiProperty({ enum: ['manual', 'project_synced'], description: 'project_synced: members follow the project' }) readonly membershipMode!: MembershipMode;
   @ApiProperty({ type: String, format: 'uuid', isArray: true }) readonly memberIds!: string[];
   @ApiProperty() readonly memberCount!: number;
   @ApiProperty({ enum: CONVERSATION_ROLES, nullable: true }) readonly myRole!: ConversationRole | null;

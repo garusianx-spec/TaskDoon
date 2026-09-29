@@ -127,6 +127,12 @@ export interface MemberView {
   readonly online: boolean;
   readonly statusMessage: string;
   readonly joinedAt: string;
+  /**
+   * Former members (`status: 'left'`, listed with `includeFormer`) keep their name on what they
+   * wrote; their phone and email are not shown. Re-invited within 40 days, they get their
+   * conversations and projects back.
+   */
+  readonly leftAt?: string | null;
 }
 
 export interface UpdateMemberBody {

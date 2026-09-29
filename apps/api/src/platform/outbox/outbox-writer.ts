@@ -31,7 +31,10 @@ export interface OutboxEventMap {
   /* M2: projects, board and tasks. */
   'project.created': { readonly projectId: string };
   'project.updated': { readonly projectId: string; readonly fields: readonly string[] };
+  /** Moved to the trash (Phase 3.1): restorable for 40 days, then purged. */
   'project.deleted': { readonly projectId: string };
+  /** Back from the trash. */
+  'project.restored': { readonly projectId: string };
   'project.member.changed': { readonly projectId: string; readonly userId: string; readonly role: string | null };
   'board.column.added': { readonly workflowId: string; readonly projectId: string; readonly columnId: string; readonly version: number };
   'board.column.updated': { readonly workflowId: string; readonly projectId: string; readonly columnId: string; readonly version: number };

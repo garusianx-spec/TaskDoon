@@ -96,7 +96,7 @@ export function KanbanBoard({
     if (added) requestAnimationFrame(revealBoardEnd);
   }, [columns, revealBoardEnd]);
 
-  // A column holds its own project's cards only (a sub-project's cards keep their own board).
+  // A column holds its own project's cards only.
   const columnLoad = (column: BoardColumn): number =>
     tasksInColumn(
       allTasks.filter((task) => column.projectId === undefined || task.projectId === column.projectId),

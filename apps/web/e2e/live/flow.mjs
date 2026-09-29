@@ -114,7 +114,8 @@ try {
   await dialog.getByRole('button', { name: 'ایجاد پروژه' }).click();
   await owner.waitForURL('**/tasks');
   const tree = owner.getByRole('navigation', { name: 'درخت پروژه‌ها' });
-  check(await visible(tree.getByRole('button', { name: new RegExp(projectName) })), 'the project appears in the project tree');
+  // Anchored: the owner's rows also carry a «حذف پروژه …» button (Phase 3.1).
+  check(await visible(tree.getByRole('button', { name: new RegExp(`^${projectName}`) })), 'the project appears in the project tree');
 
   await quickCreate(owner, 'دعوت همکار');
   dialog = owner.getByRole('dialog', { name: 'دعوت همکار' });
@@ -172,6 +173,8 @@ try {
   await owner.waitForURL('**/chats');
   const ownerThread = owner.getByRole('region', { name: `گفتگوی ${guestName}` });
   check(await visible(ownerThread, 10_000), 'the direct chat opens for the owner');
+  // Phase 3.1: the project opened its own channel with it, its creator in it.
+  check(await visible(owner.getByRole('button', { name: new RegExp(projectName) }).first(), 10_000), 'the project’s own channel is in the owner’s chat list');
   const hello = `سلام ${guestName}، بورد را ببین.`;
   const ownerComposer = owner.getByRole('textbox', { name: `نوشتن پیام در ${guestName}` });
   await ownerComposer.fill(hello);
@@ -182,6 +185,7 @@ try {
   await guest.waitForURL('**/chats');
   const guestEntry = guest.getByRole('button', { name: new RegExp(ownerName) }).first();
   check(await visible(guestEntry, 10_000), 'the new chat appears live in the guest’s list');
+  check((await guest.getByRole('button', { name: new RegExp(projectName) }).count()) === 0, 'the project’s channel is its members’ only: not in the guest’s list');
   await guestEntry.click();
   const guestThread = guest.getByRole('region', { name: `گفتگوی ${ownerName}` });
   check(await visible(guestThread.getByText(hello), 10_000), 'the guest receives the message');
@@ -454,7 +458,7 @@ try {
     await dialog.getByRole('button', { name: 'ایجاد پروژه' }).click();
     await dialog.waitFor({ state: 'detached' });
   }
-  check(await eventually(async () => (await tree.getByRole('button', { name: /پروژه (5|۵)/ }).count()) === 1, 15_000), 'five projects: the free plan is full');
+  check(await eventually(async () => (await tree.getByRole('button', { name: /^پروژه (5|۵)/ }).count()) === 1, 15_000), 'five projects: the free plan is full');
   await quickCreate(owner, 'پروژه جدید');
   const limitAlert = owner.getByRole('alertdialog', { name: 'سقف پروژه‌های این فضای کاری پر شده است' });
   check(await visible(limitAlert), 'at the limit «پروژه جدید» shows an alert instead of the form');
@@ -463,6 +467,46 @@ try {
   await owner.screenshot({ path: `${out}/live_project_limit.png` });
   await limitAlert.getByRole('button', { name: 'متوجه شدم' }).click();
   check(await eventually(async () => (await limitAlert.count()) === 0), 'the alert closes');
+
+  /* ------------------------------------------------ Phase 3.1: the owner's project trash */
+
+  const lastProject = tree.getByRole('button', { name: /^پروژه (5|۵)/ });
+  await lastProject.hover();
+  await tree.getByRole('button', { name: /^حذف پروژه پروژه (5|۵)$/ }).click();
+  dialog = owner.getByRole('dialog', { name: /^حذف پروژه «پروژه (5|۵)»$/ });
+  await dialog.getByRole('button', { name: 'انتقال به سطل زباله' }).click();
+  check(await eventually(async () => (await lastProject.count()) === 0, 10_000), 'the owner moves a project to the trash: it leaves the tree');
+  await owner.getByRole('button', { name: 'آرشیو / سطل زباله' }).click();
+  dialog = owner.getByRole('dialog', { name: 'آرشیو / سطل زباله' });
+  const trashed = dialog.getByRole('listitem').filter({ hasText: /پروژه (5|۵)/ });
+  check(await visible(trashed, 10_000), 'the trash lists it, from the server');
+  check(await visible(trashed.getByText('۴۰ روز تا پاک‌سازی')), '…restorable for 40 days');
+  await owner.reload();
+  await owner.getByRole('button', { name: 'آرشیو / سطل زباله' }).click();
+  check(await visible(dialog.getByRole('listitem').filter({ hasText: /پروژه (5|۵)/ }), 15_000), 'the deletion is stored: still in the trash after a reload');
+  await dialog.getByRole('button', { name: /^بازیابی پروژه (5|۵)$/ }).click();
+  check(await eventually(async () => (await lastProject.count()) === 1, 15_000), '«بازیابی» brings it back into the tree');
+  check(await visible(dialog.getByText('سطل زباله خالی است')), 'the trash is empty again');
+  await owner.keyboard.press('Escape');
+
+  /* ------------------------------------------------ Phase 3.1: a removed member keeps their history */
+
+  await railOf(owner).getByRole('link', { name: 'اعضای سازمان' }).click();
+  await owner.waitForURL('**/directory');
+  await owner.getByRole('button', { name: `حذف ${guestName} از فضای کاری` }).click();
+  dialog = owner.getByRole('dialog', { name: `حذف ${guestName} از فضای کاری` });
+  await dialog.getByLabel('رمز مدیر').fill('Taskin-2026!');
+  await dialog.getByRole('button', { name: 'حذف از فضای کاری' }).click();
+  check(await eventually(async () => (await owner.getByRole('listitem').filter({ hasText: guestName }).count()) === 0, 15_000), 'the owner removes the guest from the workspace (with the admin password)');
+  await railOf(owner).getByRole('link', { name: 'گفتگوها' }).click();
+  await owner.waitForURL('**/chats');
+  await owner.reload();
+  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click({ timeout: 20_000 });
+  const formerThread = owner.getByRole('region', { name: `گفتگوی ${guestName}` });
+  const formerBubble = formerThread.locator('div.group\\/message').filter({ hasText: 'دیدم، ممنون!' }).last();
+  check(await visible(formerBubble, 15_000), 'their messages stay in the direct chat, still titled with their name');
+  check(await visible(formerBubble.getByText('عضو سابق')), '…marked «عضو سابق», after a reload too');
+  await owner.screenshot({ path: `${out}/live_former_member.png` });
 
   /* ------------------------------------------------ M4: a workspace icon, uploaded */
 

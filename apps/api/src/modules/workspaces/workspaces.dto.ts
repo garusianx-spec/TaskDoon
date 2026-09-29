@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -180,6 +180,18 @@ export class MemberViewDto implements MemberView {
   @ApiProperty({ description: 'Connected on at least one device right now' }) readonly online!: boolean;
   @ApiProperty() readonly statusMessage!: string;
   @ApiProperty({ format: 'date-time' }) readonly joinedAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'date-time', description: 'Former members only: when they were removed' })
+  readonly leftAt?: string | null;
+}
+
+const trueish = ({ value }: { value: unknown }) => value === true || value === 'true' || value === '1';
+
+export class MemberListQueryDto {
+  @ApiPropertyOptional({ type: Boolean, description: 'Also former members (removed or left): names only, for the history they left' })
+  @IsOptional()
+  @Transform(trueish)
+  @IsBoolean()
+  readonly includeFormer?: boolean;
 }
 
 export class CreateDepartmentDto implements CreateDepartmentBody {

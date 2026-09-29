@@ -38,6 +38,8 @@ export interface User {
   readonly avatarTone: AvatarTone;
   readonly email: string;
   readonly phone: string;
+  /** Removed from the workspace: still named on what they wrote, shown as a former member. */
+  readonly former?: boolean;
 }
 
 export type AvatarTone = 'brand' | 'teal' | 'violet' | 'amber' | 'rose' | 'slate';
@@ -232,6 +234,7 @@ export interface Project {
   readonly departmentId: DepartmentId;
   readonly color: AvatarTone;
   readonly starred: boolean;
+  /** Always `null`: projects are flat (Phase 3.1). */
   readonly parentId: string | null;
   readonly memberIds: readonly string[];
 }
@@ -295,6 +298,8 @@ export interface Conversation {
   readonly unreadCount: number;
   readonly tone: AvatarTone;
   readonly topic: string;
+  /** A project's own channel: its members follow the project's (added and removed there). */
+  readonly projectId?: string | null;
 }
 
 export type ChatFilterId = 'all' | 'direct' | 'groups' | 'unread';

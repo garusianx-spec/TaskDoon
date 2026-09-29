@@ -26,7 +26,8 @@ export interface FeedFanoutJob {
   readonly payload: Readonly<Record<string, unknown>>;
 }
 
-export type MaintenanceJob = 'audit.partitions' | 'workspace.purge' | 'cleanup' | 'files.gc';
+/** `projects.purge` and `members.purge`: the 40-day retention of the project trash and of departed members. */
+export type MaintenanceJob = 'audit.partitions' | 'workspace.purge' | 'projects.purge' | 'members.purge' | 'cleanup' | 'files.gc';
 
 /** Correlation carried from the request (or outbox row) that caused a job. */
 export interface JobHeaders {

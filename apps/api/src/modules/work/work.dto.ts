@@ -43,6 +43,7 @@ import {
   type ProjectMemberView,
   type ProjectRole,
   type ProjectView,
+  type TrashedProjectView,
   type ProjectVisibility,
   type PutProjectMemberBody,
   type SmartView,
@@ -88,8 +89,13 @@ export class CreateProjectDto implements CreateProjectBody {
   @ApiPropertyOptional({ maxLength: 2000 }) @IsOptional() @IsString() @MaxLength(2000) readonly description?: string;
   @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly departmentId?: string | null;
   @ApiPropertyOptional({ enum: AVATAR_TONES }) @IsOptional() @IsIn(AVATAR_TONES) readonly color?: AvatarTone;
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly parentId?: string | null;
   @ApiPropertyOptional({ enum: VISIBILITIES }) @IsOptional() @IsIn(VISIBILITIES) readonly visibility?: ProjectVisibility;
+  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid', maxItems: 100, description: 'Contributors besides the creator; the project channel starts with them' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID('all', { each: true })
+  readonly memberIds?: string[];
 }
 
 export class UpdateProjectDto implements UpdateProjectBody {
@@ -97,7 +103,6 @@ export class UpdateProjectDto implements UpdateProjectBody {
   @ApiPropertyOptional({ maxLength: 2000 }) @IsOptional() @IsString() @MaxLength(2000) readonly description?: string;
   @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly departmentId?: string | null;
   @ApiPropertyOptional({ enum: AVATAR_TONES }) @IsOptional() @IsIn(AVATAR_TONES) readonly color?: AvatarTone;
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly parentId?: string | null;
   @ApiPropertyOptional({ enum: VISIBILITIES }) @IsOptional() @IsIn(VISIBILITIES) readonly visibility?: ProjectVisibility;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() readonly archived?: boolean;
 }
@@ -113,7 +118,7 @@ export class ProjectViewDto implements ProjectView {
   @ApiProperty() readonly description!: string;
   @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly departmentId!: string | null;
   @ApiProperty({ enum: AVATAR_TONES }) readonly color!: AvatarTone;
-  @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly parentId!: string | null;
+  @ApiProperty({ type: String, nullable: true, format: 'uuid', description: 'Always null: projects are flat' }) readonly parentId!: string | null;
   @ApiProperty({ enum: VISIBILITIES }) readonly visibility!: ProjectVisibility;
   @ApiProperty() readonly archived!: boolean;
   @ApiProperty() readonly starred!: boolean;
@@ -123,6 +128,18 @@ export class ProjectViewDto implements ProjectView {
   @ApiProperty() readonly taskCount!: number;
   @ApiProperty() readonly openTaskCount!: number;
   @ApiProperty({ format: 'date-time' }) readonly createdAt!: string;
+}
+
+export class TrashedProjectViewDto implements TrashedProjectView {
+  @ApiProperty({ format: 'uuid' }) readonly id!: string;
+  @ApiProperty() readonly key!: string;
+  @ApiProperty() readonly name!: string;
+  @ApiProperty({ enum: AVATAR_TONES }) readonly color!: AvatarTone;
+  @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly departmentId!: string | null;
+  @ApiProperty() readonly taskCount!: number;
+  @ApiProperty({ format: 'date-time' }) readonly deletedAt!: string;
+  @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly deletedBy!: string | null;
+  @ApiProperty({ format: 'date-time', description: 'When the purge removes it for good (40 days after deletion)' }) readonly purgeAt!: string;
 }
 
 export class ProjectMemberViewDto implements ProjectMemberView {

@@ -59,6 +59,13 @@ export interface WorkspaceState {
   /** Everyone in the active workspace (the directory), and its projects. */
   readonly users: readonly User[];
   readonly projects: readonly Project[];
+  /**
+   * People removed from the workspace (Phase 3.1): out of the directory and every picker, yet still
+   * named — as former members — on the messages, tasks and activity they left behind.
+   */
+  readonly formerUsers: readonly User[];
+  /** Deleted projects, restorable by the workspace owner until `purgeAt` (40 days). */
+  readonly projectTrash: readonly TrashedProject[];
   /** Who is typing where right now; cleared by the server's stop or after a few seconds. */
   readonly typingByConversation: Readonly<Record<string, readonly string[]>>;
   /** A message to scroll to and highlight once its conversation is on screen (the task's «پیام مبدأ»). */
@@ -164,6 +171,13 @@ export type WorkspaceAction =
   | { readonly type: 'create-note'; readonly noteId: string; readonly categoryId: string | null }
   | { readonly type: 'create-note-category'; readonly categoryId: string; readonly label: string }
   | { readonly type: 'create-project'; readonly projectId: string; readonly draft: ProjectDraft; readonly ownerId: string }
+  /** Workspace owner only: to the trash, restorable for 40 days. */
+  | { readonly type: 'delete-project'; readonly projectId: string }
+  | { readonly type: 'restore-project'; readonly projectId: string }
+  /** The trash view opened: the live app reads it from the server. */
+  | { readonly type: 'load-project-trash' }
+  /** Out of the workspace; what they wrote stays. `password`: the owner's or admin's step-up (live). */
+  | { readonly type: 'remove-member'; readonly userId: string; readonly password?: string }
   | { readonly type: 'delete-note-category'; readonly categoryId: string }
   | { readonly type: 'update-note'; readonly noteId: string; readonly patch: NotePatch }
   | { readonly type: 'delete-note'; readonly noteId: string }
@@ -216,6 +230,7 @@ export type SyncAction =
   | { readonly type: 'sync/remove-conversation'; readonly conversationId: string }
   | { readonly type: 'sync/upsert-messages'; readonly messages: readonly Message[]; readonly replaceId?: string }
   | { readonly type: 'sync/remove-message'; readonly messageId: string }
+  | { readonly type: 'sync/project-trash'; readonly entries: readonly TrashedProject[] }
   | { readonly type: 'sync/message-failed'; readonly messageId: string }
   | { readonly type: 'sync/reaction'; readonly messageId: string; readonly emoji: string; readonly userIds: readonly string[] }
   | { readonly type: 'sync/read'; readonly userId: string; readonly messageIds: readonly string[] }
@@ -261,6 +276,26 @@ export interface VoiceRecording {
   /** 64 samples, 0–100. */
   readonly waveform: readonly number[];
   readonly previewUrl: string;
+}
+
+/** Days a deleted project stays restorable (the API purges it after them). */
+export const PROJECT_TRASH_DAYS = 40;
+
+/** A project in the trash, as «آرشیو / سطل زباله» lists it. */
+export interface TrashedProject {
+  readonly project: Project;
+  readonly deletedAt: string;
+  readonly purgeAt: string;
+  readonly taskCount: number;
+  /**
+   * The demo keeps what went with the project here and puts it back on «بازیابی»; the live app
+   * reloads it from the server instead.
+   */
+  readonly stash?: {
+    readonly tasks: readonly Task[];
+    readonly boardColumns: readonly BoardColumn[];
+    readonly conversations: readonly Conversation[];
+  };
 }
 
 export interface ProjectDraft {
@@ -918,12 +953,92 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         parentId: null,
         memberIds: [action.ownerId],
       };
+      // …and its own chat channel, whose members follow the project's (the live app gets it from the API).
+      const channel: Conversation = {
+        id: nextId('conv'),
+        kind: 'channel',
+        title: name,
+        memberIds: [action.ownerId],
+        pinned: false,
+        muted: false,
+        unreadCount: 0,
+        tone: action.draft.color,
+        topic: 'کانال پروژه',
+        projectId: project.id,
+      };
       return {
         ...state,
         projects: [...state.projects, project],
         // Every project starts with a board of its own: its copy of the four built-in columns.
         boardColumns: [...state.boardColumns, ...builtInColumnsFor(project.id)],
+        conversations: [...state.conversations, channel],
         announcement: `پروژه «${name}» ایجاد شد.`,
+      };
+    }
+
+    case 'delete-project': {
+      const project = state.projects.find((entry) => entry.id === action.projectId);
+      if (!project) return state;
+      const deletedAt = new Date();
+      const tasks = state.tasks.filter((task) => task.projectId === project.id);
+      const taskIds = new Set(tasks.map((task) => task.id));
+      const channels = state.conversations.filter((conversation) => conversation.projectId === project.id);
+      const entry: TrashedProject = {
+        project,
+        deletedAt: deletedAt.toISOString(),
+        purgeAt: new Date(deletedAt.getTime() + PROJECT_TRASH_DAYS * 86_400_000).toISOString(),
+        taskCount: tasks.length,
+        stash: { tasks, boardColumns: state.boardColumns.filter((column) => column.projectId === project.id), conversations: channels },
+      };
+      return {
+        ...state,
+        projects: state.projects.filter((entry) => entry.id !== project.id),
+        tasks: state.tasks.filter((task) => !taskIds.has(task.id)),
+        boardColumns: state.boardColumns.filter((column) => column.projectId !== project.id),
+        conversations: state.conversations.filter((conversation) => conversation.projectId !== project.id),
+        activeConversationId: channels.some((channel) => channel.id === state.activeConversationId) ? '' : state.activeConversationId,
+        projectTrash: [entry, ...state.projectTrash.filter((trashed) => trashed.project.id !== project.id)],
+        projectFilterId: state.projectFilterId === project.id ? null : state.projectFilterId,
+        inspector: state.inspector.kind === 'task' && taskIds.has(state.inspector.taskId) ? { kind: 'none' } : state.inspector,
+        announcement: `پروژه «${project.name}» به سطل زباله رفت و تا ${toPersianDigits(PROJECT_TRASH_DAYS)} روز بازیابی‌پذیر است.`,
+      };
+    }
+
+    case 'restore-project': {
+      const entry = state.projectTrash.find((trashed) => trashed.project.id === action.projectId);
+      if (!entry) return state;
+      const { stash } = entry;
+      return {
+        ...state,
+        projects: [...state.projects.filter((project) => project.id !== entry.project.id), entry.project],
+        tasks: stash ? [...state.tasks, ...stash.tasks] : state.tasks,
+        boardColumns: stash ? [...state.boardColumns, ...stash.boardColumns] : state.boardColumns,
+        conversations: stash ? [...state.conversations, ...stash.conversations] : state.conversations,
+        projectTrash: state.projectTrash.filter((trashed) => trashed !== entry),
+        announcement: `پروژه «${entry.project.name}» بازیابی شد.`,
+      };
+    }
+
+    case 'load-project-trash':
+      return state;
+
+    case 'remove-member': {
+      const user = state.users.find((entry) => entry.id === action.userId);
+      if (!user || user.id === state.meId) return state;
+      return {
+        ...state,
+        users: state.users.filter((entry) => entry.id !== user.id),
+        formerUsers: [...state.formerUsers.filter((entry) => entry.id !== user.id), { ...user, former: true, presence: 'offline' }],
+        // Out of every group and channel; a direct chat keeps naming both people.
+        conversations: state.conversations.map((conversation) =>
+          conversation.kind !== 'direct' && conversation.memberIds.includes(user.id)
+            ? { ...conversation, memberIds: conversation.memberIds.filter((id) => id !== user.id) }
+            : conversation,
+        ),
+        projects: state.projects.map((project) =>
+          project.memberIds.includes(user.id) ? { ...project, memberIds: project.memberIds.filter((id) => id !== user.id) } : project,
+        ),
+        announcement: `${user.fullName} از فضای کاری حذف شد؛ پیام‌ها و کارهایش می‌ماند.`,
       };
     }
 
@@ -1171,6 +1286,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'sync/remove-conversation':
     case 'sync/upsert-messages':
     case 'sync/remove-message':
+    case 'sync/project-trash':
     case 'sync/message-failed':
     case 'sync/reaction':
     case 'sync/read':
@@ -1280,6 +1396,9 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
 
     case 'sync/message-failed':
       return { ...state, messages: state.messages.map((message) => (message.id === action.messageId ? { ...message, failed: true } : message)) };
+
+    case 'sync/project-trash':
+      return { ...state, projectTrash: action.entries };
 
     case 'sync/reaction':
       return {

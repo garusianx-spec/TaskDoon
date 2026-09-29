@@ -5,6 +5,7 @@ import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
 import { CreateProjectModal } from '@/components/tasks/CreateProjectModal';
 import { ProjectLimitDialog } from '@/components/tasks/ProjectLimitDialog';
+import { ProjectDeleteDialog, ProjectTrashModal } from '@/components/tasks/ProjectTrash';
 import { GlobalSearchModal } from '@/components/layout/GlobalSearchModal';
 import { NewConversationModal } from '@/components/chat/NewConversationModal';
 import { CalendarEventModal } from '@/components/calendar/CalendarEventModal';
@@ -47,6 +48,8 @@ export function OverlayHost() {
   const projectLimit = activeWorkspace.projectLimit ?? null;
   const atProjectLimit = projectLimit !== null && state.projects.length >= projectLimit;
 
+  const deletingProject = active?.kind === 'project-delete' ? (state.projects.find((project) => project.id === active.projectId) ?? null) : null;
+
   const pendingDeletion =
     active?.kind === 'workspace-delete'
       ? (state.workspaces.find((workspace) => workspace.id === active.workspaceId) ?? null)
@@ -83,6 +86,22 @@ export function OverlayHost() {
           close();
           goTo('/tasks');
         }}
+      />
+
+      <ProjectDeleteDialog
+        project={isWorkspaceOwner ? deletingProject : null}
+        onClose={close}
+        onConfirm={() => {
+          if (deletingProject) dispatch({ type: 'delete-project', projectId: deletingProject.id });
+          close();
+        }}
+      />
+
+      <ProjectTrashModal
+        open={isWorkspaceOwner && active?.kind === 'project-trash'}
+        entries={state.projectTrash}
+        onClose={close}
+        onRestore={(projectId) => dispatch({ type: 'restore-project', projectId })}
       />
 
       <NewConversationModal

@@ -36,6 +36,7 @@ import type {
   TaskCommentView,
   TaskDetail,
   TaskStatus,
+  TrashedProjectView,
   User,
   WorkflowView,
   Workspace,
@@ -43,6 +44,7 @@ import type {
 } from '@taskin/contracts';
 import { formatMobile, monogram } from '@taskin/text';
 import { DEPARTMENTS } from '@/data/reference';
+import type { TrashedProject } from '@/store/workspace-reducer';
 
 /**
  * API views → the domain types the screens were built on. The screens predate the API, so a few
@@ -74,6 +76,7 @@ export function memberToUser(member: MemberView, departmentName: (id: string | n
     avatarTone: member.avatarTone,
     email: member.email ?? '',
     phone: displayPhone(member.phone),
+    ...(member.status === 'left' ? { former: true } : {}),
   };
 }
 
@@ -124,6 +127,24 @@ export function workspaceFromView(view: WorkspaceView): Workspace {
     projectLimit: view.limits.maxProjects,
     memberCount: view.memberCount,
     ownerId: view.ownerId,
+  };
+}
+
+/** A project in the trash: back as a project on «بازیابی» (the server restores its tasks too). */
+export function trashedProjectFromView(view: TrashedProjectView, departmentName: (id: string | null) => string | undefined): TrashedProject {
+  return {
+    project: {
+      id: view.id,
+      name: view.name,
+      departmentId: departmentIdFor(departmentName(view.departmentId)),
+      color: view.color,
+      starred: false,
+      parentId: null,
+      memberIds: [],
+    },
+    deletedAt: view.deletedAt,
+    purgeAt: view.purgeAt,
+    taskCount: view.taskCount,
   };
 }
 
@@ -259,7 +280,8 @@ export function conversationFromView(view: ConversationView, meId: string, nameO
     muted: view.mutedUntil !== null && Date.parse(view.mutedUntil) > Date.now(),
     unreadCount: view.unreadCount,
     tone: view.tone,
-    topic: view.topic || (view.kind === 'direct' ? 'گفتگوی مستقیم' : view.kind === 'channel' ? 'کانال' : 'گروه تیمی'),
+    topic: view.topic || (view.projectId ? 'کانال پروژه' : view.kind === 'direct' ? 'گفتگوی مستقیم' : view.kind === 'channel' ? 'کانال' : 'گروه تیمی'),
+    projectId: view.projectId,
   };
 }
 

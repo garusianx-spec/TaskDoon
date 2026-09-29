@@ -868,6 +868,15 @@
         "operationId": "Workspace_listMembers",
         "parameters": [
           {
+            "name": "includeFormer",
+            "required": false,
+            "in": "query",
+            "description": "Also former members (removed or left): names only, for the history they left",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "workspaceId",
             "required": true,
             "in": "path",
@@ -1513,6 +1522,89 @@
         ]
       }
     },
+    "/api/v1/workspaces/{workspaceId}/projects/trash": {
+      "get": {
+        "operationId": "Work_projectTrash",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrashedProjectViewDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The project trash (workspace owner): deleted projects, restorable for 40 days",
+        "tags": [
+          "work"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/projects/{projectId}/restore": {
+      "post": {
+        "operationId": "Work_restoreProject",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Bring a project back from the trash (workspace owner)",
+        "tags": [
+          "work"
+        ]
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/projects/{projectId}": {
       "get": {
         "operationId": "Work_getProject",
@@ -1637,6 +1729,7 @@
             "bearer": []
           }
         ],
+        "summary": "Move a project to the trash (workspace owner); purged after 40 days",
         "tags": [
           "work"
         ]
@@ -6364,6 +6457,12 @@
           "joinedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "leftAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Former members only: when they were removed"
           }
         },
         "required": [
@@ -6716,7 +6815,8 @@
           "parentId": {
             "type": "string",
             "nullable": true,
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Always null: projects are flat"
           },
           "visibility": {
             "type": "string",
@@ -6823,22 +6923,85 @@
               "slate"
             ]
           },
-          "parentId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
           "visibility": {
             "type": "string",
             "enum": [
               "workspace",
               "private"
             ]
+          },
+          "memberIds": {
+            "maxItems": 100,
+            "description": "Contributors besides the creator; the project channel starts with them",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
           "key",
           "name"
+        ]
+      },
+      "TrashedProjectViewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "brand",
+              "teal",
+              "violet",
+              "amber",
+              "rose",
+              "slate"
+            ]
+          },
+          "departmentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "taskCount": {
+            "type": "number"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletedBy": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "purgeAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the purge removes it for good (40 days after deletion)"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "color",
+          "departmentId",
+          "taskCount",
+          "deletedAt",
+          "deletedBy",
+          "purgeAt"
         ]
       },
       "UpdateProjectDto": {
@@ -6868,11 +7031,6 @@
               "rose",
               "slate"
             ]
-          },
-          "parentId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
           },
           "visibility": {
             "type": "string",
@@ -9013,6 +9171,14 @@
             "nullable": true,
             "format": "uuid"
           },
+          "membershipMode": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "project_synced"
+            ],
+            "description": "project_synced: members follow the project"
+          },
           "memberIds": {
             "type": "array",
             "items": {
@@ -9092,6 +9258,7 @@
           "isPrivate",
           "postPolicy",
           "projectId",
+          "membershipMode",
           "memberIds",
           "memberCount",
           "myRole",
@@ -9252,6 +9419,14 @@
             "nullable": true,
             "format": "uuid"
           },
+          "membershipMode": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "project_synced"
+            ],
+            "description": "project_synced: members follow the project"
+          },
           "memberIds": {
             "type": "array",
             "items": {
@@ -9337,6 +9512,7 @@
           "isPrivate",
           "postPolicy",
           "projectId",
+          "membershipMode",
           "memberIds",
           "memberCount",
           "myRole",

@@ -56,19 +56,20 @@ describe('M2: projects', () => {
     expectStatus(response, 403);
   });
 
-  it('nests projects one level deep', async () => {
-    const parent = await createProject(t, owner, workspace.id);
-    const child = await createProject(t, owner, workspace.id, { parentId: parent.id });
-    expect(child.parentId).toBe(parent.id);
-    const grandchild = await t
+  it('keeps projects flat: there is no parent to give, and the database refuses one', async () => {
+    const project = await createProject(t, owner, workspace.id);
+    expect(project.parentId).toBeNull();
+    const nested = await t
       .http()
       .post(`${base()}/projects`)
       .set(bearer(owner))
       .set('Idempotency-Key', idempotencyKey())
-      .send({ key: projectKey(), name: 'نوه', parentId: child.id });
-    expectStatus(grandchild, 400);
-    const deleteParent = await t.http().delete(`${base()}/projects/${parent.id}`).set(bearer(owner));
-    expectStatus(deleteParent, 409);
+      .send({ key: projectKey(), name: 'زیرپروژه', parentId: project.id });
+    expectStatus(nested, 400);
+    expectStatus(await t.http().patch(`${base()}/projects/${project.id}`).set(bearer(owner)).send({ parentId: project.id }), 400);
+    const other = await createProject(t, owner, workspace.id);
+    await expect(t.admin.query('update projects set parent_id = $1 where id = $2', [project.id, other.id])).rejects.toThrow(/projects_flat/);
+    expect((await listProjects(owner)).every((entry) => entry.parentId === null)).toBe(true);
   });
 
   it('stars projects per user', async () => {

@@ -179,7 +179,6 @@ export function CalendarEventModal({ open, initialDate, currentUserId, onClose, 
                 ...directory.projects().map((project) => ({
                   value: project.id,
                   label: project.name,
-                  ...(project.parentId ? { description: 'زیرپروژه' } : {}),
                 })),
               ]}
             />

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { MemberView, RoleId, UpdateMemberBody, UpdatePresenceBody } from '@taskin/contracts';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import type { Tx } from '../../platform/db/database.js';
-import { departments, roles, users, workspaceMembers, workspaces } from '../../platform/db/schema/all.js';
+import { departments, projectMembers, projectStars, roles, users, workspaceMembers, workspaces } from '../../platform/db/schema/all.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { MembershipContext } from '../../platform/http/request.js';
@@ -23,6 +23,12 @@ export function assertCanManage(actor: MembershipContext, target: { readonly ran
   if (!actor.isOwner && target.rank <= actor.rank) throw new ApiError('ROLE_RANK_VIOLATION');
 }
 
+/**
+ * Days a removed member's place is kept: re-invited within them, they get their conversations and
+ * projects back as they were. Their messages, tasks, comments and activity are never deleted.
+ */
+export const DEPARTED_MEMBER_DAYS = 40;
+
 interface TargetRow {
   readonly userId: string;
   readonly status: 'active' | 'suspended' | 'left';
@@ -33,6 +39,8 @@ interface TargetRow {
 
 @Injectable()
 export class MembersService {
+  private readonly logger = new Logger('MembersService');
+
   constructor(
     private readonly uow: UnitOfWork,
     private readonly audit: AuditWriter,
@@ -43,15 +51,20 @@ export class MembersService {
     private readonly realtime: RealtimePublisher,
   ) {}
 
-  /** Members with their manual status and, from the gateway, whether they are connected now. */
-  async list(member: MembershipContext): Promise<MemberView[]> {
+  /**
+   * Members with their manual status and, from the gateway, whether they are connected now.
+   * `includeFormer` adds people who were removed or left: their messages, tasks and activity stay,
+   * so clients still name them (as former members; their phone and email are not shown).
+   */
+  async list(member: MembershipContext, options: { readonly includeFormer?: boolean } = {}): Promise<MemberView[]> {
+    const statuses: Array<'active' | 'suspended' | 'left'> = options.includeFormer ? ['active', 'suspended', 'left'] : ['active', 'suspended'];
     const rows = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, ({ tx }) =>
       tx
         .select({ m: workspaceMembers, u: users, roleKey: roles.key })
         .from(workspaceMembers)
         .innerJoin(users, eq(users.id, workspaceMembers.userId))
         .innerJoin(roles, and(eq(roles.workspaceId, workspaceMembers.workspaceId), eq(roles.id, workspaceMembers.roleId)))
-        .where(and(eq(workspaceMembers.workspaceId, member.workspaceId), inArray(workspaceMembers.status, ['active', 'suspended'])))
+        .where(and(eq(workspaceMembers.workspaceId, member.workspaceId), inArray(workspaceMembers.status, statuses)))
         .orderBy(asc(roles.rank), asc(users.fullName)),
     );
     const online = await this.presence.online(rows.map(({ u }) => u.id));
@@ -119,7 +132,41 @@ export class MembersService {
     });
   }
 
-  /** Removes a member. Their sessions stay (they may belong to other workspaces). */
+  /**
+   * Worker: forgets what people gone for {@link DEPARTED_MEMBER_DAYS} days still held — project
+   * memberships and stars — so a much later invitation starts afresh. Everything they wrote stays,
+   * and so does their member row, the anchor of that history.
+   */
+  async purgeDeparted(limit = 50): Promise<number> {
+    const due = await this.uow.run({ workspaceId: null, userId: null }, ({ tx }) =>
+      tx.execute<{ workspace_id: string; user_id: string }>(sql`select * from app.departed_members_due(${DEPARTED_MEMBER_DAYS}, ${limit})`),
+    );
+    let purged = 0;
+    for (const { workspace_id: workspaceId, user_id: userId } of due.rows) {
+      await this.uow.run({ workspaceId, userId: null }, async ({ tx }) => {
+        // Re-invited meanwhile: they keep everything.
+        const [still] = await tx
+          .select({ userId: workspaceMembers.userId })
+          .from(workspaceMembers)
+          .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId), eq(workspaceMembers.status, 'left')))
+          .for('update');
+        if (!still) return;
+        await tx.delete(projectMembers).where(and(eq(projectMembers.workspaceId, workspaceId), eq(projectMembers.userId, userId)));
+        await tx.delete(projectStars).where(and(eq(projectStars.workspaceId, workspaceId), eq(projectStars.userId, userId)));
+        await this.audit.write(tx, { action: 'member.state_purge', workspaceId, actorUserId: null, resourceType: 'member', resourceId: userId });
+      });
+      this.logger.log({ workspaceId, userId }, 'departed member state purged');
+      purged += 1;
+    }
+    return purged;
+  }
+
+  /**
+   * Removes a member. Nothing they wrote goes: messages, tasks, comments and activity keep their
+   * name (clients show them as a former member). They leave every conversation; their project
+   * memberships stay for {@link DEPARTED_MEMBER_DAYS} days, so re-inviting them restores both.
+   * Their sessions stay (they may belong to other workspaces).
+   */
   async remove(actor: MembershipContext, targetUserId: string): Promise<void> {
     const ability = this.abilities.forMember(actor);
     if (!ability.can('delete', 'Member')) throw ApiError.forbidden();
@@ -235,6 +282,8 @@ export class MembersService {
       online,
       statusMessage: m.statusMessage,
       joinedAt: m.joinedAt.toISOString(),
+      // A former member: named on their history, nothing more.
+      ...(m.status === 'left' ? { phone: '', email: null, online: false, statusMessage: '', leftAt: m.leftAt?.toISOString() ?? null } : {}),
     };
   }
 }

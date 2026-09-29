@@ -37,6 +37,7 @@ const MESSAGES: Partial<Record<ApiErrorCode | 'NETWORK', string>> = {
   ASSIGNEE_NO_ACCESS: 'مسئول انتخاب‌شده به این پروژه دسترسی ندارد.',
   CONVERSATION_ARCHIVED: 'این گفتگو بایگانی شده است.',
   POSTING_RESTRICTED: 'در این کانال فقط مدیران می‌توانند پیام بفرستند.',
+  PROJECT_CHANNEL: 'اعضای کانال پروژه همان اعضای پروژه‌اند؛ آن‌ها را در خود پروژه اضافه یا حذف کنید.',
   EDIT_WINDOW_CLOSED: 'مهلت ویرایش این پیام گذشته است.',
   MESSAGE_GONE: 'این پیام حذف شده است.',
   NOTE_CATEGORY_IN_USE: 'این دفترچه هنوز یادداشت دارد.',

@@ -22,6 +22,7 @@ import { OutboxWriter } from '../../platform/outbox/outbox-writer.js';
 import { toIranMobileE164 } from '../auth/otp.service.js';
 import { AbilityFactory } from '../rbac/ability.js';
 import { MembershipService } from '../rbac/membership.service.js';
+import { DEPARTED_MEMBER_DAYS } from './members.service.js';
 
 type InvitationRow = typeof invitations.$inferSelect;
 
@@ -237,6 +238,18 @@ export class InvitationsService {
         returning w.member_count`);
       if (seat.rows.length === 0) throw new ApiError('PLAN_LIMIT_REACHED', 'The workspace has no free seats.');
 
+      // Back within 40 days of being removed: the conversations the removal closed (in the same
+      // transaction, so at the same instant) open again. Their project memberships never went.
+      const rejoined = existing
+        ? await tx.execute<{ conversation_id: string; role: string }>(sql`
+            update conversation_members cm set left_at = null, hidden_at = null
+            from workspace_members m, conversations c
+            where m.workspace_id = ${invitation.workspaceId} and m.user_id = ${user.id} and m.status = 'left'
+              and m.left_at > now() - make_interval(days => ${DEPARTED_MEMBER_DAYS})
+              and cm.workspace_id = m.workspace_id and cm.user_id = m.user_id and cm.left_at = m.left_at
+              and c.workspace_id = cm.workspace_id and c.id = cm.conversation_id and c.archived_at is null
+            returning cm.conversation_id, cm.role`)
+        : { rows: [] };
       const membership = {
         roleId: invitation.roleId,
         departmentId: invitation.departmentId,
@@ -265,6 +278,15 @@ export class InvitationsService {
         resourceId: invitation.id,
         changes: { role: row.roleKey, channel: invitation.channel },
       });
+      for (const { conversation_id: conversationId, role } of rejoined.rows) {
+        await this.outbox.add(tx, {
+          type: 'conversation.member.added',
+          aggregateType: 'conversation',
+          aggregateId: conversationId,
+          workspaceId: invitation.workspaceId,
+          payload: { conversationId, userId: user.id, role },
+        });
+      }
       await this.outbox.add(tx, {
         type: 'member.joined',
         aggregateType: 'workspace',

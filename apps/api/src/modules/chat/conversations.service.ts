@@ -8,6 +8,7 @@ import type {
   ConversationRole,
   ConversationView,
   CreateConversationBody,
+  MembershipMode,
   MessagePreview,
   NotificationLevel,
   PostPolicy,
@@ -33,6 +34,7 @@ interface ConversationRow extends Record<string, unknown> {
   is_private: boolean;
   post_policy: PostPolicy;
   project_id: string | null;
+  membership_mode: MembershipMode;
   last_seq: string;
   last_message_at: string | null;
   archived_at: string | null;
@@ -110,7 +112,7 @@ export class ConversationsService {
   private viewQuery(member: MembershipContext, where: SQL, order: SQL, withMembers: boolean): SQL {
     const u = member.userId;
     return sql`
-      select c.id, c.kind, c.title, c.topic, c.tone, c.is_private, c.post_policy, c.project_id, c.last_seq, c.last_message_at,
+      select c.id, c.kind, c.title, c.topic, c.tone, c.is_private, c.post_policy, c.project_id, c.membership_mode, c.last_seq, c.last_message_at,
              c.archived_at, c.created_at,
              cm.role as my_role, cm.pinned_at, cm.muted_until, coalesce(cm.notification_level, 'all') as notification_level,
              cm.hidden_at, coalesce(cm.last_read_seq, 0) as last_read_seq,
@@ -135,8 +137,9 @@ export class ConversationsService {
       left join conversation_members cm
         on cm.workspace_id = c.workspace_id and cm.conversation_id = c.id and cm.user_id = ${u} and cm.left_at is null
       cross join lateral (
+        -- A direct chat always names both its people, one of them perhaps a former member.
         select coalesce((array_agg(p.user_id order by p.joined_at, p.user_id))[1:${MEMBER_IDS_MAX}], '{}') as ids, count(*) as n
-        from conversation_members p where p.workspace_id = c.workspace_id and p.conversation_id = c.id and p.left_at is null) people
+        from conversation_members p where p.workspace_id = c.workspace_id and p.conversation_id = c.id and (p.left_at is null or c.kind = 'direct')) people
       where ${where}
       order by ${order}`;
   }
@@ -152,6 +155,7 @@ export class ConversationsService {
       isPrivate: row.is_private,
       postPolicy: row.post_policy,
       projectId: row.project_id,
+      membershipMode: row.membership_mode,
       memberIds: row.member_ids ?? [],
       memberCount: num(row.member_count),
       myRole: row.my_role,
@@ -290,6 +294,8 @@ export class ConversationsService {
       const access = await loadConversation(tx, member, conversationId, { lock: true });
       const { conversation } = access;
       if (conversation.kind === 'direct') throw new ApiError('DIRECT_CONVERSATION');
+      // A project's channel has the project's members: they join and leave through the project.
+      if (conversation.membershipMode === 'project_synced') throw new ApiError('PROJECT_CHANNEL');
       if (conversation.archived) throw new ApiError('CONVERSATION_ARCHIVED');
       const existing = await tx.execute<{ role: ConversationRole; active: boolean }>(sql`
         select role, left_at is null as active from conversation_members
@@ -348,6 +354,7 @@ export class ConversationsService {
       const w = member.workspaceId;
       const access = await loadConversation(tx, member, conversationId, { lock: true });
       if (access.conversation.kind === 'direct') throw new ApiError('DIRECT_CONVERSATION');
+      if (access.conversation.membershipMode === 'project_synced') throw new ApiError('PROJECT_CHANNEL');
       const target = await tx.execute<{ role: ConversationRole }>(sql`
         select role from conversation_members
         where workspace_id = ${w} and conversation_id = ${conversationId} and user_id = ${userId} and left_at is null`);

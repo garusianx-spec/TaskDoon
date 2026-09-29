@@ -103,6 +103,12 @@ export function realtimeFor(row: OutboxRow): RealtimeItem[] {
         { op: { op: 'rescope', workspaceId, userIds: null, reason: 'project.deleted' } },
       ];
     }
+    case 'project.restored':
+      // Everyone who can see it again gets its rooms back, and lists reload.
+      return [
+        { op: { op: 'rescope', workspaceId, userIds: null, reason: 'project.restored' } },
+        emit({ type: 'resync:required', workspaceId, rooms: [rooms.workspace(workspaceId)], data: { scopes: ['projects'] } }),
+      ];
     case 'project.member.changed': {
       const data = payload as OutboxEventMap['project.member.changed'];
       return [{ op: { op: 'rescope', workspaceId, userIds: [data.userId], reason: 'project.member' } }];

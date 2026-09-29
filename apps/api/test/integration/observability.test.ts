@@ -233,6 +233,9 @@ describe('M1 checklist: audit trail and correlation', () => {
     await traced('delete', `${cv}/{conversationId}/messages/{messageId}`, mg, (r) => r.set(bearer(user)));
     await traced('delete', `${cv}/{conversationId}/members/{userId}`, `${cn}/members/${joiner.userId}`, (r) => r.set(bearer(user)));
     await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) => r.set(bearer(user)));
+    // Phase 3.1: out of the trash, and back into it.
+    await traced('post', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/restore', `${pj}/restore`, (r) => r.set(bearer(user)));
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) => r.set(bearer(user)));
 
     // Ownership, removal, deletion, and finally signing out.
     await traced('post', '/api/v1/workspaces/{workspaceId}/transfer-ownership', `${ws}/transfer-ownership`, (r) => r.set(bearer(user)).send({ userId: joiner.userId }));

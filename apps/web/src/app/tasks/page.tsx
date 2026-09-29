@@ -67,7 +67,7 @@ function TaskSidebarContainer({
   /** Closes the mobile filter panel once a selection is made. */
   readonly onNavigate: () => void;
 }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, isWorkspaceOwner } = useWorkspace();
   const { open } = useOverlays();
 
   return (
@@ -85,6 +85,16 @@ function TaskSidebarContainer({
         onNavigate();
       }}
       onCreateProject={() => open({ kind: 'project-composer' })}
+      // Deleting (to the trash) and restoring projects are the workspace owner's alone.
+      {...(isWorkspaceOwner
+        ? {
+            onDeleteProject: (projectId: string) => open({ kind: 'project-delete', projectId }),
+            onOpenTrash: () => {
+              dispatch({ type: 'load-project-trash' });
+              open({ kind: 'project-trash' });
+            },
+          }
+        : {})}
     />
   );
 }
@@ -102,8 +112,8 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
   const [postponeTarget, setPostponeTarget] = useState<Task | null>(null);
 
   const selectedTaskId = state.inspector.kind === 'task' ? state.inspector.taskId : null;
-  // A project's board shows its own columns (its sub-projects' cards sit in the column of their
-  // status); views across projects group every card by status, and their columns are not edited.
+  // A project's board shows its own columns; views across projects group every card by status,
+  // and their columns are not edited.
   const boardProjectId = state.projectFilterId;
   const boardColumns = boardProjectId ? projectColumns(state.boardColumns, boardProjectId) : BUILT_IN_COLUMNS;
   const columnsEditable = boardProjectId !== null && state.boardColumns.some((column) => column.projectId === boardProjectId);

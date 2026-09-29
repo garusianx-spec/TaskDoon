@@ -96,7 +96,7 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
   }, [live]);
 
   // Lookups by id (`userById`, `projectById`) read the directory; keep it equal to the state.
-  setDirectory(state.users, state.projects);
+  setDirectory(state.users, state.projects, state.formerUsers);
 
   const unreadFor = useCallback(
     (conversationId: string) => state.unreadByConversation[conversationId] ?? 0,

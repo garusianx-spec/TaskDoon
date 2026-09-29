@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiHeader, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
   AcceptInvitationResult,
@@ -33,6 +33,7 @@ import {
   DeleteWorkspaceDto,
   DepartmentViewDto,
   InvitationViewDto,
+  MemberListQueryDto,
   MemberViewDto,
   MyPermissionsDto,
   RoleViewDto,
@@ -151,8 +152,8 @@ export class WorkspaceController {
   @Get('members')
   @CheckPolicies(can('view', 'Member'))
   @ApiOkResponse({ type: MemberViewDto, isArray: true })
-  listMembers(@CurrentMember() member: MembershipContext): Promise<MemberView[]> {
-    return this.members.list(member);
+  listMembers(@CurrentMember() member: MembershipContext, @Query() query: MemberListQueryDto): Promise<MemberView[]> {
+    return this.members.list(member, { includeFormer: query.includeFormer === true });
   }
 
   @Patch('members/:userId')

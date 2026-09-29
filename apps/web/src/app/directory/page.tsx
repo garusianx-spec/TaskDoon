@@ -1,16 +1,17 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { DepartmentId, RoleId } from '@taskin/contracts';
+import type { DepartmentId, RoleId, User } from '@taskin/contracts';
 import { DEPARTMENTS, ROLES, roleLabel } from '@/data/reference';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { useWorkspace } from '@/store/WorkspaceProvider';
+import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { AppShell } from '@/components/layout/AppShell';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { PendingInvitationRow } from '@/components/directory/InviteMemberModal';
+import { RemoveMemberDialog } from '@/components/directory/RemoveMemberDialog';
 import { Avatar, Badge, Button, EmptyState, Input, Select } from '@/components/ui';
-import { CallIcon, PeopleIcon, SearchIcon, SmsIcon, UserAddIcon } from '@/components/icons';
+import { CallIcon, PeopleIcon, SearchIcon, SmsIcon, TrashIcon, UserAddIcon } from '@/components/icons';
 
 type DepartmentFilter = DepartmentId | 'all';
 type RoleFilter = RoleId | 'all';
@@ -24,9 +25,18 @@ export default function DirectoryPage() {
 }
 
 function DirectoryContent() {
-  const { state, dispatch, currentUser } = useWorkspace();
+  const { state, dispatch, currentUser, activeWorkspace, isWorkspaceOwner } = useWorkspace();
+  const live = useLive();
   const { open } = useOverlays();
   const [query, setQuery] = useState('');
+  const [removing, setRemoving] = useState<User | null>(null);
+
+  // Removing someone needs members:delete (the owner's alone by default) and a higher rank than theirs.
+  const rankOf = (roleId: RoleId) => ROLES.find((entry) => entry.id === roleId)?.rank ?? Number.MAX_SAFE_INTEGER;
+  const myRank = isWorkspaceOwner ? 0 : rankOf(currentUser.role);
+  const canRemoveMembers = isWorkspaceOwner || state.permissions[currentUser.role].members.delete;
+  const canRemove = (user: User) =>
+    canRemoveMembers && user.id !== currentUser.id && user.id !== activeWorkspace.ownerId && (isWorkspaceOwner || rankOf(user.role) > myRank);
   const [department, setDepartment] = useState<DepartmentFilter>('all');
   const [role, setRole] = useState<RoleFilter>('all');
 
@@ -149,6 +159,19 @@ function DirectoryContent() {
                   {roleLabel(user.role)}
                 </Badge>
 
+                {canRemove(user) && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    className="self-start"
+                    iconStart={<TrashIcon size={14} />}
+                    aria-label={`حذف ${user.fullName} از فضای کاری`}
+                    onClick={() => setRemoving(user)}
+                  >
+                    حذف از فضای کاری
+                  </Button>
+                )}
+
                 <div className="flex flex-col gap-1.5 border-t border-secondary pt-3">
                   <a
                     href={`mailto:${user.email}`}
@@ -169,6 +192,16 @@ function DirectoryContent() {
           </ul>
         )}
       </div>
+
+      <RemoveMemberDialog
+        member={removing}
+        requirePassword={live !== null}
+        onClose={() => setRemoving(null)}
+        onConfirm={(password) => {
+          if (removing) dispatch({ type: 'remove-member', userId: removing.id, ...(password ? { password } : {}) });
+          setRemoving(null);
+        }}
+      />
     </div>
   );
 }

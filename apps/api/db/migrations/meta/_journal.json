@@ -71,6 +71,20 @@
       "when": 1790689830728,
       "tag": "0009_project_workflows",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790703898553,
+      "tag": "0010_flat_projects_and_trash",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790703908588,
+      "tag": "0011_project_trash_and_departed_members",
+      "breakpoints": true
     }
   ]
 }

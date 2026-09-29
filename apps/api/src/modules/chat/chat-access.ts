@@ -1,5 +1,5 @@
 import { type SQL, sql } from 'drizzle-orm';
-import type { ConversationKind, ConversationRole, PostPolicy } from '@taskin/contracts';
+import type { ConversationKind, ConversationRole, MembershipMode, PostPolicy } from '@taskin/contracts';
 import type { Tx } from '../../platform/db/database.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { MembershipContext } from '../../platform/http/request.js';
@@ -23,6 +23,8 @@ export interface ConversationRow {
   readonly postPolicy: PostPolicy;
   readonly lastSeq: number;
   readonly archived: boolean;
+  /** `project_synced`: its members follow its project's; they are not changed here. */
+  readonly membershipMode: MembershipMode;
 }
 
 /**
@@ -50,6 +52,7 @@ export interface AccessRow extends Record<string, unknown> {
   post_policy: PostPolicy;
   last_seq: string | number;
   archived: boolean;
+  membership_mode: MembershipMode;
   my_role: ConversationRole | null;
 }
 
@@ -60,7 +63,7 @@ export function publicChannelVisible(member: MembershipContext): boolean {
 /** The row `accessFrom` decides on, as SQL (to load alone, or inside a larger statement). */
 export function accessRowSql(member: MembershipContext, conversationId: string): SQL {
   return sql`
-    select c.id, c.workspace_id, c.kind, c.title, c.is_private, c.post_policy, c.last_seq, c.archived_at is not null as archived,
+    select c.id, c.workspace_id, c.kind, c.title, c.is_private, c.post_policy, c.last_seq, c.archived_at is not null as archived, c.membership_mode,
            (select cm.role from conversation_members cm
              where cm.workspace_id = c.workspace_id and cm.conversation_id = c.id and cm.user_id = ${member.userId} and cm.left_at is null) as my_role
     from conversations c
@@ -85,6 +88,7 @@ export function accessFrom(member: MembershipContext, row: AccessRow): Conversat
     postPolicy: row.post_policy,
     lastSeq: Number(row.last_seq),
     archived: row.archived,
+    membershipMode: row.membership_mode,
   };
   const myRole = row.my_role;
   const visible =

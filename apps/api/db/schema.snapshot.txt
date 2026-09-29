@@ -248,6 +248,7 @@ projects.color avatar_tone not null default 'brand'::avatar_tone
 projects.created_at timestamp with time zone not null default now()
 projects.created_by uuid not null
 projects.deleted_at timestamp with time zone
+projects.deleted_by uuid
 projects.department_id uuid
 projects.description text not null default ''::text
 projects.id uuid not null default app.uuidv7()
@@ -689,9 +690,11 @@ projects projects_color_not_null: NOT NULL color
 projects projects_created_at_not_null: NOT NULL created_at
 projects projects_created_by_fk: FOREIGN KEY (workspace_id, created_by) REFERENCES workspace_members(workspace_id, user_id)
 projects projects_created_by_not_null: NOT NULL created_by
+projects projects_deleted_by_fk: FOREIGN KEY (workspace_id, deleted_by) REFERENCES workspace_members(workspace_id, user_id)
 projects projects_department_fk: FOREIGN KEY (workspace_id, department_id) REFERENCES departments(workspace_id, id) ON DELETE SET NULL (department_id)
 projects projects_description_len: CHECK ((char_length(description) <= 2000))
 projects projects_description_not_null: NOT NULL description
+projects projects_flat: CHECK ((parent_id IS NULL))
 projects projects_id_not_null: NOT NULL id
 projects projects_key_format: CHECK ((key ~ '^[A-Z][A-Z0-9]{1,5}$'::text))
 projects projects_key_not_null: NOT NULL key
@@ -975,6 +978,7 @@ plans CREATE UNIQUE INDEX plans_pkey ON public.plans USING btree (id)
 project_members CREATE INDEX project_members_user_idx ON public.project_members USING btree (workspace_id, user_id)
 project_members CREATE UNIQUE INDEX project_members_pk ON public.project_members USING btree (project_id, user_id)
 project_stars CREATE UNIQUE INDEX project_stars_pk ON public.project_stars USING btree (user_id, project_id)
+projects CREATE INDEX projects_trash_idx ON public.projects USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
 projects CREATE INDEX projects_ws_parent_idx ON public.projects USING btree (workspace_id, parent_id)
 projects CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)
 projects CREATE UNIQUE INDEX projects_ws_id_uq ON public.projects USING btree (workspace_id, id)
@@ -1087,6 +1091,7 @@ notifications notifications_fanout ALL using(((workspace_id = ( SELECT app.curre
 notifications notifications_recipient ALL using((recipient_id = ( SELECT app.current_user_id() AS current_user_id))) check()
 project_members project_members_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 project_stars project_stars_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+projects projects_hide_deleted SELECT using(((deleted_at IS NULL) OR ( SELECT app.include_deleted() AS include_deleted))) check()
 projects projects_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 role_permissions role_permissions_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 roles roles_member_read SELECT using((EXISTS ( SELECT 1
@@ -1137,10 +1142,13 @@ app.attachments_due_for_gc(p_limit integer) security definer
 app.check_workflow_categories() invoker
 app.current_user_id() invoker
 app.current_workspace_id() invoker
+app.departed_members_due(p_days integer, p_limit integer) security definer
 app.drop_expired_audit_partitions(keep_months integer) security definer
 app.ensure_audit_partitions(months_ahead integer) security definer
 app.find_invitation(p_token_hash bytea) security definer
+app.include_deleted() invoker
 app.notify_outbox() invoker
+app.projects_due_for_purge(p_days integer, p_limit integer) security definer
 app.protect_locked_role_permissions() invoker
 app.protect_locked_roles() invoker
 app.search_note_ids(p_pattern text) security definer

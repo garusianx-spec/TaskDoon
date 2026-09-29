@@ -97,6 +97,7 @@ export const projects = pgTable(
     /** Composite FK with ON DELETE SET NULL (department_id), declared in the SQL migration. */
     departmentId: uuid(),
     color: avatarTone().notNull().default('brand'),
+    /** Always null: projects are flat since Phase 3.1 (`projects_flat`); the column is to be dropped. */
     parentId: uuid(),
     visibility: projectVisibility().notNull().default('workspace'),
     workflowId: uuid().notNull(),
@@ -106,19 +107,27 @@ export const projects = pgTable(
     archivedAt: instant(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
+    /**
+     * In the trash: hidden from every query (row-level security too) and restorable by the
+     * workspace owner for 40 days, then purged with its tasks.
+     */
     deletedAt: instant(),
+    deletedBy: uuid(),
   },
   (t) => [
     unique('projects_ws_id_uq').on(t.workspaceId, t.id),
     uniqueIndex('projects_ws_key_uq').on(t.workspaceId, t.key).where(sql`${t.deletedAt} is null`),
     index('projects_ws_parent_idx').on(t.workspaceId, t.parentId),
+    index('projects_trash_idx').on(t.deletedAt).where(sql`${t.deletedAt} is not null`),
     foreignKey({ name: 'projects_parent_fk', columns: [t.workspaceId, t.parentId], foreignColumns: [t.workspaceId, t.id] }),
     foreignKey({ name: 'projects_workflow_fk', columns: [t.workspaceId, t.workflowId], foreignColumns: [workflows.workspaceId, workflows.id] }),
     member('projects_created_by_fk', [t.workspaceId, t.createdBy]),
+    member('projects_deleted_by_fk', [t.workspaceId, t.deletedBy]),
     check('projects_key_format', sql`${t.key} ~ '^[A-Z][A-Z0-9]{1,5}$'`),
     check('projects_name_len', sql`char_length(${t.name}) between 1 and 80`),
     check('projects_description_len', sql`char_length(${t.description}) <= 2000`),
     check('projects_not_own_parent', sql`${t.parentId} is distinct from ${t.id}`),
+    check('projects_flat', sql`${t.parentId} is null`),
   ],
 );
 

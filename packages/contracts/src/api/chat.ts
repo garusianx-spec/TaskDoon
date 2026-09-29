@@ -10,6 +10,9 @@ export type ConversationRole = 'owner' | 'admin' | 'member';
 /** Who may post: everyone, or only the conversation's owners and admins (announcement channels). */
 export type PostPolicy = 'everyone' | 'admins';
 
+/** `project_synced`: the channel's members follow its project's members. */
+export type MembershipMode = 'manual' | 'project_synced';
+
 /** What a member hears about: every message, only mentions and replies, or nothing. */
 export type NotificationLevel = 'all' | 'mentions' | 'none';
 
@@ -38,6 +41,11 @@ export interface ConversationView {
   readonly isPrivate: boolean;
   readonly postPolicy: PostPolicy;
   readonly projectId: string | null;
+  /**
+   * `project_synced`: a project's own channel. Its members are the project's members, kept in step
+   * with them; people are added and removed through the project, not the channel.
+   */
+  readonly membershipMode: MembershipMode;
   readonly memberIds: readonly string[];
   readonly memberCount: number;
   /** `null` when the caller is not a member (a public channel they can join). */

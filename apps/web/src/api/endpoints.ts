@@ -53,6 +53,7 @@ import type {
   UpdateTaskBody,
   WorkflowView,
   WorkspaceView,
+  TrashedProjectView,
 } from '@taskin/contracts';
 import { http, query } from './http';
 
@@ -95,7 +96,9 @@ export const api = {
     create: (body: CreateWorkspaceBody) => http.post<WorkspaceView>('/workspaces', body, { idempotent: true }),
     get: (workspaceId: string) => http.get<WorkspaceView>(ws(workspaceId)),
     remove: (workspaceId: string, confirmName: string) => http.delete<void>(ws(workspaceId), { confirmName }),
-    members: (workspaceId: string) => http.get<MemberView[]>(`${ws(workspaceId)}/members`),
+    /** `includeFormer`: also people removed from the workspace (names only), for the history they left. */
+    members: (workspaceId: string, includeFormer = false) => http.get<MemberView[]>(`${ws(workspaceId)}/members${query({ includeFormer: includeFormer || undefined })}`),
+    removeMember: (workspaceId: string, userId: string) => http.delete<void>(`${ws(workspaceId)}/members/${userId}`),
     setPresence: (workspaceId: string, presence: ManualPresence, statusMessage: string) =>
       http.patch<void>(`${ws(workspaceId)}/me/presence`, { presence, statusMessage }),
     roles: (workspaceId: string) => http.get<RoleView[]>(`${ws(workspaceId)}/roles`),
@@ -121,6 +124,10 @@ export const api = {
     create: (workspaceId: string, body: CreateProjectBody) => http.post<ProjectView>(`${ws(workspaceId)}/projects`, body, { idempotent: true }),
     star: (workspaceId: string, projectId: string, starred: boolean) =>
       starred ? http.put<void>(`${ws(workspaceId)}/projects/${projectId}/star`) : http.delete<void>(`${ws(workspaceId)}/projects/${projectId}/star`),
+    /** To the trash (workspace owner): restorable for 40 days. */
+    remove: (workspaceId: string, projectId: string) => http.delete<void>(`${ws(workspaceId)}/projects/${projectId}`),
+    trash: (workspaceId: string) => http.get<TrashedProjectView[]>(`${ws(workspaceId)}/projects/trash`),
+    restore: (workspaceId: string, projectId: string) => http.post<ProjectView>(`${ws(workspaceId)}/projects/${projectId}/restore`),
   },
 
   workflow: {

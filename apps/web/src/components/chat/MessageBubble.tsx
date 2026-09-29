@@ -102,6 +102,12 @@ export function MessageBubble({
             <span className="text-caption font-semibold text-fg-primary">
               {outgoing ? 'شما' : author.fullName}
             </span>
+            {/* Removed from the workspace: what they wrote stays under their name. */}
+            {author.former && !outgoing && (
+              <Badge tone="neutral" size="sm">
+                عضو سابق
+              </Badge>
+            )}
             <ClockTime iso={message.sentAt} className="numeric text-micro text-fg-quaternary" />
           </div>
         )}
