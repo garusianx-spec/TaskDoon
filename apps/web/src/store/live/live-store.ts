@@ -119,6 +119,11 @@ export class LiveStore {
   private typingSentAt = new Map<string, number>();
   /** Signed file links, reused until shortly before they expire. */
   private readonly links = new Map<string, { readonly url: string; readonly expires: number }>();
+  /**
+   * Each task's subtask adds, one at a time: the API appends after the last key it reads, so
+   * two adds in flight at once could take the same key and come back in either order.
+   */
+  private readonly subtaskAdds = new Map<string, Promise<void>>();
 
   private getState: () => WorkspaceState = () => LIVE_EMPTY_STATE;
   private apply: Apply = () => undefined;
@@ -507,12 +512,19 @@ export class LiveStore {
         }, () => this.refreshTask(action.taskId));
         return;
       }
-      case 'add-subtask':
-        this.run(async () => {
+      case 'add-subtask': {
+        const added = (this.subtaskAdds.get(action.taskId) ?? Promise.resolve()).then(async () => {
           await api.tasks.addSubtask(this.workspaceId, await this.serverId(action.taskId), action.title);
           await this.refreshTask(action.taskId);
-        }, () => this.refreshTask(action.taskId));
+        });
+        const settled = added.catch(() => undefined);
+        this.subtaskAdds.set(action.taskId, settled);
+        void settled.then(() => {
+          if (this.subtaskAdds.get(action.taskId) === settled) this.subtaskAdds.delete(action.taskId);
+        });
+        this.run(() => added, () => this.refreshTask(action.taskId));
         return;
+      }
       case 'remove-subtask':
         this.run(async () => {
           await api.tasks.removeSubtask(this.workspaceId, await this.serverId(action.taskId), action.subtaskId);
