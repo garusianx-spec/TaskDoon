@@ -10,6 +10,7 @@ import { TopAppBar } from './TopAppBar';
 import { BottomNav } from './BottomNav';
 import { Drawer } from '@/components/ui';
 import { TaskInspector, type TaskSourceView } from '@/components/tasks/TaskInspector';
+import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
 import { ConversationInspector } from '@/components/chat/ConversationInspector';
 
 export interface AppShellProps {
@@ -24,12 +25,13 @@ export interface AppShellProps {
 }
 
 /**
- * Three-column desktop shell (rail، sidebar، workspace) with the inspector docking as a
- * fourth column, collapsing to a top bar + bottom tabs below `lg`.
+ * Three-column desktop shell (rail، sidebar، workspace) with the conversation details docking
+ * as a fourth column, collapsing to a top bar + bottom tabs below `lg`. A task's details open
+ * over the workspace in a centred dialog.
  *
- * The inspector lives here because it docks into the layout. Every modal dialog — composers,
- * search, notifications, account — lives in the global `OverlayProvider` instead, so it can
- * be opened from anywhere via `useOverlays()`.
+ * The inspectors live here because they follow the workspace state's `inspector`. Every other
+ * modal dialog — composers, search, notifications, account — lives in the global
+ * `OverlayProvider` instead, so it can be opened from anywhere via `useOverlays()`.
  */
 export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppShellProps) {
   const router = useRouter();
@@ -49,7 +51,6 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
     state.inspector.kind === 'conversation' && pathname.startsWith('/chats')
       ? conversationById(state.conversations, state.inspector.conversationId)
       : undefined;
-  const inspectorOpen = Boolean(inspectorTask ?? inspectorConversation);
 
   const closeInspector = useCallback(() => dispatch({ type: 'close-inspector' }), [dispatch]);
   // The chat message the inspected task came from: from the loaded history, else as the server described it.
@@ -114,59 +115,11 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
         </div>
 
         <Drawer
-          open={inspectorOpen}
+          open={inspectorConversation !== undefined}
           onClose={closeInspector}
-          title={inspectorTask ? 'جزئیات وظیفه' : 'جزئیات گفتگو'}
+          title="جزئیات گفتگو"
           className="border-s border-secondary"
         >
-          {inspectorTask && (
-            <TaskInspector
-              task={inspectorTask}
-              currentUser={currentUser}
-              columns={state.boardColumns}
-              onClose={closeInspector}
-              onPatch={(patch) => dispatch({ type: 'patch-task', taskId: inspectorTask.id, patch })}
-              onMoveToColumn={(columnId) =>
-                dispatch({ type: 'move-task-to-column', taskId: inspectorTask.id, columnId })
-              }
-              onToggleStar={() => dispatch({ type: 'toggle-task-star', taskId: inspectorTask.id })}
-              onToggleSubtask={(subtaskId) =>
-                dispatch({ type: 'toggle-subtask', taskId: inspectorTask.id, subtaskId })
-              }
-              onAddSubtask={(title) => dispatch({ type: 'add-subtask', taskId: inspectorTask.id, title })}
-              onRemoveSubtask={(subtaskId) =>
-                dispatch({ type: 'remove-subtask', taskId: inspectorTask.id, subtaskId })
-              }
-              onMoveSubtask={(subtaskId, delta) =>
-                dispatch({ type: 'move-subtask', taskId: inspectorTask.id, subtaskId, delta })
-              }
-              onAddComment={(body, replyToId) =>
-                dispatch({
-                  type: 'add-task-comment',
-                  taskId: inspectorTask.id,
-                  authorId: currentUser.id,
-                  body,
-                  replyToId,
-                })
-              }
-              onAttachFiles={(files) =>
-                dispatch({
-                  type: 'attach-task-files',
-                  taskId: inspectorTask.id,
-                  authorId: currentUser.id,
-                  files: files.map((file) => ({ attachmentId: nextLocalId('att'), file, name: file.name, previewUrl: URL.createObjectURL(file) })),
-                })
-              }
-              onRemoveAttachment={(attachmentId) => dispatch({ type: 'remove-task-attachment', taskId: inspectorTask.id, attachmentId })}
-              source={taskSource}
-              onOpenSource={() => {
-                if (!sourceConversationId || !inspectorTask.sourceMessageId) return;
-                dispatch({ type: 'focus-message', conversationId: sourceConversationId, messageId: inspectorTask.sourceMessageId });
-                if (!pathname.startsWith('/chats')) router.push('/chats');
-              }}
-            />
-          )}
-
           {inspectorConversation && (
             <ConversationInspector
               conversation={inspectorConversation}
@@ -185,6 +138,56 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
           )}
         </Drawer>
       </div>
+
+      <TaskDetailDialog open={inspectorTask !== undefined} onClose={closeInspector} title="جزئیات وظیفه">
+        {inspectorTask && (
+          <TaskInspector
+            task={inspectorTask}
+            currentUser={currentUser}
+            columns={state.boardColumns}
+            onClose={closeInspector}
+            onPatch={(patch) => dispatch({ type: 'patch-task', taskId: inspectorTask.id, patch })}
+            onMoveToColumn={(columnId) =>
+              dispatch({ type: 'move-task-to-column', taskId: inspectorTask.id, columnId })
+            }
+            onToggleStar={() => dispatch({ type: 'toggle-task-star', taskId: inspectorTask.id })}
+            onToggleSubtask={(subtaskId) =>
+              dispatch({ type: 'toggle-subtask', taskId: inspectorTask.id, subtaskId })
+            }
+            onAddSubtask={(title) => dispatch({ type: 'add-subtask', taskId: inspectorTask.id, title })}
+            onRemoveSubtask={(subtaskId) =>
+              dispatch({ type: 'remove-subtask', taskId: inspectorTask.id, subtaskId })
+            }
+            onMoveSubtask={(subtaskId, delta) =>
+              dispatch({ type: 'move-subtask', taskId: inspectorTask.id, subtaskId, delta })
+            }
+            onAddComment={(body, replyToId) =>
+              dispatch({
+                type: 'add-task-comment',
+                taskId: inspectorTask.id,
+                authorId: currentUser.id,
+                body,
+                replyToId,
+              })
+            }
+            onAttachFiles={(files) =>
+              dispatch({
+                type: 'attach-task-files',
+                taskId: inspectorTask.id,
+                authorId: currentUser.id,
+                files: files.map((file) => ({ attachmentId: nextLocalId('att'), file, name: file.name, previewUrl: URL.createObjectURL(file) })),
+              })
+            }
+            onRemoveAttachment={(attachmentId) => dispatch({ type: 'remove-task-attachment', taskId: inspectorTask.id, attachmentId })}
+            source={taskSource}
+            onOpenSource={() => {
+              if (!sourceConversationId || !inspectorTask.sourceMessageId) return;
+              dispatch({ type: 'focus-message', conversationId: sourceConversationId, messageId: inspectorTask.sourceMessageId });
+              if (!pathname.startsWith('/chats')) router.push('/chats');
+            }}
+          />
+        )}
+      </TaskDetailDialog>
 
       {/* Single live region for non-visual state changes (board moves, task creation). */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">

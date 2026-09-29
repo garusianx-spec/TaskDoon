@@ -147,6 +147,8 @@ try {
   await dialog.getByRole('button', { name: 'ایجاد وظیفه' }).click();
   const ownerCard = owner.getByRole('group', { name: new RegExp(taskTitle) });
   check(await visible(ownerCard), 'the task appears on the owner’s board');
+  // A new task opens in the (modal) task dialog; close it to get back to the board.
+  await owner.keyboard.press('Escape');
 
   const guestCard = guest.getByRole('group', { name: new RegExp(taskTitle) });
   check(await visible(guestCard, 10_000), 'the task appears live on the guest’s board');

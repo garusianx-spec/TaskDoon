@@ -6,9 +6,10 @@ await page.getByRole('tab', { name: 'گانت' }).click();
 await page.waitForTimeout(300);
 const scroller = page.locator('div.overflow-auto').filter({ has: page.locator('ul') }).first();
 await page.screenshot({ path: `${out}/g0.png` });
-// In RTL, scrolling toward later days is negative scrollLeft.
+// In RTL, scrolling toward later days is negative scrollLeft. The timeline opens on today and
+// holds twelve weeks, so a week on (not its far end) is where the running tasks cross the column.
 const info = await scroller.evaluate((el) => {
-  el.scrollLeft = -(el.scrollWidth - el.clientWidth);
+  el.scrollLeft -= 7 * el.querySelector('[data-day-index]').getBoundingClientRect().width;
   el.scrollTop = 120;
   return { sw: el.scrollWidth, cw: el.clientWidth, sl: el.scrollLeft };
 });

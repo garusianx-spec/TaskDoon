@@ -204,22 +204,23 @@ check(await eventually(async () => (await page.getByRole('menuitem', { name: 'پ
 await rail.getByRole('link', { name: 'یادداشت‌ها' }).click();
 await page.waitForURL('**/notes');
 await pause(400);
-check(await eventually(async () => (await page.getByRole('button', { name: 'یادداشت جدید' }).count()) === 1), 'single «یادداشت جدید» (sidebar button removed)');
+const notebook = page.getByRole('complementary', { name: 'ستون زمینه' });
+const categoryNav = notebook.getByRole('navigation', { name: 'دسته‌ها' });
+check(await eventually(async () => (await page.getByRole('button', { name: 'یادداشت جدید' }).count()) === 1 && (await notebook.getByRole('button', { name: 'یادداشت جدید' }).count()) === 1), 'single «یادداشت جدید», beside the notebook title');
 const toolbar = page.getByRole('toolbar', { name: 'اقدام‌های یادداشت' });
-check(await eventually(async () => (await toolbar.getByRole('button', { name: 'جستجو در یادداشت‌ها' }).count()) === 1 && (await toolbar.getByRole('button', { name: 'دسته جدید' }).count()) === 1), 'header hub: search + folder-plus + new');
-const chips = page.getByRole('group', { name: 'فیلتر دسته' });
-check(await eventually(async () => (await chips.getByRole('button', { name: /^همه/ }).getAttribute('aria-pressed')) === 'true'), '«همه» chip active by default');
-await toolbar.getByRole('button', { name: 'دسته جدید' }).click();
+check(await eventually(async () => (await toolbar.getByRole('button', { name: 'جستجو در یادداشت‌ها' }).count()) === 1 && (await categoryNav.getByRole('button', { name: 'افزودن دسته' }).count()) === 1 && (await toolbar.getByRole('button', { name: 'دسته جدید' }).count()) === 0), 'list header keeps search; «افزودن دسته» sits above the categories');
+check(await eventually(async () => (await page.getByRole('group', { name: 'فیلتر دسته' }).count()) === 0 && (await categoryNav.getByRole('button', { name: /^همه یادداشت‌ها/ }).getAttribute('aria-current')) === 'true'), 'no category chips; «همه یادداشت‌ها» active by default');
+await categoryNav.getByRole('button', { name: 'افزودن دسته' }).click();
 await page.getByRole('textbox', { name: 'نام دسته' }).fill('پژوهش');
 await page.getByRole('button', { name: 'ایجاد دسته' }).click();
 await pause(250);
-check(await eventually(async () => (await chips.getByRole('button', { name: /^پژوهش/ }).getAttribute('aria-pressed')) === 'true'), 'new category chip created and active');
-check(await eventually(async () => (await chips.getByRole('button', { name: 'حذف دسته پژوهش' }).count()) === 1), 'empty custom category shows delete ✕');
-await toolbar.getByRole('button', { name: 'یادداشت جدید' }).click();
+check(await eventually(async () => (await categoryNav.getByRole('button', { name: /^پژوهش/ }).getAttribute('aria-current')) === 'true'), 'new category listed and active');
+check(await eventually(async () => (await categoryNav.getByRole('button', { name: 'حذف دسته پژوهش' }).count()) === 1), 'empty custom category shows delete ✕');
+await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
 await pause(300);
 const categorySelect = page.getByRole('combobox', { name: 'دسته' });
-check(await eventually(async () => (await categorySelect.textContent()).includes('پژوهش')), 'new note auto-assigned to the active chip');
-check(await eventually(async () => (await chips.getByRole('button', { name: 'حذف دسته پژوهش' }).count()) === 0), 'category with a note is no longer deletable');
+check(await eventually(async () => (await categorySelect.textContent()).includes('پژوهش')), 'new note auto-assigned to the active category');
+check(await eventually(async () => (await categoryNav.getByRole('button', { name: 'حذف دسته پژوهش' }).count()) === 0), 'category with a note is no longer deletable');
 await page.getByRole('textbox', { name: /عنوان/ }).first().fill('برنامه مصاحبه');
 await page.getByRole('toolbar', { name: 'قالب‌بندی متن' }).getByRole('button', { name: 'چک‌لیست', exact: true }).click();
 await pause(150);
@@ -242,13 +243,13 @@ await page.getByRole('option', { name: 'کاری' }).click();
 await pause(200);
 check(await eventually(async () => (await categorySelect.textContent()).includes('کاری')), 'editor category switcher moves the note');
 // Create + delete an empty category
-await toolbar.getByRole('button', { name: 'دسته جدید' }).click();
+await categoryNav.getByRole('button', { name: 'افزودن دسته' }).click();
 await page.getByRole('textbox', { name: 'نام دسته' }).fill('موقت');
 await page.getByRole('button', { name: 'ایجاد دسته' }).click();
 await pause(200);
-await chips.getByRole('button', { name: 'حذف دسته موقت' }).click();
+await categoryNav.getByRole('button', { name: 'حذف دسته موقت' }).click();
 await pause(200);
-check(await eventually(async () => (await chips.getByRole('button', { name: /^موقت/ }).count()) === 0), 'empty custom category deleted');
+check(await eventually(async () => (await categoryNav.getByRole('button', { name: /^موقت/ }).count()) === 0), 'empty custom category deleted');
 
 // ---------- 8. Workspace CRUD ----------
 const switcher = rail.getByRole('button', { name: /^فضای کاری فعال/ });
@@ -277,12 +278,12 @@ check(await eventually(async () => (await board.locator('[aria-label^="ستون 
 await rail.getByRole('link', { name: 'یادداشت‌ها' }).click();
 await page.waitForURL('**/notes');
 await pause(300);
-check(await eventually(async () => (await chips.getByRole('button', { name: /^پژوهش/ }).count()) === 0), 'fresh workspace has only the built-in note categories');
+check(await eventually(async () => (await categoryNav.getByRole('button', { name: /^پژوهش/ }).count()) === 0), 'fresh workspace has only the built-in note categories');
 // Switch back: Rahnama data (and the edits made above) are restored
 await switcher.click();
 await page.getByRole('menuitem', { name: /راهنما/ }).click();
 await pause(300);
-check(await eventually(async () => (await switcher.textContent()).includes('هلدینگ راهنما') && (await chips.getByRole('button', { name: /^پژوهش/ }).count()) === 1), 'switching back restores the parked workspace (its custom note category is back)');
+check(await eventually(async () => (await switcher.textContent()).includes('هلدینگ راهنما') && (await categoryNav.getByRole('button', { name: /^پژوهش/ }).count()) === 1), 'switching back restores the parked workspace (its custom note category is back)');
 await rail.getByRole('link', { name: 'پروژه‌ها و وظایف' }).click();
 await page.waitForURL('**/tasks');
 await pause(300);

@@ -42,7 +42,7 @@ check(await visible(page.getByRole('textbox', { name: 'عنوان یادداشت
 await page.screenshot({ path: `${out}/m_notes_editor.png` });
 await page.getByRole('button', { name: 'بازگشت به فهرست یادداشت‌ها' }).tap();
 check(await visible(page.getByRole('heading', { name: 'همه یادداشت‌ها' })), 'mobile: back returns to list');
-check(await visible(page.getByRole('group', { name: 'فیلتر دسته' })), 'mobile: category chips visible above the list');
+check(await visible(page.getByRole('toolbar', { name: 'اقدام‌های یادداشت' }).getByRole('button', { name: 'یادداشت جدید' })), 'mobile: the list header keeps a new-note button');
 await page.getByRole('button', { name: 'دسته‌ها و فیلترها' }).tap();
 check(await visible(page.getByRole('navigation', { name: 'دسته‌ها' })), 'mobile: categories panel opens');
 // more page account actions

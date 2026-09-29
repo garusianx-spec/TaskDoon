@@ -239,7 +239,9 @@ Direction-aware details that are easy to get wrong and are handled here:
   edge, and `ArrowLeft` seeks forward.
 - **Gantt.** The timeline is a CSS grid of one column per day. Because the container inherits
   `dir="rtl"`, column 1 is the right-most cell and bars run right-to-left with no coordinate
-  mirroring — only `gridColumnStart` / `gridColumnEnd`.
+  mirroring — only `gridColumnStart` / `gridColumnEnd`. Later days sit at a *negative*
+  `scrollLeft`, so the week buttons work in "px from the window's first day" and apply the
+  sign of the document direction.
 - **Avatar stacks** use `flex-row-reverse` plus a negative inline margin so the first member
   still stacks on top.
 - Separators between a word and a number use the Persian comma `،` rather than `·`, which is
@@ -322,7 +324,8 @@ chat navigates to `/chats`, an event to `/calendar`). The store holds a single c
 and is the only place that turns their callbacks into reducer actions. It also binds the
 quick-create shortcuts **N** (new task) and **M** (new chat), matched on `KeyboardEvent.code`
 so they work on a Persian keyboard layout and ignored while typing. `AppShell` keeps only the
-inspector, because that docks into the layout rather than floating over it.
+inspectors, which follow the workspace state's `inspector`: a task's details open in a
+centred dialog, and a conversation's details dock into the layout on `/chats`.
 
 ## Modules
 
@@ -353,6 +356,9 @@ the rail, and میز کار · وظایف من · گفتگوها · تقویم �
 - **Tasks** — board, list and Jalali Gantt. The board's columns live in state: the four
   built-ins plus any added from the dashed «افزودن ستون جدید» card (name + accent colour),
   which scrolls the board to its far (left, in RTL) end and focuses the name field. Every
+  column is 320px wide, so a new column extends the board, which scrolls sideways, instead
+  of narrowing the others. A task opens in a centred dialog: the work (description,
+  checklist, source message, files, discussion) beside its properties. Every
   column's ⋮ menu renames it inline or deletes it: an empty column goes at once; one with
   cards asks whether to move them to another column or archive them. The last column can
   never be deleted, and a task whose column disappears falls back to the first one rather
@@ -361,7 +367,10 @@ the rail, and میز کار · وظایف من · گفتگوها · تقویم �
   in progress. Every card and row has a quick-complete checkbox: checking moves the task to
   «انجام شد» with a struck-through, muted title; unchecking returns it to the column it came
   from (or «برای انجام» when it has no history). The list view collects completed work in a
-  collapsible group. In the Gantt, the task column is `sticky` on the inline-start edge and
+  collapsible group. The Gantt loads twelve weeks of fixed-width days, opens on today, and
+  scrolls sideways; «هفته قبل» / «هفته بعد» glide a week at a time and load four more weeks
+  past either end, and the header shows the dates in view. Hovering or focusing a bar shows
+  its title, status and dates. The task column is `sticky` on the inline-start edge and
   opaque (`z-20`) so bars (`z-10`) slide beneath it over the grid lines (`z-0`), under a
   sticky header (`z-30`).
 - **Calendar** — deadlines, meetings, reminders and project milestones only. One toolbar sits
@@ -369,10 +378,11 @@ the rail, and میز کار · وظایف من · گفتگوها · تقویم �
   centred on the grid, then «رویداد جدید». A day shows at most two badges; the rest fold into «+X مورد دیگر», which opens the day summary. Clicking
   any day opens the task composer with that Jalali date as the deadline. Deadlines are derived
   from live tasks, never stored twice.
-- **Notes** — the list header is the action hub: an expanding search, a folder-plus button
-  that creates a category, and the primary «جدید». Below it, horizontally scrolling category
-  chips («همه» first and active by default; custom categories with no notes carry a delete
-  ✕). A new note lands in the active category, and the editor has a category switcher. In
+- **Notes** — the notebook column holds its actions: «یادداشت جدید» beside the «دفترچه
+  یادداشت» title, and a dashed «افزودن دسته» row above the categories («همه یادداشت‌ها» first
+  and active by default; custom categories with no notes carry a delete ✕). The list header
+  keeps the expanding search (and, on phones, the categories button and a new-note button).
+  A new note lands in the active category, and the editor has a category switcher. In
   edit mode, `- [ ]` / `- [x]` lines render as real checkboxes with inline text inputs —
   Enter adds the next item, Backspace on an empty one leaves the list, typing `[] ` starts
   one — and everything is stored back as plain Markdown. A pinned shelf and colour-tag
@@ -420,8 +430,10 @@ guard, so adding a member surfaces as a compile error rather than a runtime fall
   labelled by their title, focus trapped (verified: focus never escapes across 40 tabs),
   Escape to close, background scroll locked (reference-counted for nesting) and focus
   restored to the opener.
-- **The inspector** is a docked column on desktop — it does *not* trap focus or lock scroll
-  there, because the rest of the app stays interactive — and promotes to a full dialog on
+- **The task dialog** is modal everywhere: focus moves to the dialog (so its name is read
+  first), stays inside it and returns to the card that opened it.
+- **The conversation inspector** is a docked column on desktop — it does *not* trap focus or
+  lock scroll there, because the chat stays interactive — and promotes to a full dialog on
   mobile.
 - **Kanban drag and drop has a complete keyboard path**: focus a card, `Space` picks it up,
   arrow keys move it between columns, `Space` drops, `Escape` cancels. Every transition is
@@ -446,8 +458,9 @@ guard, so adding a member surfaces as a compile error rather than a runtime fall
 
 **Desktop (≥1024px)** — a four-column shell on a 1440px grid: 64px navigation rail pinned to
 the inline-end (right) edge, 300px contextual sidebar, fluid workspace, and a 380px
-collapsible inspector. Kanban columns share the available width and only scroll once they hit
-their minimum, so all four fit at 1440px with the inspector closed.
+collapsible conversation inspector on `/chats`. Kanban columns are a fixed 320px and the
+board scrolls sideways (smoothly) once they outgrow it; task details open in a centred
+dialog (at most `max-w-4xl`, 90% of the viewport's height).
 
 **Mobile (375–414px)** — top app bar (workspace switcher, quick create, search,
 notifications), five fixed bottom tabs (میز کار · وظایف من · گفتگوها · تقویم · بیشتر — notes

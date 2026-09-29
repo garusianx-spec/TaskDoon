@@ -1,14 +1,19 @@
 'use client';
 
+import { useState, type FormEvent } from 'react';
 import type { Note, NoteCategory, TagTone } from '@taskin/contracts';
 import { TAG_TONES } from '@/data/reference';
 import { cn } from '@/lib/cn';
 import { formatCount } from '@/lib/format';
 import { TAG_DOT } from '@/lib/tag-tone';
 import { notePreview } from '@taskin/text';
+import { Button, Input, Popover, Tooltip } from '@/components/ui';
 import {
+  AddIcon,
   BriefcaseIcon,
   CalendarIcon,
+  CloseIcon,
+  FolderAddIcon,
   FolderIcon,
   NotebookIcon,
   PinIcon,
@@ -37,11 +42,16 @@ export interface NotesSidebarProps {
   readonly onCategoryChange: (categoryId: string) => void;
   readonly onColorChange: (color: TagTone | null) => void;
   readonly onSelectNote: (noteId: string) => void;
+  readonly onCreateNote: () => void;
+  readonly onCreateCategory: (label: string) => void;
+  /** Only a team's own category that holds no notes can be removed. */
+  readonly onDeleteCategory: (categoryId: string) => void;
 }
 
 /**
- * Notes-context column: categories, colour-tag filters and the pinned shelf. Creating and
- * searching live in the list header's action hub, so the column stays a navigator.
+ * Notes-context column: the notebook's own actions (a new note beside its title, a new
+ * category above the list), categories, colour-tag filters and the pinned shelf. Searching
+ * stays in the list header.
  */
 export function NotesSidebar({
   notes,
@@ -52,20 +62,30 @@ export function NotesSidebar({
   onCategoryChange,
   onColorChange,
   onSelectNote,
+  onCreateNote,
+  onCreateCategory,
+  onDeleteCategory,
 }: NotesSidebarProps) {
   const pinned = notes.filter((note) => note.pinned);
   const countFor = (id: string) =>
     id === 'all' ? notes.length : notes.filter((note) => note.categoryId === id).length;
 
-  const entries: ReadonlyArray<{ readonly id: string; readonly label: string }> = [
-    { id: 'all', label: 'همه یادداشت‌ها' },
-    ...categories,
+  const entries: ReadonlyArray<{ readonly id: string; readonly label: string; readonly removable: boolean }> = [
+    { id: 'all', label: 'همه یادداشت‌ها', removable: false },
+    ...categories.map((category) => ({
+      id: category.id,
+      label: category.label,
+      removable: !category.builtIn && countFor(category.id) === 0,
+    })),
   ];
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-secondary px-3 py-3.5">
-        <h2 className="text-title font-bold text-fg-primary">دفترچه یادداشت</h2>
+      <div className="flex items-center gap-2 border-b border-secondary px-3 py-2.5">
+        <h2 className="min-w-0 flex-1 truncate text-title font-bold text-fg-primary">دفترچه یادداشت</h2>
+        <Button size="xs" iconStart={<AddIcon size={16} />} onClick={onCreateNote}>
+          یادداشت جدید
+        </Button>
       </div>
 
       <div className="scrollbar-thin flex-1 overflow-y-auto p-2">
@@ -73,31 +93,52 @@ export function NotesSidebar({
           <h3 className="px-2.5 pb-1 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
             دسته‌ها
           </h3>
-          {entries.map(({ id, label }) => {
+          <CreateCategoryButton categories={categories} onCreate={onCreateCategory} />
+          {entries.map(({ id, label, removable }) => {
             const Icon = categoryIcon(id);
             const active = categoryId === id;
             return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onCategoryChange(id)}
-                aria-current={active ? 'true' : undefined}
-                className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-body-sm font-medium transition-colors',
-                  active ? 'bg-brand-subtle text-fg-brand' : 'text-fg-secondary hover:bg-hover',
-                )}
-              >
-                <Icon size={18} variant={active ? 'twotone' : 'linear'} />
-                <span className="flex-1 truncate">{label}</span>
-                <span
+              <div key={id} className="relative flex items-center">
+                <button
+                  type="button"
+                  onClick={() => onCategoryChange(id)}
+                  aria-current={active ? 'true' : undefined}
                   className={cn(
-                    'numeric rounded-full px-1.5 py-0.5 text-micro font-semibold',
-                    active ? 'bg-surface text-fg-brand' : 'bg-sunken text-fg-tertiary',
+                    'flex flex-1 items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-body-sm font-medium transition-colors',
+                    active ? 'bg-brand-subtle text-fg-brand' : 'text-fg-secondary hover:bg-hover',
                   )}
                 >
-                  {formatCount(countFor(id))}
-                </span>
-              </button>
+                  <Icon size={18} variant={active ? 'twotone' : 'linear'} />
+                  <span className="flex-1 truncate">{label}</span>
+                  {/* An empty removable category shows its ✕ in place of the (zero) count. */}
+                  {removable ? (
+                    <span className="size-6" aria-hidden="true" />
+                  ) : (
+                    <span
+                      className={cn(
+                        'numeric rounded-full px-1.5 py-0.5 text-micro font-semibold',
+                        active ? 'bg-surface text-fg-brand' : 'bg-sunken text-fg-tertiary',
+                      )}
+                    >
+                      {formatCount(countFor(id))}
+                    </span>
+                  )}
+                </button>
+                {removable && (
+                  <span className="absolute end-2">
+                    <Tooltip content="حذف دسته خالی">
+                      <button
+                        type="button"
+                        aria-label={`حذف دسته ${label}`}
+                        onClick={() => onDeleteCategory(id)}
+                        className="flex size-6 items-center justify-center rounded-full text-fg-quaternary transition-colors hover:bg-status-blocked-subtle hover:text-status-blocked"
+                      >
+                        <CloseIcon size={14} />
+                      </button>
+                    </Tooltip>
+                  </span>
+                )}
+              </div>
             );
           })}
         </nav>
@@ -172,5 +213,70 @@ export function NotesSidebar({
         </section>
       </div>
     </div>
+  );
+}
+
+/** "+ افزودن دسته": a dashed row above the categories that opens a one-field form. */
+function CreateCategoryButton({
+  categories,
+  onCreate,
+}: {
+  readonly categories: readonly NoteCategory[];
+  readonly onCreate: (label: string) => void;
+}) {
+  const [label, setLabel] = useState('');
+  const [error, setError] = useState<string | undefined>(undefined);
+
+  return (
+    <Popover
+      label="دسته جدید"
+      align="start"
+      // As wide as the column, so the form never spills sideways out of it.
+      className="mb-1 w-full"
+      panelClassName="w-full min-w-0 p-3"
+      onOpenChange={(open) => {
+        if (!open) return;
+        setLabel('');
+        setError(undefined);
+      }}
+      trigger={
+        <button
+          type="button"
+          className="flex h-9 w-full items-center gap-2 rounded-lg border border-dashed border-primary px-2.5 text-start text-body-sm font-medium text-fg-tertiary transition-colors hover:border-brand hover:bg-brand-subtle/40 hover:text-fg-brand"
+        >
+          <AddIcon size={16} />
+          افزودن دسته
+        </button>
+      }
+    >
+      {(close) => (
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(event: FormEvent) => {
+            event.preventDefault();
+            const name = label.trim();
+            if (!name) return setError('نام دسته را وارد کنید.');
+            if (categories.some((category) => category.label.trim() === name)) return setError('دسته‌ای با این نام وجود دارد.');
+            onCreate(name);
+            close();
+          }}
+        >
+          <Input
+            label="نام دسته"
+            value={label}
+            onChange={(event) => {
+              setLabel(event.target.value);
+              setError(undefined);
+            }}
+            placeholder="مثلاً: پژوهش کاربر"
+            error={error}
+            maxLength={24}
+          />
+          <Button type="submit" size="sm" iconStart={<FolderAddIcon size={16} />}>
+            ایجاد دسته
+          </Button>
+        </form>
+      )}
+    </Popover>
   );
 }

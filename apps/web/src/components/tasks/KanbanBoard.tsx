@@ -161,7 +161,7 @@ export function KanbanBoard({
   return (
     <div
       ref={boardRef}
-      className="scrollbar-thin flex h-full min-h-0 gap-4 overflow-x-auto p-4"
+      className="scrollbar-thin flex h-full min-h-0 gap-4 overflow-x-auto scroll-smooth p-4"
       role="application"
       aria-label="بورد کانبان وظایف"
     >
@@ -190,9 +190,9 @@ export function KanbanBoard({
               if (taskId) commitMove(taskId, column, false);
             }}
             className={cn(
-              // Columns share the row and only overflow once they hit their minimum, so a
-              // 1440px viewport still shows the four built-ins beside the add-column card.
-              'flex min-w-[13rem] flex-1 flex-col rounded-2xl border bg-sunken/60 transition-colors',
+              // Every column keeps one fixed width: a new column extends the row (the board
+              // scrolls sideways) instead of squeezing the columns already there.
+              'flex w-[320px] min-w-[320px] shrink-0 flex-col rounded-2xl border bg-sunken/60 transition-colors',
               isDropTarget ? 'border-brand bg-brand-subtle/50' : 'border-secondary',
               // A custom column carries its accent as a top stripe (declared after the
               // border colour so the stripe's top-edge colour wins).

@@ -21,9 +21,17 @@ await page.getByRole('button', { name: 'افزودن ستون', exact: true }).c
 check(await visible(page.getByText('ستونی با این نام وجود دارد.')), 'duplicate column name rejected');
 await page.keyboard.press('Escape');
 
-// 2. Drag a todo card into the new column
+// 2. Drag a todo card into the new column. Columns keep a fixed width, so the new column sits
+// past the board's visible end: the board scrolls mid-drag, as the browser's edge auto-scroll would.
 const card = page.getByRole('group', { name: /تهیه سند معماری همگام‌سازی آفلاین/ });
-await card.dragTo(qa);
+await card.hover();
+await page.mouse.down();
+const from = await card.boundingBox();
+await page.mouse.move(from.x + from.width / 2 - 20, from.y + from.height / 2, { steps: 4 }); // the drag starts
+await qa.evaluate((column) => column.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'instant' }));
+const to = await qa.boundingBox();
+await page.mouse.move(to.x + to.width / 2, to.y + 120, { steps: 8 });
+await page.mouse.up();
 await page.waitForTimeout(300);
 check(await eventually(async () => (await qa.getByRole('group', { name: /تهیه سند معماری/ }).count()) === 1), 'card dragged into custom column');
 
@@ -48,7 +56,7 @@ const todo = page.getByRole('region', { name: 'ستون برای انجام' });
 check(await eventually(async () => (await todo.getByRole('group', { name: /بهینه‌سازی زمان بارگذاری/ }).count()) === 1), 'seeded done card unchecked → To Do');
 
 // 6. Checkbox click must not open the inspector
-check(await page.getByRole('complementary').filter({ hasText: 'جزئیات وظیفه' }).count() === 0, 'checkbox did not open inspector');
+check(await page.getByRole('dialog', { name: 'جزئیات وظیفه' }).count() === 0, 'checkbox did not open inspector');
 
 // 7. Keyboard move: focus a card, Space, ArrowLeft x?, Space
 const kcard = todo.getByRole('group', { name: /رفع آسیب‌پذیری/ });
