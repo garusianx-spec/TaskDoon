@@ -114,6 +114,20 @@ must be an origin the API allows: its `PUBLIC_WEB_ORIGIN` or `CORS_ORIGINS`); an
 console error or warning, hydration mismatches included, fails it. CI runs it against the
 Compose API and a production build of the web app.
 
+**Platform super admin** (`/admin`, RFC Addendum H). The operators of TaskDoon itself get a separate
+shell with three sections: «کاربران و سشن‌ها» (user directory, workspaces and exact roles, sessions
+with IP and device, ending sessions, single-use password reset codes), «رصد پیام‌ها و گروه‌ها»
+(conversations and messages with date, type and sender filters) and «ورک‌اسپیس‌ها و نقش‌ها». It also
+has an audit log of everything looked at. Only flagged accounts get in, and only after a password
+step-up. Everyone else gets a 404, and the workspace app never links there.
+
+- **Flag an account** from the server: `npm run platform-admin -w @taskin/api -- grant 09121234567`. Use `revoke` to remove the flag and `list` to see who has it. It needs `DATABASE_MIGRATOR_URL`.
+- **Database role.** The API reads across tenants only through the read-only
+  `taskin_platform_admin` role on its own pool: set `DATABASE_PLATFORM_ADMIN_URL` (the Compose
+  stack does). Without it the admin routes answer 503.
+- **Live test.** `npm run test:e2e:live:admin` needs `API_LOG` like the live flow. It flags its
+  operator with `GRANT_PLATFORM_ADMIN` (default: the local API build's CLI).
+
 ---
 
 ## Typography

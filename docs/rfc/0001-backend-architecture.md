@@ -1338,3 +1338,44 @@ Locks are taken in the order project → column → task → conversation (the s
 - **Answering.** After a message's broadcast, off the sender's path, a **direct** message to a member whose auto-reply is on and who is outside their hours is answered with their text, as them, marked `meta.autoReply` (the web shows «پاسخ خودکار»). Groups, channels and project channels are never answered, and an auto-reply is never answered in turn.
 - **Once a day.** Before posting, the answer claims the `(member, sender)` row of `auto_reply_log` atomically (insert, or update only when the last answer is 24 hours old), so two nodes or two quick messages never answer twice. If the answer cannot be posted, the claim is given back.
 - **Cost.** Each node caches, per workspace and for 15 seconds, who has the auto-reply on, so a workspace where nobody uses it pays nothing per message. A change made on another node takes effect within that time.
+
+## Addendum H. Platform super admin, phase 1
+
+The operators of TaskDoon itself (support, compliance) get a view across every workspace: who a person is and where they are a member, which devices and addresses hold their sessions, and — when required — what was said in a conversation. It is built beside the product, not into it: members see nothing new, and the tenant policies stay exactly as they are.
+
+**Who gets in**
+
+- **The flag.** `users.is_platform_admin` (migration `0014`), set only from the servers: `npm run platform-admin -- grant|revoke <phone>` (or `list`) connects as `DATABASE_MIGRATOR_URL` and writes an `audit_logs` row. No API route can grant it.
+- **The guard.** Every `/api/v1/admin/*` route reads the flag afresh (so revoking it works on the next request) and answers **404** to everyone else, exactly like a route that does not exist. All but the `GET /admin/me` probe also need a password step-up within 15 minutes (`STEP_UP_REQUIRED` otherwise).
+
+**How it reads across tenants**
+
+- **A role of its own.** `taskin_platform_admin` (created with the other roles in `infra/postgres/init/01-roles.sql`) is `BYPASSRLS`, but `default_transaction_read_only` is on and migration `0015` grants it `SELECT` on the tables the admin screens show and nothing else (plus four columns of `tasks`, for a message's linked-task id). It has no access to notes, task contents, refresh tokens or reset codes.
+- **A pool of its own.** `DATABASE_PLATFORM_ADMIN_URL` (direct to Postgres, not PgBouncer; three connections, 10-second statements). The administrative unit of work opens `READ ONLY` transactions on it with the admin's id and the request id set for the session. Only the platform-admin services use it, and only after the guard. Without the variable the routes answer `503 PLATFORM_ADMIN_UNAVAILABLE`, and the probe says so.
+- **Ops.** Create the role (and grant it `CONNECT`) before running migrations; `0015` grants nothing when the role does not exist yet, so run migrations again once it does.
+- **Writes** (ending sessions, issuing reset codes) go through the ordinary unit of work as `taskin_app`, reusing the session and outbox code the members' own screens use.
+
+**What it shows** (`/api/v1/admin/*`, OpenAPI tag `platform-admin`)
+
+- **Users and sessions.** A directory filtered by name, phone (any written form; a full number matches exactly), email, status and platform role, with keyset paging. A profile with every membership: the workspace, the exact role (key and name), the member status, department, job title and project roles. The session inspector: client, OS and form factor parsed from the user agent at sign-in (`auth_sessions.client_name`, `os_name`, `device_type`), the sign-in IP and the IP of the last refresh (`last_ip`), both as the trusted proxy reports them (`X-Forwarded-For`), created and last-active times, and status (`active`, `revoked` with its reason, `expired`). `POST /admin/sessions/:id/revoke` and `POST /admin/users/:id/sessions/revoke-all` end sessions with the reason `admin_action`; access tokens and sockets die at once, as for any revocation.
+- **Conversations.** Every conversation a person is or was in (direct chats, groups, private and project channels, across workspaces), a conversation with its members (former ones included), and its messages, newest page first, filtered by date range, type (`text`, `voice`, `image`, `file`) and sender. Deleted messages stay listed without their content. Files open through a five-minute presigned link.
+- **Workspaces.** Every workspace, and each one's roles with their permission matrix and member counts, and its members with their roles.
+
+**The audit log**
+
+- `platform_audit_logs` records every search, view and action: the admin, the person concerned (`targetUserId`, which the screens pass along), the action, the resource, the client IP, the user agent, the request id and the filters used (never message content or codes). The API role may insert and read it, never change or delete it. Each row also goes to `audit_logs` as `platform.<action>`, so the M1 guarantee (every mutating route audited, with request and trace ids) holds.
+- A look is recorded after the data is loaded and before it is returned: a look that cannot be recorded is not served. Reading the audit log itself is not recorded.
+
+**Password resets** (passwords stay argon2id; no one but their owner ever sees or sets one)
+
+- `POST /admin/users/:id/password-reset {channel}` creates a single-use code of 256 bits, stored only as its SHA-256 in `password_reset_tokens`, valid `PASSWORD_RESET_TTL_MINUTES` (60). `sms` and `email` send a link to `/reset-password?token=…` through the outbox (sealed until sent); `manual` returns the code and link once, for the admin to hand over. A new code retires any earlier one.
+- From then until the code is used, `users.password_reset_required` makes the old password fail with `409 PASSWORD_RESET_REQUIRED`.
+- `POST /api/v1/password-reset {token, newPassword}` (public; 30 attempts per IP per hour) checks the code against its hash, its lifetime and that it is unused, applies the password policy, stores the new hash, clears the flag, ends every session of the account, audits `auth.password.reset` and texts the owner. Expired, used and superseded codes answer `410 RESET_TOKEN_INVALID`.
+
+**Web**
+
+- The root layout keeps only the document, theme and metadata. The workspace app (its store, sign-in gate and overlays) moved into the `(app)` route group without changing any address, and unknown addresses still render inside it.
+- `(admin)/admin` has its own shell: its own SMS sign-in (no sign-up), the step-up (or, for an admin without one, setting a password first), and navigation «کاربران و سشن‌ها», «رصد پیام‌ها و گروه‌ها», «ورک‌اسپیس‌ها و نقش‌ها» and «گزارش بازرسی». Anyone else signed in sees the same 404 as an unknown address. Nothing in the workspace app links there. It is `noindex`, and the demo build shows a notice instead.
+- `/reset-password` stands on its own, outside both groups. It reads the code and removes it from the address bar at once.
+
+**Tests.** `platform-admin.integration.spec.ts` covers the 404s, the step-up, every filter, memberships across workspaces, sessions behind the proxy, revocation, message filters, file links, the audit rows, the read-only role and the whole reset lifecycle. `test/unit/user-agent.test.ts` covers the user-agent parser. The observability walk covers the new mutating routes. `e2e/live/admin.mjs` drives the shell against the live stack in CI.

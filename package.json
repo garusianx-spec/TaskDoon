@@ -22,6 +22,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e -w @taskin/web",
     "test:e2e:live": "npm run test:e2e:live -w @taskin/web",
+    "test:e2e:live:admin": "npm run test:e2e:live:admin -w @taskin/web",
     "check:contrast": "npm run check:contrast -w @taskin/web",
     "test:int": "npm run test:int -w @taskin/api",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d --wait postgres pgbouncer redis-core redis-rt s3 s3-init mailpit",

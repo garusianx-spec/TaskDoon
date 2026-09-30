@@ -4,8 +4,6 @@ import './globals.css';
 import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme';
 import { DATA_SOURCE } from '@/lib/data-source';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
-import { WorkspaceProvider } from '@/store/WorkspaceProvider';
-import { OverlayProvider } from '@/components/overlays/OverlayProvider';
 
 const BRAND_TITLE = 'تسک‌دون | TaskDoon';
 const DESCRIPTION =
@@ -40,6 +38,11 @@ export const viewport: Viewport = {
   ],
 };
 
+/**
+ * The document every page shares: language, direction, theme and metadata. The workspace app
+ * (its store, sign-in gate and overlays) lives in the `(app)` group; the password-reset page and
+ * the platform admin shell sit beside it with nothing of the workspace around them.
+ */
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
     // `data-source` tells tooling which build this is (`api` or `demo`); it is inlined at build time.
@@ -52,11 +55,7 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
       </head>
       <body>
-        <ThemeProvider>
-          <WorkspaceProvider>
-            <OverlayProvider>{children}</OverlayProvider>
-          </WorkspaceProvider>
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

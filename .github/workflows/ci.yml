@@ -172,6 +172,12 @@ jobs:
           # The console SMS driver logs sign-in codes and invitation links; the suite reads them here.
           docker compose -f infra/docker-compose.yml --profile app logs -f --no-log-prefix api > "$RUNNER_TEMP/api.log" 2>&1 &
           API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live
+      - name: Platform super admin (sign-in, step-up, directory, sessions, messages, reset code, audit)
+        run: |
+          # No API route can flag a platform admin: the suite runs the CLI inside the API container.
+          API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 \
+          GRANT_PLATFORM_ADMIN="docker compose -f $GITHUB_WORKSPACE/infra/docker-compose.yml --profile app exec -T api node dist/cli/platform-admin.js grant" \
+          npm run test:e2e:live:admin
       - name: Logs
         if: failure()
         run: |
