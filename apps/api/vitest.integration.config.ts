@@ -9,7 +9,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [swc.vite({ module: { type: 'es6' } })],
   test: {
-    include: ['test/integration/**/*.test.ts'],
+    include: ['test/integration/**/*.{test,spec}.ts'],
     environment: 'node',
     globalSetup: ['test/integration/global-setup.ts'],
     testTimeout: 30_000,

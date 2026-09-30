@@ -5,6 +5,9 @@
 --   taskin_migrator  owns the schema and runs migrations; BYPASSRLS for seeds and the few
 --                    SECURITY DEFINER lookups that must cross tenants.
 --   taskin_app       what the API connects as: DML only, subject to row-level security.
+--   taskin_platform_admin
+--                    verified platform-admin reads only (a pool of its own): BYPASSRLS, every
+--                    transaction read-only, and SELECT on the few tables migrations grant it.
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'taskin_migrator') THEN
@@ -13,5 +16,9 @@ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'taskin_app') THEN
     CREATE ROLE taskin_app LOGIN PASSWORD 'taskin_app' NOBYPASSRLS;
   END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'taskin_platform_admin') THEN
+    CREATE ROLE taskin_platform_admin LOGIN PASSWORD 'taskin_platform_admin' BYPASSRLS;
+  END IF;
 END
 $$;
+ALTER ROLE taskin_platform_admin SET default_transaction_read_only = on;

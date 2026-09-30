@@ -66,7 +66,11 @@ export type ApiErrorCode =
   | 'MESSAGE_NOT_CONVERTIBLE'
   | 'NOT_SUBSCRIBED'
   | 'SCHEDULED_MESSAGE_CLOSED'
-  | 'SCHEDULE_LIMIT_REACHED';
+  | 'SCHEDULE_LIMIT_REACHED'
+  // Platform administration
+  | 'PASSWORD_RESET_REQUIRED'
+  | 'RESET_TOKEN_INVALID'
+  | 'PLATFORM_ADMIN_UNAVAILABLE';
 
 export interface FieldError {
   /** Dotted path of the offending field, e.g. `recipients.2.address`. */

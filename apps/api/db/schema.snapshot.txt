@@ -42,13 +42,17 @@ audit_logs.user_agent text
 audit_logs.workspace_id uuid
 auth_sessions.absolute_expires_at timestamp with time zone not null
 auth_sessions.amr text[] not null
+auth_sessions.client_name text
 auth_sessions.created_at timestamp with time zone not null default now()
 auth_sessions.device_label text
+auth_sessions.device_type text
 auth_sessions.geo_city text
 auth_sessions.id uuid not null default app.uuidv7()
 auth_sessions.idle_expires_at timestamp with time zone not null
 auth_sessions.ip inet
 auth_sessions.last_active_at timestamp with time zone not null default now()
+auth_sessions.last_ip inet
+auth_sessions.os_name text
 auth_sessions.revoke_reason session_revoke_reason
 auth_sessions.revoked_at timestamp with time zone
 auth_sessions.stepped_up_at timestamp with time zone
@@ -242,10 +246,29 @@ outbox_events.id bigint not null identity
 outbox_events.payload jsonb not null
 outbox_events.published_at timestamp with time zone
 outbox_events.workspace_id uuid
+password_reset_tokens.channel text not null
+password_reset_tokens.created_at timestamp with time zone not null default now()
+password_reset_tokens.created_by uuid
+password_reset_tokens.expires_at timestamp with time zone not null
+password_reset_tokens.id uuid not null default app.uuidv7()
+password_reset_tokens.token_hash bytea not null
+password_reset_tokens.used_at timestamp with time zone
+password_reset_tokens.user_id uuid not null
 plans.created_at timestamp with time zone not null default now()
 plans.id text not null
 plans.limits jsonb not null
 plans.name text not null
+platform_audit_logs.action text not null
+platform_audit_logs.admin_id uuid not null
+platform_audit_logs.created_at timestamp with time zone not null default now()
+platform_audit_logs.id bigint not null identity
+platform_audit_logs.ip inet
+platform_audit_logs.metadata jsonb
+platform_audit_logs.request_id text
+platform_audit_logs.resource_id text
+platform_audit_logs.resource_type text
+platform_audit_logs.target_user_id uuid
+platform_audit_logs.user_agent text
 project_members.added_at timestamp with time zone not null default now()
 project_members.added_by uuid
 project_members.project_id uuid not null
@@ -388,10 +411,12 @@ users.email_verified_at timestamp with time zone
 users.failed_password_attempts integer not null default 0
 users.full_name text not null
 users.id uuid not null default app.uuidv7()
+users.is_platform_admin boolean not null default false
 users.locale text not null default 'fa-IR'::text
 users.locked_until timestamp with time zone
 users.password_changed_at timestamp with time zone
 users.password_hash text
+users.password_reset_required boolean not null default false
 users.phone text not null
 users.phone_verified_at timestamp with time zone not null
 users.security_version integer not null default 1
@@ -721,11 +746,29 @@ outbox_events outbox_events_headers_not_null: NOT NULL headers
 outbox_events outbox_events_id_not_null: NOT NULL id
 outbox_events outbox_events_payload_not_null: NOT NULL payload
 outbox_events outbox_events_pkey: PRIMARY KEY (id)
+password_reset_tokens password_reset_tokens_channel: CHECK ((channel = ANY (ARRAY['sms'::text, 'email'::text, 'manual'::text])))
+password_reset_tokens password_reset_tokens_channel_not_null: NOT NULL channel
+password_reset_tokens password_reset_tokens_created_at_not_null: NOT NULL created_at
+password_reset_tokens password_reset_tokens_created_by_users_id_fk: FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+password_reset_tokens password_reset_tokens_expires_at_not_null: NOT NULL expires_at
+password_reset_tokens password_reset_tokens_hash_uq: UNIQUE (token_hash)
+password_reset_tokens password_reset_tokens_id_not_null: NOT NULL id
+password_reset_tokens password_reset_tokens_pkey: PRIMARY KEY (id)
+password_reset_tokens password_reset_tokens_token_hash_not_null: NOT NULL token_hash
+password_reset_tokens password_reset_tokens_user_id_not_null: NOT NULL user_id
+password_reset_tokens password_reset_tokens_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 plans plans_created_at_not_null: NOT NULL created_at
 plans plans_id_not_null: NOT NULL id
 plans plans_limits_not_null: NOT NULL limits
 plans plans_name_not_null: NOT NULL name
 plans plans_pkey: PRIMARY KEY (id)
+platform_audit_logs platform_audit_logs_action_not_null: NOT NULL action
+platform_audit_logs platform_audit_logs_admin_id_not_null: NOT NULL admin_id
+platform_audit_logs platform_audit_logs_admin_id_users_id_fk: FOREIGN KEY (admin_id) REFERENCES users(id)
+platform_audit_logs platform_audit_logs_created_at_not_null: NOT NULL created_at
+platform_audit_logs platform_audit_logs_id_not_null: NOT NULL id
+platform_audit_logs platform_audit_logs_pkey: PRIMARY KEY (id)
+platform_audit_logs platform_audit_logs_target_user_id_users_id_fk: FOREIGN KEY (target_user_id) REFERENCES users(id)
 project_members project_members_added_at_not_null: NOT NULL added_at
 project_members project_members_pk: PRIMARY KEY (project_id, user_id)
 project_members project_members_project_fk: FOREIGN KEY (workspace_id, project_id) REFERENCES projects(workspace_id, id) ON DELETE CASCADE
@@ -920,7 +963,9 @@ users users_failed_password_attempts_not_null: NOT NULL failed_password_attempts
 users users_full_name_len: CHECK (((char_length(full_name) >= 2) AND (char_length(full_name) <= 80)))
 users users_full_name_not_null: NOT NULL full_name
 users users_id_not_null: NOT NULL id
+users users_is_platform_admin_not_null: NOT NULL is_platform_admin
 users users_locale_not_null: NOT NULL locale
+users users_password_reset_required_not_null: NOT NULL password_reset_required
 users users_phone_e164: CHECK ((phone ~ '^\+[1-9][0-9]{7,14}$'::text))
 users users_phone_not_null: NOT NULL phone
 users users_phone_verified_at_not_null: NOT NULL phone_verified_at
@@ -1055,7 +1100,13 @@ otp_challenges CREATE UNIQUE INDEX otp_challenges_pkey ON public.otp_challenges 
 outbox_events CREATE INDEX outbox_events_published_idx ON public.outbox_events USING btree (published_at) WHERE (published_at IS NOT NULL)
 outbox_events CREATE INDEX outbox_events_unpublished_idx ON public.outbox_events USING btree (id) WHERE (published_at IS NULL)
 outbox_events CREATE UNIQUE INDEX outbox_events_pkey ON public.outbox_events USING btree (id)
+password_reset_tokens CREATE INDEX password_reset_tokens_user_idx ON public.password_reset_tokens USING btree (user_id) WHERE (used_at IS NULL)
+password_reset_tokens CREATE UNIQUE INDEX password_reset_tokens_hash_uq ON public.password_reset_tokens USING btree (token_hash)
+password_reset_tokens CREATE UNIQUE INDEX password_reset_tokens_pkey ON public.password_reset_tokens USING btree (id)
 plans CREATE UNIQUE INDEX plans_pkey ON public.plans USING btree (id)
+platform_audit_logs CREATE INDEX platform_audit_logs_admin_idx ON public.platform_audit_logs USING btree (admin_id, created_at DESC NULLS LAST)
+platform_audit_logs CREATE INDEX platform_audit_logs_target_idx ON public.platform_audit_logs USING btree (target_user_id, created_at DESC NULLS LAST) WHERE (target_user_id IS NOT NULL)
+platform_audit_logs CREATE UNIQUE INDEX platform_audit_logs_pkey ON public.platform_audit_logs USING btree (id)
 project_members CREATE INDEX project_members_user_idx ON public.project_members USING btree (workspace_id, user_id)
 project_members CREATE UNIQUE INDEX project_members_pk ON public.project_members USING btree (project_id, user_id)
 project_stars CREATE UNIQUE INDEX project_stars_pk ON public.project_stars USING btree (user_id, project_id)
@@ -1138,7 +1189,9 @@ notes enabled=true forced=true
 notifications enabled=true forced=true
 otp_challenges enabled=false forced=false
 outbox_events enabled=false forced=false
+password_reset_tokens enabled=false forced=false
 plans enabled=false forced=false
+platform_audit_logs enabled=false forced=false
 project_members enabled=true forced=true
 project_stars enabled=true forced=true
 projects enabled=true forced=true
@@ -1280,7 +1333,9 @@ notes DELETE,INSERT,SELECT,UPDATE
 notifications DELETE,INSERT,SELECT,UPDATE
 otp_challenges DELETE,INSERT,SELECT,UPDATE
 outbox_events DELETE,INSERT,SELECT,UPDATE
+password_reset_tokens DELETE,INSERT,SELECT,UPDATE
 plans SELECT
+platform_audit_logs INSERT,SELECT
 project_members DELETE,INSERT,SELECT,UPDATE
 project_stars DELETE,INSERT,SELECT,UPDATE
 projects DELETE,INSERT,SELECT,UPDATE

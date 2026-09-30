@@ -49,6 +49,7 @@ export class PasswordService {
       .select({
         phone: users.phone,
         passwordHash: users.passwordHash,
+        resetRequired: users.passwordResetRequired,
         failures: users.failedPasswordAttempts,
         locked: sql<boolean>`coalesce(${users.lockedUntil} > now(), false)`,
       })
@@ -56,6 +57,8 @@ export class PasswordService {
       .where(eq(users.id, userId));
     if (!user) throw new ApiError('UNAUTHENTICATED');
     if (!user.passwordHash) throw new ApiError('PASSWORD_REQUIRED');
+    // A platform admin issued a reset code: the old password is retired until a new one is set.
+    if (user.resetRequired) throw new ApiError('PASSWORD_RESET_REQUIRED');
     if (user.locked) throw new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`);
 
     if (await argon2.verify(user.passwordHash, password)) {

@@ -21,7 +21,8 @@
     "db:snapshot": "tsc -b && node --enable-source-maps dist/cli/schema-snapshot.js --write",
     "perf:seed": "tsc -b && node --enable-source-maps dist/cli/perf.js --seed",
     "perf:measure": "tsc -b && node --enable-source-maps dist/cli/perf.js --measure",
-    "openapi": "tsc -b && node --enable-source-maps dist/cli/openapi.js"
+    "openapi": "tsc -b && node --enable-source-maps dist/cli/openapi.js",
+    "platform-admin": "tsc -b && node --enable-source-maps dist/cli/platform-admin.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1140.0",

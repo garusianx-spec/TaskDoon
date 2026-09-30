@@ -14,6 +14,7 @@ x-api-env: &api-env
   DATABASE_URL: postgres://taskin_app:taskin_app@pgbouncer:6432/taskin
   DATABASE_DIRECT_URL: postgres://taskin_app:taskin_app@postgres:5432/taskin
   DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@postgres:5432/taskin
+  DATABASE_PLATFORM_ADMIN_URL: postgres://taskin_platform_admin:taskin_platform_admin@postgres:5432/taskin
   REDIS_CORE_URL: redis://redis-core:6379
   REDIS_RT_URL: redis://redis-rt:6379
   S3_ENDPOINT: http://s3:8333

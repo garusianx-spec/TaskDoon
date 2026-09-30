@@ -14,6 +14,7 @@ import { SchedulingController } from './modules/chat/scheduling.controller.js';
 import { DomainModule } from './modules/domain.module.js';
 import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { MeController } from './modules/users/me.controller.js';
+import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module.js';
 import { ContentController, InboxController } from './modules/content/content.controller.js';
 import { WorkController } from './modules/work/work.controller.js';
 import { WorkspaceController, WorkspaceEntryController } from './modules/workspaces/workspaces.controller.js';
@@ -52,6 +53,7 @@ class HttpApiModule {
       module: HttpApiModule,
       imports: [
         DomainModule,
+        PlatformAdminModule,
         ThrottlerModule.forRootAsync({
           inject: [RedisClients, AppConfig],
           useFactory: (redis: RedisClients, config: AppConfig) => ({

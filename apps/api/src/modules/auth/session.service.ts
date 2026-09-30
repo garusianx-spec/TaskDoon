@@ -3,10 +3,12 @@ import { and, desc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type { AuthMethod, SessionView } from '@taskin/contracts';
 import { AppConfig } from '../../config/app-config.js';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
+import { RequestContext } from '../../platform/context/request-context.js';
 import { randomToken, sha256 } from '../../platform/crypto/crypto.js';
 import type { Tx } from '../../platform/db/database.js';
 import { authSessions, refreshTokens, users } from '../../platform/db/schema/all.js';
 import { UnitOfWork, type Unit } from '../../platform/db/unit-of-work.js';
+import { parseUserAgent } from '../../platform/http/user-agent.js';
 import { OutboxWriter } from '../../platform/outbox/outbox-writer.js';
 import { RevocationService } from './revocation.service.js';
 
@@ -47,12 +49,14 @@ export class SessionService {
     private readonly revocations: RevocationService,
     private readonly audit: AuditWriter,
     private readonly outbox: OutboxWriter,
+    private readonly context: RequestContext,
   ) {}
 
   async create(unit: Unit, userId: string, device: DeviceInfo, amr: readonly AuthMethod[]): Promise<{ session: SessionRow; refresh: IssuedRefresh }> {
     const now = Date.now();
     const absolute = new Date(now + this.config.env.REFRESH_ABSOLUTE_DAYS * DAY_MS);
     const idle = new Date(Math.min(now + this.config.env.REFRESH_IDLE_DAYS * DAY_MS, absolute.getTime()));
+    const parsed = parseUserAgent(device.userAgent);
     const [session] = await unit.tx
       .insert(authSessions)
       .values({
@@ -60,6 +64,9 @@ export class SessionService {
         deviceLabel: device.deviceLabel?.slice(0, 120) ?? null,
         userAgent: device.userAgent?.slice(0, 512) ?? null,
         ip: device.ip ?? null,
+        clientName: parsed.client,
+        osName: parsed.os,
+        deviceType: parsed.deviceType,
         amr: [...amr],
         idleExpiresAt: idle,
         absoluteExpiresAt: absolute,
@@ -123,7 +130,7 @@ export class SessionService {
       }
       const [updated] = await tx
         .update(authSessions)
-        .set({ lastActiveAt: sql`now()`, idleExpiresAt: idle })
+        .set({ lastActiveAt: sql`now()`, idleExpiresAt: idle, ...(this.context.ip ? { lastIp: this.context.ip } : {}) })
         .where(eq(authSessions.id, session.id))
         .returning();
       await this.audit.write(tx, { action: 'auth.refresh', actorUserId: user.id, resourceType: 'session', resourceId: session.id });

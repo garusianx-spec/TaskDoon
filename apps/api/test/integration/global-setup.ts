@@ -21,6 +21,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
     await admin.query(`create database ${TEMPLATE_DB} owner taskin_migrator`);
     await admin.query(`revoke all on database ${TEMPLATE_DB} from public`);
     await admin.query(`grant connect, temporary on database ${TEMPLATE_DB} to taskin_app`);
+    await admin.query(`grant connect on database ${TEMPLATE_DB} to taskin_platform_admin`);
   } finally {
     await admin.end();
   }

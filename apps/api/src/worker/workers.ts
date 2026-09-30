@@ -51,6 +51,16 @@ function inviteMail(params: Readonly<Record<string, string>>): { subject: string
   };
 }
 
+/** A password reset link a platform admin sent (single use; it expires). */
+function resetMail(params: Readonly<Record<string, string>>): { subject: string; text: string; html: string } {
+  const link = params.link ?? '';
+  return {
+    subject: 'بازنشانی رمز عبور تسک‌دون',
+    text: `برای گذاشتن رمز عبور تازه در تسک‌دون این پیوند را باز کنید: ${link}\n\nپیوند یک بار کار می‌کند و به‌زودی منقضی می‌شود. اگر این درخواست از شما نبوده، به مدیر سازمان خبر دهید.`,
+    html: `<div dir="rtl" style="font-family:Vazirmatn,Tahoma,sans-serif"><p>برای گذاشتن رمز عبور تازه در تسک‌دون این پیوند را باز کنید:</p><p><a href="${escapeHtml(link)}">گذاشتن رمز عبور تازه</a></p><p>پیوند یک بار کار می‌کند و به‌زودی منقضی می‌شود. اگر این درخواست از شما نبوده، به مدیر سازمان خبر دهید.</p></div>`,
+  };
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char);
 }
@@ -76,7 +86,8 @@ export class NotificationsProcessor {
       }
       case 'mail.send': {
         const payload = data.payload as NotificationJobs['mail.send'];
-        await this.mail.send({ to: payload.to, ...inviteMail(unseal(payload.params, payload.sealed, this.box)) });
+        const params = unseal(payload.params, payload.sealed, this.box);
+        await this.mail.send({ to: payload.to, ...(payload.template === 'password_reset' ? resetMail(params) : inviteMail(params)) });
         return;
       }
     }

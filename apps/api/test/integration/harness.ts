@@ -79,6 +79,7 @@ export async function createTestApp(overrides: Record<string, string> = {}): Pro
   await creator.query(`create database ${database} template ${inject('templateDb')} owner taskin_migrator`);
   await creator.query(`revoke all on database ${database} from public`);
   await creator.query(`grant connect, temporary on database ${database} to taskin_app`);
+  await creator.query(`grant connect on database ${database} to taskin_platform_admin`);
   await creator.end();
 
   const prefix = `t${randomBytes(4).toString('hex')}`;
@@ -91,6 +92,7 @@ export async function createTestApp(overrides: Record<string, string> = {}): Pro
     LOG_LEVEL: 'info',
     DATABASE_URL: dbUrl(database, 'app'),
     DATABASE_MIGRATOR_URL: dbUrl(database, 'migrator'),
+    DATABASE_PLATFORM_ADMIN_URL: dbUrl(database, 'platform_admin'),
     DATABASE_POOL_MAX: '5',
     REDIS_CORE_URL: REDIS_URL,
     REDIS_RT_URL: REDIS_URL,

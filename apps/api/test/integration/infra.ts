@@ -8,11 +8,12 @@ export function adminUrl(): string {
   return process.env.TEST_DATABASE_ADMIN_URL ?? 'postgres://postgres:postgres@localhost:5432/postgres';
 }
 
-/** A connection to `database` as one of the two roles. */
-export function dbUrl(database: string, role: 'app' | 'migrator'): string {
+/** A connection to `database` as one of the roles (`platform_admin`: the read-only platform-admin pool). */
+export function dbUrl(database: string, role: 'app' | 'migrator' | 'platform_admin'): string {
   const url = new URL(adminUrl());
-  url.username = role === 'app' ? 'taskin_app' : 'taskin_migrator';
-  url.password = role === 'app' ? 'taskin_app' : 'taskin_migrator';
+  const name = role === 'app' ? 'taskin_app' : role === 'migrator' ? 'taskin_migrator' : 'taskin_platform_admin';
+  url.username = name;
+  url.password = name;
   url.pathname = `/${database}`;
   return url.toString();
 }

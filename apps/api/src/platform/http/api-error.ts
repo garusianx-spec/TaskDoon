@@ -59,6 +59,9 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   NOT_SUBSCRIBED: { status: 409, title: 'Subscribe to the workspace first' },
   SCHEDULED_MESSAGE_CLOSED: { status: 409, title: 'The scheduled message was sent or cancelled already' },
   SCHEDULE_LIMIT_REACHED: { status: 409, title: 'Too many messages are scheduled in this conversation' },
+  PASSWORD_RESET_REQUIRED: { status: 409, title: 'Set a new password with the reset link first' },
+  RESET_TOKEN_INVALID: { status: 410, title: 'The reset link is not valid any more' },
+  PLATFORM_ADMIN_UNAVAILABLE: { status: 503, title: 'Platform administration is not configured here' },
 };
 
 /**

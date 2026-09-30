@@ -4,3 +4,4 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'taskin')\gexec
 
 REVOKE ALL ON DATABASE taskin FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE taskin TO taskin_app;
+GRANT CONNECT ON DATABASE taskin TO taskin_platform_admin;

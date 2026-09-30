@@ -8,7 +8,8 @@ import { maskPhone } from '../logging/logging.js';
  * invitation link, a security alert. Numbers are E.164 at the port; each adapter converts to the
  * form its API expects.
  */
-export type SmsTemplate = 'otp' | 'invite' | 'alert';
+/** `password_reset`: a link a platform admin sent to set a new password. */
+export type SmsTemplate = 'otp' | 'invite' | 'alert' | 'password_reset';
 
 export interface SmsMessage {
   readonly to: string;
@@ -48,6 +49,8 @@ export function renderSms(message: SmsMessage): string {
       return `شما به فضای کاری «${message.tokens.workspace}» در تسک‌دون دعوت شده‌اید: ${message.tokens.link}`;
     case 'alert':
       return `هشدار امنیتی تسک‌دون: ${message.tokens.event}`;
+    case 'password_reset':
+      return `برای گذاشتن رمز عبور تازه در تسک‌دون: ${message.tokens.link}`;
   }
 }
 
@@ -104,6 +107,8 @@ export class KavenegarProvider implements SmsProvider {
     if (message.template === 'invite') {
       params.set('token', message.tokens.link ?? '');
       params.set('token10', message.tokens.workspace ?? '');
+    } else if (message.template === 'password_reset') {
+      params.set('token', message.tokens.link ?? '');
     } else {
       values.slice(0, 3).forEach((value, index) => params.set(index === 0 ? 'token' : `token${index + 1}`, value.replace(/\s+/g, '_')));
     }
@@ -178,12 +183,14 @@ export class SmsService {
             otp: env.KAVENEGAR_OTP_TEMPLATE,
             invite: env.KAVENEGAR_INVITE_TEMPLATE,
             alert: env.KAVENEGAR_ALERT_TEMPLATE,
+            password_reset: env.KAVENEGAR_RESET_TEMPLATE,
           });
         case 'smsir':
           return new SmsIrProvider(env.SMSIR_API_KEY ?? '', {
             otp: env.SMSIR_OTP_TEMPLATE_ID,
             invite: env.SMSIR_INVITE_TEMPLATE_ID,
             alert: env.SMSIR_ALERT_TEMPLATE_ID,
+            password_reset: env.SMSIR_RESET_TEMPLATE_ID,
           });
       }
     });

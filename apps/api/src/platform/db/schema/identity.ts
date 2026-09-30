@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, index, inet, integer, pgTable, smallint, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, index, inet, integer, pgTable, smallint, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { bytea, citext, createdAt, instant, updatedAt, uuidPk } from './columns.js';
 import { avatarTone, otpPurpose, sessionRevokeReason, userStatus } from './enums.js';
 
@@ -31,6 +31,10 @@ export const users = pgTable(
     /** Bumping it invalidates every access token the user holds (phone change, compromise). */
     securityVersion: integer().notNull().default(1),
     status: userStatus().notNull().default('active'),
+    /** Platform super admin (operators of TaskDoon itself): granted only by the CLI, never through the API. */
+    isPlatformAdmin: boolean().notNull().default(false),
+    /** An admin issued a reset code: the old password no longer verifies until a new one is set. */
+    passwordResetRequired: boolean().notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     deletedAt: instant(),
@@ -79,6 +83,12 @@ export const authSessions = pgTable(
     userAgent: text(),
     ip: inet(),
     geoCity: text(),
+    /** Parsed from the user agent when the session starts: browser or app, operating system, form factor. */
+    clientName: text(),
+    osName: text(),
+    deviceType: text(),
+    /** The address of the latest refresh (the session's first address is `ip`). */
+    lastIp: inet(),
     /** Authentication methods (RFC 8176): `otp`, plus `pwd` once the session has stepped up. */
     amr: text().array().notNull(),
     lastActiveAt: instant().notNull().defaultNow(),
@@ -113,4 +123,29 @@ export const refreshTokens = pgTable(
     replacedBy: uuid(),
   },
   (t) => [index('refresh_tokens_session_idx').on(t.sessionId)],
+);
+
+/**
+ * Single-use password reset codes a platform admin issued (sent as a link, or handed over). Only
+ * a SHA-256 of the 256-bit code is stored; a newer code supersedes the older ones.
+ */
+export const passwordResetTokens = pgTable(
+  'password_reset_tokens',
+  {
+    id: uuidPk(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: bytea().notNull().unique('password_reset_tokens_hash_uq'),
+    channel: text().notNull(),
+    /** The platform admin who issued it. */
+    createdBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    expiresAt: instant().notNull(),
+    usedAt: instant(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('password_reset_tokens_user_idx').on(t.userId).where(sql`${t.usedAt} is null`),
+    check('password_reset_tokens_channel', sql`${t.channel} in ('sms', 'email', 'manual')`),
+  ],
 );

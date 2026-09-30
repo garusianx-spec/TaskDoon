@@ -41,6 +41,13 @@ export const envSchema = z
     DATABASE_DIRECT_URL: z.url().optional(),
     /** As `taskin_migrator`, the table owner; only the migrate job uses it. */
     DATABASE_MIGRATOR_URL: z.url().optional(),
+    /**
+     * As `taskin_platform_admin`, direct (no PgBouncer): read-only, cross-tenant reads for verified
+     * platform super admins only. Unset: the admin routes answer 503.
+     */
+    DATABASE_PLATFORM_ADMIN_URL: z.url().optional(),
+    /** How long a password reset code a platform admin issued stays valid. */
+    PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(24 * 60).default(60),
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(200).default(10),
 
     /** AOF, `noeviction`: queues, rate limits, idempotency, revocations, caches. */
@@ -105,10 +112,12 @@ export const envSchema = z
     KAVENEGAR_OTP_TEMPLATE: z.string().default('taskin-otp'),
     KAVENEGAR_INVITE_TEMPLATE: z.string().default('taskin-invite'),
     KAVENEGAR_ALERT_TEMPLATE: z.string().default('taskin-alert'),
+    KAVENEGAR_RESET_TEMPLATE: z.string().default('taskin-reset'),
     SMSIR_API_KEY: z.string().optional(),
     SMSIR_OTP_TEMPLATE_ID: z.coerce.number().int().optional(),
     SMSIR_INVITE_TEMPLATE_ID: z.coerce.number().int().optional(),
     SMSIR_ALERT_TEMPLATE_ID: z.coerce.number().int().optional(),
+    SMSIR_RESET_TEMPLATE_ID: z.coerce.number().int().optional(),
 
     SMTP_URL: z.url().default('smtp://localhost:1025'),
     MAIL_FROM: z.string().default('TaskDoon <no-reply@taskin.local>'),

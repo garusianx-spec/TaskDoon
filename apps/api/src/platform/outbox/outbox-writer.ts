@@ -8,7 +8,7 @@ export interface OutboxEventMap {
   /** An SMS the worker must send (invitation link, security alert). */
   'notification.sms': {
     readonly to: string;
-    readonly template: 'invite' | 'alert';
+    readonly template: 'invite' | 'alert' | 'password_reset';
     /** Template tokens; values marked sealed are SecretBox-encrypted until the worker sends. */
     readonly tokens: Readonly<Record<string, string>>;
     readonly sealed?: readonly string[];
@@ -16,7 +16,7 @@ export interface OutboxEventMap {
   /** An email the worker must send. */
   'notification.email': {
     readonly to: string;
-    readonly template: 'invite';
+    readonly template: 'invite' | 'password_reset';
     readonly params: Readonly<Record<string, string>>;
     readonly sealed?: readonly string[];
   };

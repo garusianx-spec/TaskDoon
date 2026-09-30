@@ -249,6 +249,18 @@ describe('M1 checklist: audit trail and correlation', () => {
     await traced('post', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/restore', `${pj}/restore`, (r) => r.set(bearer(user)));
     await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) => r.set(bearer(user)));
 
+    // Platform super admin: ending sessions and a password reset, by a flagged operator.
+    const operator = await withAdminPassword(t, await signIn(t, randomPhone(), 'اپراتور پلتفرم'));
+    await t.admin.query('update users set is_platform_admin = true where id = $1', [operator.userId]);
+    const target = await signIn(t, randomPhone(), 'کاربر هدف');
+    const targetDevice = await signIn(t, target.phone);
+    await traced('post', '/api/v1/admin/sessions/{sessionId}/revoke', `/api/v1/admin/sessions/${targetDevice.sessionId}/revoke`, (r) => r.set(bearer(operator)));
+    await traced('post', '/api/v1/admin/users/{userId}/sessions/revoke-all', `/api/v1/admin/users/${target.userId}/sessions/revoke-all`, (r) => r.set(bearer(operator)));
+    const reset = await traced('post', '/api/v1/admin/users/{userId}/password-reset', `/api/v1/admin/users/${target.userId}/password-reset`, (r) =>
+      r.set(bearer(operator)).send({ channel: 'manual' }),
+    );
+    await traced('post', '/api/v1/password-reset', '/api/v1/password-reset', (r) => r.send({ token: (reset.body as { code: string }).code, newPassword: 'Tazeh-Ramz-1405!' }));
+
     // Ownership, removal, deletion, and finally signing out.
     await traced('post', '/api/v1/workspaces/{workspaceId}/transfer-ownership', `${ws}/transfer-ownership`, (r) => r.set(bearer(user)).send({ userId: joiner.userId }));
     const newOwner = { ...joiner };
