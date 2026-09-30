@@ -2578,6 +2578,15 @@
             }
           },
           {
+            "name": "backlog",
+            "required": false,
+            "in": "query",
+            "description": "Only backlog items (`true`) or only board items (`false`); omitted, both",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "cursor",
             "required": false,
             "in": "query",
@@ -3541,6 +3550,347 @@
           },
           {
             "name": "attachmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "work"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/worklogs": {
+      "get": {
+        "operationId": "Agile_worklogs",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorklogListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Time logged on the task, newest first, with the total and the estimate",
+        "tags": [
+          "work"
+        ]
+      },
+      "post": {
+        "operationId": "Agile_logWork",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "8–64 characters of [A-Za-z0-9_-], unique per intended operation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorklogDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorklogViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Log time spent on the task",
+        "tags": [
+          "work"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/worklogs/{worklogId}": {
+      "delete": {
+        "operationId": "Agile_removeWorklog",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "worklogId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a worklog: one's own with edit, anyone's with delete",
+        "tags": [
+          "work"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/dependencies": {
+      "get": {
+        "operationId": "Agile_dependencies",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskDependencyViewDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The task's links to other tasks of the project, each from this task's side",
+        "tags": [
+          "work"
+        ]
+      },
+      "post": {
+        "operationId": "Agile_link",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDependencyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDependencyViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Link the task to another of the project; blocking links may not form a cycle",
+        "tags": [
+          "work"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/dependencies/{dependencyId}": {
+      "delete": {
+        "operationId": "Agile_unlink",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dependencyId",
             "required": true,
             "in": "path",
             "schema": {
@@ -8646,6 +8996,45 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "task",
+              "bug",
+              "feature"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "description": "Bugs only"
+          },
+          "estimatedMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "spentMinutes": {
+            "type": "number",
+            "description": "The sum of the task's worklogs, in minutes"
+          },
+          "isBacklog": {
+            "type": "boolean",
+            "description": "Backlog items are not on the board"
+          },
+          "blockedByIds": {
+            "description": "Live, unarchived tasks that block this one, whatever their status",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
@@ -8673,7 +9062,13 @@
           "sourceNoteId",
           "version",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "type",
+          "severity",
+          "estimatedMinutes",
+          "spentMinutes",
+          "isBacklog",
+          "blockedByIds"
         ]
       },
       "BoardViewDto": {
@@ -8860,6 +9255,36 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "task",
+              "bug",
+              "feature"
+            ],
+            "default": "task"
+          },
+          "severity": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "description": "Bugs only"
+          },
+          "estimatedMinutes": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 60000
+          },
+          "isBacklog": {
+            "type": "boolean",
+            "default": false
           }
         },
         "required": [
@@ -9195,6 +9620,45 @@
             "type": "string",
             "format": "date-time"
           },
+          "type": {
+            "type": "string",
+            "enum": [
+              "task",
+              "bug",
+              "feature"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "description": "Bugs only"
+          },
+          "estimatedMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "spentMinutes": {
+            "type": "number",
+            "description": "The sum of the task's worklogs, in minutes"
+          },
+          "isBacklog": {
+            "type": "boolean",
+            "description": "Backlog items are not on the board"
+          },
+          "blockedByIds": {
+            "description": "Live, unarchived tasks that block this one, whatever their status",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           "description": {
             "type": "string"
           },
@@ -9280,6 +9744,12 @@
           "version",
           "createdAt",
           "updatedAt",
+          "type",
+          "severity",
+          "estimatedMinutes",
+          "spentMinutes",
+          "isBacklog",
+          "blockedByIds",
           "description",
           "createdById",
           "reopenColumnId",
@@ -9339,6 +9809,36 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "task",
+              "bug",
+              "feature"
+            ],
+            "description": "Changing away from `bug` clears the severity"
+          },
+          "severity": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "description": "Bugs only"
+          },
+          "estimatedMinutes": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 60000
+          },
+          "isBacklog": {
+            "type": "boolean",
+            "description": "To (`true`) or back from (`false`) the backlog; needs the assign permission"
           }
         }
       },
@@ -9518,6 +10018,181 @@
         },
         "required": [
           "attachmentId"
+        ]
+      },
+      "WorklogViewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "loggedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "taskId",
+          "userId",
+          "durationMinutes",
+          "description",
+          "loggedAt",
+          "createdAt"
+        ]
+      },
+      "WorklogListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first, at most 500",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorklogViewDto"
+            }
+          },
+          "totalMinutes": {
+            "type": "number",
+            "description": "Every worklog of the task"
+          },
+          "estimatedMinutes": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "totalMinutes",
+          "estimatedMinutes"
+        ]
+      },
+      "CreateWorklogDto": {
+        "type": "object",
+        "properties": {
+          "durationMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "loggedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the work happened; defaults to now"
+          }
+        },
+        "required": [
+          "durationMinutes"
+        ]
+      },
+      "LinkedTaskViewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "CRM-104"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "todo",
+              "in-progress",
+              "review",
+              "done"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "status"
+        ]
+      },
+      "TaskDependencyViewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "blocks",
+              "blocked_by",
+              "relates_to"
+            ],
+            "description": "From the requested task's side: `blocks` means it blocks `task`"
+          },
+          "task": {
+            "$ref": "#/components/schemas/LinkedTaskViewDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "task",
+          "createdAt"
+        ]
+      },
+      "CreateDependencyDto": {
+        "type": "object",
+        "properties": {
+          "targetTaskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Another task of the same project"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "blocks",
+              "blocked_by",
+              "relates_to"
+            ],
+            "description": "How the task in the path relates to the target"
+          }
+        },
+        "required": [
+          "targetTaskId",
+          "type"
         ]
       },
       "CreateUploadDto": {

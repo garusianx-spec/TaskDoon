@@ -364,6 +364,14 @@ task_comments.id uuid not null default app.uuidv7()
 task_comments.reply_to_id uuid
 task_comments.task_id uuid not null
 task_comments.workspace_id uuid not null
+task_dependencies.created_at timestamp with time zone not null default now()
+task_dependencies.created_by uuid not null
+task_dependencies.id uuid not null default app.uuidv7()
+task_dependencies.project_id uuid not null
+task_dependencies.source_task_id uuid not null
+task_dependencies.target_task_id uuid not null
+task_dependencies.type task_dependency_type not null
+task_dependencies.workspace_id uuid not null
 task_events.actor_id uuid
 task_events.created_at timestamp with time zone not null default now()
 task_events.id uuid not null default app.uuidv7()
@@ -378,6 +386,14 @@ task_stars.created_at timestamp with time zone not null default now()
 task_stars.task_id uuid not null
 task_stars.user_id uuid not null
 task_stars.workspace_id uuid not null
+task_worklogs.created_at timestamp with time zone not null default now()
+task_worklogs.description text not null default ''::text
+task_worklogs.duration_minutes integer not null
+task_worklogs.id uuid not null default app.uuidv7()
+task_worklogs.logged_at timestamp with time zone not null default now()
+task_worklogs.task_id uuid not null
+task_worklogs.user_id uuid not null
+task_worklogs.workspace_id uuid not null
 tasks.archived_at timestamp with time zone
 tasks.column_id uuid not null
 tasks.completed_at timestamp with time zone
@@ -386,7 +402,9 @@ tasks.created_by uuid not null
 tasks.deleted_at timestamp with time zone
 tasks.description text not null default ''::text
 tasks.due_date date
+tasks.estimated_minutes integer
 tasks.id uuid not null default app.uuidv7()
+tasks.is_backlog boolean not null default false
 tasks.number bigint not null
 tasks.position text not null
 tasks.priority task_priority not null default 'medium'::task_priority
@@ -394,11 +412,13 @@ tasks.project_id uuid not null
 tasks.reopen_column_id uuid
 tasks.reviewer_id uuid
 tasks.search_text text not null
+tasks.severity issue_severity
 tasks.source_message_id uuid
 tasks.source_note_id uuid
 tasks.start_date date not null
 tasks.status task_status not null
 tasks.title text not null
+tasks.type issue_type not null default 'task'::issue_type
 tasks.updated_at timestamp with time zone not null default now()
 tasks.version integer not null default 1
 tasks.workspace_id uuid not null
@@ -903,6 +923,22 @@ task_comments task_comments_task_id_not_null: NOT NULL task_id
 task_comments task_comments_workspace_id_not_null: NOT NULL workspace_id
 task_comments task_comments_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 task_comments task_comments_ws_id_uq: UNIQUE (workspace_id, id)
+task_dependencies task_dependencies_created_at_not_null: NOT NULL created_at
+task_dependencies task_dependencies_created_by_fk: FOREIGN KEY (workspace_id, created_by) REFERENCES workspace_members(workspace_id, user_id)
+task_dependencies task_dependencies_created_by_not_null: NOT NULL created_by
+task_dependencies task_dependencies_id_not_null: NOT NULL id
+task_dependencies task_dependencies_not_self: CHECK ((source_task_id <> target_task_id))
+task_dependencies task_dependencies_pkey: PRIMARY KEY (id)
+task_dependencies task_dependencies_project_fk: FOREIGN KEY (workspace_id, project_id) REFERENCES projects(workspace_id, id) ON DELETE CASCADE
+task_dependencies task_dependencies_project_id_not_null: NOT NULL project_id
+task_dependencies task_dependencies_source_fk: FOREIGN KEY (workspace_id, source_task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+task_dependencies task_dependencies_source_task_id_not_null: NOT NULL source_task_id
+task_dependencies task_dependencies_target_fk: FOREIGN KEY (workspace_id, target_task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+task_dependencies task_dependencies_target_task_id_not_null: NOT NULL target_task_id
+task_dependencies task_dependencies_type_not_null: NOT NULL type
+task_dependencies task_dependencies_workspace_id_not_null: NOT NULL workspace_id
+task_dependencies task_dependencies_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+task_dependencies task_dependencies_ws_id_uq: UNIQUE (workspace_id, id)
 task_events task_events_created_at_not_null: NOT NULL created_at
 task_events task_events_id_not_null: NOT NULL id
 task_events task_events_payload_not_null: NOT NULL payload
@@ -927,6 +963,21 @@ task_stars task_stars_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES wo
 task_stars task_stars_user_id_not_null: NOT NULL user_id
 task_stars task_stars_workspace_id_not_null: NOT NULL workspace_id
 task_stars task_stars_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+task_worklogs task_worklogs_created_at_not_null: NOT NULL created_at
+task_worklogs task_worklogs_description_len: CHECK ((char_length(description) <= 500))
+task_worklogs task_worklogs_description_not_null: NOT NULL description
+task_worklogs task_worklogs_duration: CHECK (((duration_minutes >= 1) AND (duration_minutes <= 1440)))
+task_worklogs task_worklogs_duration_minutes_not_null: NOT NULL duration_minutes
+task_worklogs task_worklogs_id_not_null: NOT NULL id
+task_worklogs task_worklogs_logged_at_not_null: NOT NULL logged_at
+task_worklogs task_worklogs_pkey: PRIMARY KEY (id)
+task_worklogs task_worklogs_task_fk: FOREIGN KEY (workspace_id, task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+task_worklogs task_worklogs_task_id_not_null: NOT NULL task_id
+task_worklogs task_worklogs_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id)
+task_worklogs task_worklogs_user_id_not_null: NOT NULL user_id
+task_worklogs task_worklogs_workspace_id_not_null: NOT NULL workspace_id
+task_worklogs task_worklogs_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+task_worklogs task_worklogs_ws_id_uq: UNIQUE (workspace_id, id)
 tasks tasks_column_fk: FOREIGN KEY (workspace_id, column_id) REFERENCES board_columns(workspace_id, id)
 tasks tasks_column_id_not_null: NOT NULL column_id
 tasks tasks_created_at_not_null: NOT NULL created_at
@@ -935,7 +986,9 @@ tasks tasks_created_by_not_null: NOT NULL created_by
 tasks tasks_dates: CHECK (((due_date IS NULL) OR (due_date >= start_date)))
 tasks tasks_description_len: CHECK ((char_length(description) <= 20000))
 tasks tasks_description_not_null: NOT NULL description
+tasks tasks_estimate_range: CHECK (((estimated_minutes IS NULL) OR ((estimated_minutes >= 1) AND (estimated_minutes <= 60000))))
 tasks tasks_id_not_null: NOT NULL id
+tasks tasks_is_backlog_not_null: NOT NULL is_backlog
 tasks tasks_number_not_null: NOT NULL number
 tasks tasks_pkey: PRIMARY KEY (id)
 tasks tasks_position_not_null: NOT NULL "position"
@@ -946,12 +999,14 @@ tasks tasks_project_number_uq: UNIQUE (project_id, number)
 tasks tasks_reopen_column_fk: FOREIGN KEY (workspace_id, reopen_column_id) REFERENCES board_columns(workspace_id, id)
 tasks tasks_reviewer_fk: FOREIGN KEY (workspace_id, reviewer_id) REFERENCES workspace_members(workspace_id, user_id)
 tasks tasks_search_text_not_null: NOT NULL search_text
+tasks tasks_severity_bug_only: CHECK (((severity IS NULL) OR (type = 'bug'::issue_type)))
 tasks tasks_source_message_fk: FOREIGN KEY (workspace_id, source_message_id) REFERENCES messages(workspace_id, id) ON DELETE SET NULL (source_message_id)
 tasks tasks_source_note_fk: FOREIGN KEY (workspace_id, source_note_id) REFERENCES notes(workspace_id, id) ON DELETE SET NULL (source_note_id)
 tasks tasks_start_date_not_null: NOT NULL start_date
 tasks tasks_status_not_null: NOT NULL status
 tasks tasks_title_len: CHECK (((char_length(title) >= 1) AND (char_length(title) <= 200)))
 tasks tasks_title_not_null: NOT NULL title
+tasks tasks_type_not_null: NOT NULL type
 tasks tasks_updated_at_not_null: NOT NULL updated_at
 tasks tasks_version_not_null: NOT NULL version
 tasks tasks_workspace_id_not_null: NOT NULL workspace_id
@@ -1138,11 +1193,19 @@ task_attachments CREATE UNIQUE INDEX task_attachments_pk ON public.task_attachme
 task_comments CREATE INDEX task_comments_task_idx ON public.task_comments USING btree (task_id, created_at)
 task_comments CREATE UNIQUE INDEX task_comments_pkey ON public.task_comments USING btree (id)
 task_comments CREATE UNIQUE INDEX task_comments_ws_id_uq ON public.task_comments USING btree (workspace_id, id)
+task_dependencies CREATE INDEX task_dependencies_source_idx ON public.task_dependencies USING btree (source_task_id)
+task_dependencies CREATE INDEX task_dependencies_target_idx ON public.task_dependencies USING btree (target_task_id)
+task_dependencies CREATE UNIQUE INDEX task_dependencies_pair_uq ON public.task_dependencies USING btree (LEAST(source_task_id, target_task_id), GREATEST(source_task_id, target_task_id))
+task_dependencies CREATE UNIQUE INDEX task_dependencies_pkey ON public.task_dependencies USING btree (id)
+task_dependencies CREATE UNIQUE INDEX task_dependencies_ws_id_uq ON public.task_dependencies USING btree (workspace_id, id)
 task_events CREATE INDEX task_events_task_idx ON public.task_events USING btree (task_id, created_at)
 task_events CREATE UNIQUE INDEX task_events_pkey ON public.task_events USING btree (id)
 task_labels CREATE INDEX task_labels_label_idx ON public.task_labels USING btree (label_id)
 task_labels CREATE UNIQUE INDEX task_labels_pk ON public.task_labels USING btree (task_id, label_id)
 task_stars CREATE UNIQUE INDEX task_stars_pk ON public.task_stars USING btree (user_id, task_id)
+task_worklogs CREATE INDEX task_worklogs_task_idx ON public.task_worklogs USING btree (task_id, logged_at)
+task_worklogs CREATE UNIQUE INDEX task_worklogs_pkey ON public.task_worklogs USING btree (id)
+task_worklogs CREATE UNIQUE INDEX task_worklogs_ws_id_uq ON public.task_worklogs USING btree (workspace_id, id)
 tasks CREATE INDEX tasks_column_position_idx ON public.tasks USING btree (workspace_id, column_id, "position") WHERE ((deleted_at IS NULL) AND (archived_at IS NULL))
 tasks CREATE INDEX tasks_created_idx ON public.tasks USING btree (workspace_id, created_at, id) WHERE (deleted_at IS NULL)
 tasks CREATE INDEX tasks_due_idx ON public.tasks USING btree (workspace_id, due_date) WHERE ((deleted_at IS NULL) AND (archived_at IS NULL) AND (status <> 'done'::task_status))
@@ -1203,9 +1266,11 @@ subtasks enabled=true forced=true
 task_assignees enabled=true forced=true
 task_attachments enabled=true forced=true
 task_comments enabled=true forced=true
+task_dependencies enabled=true forced=true
 task_events enabled=true forced=true
 task_labels enabled=true forced=true
 task_stars enabled=true forced=true
+task_worklogs enabled=true forced=true
 tasks enabled=true forced=true
 users enabled=false forced=false
 workflows enabled=true forced=true
@@ -1249,9 +1314,11 @@ subtasks subtasks_tenant ALL using((workspace_id = ( SELECT app.current_workspac
 task_assignees task_assignees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_attachments task_attachments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_comments task_comments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+task_dependencies task_dependencies_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_events task_events_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_labels task_labels_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_stars task_stars_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+task_worklogs task_worklogs_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 tasks tasks_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 workflows workflows_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 workspace_members workspace_members_self_read SELECT using((user_id = ( SELECT app.current_user_id() AS current_user_id))) check()
@@ -1347,9 +1414,11 @@ subtasks DELETE,INSERT,SELECT,UPDATE
 task_assignees DELETE,INSERT,SELECT,UPDATE
 task_attachments DELETE,INSERT,SELECT,UPDATE
 task_comments DELETE,INSERT,SELECT,UPDATE
+task_dependencies DELETE,INSERT,SELECT,UPDATE
 task_events DELETE,INSERT,SELECT,UPDATE
 task_labels DELETE,INSERT,SELECT,UPDATE
 task_stars DELETE,INSERT,SELECT,UPDATE
+task_worklogs DELETE,INSERT,SELECT,UPDATE
 tasks DELETE,INSERT,SELECT,UPDATE
 users DELETE,INSERT,SELECT,UPDATE
 workflows DELETE,INSERT,SELECT,UPDATE

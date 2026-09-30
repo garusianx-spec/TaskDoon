@@ -44,6 +44,16 @@ export const taskStatus = pgEnum('task_status', ['todo', 'in-progress', 'review'
 
 export const taskPriority = pgEnum('task_priority', ['urgent', 'high', 'medium', 'low']);
 
+/* ---------------------------------------------------------------- Agile tracking */
+
+export const issueType = pgEnum('issue_type', ['task', 'bug', 'feature']);
+
+/** Set on bugs only (`tasks_severity_bug_only`). */
+export const issueSeverity = pgEnum('issue_severity', ['critical', 'high', 'medium', 'low']);
+
+/** `blocked_by` rows are the reverse edge of `blocks`; `relates_to` never blocks. */
+export const taskDependencyType = pgEnum('task_dependency_type', ['blocks', 'blocked_by', 'relates_to']);
+
 export const attachmentKind = pgEnum('attachment_kind', ['image', 'video', 'document', 'sheet', 'archive', 'audio']);
 
 export const attachmentStatus = pgEnum('attachment_status', ['pending', 'scanning', 'ready', 'rejected', 'deleted']);

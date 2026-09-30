@@ -24,6 +24,11 @@ async function populate(t: TestApp, owner: Session, workspaceId: string): Promis
   expectStatus(await t.http().put(`${base}/tasks/${task.id}/star`).set(bearer(owner)), 204);
   expectStatus(await t.http().put(`${base}/projects/${project.id}/star`).set(bearer(owner)), 204);
   expectStatus(await t.http().post(`${base}/tasks/${task.id}/comments`).set(bearer(owner)).send({ body: 'نظر' }), 201);
+  // Agile tracking: a worklog, and a link to a second task.
+  const next = await createTask(t, owner, workspaceId, { projectId: project.id, title: 'وظیفه دوم' });
+  const agile = `${base}/projects/${project.id}/tasks/${task.id}`;
+  expectStatus(await t.http().post(`${agile}/worklogs`).set(bearer(owner)).set('Idempotency-Key', idempotencyKey()).send({ durationMinutes: 30 }), 201);
+  expectStatus(await t.http().post(`${agile}/dependencies`).set(bearer(owner)).send({ targetTaskId: next.id, type: 'blocks' }), 201);
   // A ready file of the owner's (the upload itself is covered by the files suite).
   const { rows } = await t.admin.query<{ id: string }>(
     `insert into attachments (workspace_id, uploader_id, bucket, object_key, file_name, mime_type, kind, size_bytes, status)

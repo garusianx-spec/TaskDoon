@@ -16,6 +16,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { MeController } from './modules/users/me.controller.js';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module.js';
 import { ContentController, InboxController } from './modules/content/content.controller.js';
+import { AgileController } from './modules/work/agile.controller.js';
 import { WorkController } from './modules/work/work.controller.js';
 import { WorkspaceController, WorkspaceEntryController } from './modules/workspaces/workspaces.controller.js';
 import type { RequestContextStore } from './platform/context/request-context.js';
@@ -72,7 +73,7 @@ class HttpApiModule {
           }),
         }),
       ],
-      controllers: [AuthController, MeController, InboxController, WorkspaceEntryController, WorkspaceController, WorkController, ContentController, ChatController, SchedulingController],
+      controllers: [AuthController, MeController, InboxController, WorkspaceEntryController, WorkspaceController, WorkController, AgileController, ContentController, ChatController, SchedulingController],
       providers: pipeline,
     };
   }

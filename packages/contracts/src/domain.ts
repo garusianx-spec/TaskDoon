@@ -111,6 +111,15 @@ export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done';
 
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low';
 
+/** Agile tracking: what kind of work a task is. Every task that predates it is a `task`. */
+export type IssueType = 'task' | 'bug' | 'feature';
+
+/** How badly a bug hurts; set on bugs only. */
+export type IssueSeverity = 'critical' | 'high' | 'medium' | 'low';
+
+/** `A blocks B` and `B blocked_by A` are the same edge; `relates_to` never blocks. */
+export type TaskDependencyType = 'blocks' | 'blocked_by' | 'relates_to';
+
 export type SemanticTone = 'done' | 'progress' | 'blocked' | 'todo' | 'review';
 
 export interface Subtask {
@@ -191,6 +200,41 @@ export interface Task {
    * subtasks it has before its detail is fetched). Absent when the arrays are complete.
    */
   readonly summary?: TaskSummary;
+  /*
+   * Agile tracking. Optional so tasks written before it (fixtures, drafts) stay valid: absent
+   * means a plain `task` on the board with no estimate, no time logged and no blockers.
+   */
+  readonly type?: IssueType;
+  /** Bugs only. */
+  readonly severity?: IssueSeverity | null;
+  readonly estimatedMinutes?: number | null;
+  /** Total of the task's worklogs, in minutes. */
+  readonly spentMinutes?: number;
+  /** In the backlog: left off the board (and its list and Gantt views) until moved back. */
+  readonly isBacklog?: boolean;
+  /** Tasks that block this one; it is blocked while any of them is not done. */
+  readonly blockedByIds?: readonly string[];
+}
+
+/** One stretch of logged work on a task. */
+export interface Worklog {
+  readonly id: string;
+  readonly userId: string;
+  readonly minutes: number;
+  readonly note: string;
+  readonly loggedAt: string;
+}
+
+/** A dependency as seen from one of its two tasks. */
+export interface TaskLink {
+  readonly id: string;
+  /** From this task's side: `blocks` means this task blocks `taskId`. */
+  readonly kind: TaskDependencyType;
+  readonly taskId: string;
+  /** The other task's code and title when known (it may not be loaded). */
+  readonly code: string;
+  readonly title: string;
+  readonly status: TaskStatus;
 }
 
 export interface TaskSummary {
@@ -239,7 +283,7 @@ export interface Project {
   readonly memberIds: readonly string[];
 }
 
-export type TaskViewMode = 'board' | 'list' | 'gantt';
+export type TaskViewMode = 'board' | 'list' | 'gantt' | 'backlog';
 
 /** Smart views resolve to a predicate over the task list rather than a stored query. */
 export type SmartViewId = 'my-tasks' | 'starred' | 'due-soon' | 'all';
@@ -547,4 +591,8 @@ export interface TaskDraft {
   /** Checklist items carried over from a note; each becomes a subtask. */
   readonly subtaskTitles: readonly string[];
   readonly attachments: readonly Attachment[];
+  /** Agile tracking; absent means a plain task on the board. */
+  readonly type?: IssueType;
+  readonly severity?: IssueSeverity | null;
+  readonly isBacklog?: boolean;
 }

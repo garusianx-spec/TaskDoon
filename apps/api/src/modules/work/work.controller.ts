@@ -254,6 +254,7 @@ export class WorkController {
       assigneeId: query.assigneeId,
       q: query.q,
       includeArchived: query.includeArchived,
+      backlog: query.backlog,
       cursor: query.cursor,
       limit: query.limit ?? 50,
     });

@@ -120,6 +120,20 @@
       "when": 1790798317058,
       "tag": "0016_password_reset_otp",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790801956391,
+      "tag": "0017_agile_tracking",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790801961417,
+      "tag": "0018_agile_tracking_security",
+      "breakpoints": true
     }
   ]
 }
