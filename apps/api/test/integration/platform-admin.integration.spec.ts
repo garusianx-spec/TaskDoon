@@ -5,6 +5,7 @@ import pg from 'pg';
 import supertest from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type {
+  AuthSession,
   OtpVerifyResult,
   PasswordResetIssued,
   PlatformAdminMe,
@@ -172,7 +173,7 @@ describe('Platform super admin (phase 1)', () => {
     it('asks for a fresh password step-up on everything but the probe', async () => {
       const probe = await admin(operatorFresh).get('/me');
       expectStatus(probe, 200);
-      expect(probe.body).toEqual({ userId: operator.userId, fullName: 'اپراتور پلتفرم', stepUpRequired: true, available: true } satisfies PlatformAdminMe);
+      expect(probe.body).toEqual({ userId: operator.userId, fullName: 'اپراتور پلتفرم', smsConfirmationRequired: false, stepUpRequired: true, available: true } satisfies PlatformAdminMe);
       expect(probe.headers['cache-control']).toBe('no-store');
       for (const [method, path] of routes(ali.userId, workspace.id).filter(([, path]) => path !== '/me')) {
         const response = await admin(operatorFresh)[method](path);
@@ -210,6 +211,58 @@ describe('Platform super admin (phase 1)', () => {
       } finally {
         await peer.close();
       }
+    });
+
+    it('answers 503, not 500, when the admin role cannot log in, and the probe says so', async () => {
+      // A database created before the role existed: Postgres answers 28P01 for a role it does not know.
+      const url = new URL(t.settings.DATABASE_PLATFORM_ADMIN_URL ?? '');
+      url.password = 'not-the-password';
+      const peer: NestExpressApplication = await createApp(envSchema.parse({ ...t.settings, DATABASE_PLATFORM_ADMIN_URL: url.toString() }), {
+        logDestination: new Writable({ write: (_chunk, _encoding, done) => done() }),
+      });
+      await peer.listen(0, '127.0.0.1');
+      try {
+        const address = peer.getHttpServer().address();
+        const http = supertest(typeof address === 'object' && address ? `http://127.0.0.1:${address.port}` : '');
+        const probe = await http.get('/api/v1/admin/me').set(bearer(operator));
+        expectStatus(probe, 200);
+        expect((probe.body as PlatformAdminMe).available).toBe(false);
+        for (const path of ['/users', '/workspaces', '/audit']) {
+          const response = await http.get(`/api/v1/admin${path}`).set(bearer(operator));
+          expectStatus(response, 503);
+          expect(response.body).toMatchObject({ code: 'PLATFORM_ADMIN_UNAVAILABLE' });
+        }
+      } finally {
+        await peer.close();
+      }
+    });
+
+    it('holds a session opened with a password until it is confirmed with an SMS code', async () => {
+      const login = await t.http().post('/api/v1/auth/password/login').send({ phone: localForm(operator.phone), password: STRONG_PASSWORD });
+      expectStatus(login, 200);
+      const passwordOnly: Session = { ...operator, accessToken: (login.body as AuthSession).accessToken, sessionId: (login.body as AuthSession).sessionId };
+      const probe = await admin(passwordOnly).get('/me');
+      expectStatus(probe, 200);
+      expect(probe.body).toMatchObject({ smsConfirmationRequired: true, stepUpRequired: true });
+      // Before the step-up, and even after it.
+      expect((await admin(passwordOnly).get('/users')).body).toMatchObject({ code: 'SMS_CONFIRMATION_REQUIRED' });
+      const steppedUp = await stepUp(t, passwordOnly);
+      const refused = await admin(steppedUp).get('/users');
+      expectStatus(refused, 401);
+      expect(refused.body).toMatchObject({ code: 'SMS_CONFIRMATION_REQUIRED' });
+
+      await t.redis.del(`${t.env.REDIS_PREFIX}:otp:send:phone:${operator.phone}:cooldown`);
+      const challenge = await t.http().post('/api/v1/auth/otp/confirm/request').set(bearer(steppedUp));
+      expectStatus(challenge, 200);
+      const confirmed = await t
+        .http()
+        .post('/api/v1/auth/otp/confirm')
+        .set(bearer(steppedUp))
+        .send({ challengeId: (challenge.body as { challengeId: string }).challengeId, code: lastCode(t, operator.phone) });
+      expectStatus(confirmed, 200);
+      const ready: Session = { ...steppedUp, accessToken: (confirmed.body as AuthSession).accessToken };
+      expect((await admin(ready).get('/me')).body).toMatchObject({ smsConfirmationRequired: false, stepUpRequired: false });
+      expectStatus(await admin(ready).get('/users'), 200);
     });
 
     it('adds nothing to what members see about themselves', async () => {

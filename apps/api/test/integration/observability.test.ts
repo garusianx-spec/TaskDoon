@@ -261,6 +261,25 @@ describe('M1 checklist: audit trail and correlation', () => {
     );
     await traced('post', '/api/v1/password-reset', '/api/v1/password-reset', (r) => r.send({ token: (reset.body as { code: string }).code, newPassword: 'Tazeh-Ramz-1405!' }));
 
+    // Phone and password: sign-in, confirming that session with an SMS code, and recovery.
+    const keyholder = await withAdminPassword(t, await signIn(t, randomPhone(), 'دارنده رمز'));
+    const passwordSession = (
+      await traced('post', '/api/v1/auth/password/login', '/api/v1/auth/password/login', (r) => r.send({ phone: localForm(keyholder.phone), password: STRONG_PASSWORD }))
+    ).body as AuthSession;
+    const clearCooldown = () => t.redis.del(`${t.env.REDIS_PREFIX}:otp:send:phone:${keyholder.phone}:cooldown`);
+    await clearCooldown();
+    const confirmation = await traced('post', '/api/v1/auth/otp/confirm/request', '/api/v1/auth/otp/confirm/request', (r) =>
+      r.set('Authorization', `Bearer ${passwordSession.accessToken}`),
+    );
+    await traced('post', '/api/v1/auth/otp/confirm', '/api/v1/auth/otp/confirm', (r) =>
+      r.set('Authorization', `Bearer ${passwordSession.accessToken}`).send({ challengeId: confirmation.body.challengeId, code: lastCode(t, keyholder.phone) }),
+    );
+    await clearCooldown();
+    const recovery = await traced('post', '/api/v1/auth/password/forgot', '/api/v1/auth/password/forgot', (r) => r.send({ phone: localForm(keyholder.phone) }));
+    await traced('post', '/api/v1/auth/password/recover', '/api/v1/auth/password/recover', (r) =>
+      r.send({ challengeId: recovery.body.challengeId, code: t.sms.lastTo(keyholder.phone)?.tokens.code, newPassword: 'Tazeh-Ramz-1405!' }),
+    );
+
     // Ownership, removal, deletion, and finally signing out.
     await traced('post', '/api/v1/workspaces/{workspaceId}/transfer-ownership', `${ws}/transfer-ownership`, (r) => r.set(bearer(user)).send({ userId: joiner.userId }));
     const newOwner = { ...joiner };

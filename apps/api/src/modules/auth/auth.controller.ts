@@ -9,8 +9,12 @@ import type { AuthPrincipal } from '../../platform/http/request.js';
 import {
   AuthSessionDto,
   OtpChallengeDto,
+  OtpConfirmDto,
   OtpRequestDto,
   OtpVerifyDto,
+  PasswordForgotDto,
+  PasswordRecoverDto,
+  PasswordSignInDto,
   SessionViewDto,
   SetPasswordDto,
   SignupDto,
@@ -67,6 +71,34 @@ export class AuthController {
   }
 
   @Public()
+  @Post('password/login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Sign in with phone and password (for accounts that set one); the SMS code stays the default' })
+  @ApiOkResponse({ type: AuthSessionDto })
+  async passwordLogin(@Body() body: PasswordSignInDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthSession> {
+    const issued = await this.auth.passwordSignIn(body.phone, body.password, device(request, body.deviceLabel));
+    setAuthCookies(response, this.config, issued.refresh.token, issued.refresh.expiresAt);
+    return issued.body;
+  }
+
+  @Public()
+  @Post('password/forgot')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Text a password reset code to the number (same answer whether or not it has an account)' })
+  @ApiOkResponse({ type: OtpChallengeDto })
+  forgotPassword(@Body() body: PasswordForgotDto, @Req() request: Request): Promise<OtpChallenge> {
+    return this.auth.forgotPassword(body.phone, { ip: request.ip, userAgent: request.headers['user-agent'] });
+  }
+
+  @Public()
+  @Post('password/recover')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Set a new password with the reset code from the SMS (signs every session out)' })
+  recoverPassword(@Body() body: PasswordRecoverDto, @Req() request: Request): Promise<void> {
+    return this.auth.recoverPassword(body.challengeId, body.code, body.newPassword, request.ip);
+  }
+
+  @Public()
   @Post('signup')
   @ApiOperation({ summary: 'Create the account for a verified number and sign in' })
   @ApiOkResponse({ type: AuthSessionDto })
@@ -112,6 +144,24 @@ export class AuthController {
   @ApiOkResponse({ type: AuthSessionDto })
   stepUp(@CurrentAuth() principal: AuthPrincipal, @Body() body: StepUpDto): Promise<AuthSession> {
     return this.auth.stepUp(principal, body.password);
+  }
+
+  @Authenticated()
+  @Post('otp/confirm/request')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Text a confirmation code to the signed-in account’s own phone' })
+  @ApiOkResponse({ type: OtpChallengeDto })
+  requestConfirmation(@CurrentAuth() principal: AuthPrincipal, @Req() request: Request): Promise<OtpChallenge> {
+    return this.auth.requestSessionConfirmation(principal, { ip: request.ip, userAgent: request.headers['user-agent'] });
+  }
+
+  @Authenticated()
+  @Post('otp/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm this session with that code (a password session then counts as SMS-confirmed)' })
+  @ApiOkResponse({ type: AuthSessionDto })
+  confirmSession(@CurrentAuth() principal: AuthPrincipal, @Body() body: OtpConfirmDto, @Req() request: Request): Promise<AuthSession> {
+    return this.auth.confirmSession(principal, body.challengeId, body.code, request.ip);
   }
 
   @Authenticated()

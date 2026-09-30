@@ -59,6 +59,8 @@ export function AdminGate({ children }: { readonly children: ReactNode }) {
           </Button>
         </AuthCard>
       );
+    case 'sms-confirm':
+      return <SmsConfirmPrompt name={phase.admin.fullName} />;
     case 'step-up':
       return <StepUpPrompt name={phase.admin.fullName} />;
     case 'ready':
@@ -66,13 +68,20 @@ export function AdminGate({ children }: { readonly children: ReactNode }) {
   }
 }
 
-type SignInStep = { readonly kind: 'phone' } | { readonly kind: 'code'; readonly phone: string; readonly challengeId: string; readonly codeLength: number; readonly resendAt: number };
+type SignInStep =
+  | { readonly kind: 'phone' }
+  | { readonly kind: 'password' }
+  | { readonly kind: 'code'; readonly phone: string; readonly challengeId: string; readonly codeLength: number; readonly resendAt: number };
 
-/** Mobile number → SMS code. No sign-up here: platform admins are existing accounts. */
+/**
+ * Mobile number → SMS code, or mobile number → password (the panel then asks for an SMS code
+ * once). No sign-up here: platform admins are existing accounts.
+ */
 function AdminSignIn({ onSignedIn }: { readonly onSignedIn: () => Promise<void> }) {
   const [step, setStep] = useState<SignInStep>({ kind: 'phone' });
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -81,6 +90,12 @@ function AdminSignIn({ onSignedIn }: { readonly onSignedIn: () => Promise<void> 
   useEffect(() => {
     fieldRef.current?.focus();
   }, [step.kind]);
+
+  const goTo = (next: SignInStep) => {
+    setError(null);
+    setPassword('');
+    setStep(next);
+  };
 
   useEffect(() => {
     if (step.kind !== 'code') return;
@@ -130,6 +145,63 @@ function AdminSignIn({ onSignedIn }: { readonly onSignedIn: () => Promise<void> 
       await onSignedIn();
     });
   };
+
+  const onPassword = (event: FormEvent) => {
+    event.preventDefault();
+    const mobile = normaliseIranMobile(phone);
+    if (!mobile) {
+      setError('شماره موبایل معتبر نیست؛ مثلاً ۰۹۱۲۱۲۳۴۵۶۷.');
+      return;
+    }
+    if (!password) {
+      setError('رمز عبور را وارد کنید.');
+      return;
+    }
+    void attempt(async () => {
+      await session.passwordSignIn(mobile, password);
+      setPassword('');
+      await onSignedIn();
+    });
+  };
+
+  if (step.kind === 'password') {
+    return (
+      <AuthCard labelledBy="admin-title" title="ورود به پنل مدیریت پلتفرم" description="با رمز عبور وارد شوید؛ پس از آن یک بار کد پیامکی هم خواسته می‌شود.">
+        <form className="flex flex-col gap-4" onSubmit={onPassword} noValidate>
+          <Input
+            ref={fieldRef}
+            label="شماره موبایل"
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="username"
+            dir="ltr"
+            placeholder="۰۹۱۲ ۱۲۳ ۴۵۶۷"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            iconStart={<MobileIcon size={18} />}
+          />
+          <Input
+            label="رمز عبور"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            dir="ltr"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            iconStart={<LockIcon size={18} />}
+            error={error ?? undefined}
+          />
+          <Button type="submit" fullWidth size="lg" loading={busy}>
+            ورود
+          </Button>
+          <Button variant="link" type="button" iconStart={<ArrowRightIcon size={16} />} onClick={() => goTo({ kind: 'phone' })}>
+            ورود با کد پیامکی
+          </Button>
+        </form>
+      </AuthCard>
+    );
+  }
 
   if (step.kind === 'code') {
     const wait = Math.max(0, Math.ceil((step.resendAt - now) / 1000));
@@ -186,7 +258,111 @@ function AdminSignIn({ onSignedIn }: { readonly onSignedIn: () => Promise<void> 
         <Button type="submit" fullWidth size="lg" loading={busy}>
           دریافت کد ورود
         </Button>
+        <Button variant="link" type="button" iconStart={<LockIcon size={16} />} onClick={() => goTo({ kind: 'password' })}>
+          ورود با رمز عبور
+        </Button>
       </form>
+    </AuthCard>
+  );
+}
+
+/**
+ * A session opened with a password shows the phone too before the panel opens: a code texted to
+ * the admin's own number, once per session. The password step-up follows as usual.
+ */
+function SmsConfirmPrompt({ name }: { readonly name: string }) {
+  const { steppedUp, signOut } = useAdmin();
+  const [challenge, setChallenge] = useState<{ readonly challengeId: string; readonly codeLength: number; readonly resendAt: number } | null>(null);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const fieldRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (challenge) fieldRef.current?.focus();
+  }, [challenge]);
+
+  useEffect(() => {
+    if (!challenge) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [challenge]);
+
+  const send = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const sent = await session.requestConfirmCode();
+      setCode('');
+      setChallenge({ challengeId: sent.challengeId, codeLength: sent.codeLength, resendAt: Date.now() + sent.resendInSeconds * 1000 });
+    } catch (failure) {
+      setError(problemMessage(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onConfirm = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!challenge) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await session.confirmCode(challenge.challengeId, toLatinDigits(code).trim());
+      await steppedUp();
+    } catch (failure) {
+      setError(problemMessage(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const wait = challenge ? Math.max(0, Math.ceil((challenge.resendAt - now) / 1000)) : 0;
+  return (
+    <AuthCard
+      labelledBy="admin-title"
+      title="تأیید با کد پیامکی"
+      description={`${name}، با رمز عبور وارد شده‌اید. برای باز شدن پنل مدیریت، کدی را که به شماره موبایل حساب پیامک می‌شود وارد کنید.`}
+    >
+      {challenge ? (
+        <form className="flex flex-col gap-4" onSubmit={(event) => void onConfirm(event)} noValidate>
+          <Input
+            ref={fieldRef}
+            label="کد تأیید"
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            dir="ltr"
+            className="text-center tracking-[0.5em]"
+            maxLength={challenge.codeLength}
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            iconStart={<KeyIcon size={18} />}
+            error={error ?? undefined}
+          />
+          <Button type="submit" fullWidth size="lg" loading={busy} disabled={toLatinDigits(code).trim().length !== challenge.codeLength}>
+            تأیید
+          </Button>
+          <Button variant="link" type="button" disabled={wait > 0 || busy} onClick={() => void send()}>
+            {wait > 0 ? `ارسال دوباره تا ${toPersianDigits(wait)} ثانیه` : 'ارسال دوباره کد'}
+          </Button>
+        </form>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {error && (
+            <p role="alert" className="text-caption text-status-blocked">
+              {error}
+            </p>
+          )}
+          <Button fullWidth size="lg" loading={busy} onClick={() => void send()}>
+            ارسال کد تأیید
+          </Button>
+          <Button variant="link" type="button" onClick={() => void signOut()}>
+            خروج از حساب
+          </Button>
+        </div>
+      )}
     </AuthCard>
   );
 }

@@ -1,6 +1,7 @@
+import { randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import argon2 from 'argon2';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import { Database } from '../../platform/db/database.js';
 import { auditLogs, users } from '../../platform/db/schema/all.js';
@@ -23,11 +24,15 @@ export function passwordProblem(password: string): string | null {
 }
 
 /**
- * Passwords exist only for owners and admins, as a second factor (RFC §5.2). Ten wrong passwords
- * in a row lock step-up for fifteen minutes and text the owner of the number.
+ * Passwords: the step-up factor for sensitive actions (RFC §5.2), and, for accounts that set one,
+ * an alternative to the SMS code at sign-in. Ten wrong passwords in a row, at either, lock the
+ * password for fifteen minutes and text the owner of the number.
  */
 @Injectable()
 export class PasswordService {
+  /** A hash of nothing anyone knows: unknown accounts cost the same Argon2 work as known ones. */
+  private decoyHash: Promise<string> | null = null;
+
   constructor(
     private readonly database: Database,
     private readonly audit: AuditWriter,
@@ -68,7 +73,55 @@ export class PasswordService {
       return;
     }
 
-    const failures = user.failures + 1;
+    const lock = await this.recordFailure(userId, user.phone, user.failures);
+    throw lock ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`) : new ApiError('PASSWORD_INVALID');
+  }
+
+  /**
+   * Sign-in with phone and password: the account's id, or `CREDENTIALS_INVALID` — the same answer
+   * for an unknown number, an account without a password, a suspended one and a wrong password,
+   * after the same Argon2 work. Wrong passwords count toward the same lockout as step-up. A
+   * locked account says so only to whoever knows its password. The old password of an account an
+   * admin reset stops working (`PASSWORD_RESET_REQUIRED`, again only for the right password).
+   */
+  async authenticate(phone: string, password: string): Promise<string> {
+    const [user] = await this.database.db
+      .select({
+        id: users.id,
+        phone: users.phone,
+        passwordHash: users.passwordHash,
+        resetRequired: users.passwordResetRequired,
+        usable: sql<boolean>`${users.status} = 'active'`,
+        failures: users.failedPasswordAttempts,
+        locked: sql<boolean>`coalesce(${users.lockedUntil} > now(), false)`,
+      })
+      .from(users)
+      // A deleted account may share its number with the live one (the unique index is partial).
+      .where(and(eq(users.phone, phone), isNull(users.deletedAt)));
+    if (!user?.passwordHash || !user.usable) {
+      await argon2.verify(await this.decoy(), password).catch(() => false);
+      throw new ApiError('CREDENTIALS_INVALID');
+    }
+    const matches = await argon2.verify(user.passwordHash, password);
+    if (user.locked) throw matches ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`) : new ApiError('CREDENTIALS_INVALID');
+    if (matches) {
+      if (user.resetRequired) throw new ApiError('PASSWORD_RESET_REQUIRED');
+      if (user.failures > 0) {
+        await this.database.db.update(users).set({ failedPasswordAttempts: 0, lockedUntil: null }).where(eq(users.id, user.id));
+      }
+      return user.id;
+    }
+    const lock = await this.recordFailure(user.id, user.phone, user.failures, 'signin');
+    throw lock ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`) : new ApiError('CREDENTIALS_INVALID');
+  }
+
+  /**
+   * One more wrong password, committed on its own (with an audit row) even though the request
+   * then fails, so the counter is real. The tenth locks the password and texts the owner.
+   * Returns whether it locked.
+   */
+  private async recordFailure(userId: string, phone: string, failuresSoFar: number, via?: 'signin'): Promise<boolean> {
+    const failures = failuresSoFar + 1;
     const lock = failures >= MAX_FAILURES;
     await this.database.db.transaction(async (tx) => {
       await tx
@@ -79,17 +132,24 @@ export class PasswordService {
             : { failedPasswordAttempts: failures },
         )
         .where(eq(users.id, userId));
-      await tx.insert(auditLogs).values(this.audit.row({ action: lock ? 'auth.password.locked' : 'auth.password.failed', actorUserId: userId }));
+      await tx
+        .insert(auditLogs)
+        .values(this.audit.row({ action: lock ? 'auth.password.locked' : 'auth.password.failed', actorUserId: userId, ...(via ? { changes: { via } } : {}) }));
       if (lock) {
         await this.outbox.add(tx, {
           type: 'notification.sms',
           aggregateType: 'user',
           aggregateId: userId,
-          payload: { to: user.phone, template: 'alert', tokens: { event: 'ورود با رمز عبور به دلیل تلاش‌های نادرست موقتاً قفل شد' } },
+          payload: { to: phone, template: 'alert', tokens: { event: 'ورود با رمز عبور به دلیل تلاش‌های نادرست موقتاً قفل شد' } },
         });
       }
     });
-    throw lock ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`) : new ApiError('PASSWORD_INVALID');
+    return lock;
+  }
+
+  private decoy(): Promise<string> {
+    this.decoyHash ??= argon2.hash(randomBytes(24).toString('base64url'), ARGON2);
+    return this.decoyHash;
   }
 
   /** Stores a hash from `hash()`; hashing happens before the transaction opens. */

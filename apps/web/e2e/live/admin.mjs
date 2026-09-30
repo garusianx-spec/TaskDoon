@@ -17,7 +17,8 @@
  * a reset code is issued, shown once, and used on /reset-password → the audit log lists all of
  * it → workspaces and the role matrix → a light and a dark screenshot. Finally the member signs
  * in at /admin herself and gets the same 404 as any unknown address, and the workspace app she
- * uses has no link to /admin anywhere.
+ * uses has no link to /admin anywhere. Last, the operator signs in with her password instead: the
+ * panel asks for an SMS code once, then the step-up.
  */
 import { execSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -86,11 +87,16 @@ async function signUp(phone, fullName) {
   return signup.body;
 }
 
+/** When each number was last sent a code: it may ask for another one a minute later. */
+const codeSentAt = new Map();
+const cooledDown = (phone) => new Promise((resolve) => setTimeout(resolve, Math.max(0, (codeSentAt.get(phone) ?? 0) + 62_000 - Date.now())));
+
 /** Phone → code on a sign-in card (no sign-up step). */
 async function signInAt(page, phone) {
   const phoneBox = page.getByRole('textbox', { name: 'شماره موبایل' });
   await phoneBox.waitFor({ timeout: 30_000 });
   await phoneBox.fill(phone);
+  codeSentAt.set(phone, Date.now());
   const from = logSize();
   await page.getByRole('button', { name: 'دریافت کد ورود' }).click();
   const code = await smsAfter(from, OTP, 'sign-in code');
@@ -257,5 +263,29 @@ await memberPage.goto(`${base}/feed`);
 check(await visible(memberPage.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000), 'her workspace app works as always');
 check((await memberPage.locator('a[href^="/admin"]').count()) === 0, '…with no link to /admin anywhere');
 await memberContext.close();
+
+/* ---------- The operator with a password: the panel asks for an SMS code once, then the step-up ---------- */
+
+const passwordContext = await browser.newContext({ viewport, locale: 'fa-IR' });
+const passwordPage = await passwordContext.newPage();
+watchConsole(passwordPage);
+await passwordPage.goto(`${base}/admin`);
+await passwordPage.getByRole('button', { name: 'ورود با رمز عبور' }).click();
+await passwordPage.getByRole('textbox', { name: 'شماره موبایل' }).fill(operatorPhone);
+await passwordPage.getByLabel('رمز عبور', { exact: true }).fill(OPERATOR_PASSWORD);
+await passwordPage.getByRole('button', { name: 'ورود', exact: true }).click();
+check(await visible(passwordPage.getByRole('heading', { name: 'تأیید با کد پیامکی' }), 15_000), 'an admin who signs in with a password is asked for an SMS code first');
+check((await passwordPage.getByRole('navigation', { name: 'بخش‌های پنل مدیریت' }).count()) === 0, '…and sees nothing of the panel before it');
+await passwordPage.screenshot({ path: `${out}/admin_sms_confirm.png` });
+await cooledDown(operatorPhone);
+const confirmFrom = logSize();
+await passwordPage.getByRole('button', { name: 'ارسال کد تأیید' }).click();
+await passwordPage.getByRole('textbox', { name: 'کد تأیید' }).fill(await smsAfter(confirmFrom, OTP, 'confirmation code'));
+await passwordPage.getByRole('button', { name: 'تأیید', exact: true }).click();
+check(await visible(passwordPage.getByRole('heading', { name: 'تأیید رمز عبور' }), 15_000), '…then the password step-up, as always');
+await passwordPage.getByLabel('رمز عبور', { exact: true }).fill(OPERATOR_PASSWORD);
+await passwordPage.getByRole('button', { name: 'تأیید و ادامه' }).click();
+check(await visible(passwordPage.getByRole('navigation', { name: 'بخش‌های پنل مدیریت' }), 15_000), '…and the panel opens');
+await passwordContext.close();
 
 await finish(browser);

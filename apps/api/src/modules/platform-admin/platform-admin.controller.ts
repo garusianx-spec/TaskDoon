@@ -88,15 +88,16 @@ export class PlatformAdminProbeController {
 
   @PlatformAdminProbe()
   @Get('me')
-  @ApiOperation({ summary: 'Platform admin probe: 404 for everyone else; no step-up needed' })
+  @ApiOperation({ summary: 'Platform admin probe: 404 for everyone else; needs neither the SMS confirmation nor the step-up' })
   @ApiOkResponse({ type: PlatformAdminMeDto })
-  me(@CurrentPlatformAdmin() admin: PlatformAdmin, @CurrentAuth() principal: AuthPrincipal): PlatformAdminMe {
+  async me(@CurrentPlatformAdmin() admin: PlatformAdmin, @CurrentAuth() principal: AuthPrincipal): Promise<PlatformAdminMe> {
     const age = Math.floor(Date.now() / 1000) - (principal.stepUpAt ?? 0);
     return {
       userId: admin.userId,
       fullName: admin.fullName,
+      smsConfirmationRequired: !principal.amr.includes('otp'),
       stepUpRequired: !principal.stepUpAt || age > this.config.env.STEP_UP_TTL_SECONDS,
-      available: this.admins.available,
+      available: await this.admins.available(),
     };
   }
 }

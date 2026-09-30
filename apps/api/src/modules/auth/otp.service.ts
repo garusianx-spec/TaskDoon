@@ -38,6 +38,12 @@ export interface VerifiedPhone {
 }
 
 /**
+ * What a code is for. A code only works for its own purpose: a sign-in code cannot reset a
+ * password, and a reset code cannot sign in.
+ */
+export type OtpPurpose = (typeof otpChallenges.$inferSelect)['purpose'];
+
+/**
  * SMS one-time codes (RFC §5.2). Codes are six digits, live 120 seconds, allow five attempts,
  * and are stored only as an HMAC bound to their challenge id. Sending limits live in redis-core
  * and fail closed: without Redis there is no way to stop SMS pumping, so no code is sent.
@@ -54,7 +60,7 @@ export class OtpService {
     private readonly sms: SmsService,
   ) {}
 
-  async request(rawPhone: string, client: { ip?: string; userAgent?: string }): Promise<OtpChallenge> {
+  async request(rawPhone: string, client: { ip?: string; userAgent?: string }, purpose: OtpPurpose = 'login'): Promise<OtpChallenge> {
     const phone = toIranMobileE164(rawPhone);
     if (!phone) throw ApiError.validation([{ field: 'phone', message: 'not an Iranian mobile number' }]);
 
@@ -64,7 +70,7 @@ export class OtpService {
     const code = numericCode(OTP_LENGTH);
     let receipt;
     try {
-      receipt = await this.sms.send({ to: phone, template: 'otp', tokens: { code } });
+      receipt = await this.sms.send({ to: phone, template: purpose === 'password_reset' ? 'otp_reset' : 'otp', tokens: { code } });
     } catch (error) {
       if (error instanceof SmsUnavailableError) {
         // Let the person try again right away instead of waiting out a cooldown for nothing.
@@ -77,7 +83,7 @@ export class OtpService {
       await tx.insert(otpChallenges).values({
         id: challengeId,
         phone,
-        purpose: 'login',
+        purpose,
         codeHash: this.hash(challengeId, code),
         provider: receipt.provider,
         providerMessageId: receipt.messageId,
@@ -90,7 +96,7 @@ export class OtpService {
         actorUserId: null,
         resourceType: 'otp_challenge',
         resourceId: challengeId,
-        changes: { phone, provider: receipt.provider },
+        changes: { phone, provider: receipt.provider, ...(purpose === 'login' ? {} : { purpose }) },
       });
     });
     this.logger.log({ phone: maskPhone(phone), provider: receipt.provider }, 'OTP sent');
@@ -102,8 +108,25 @@ export class OtpService {
     };
   }
 
+  /**
+   * The answer `request` would give, for a number that must not learn whether it has an account
+   * (password recovery): the same limits apply and the same shape comes back, but nothing is
+   * sent or stored, so the challenge can never be verified.
+   */
+  async decoy(rawPhone: string, client: { ip?: string }): Promise<OtpChallenge> {
+    const phone = toIranMobileE164(rawPhone);
+    if (!phone) throw ApiError.validation([{ field: 'phone', message: 'not an Iranian mobile number' }]);
+    await this.enforceSendLimits(phone, client.ip);
+    return {
+      challengeId: randomUUID(),
+      codeLength: OTP_LENGTH,
+      expiresInSeconds: this.config.env.OTP_TTL_SECONDS,
+      resendInSeconds: this.config.env.OTP_RESEND_SECONDS,
+    };
+  }
+
   /** Consumes the challenge when the code matches; counts the attempt when it does not. */
-  async verify(challengeId: string, code: string, ip: string | undefined): Promise<VerifiedPhone> {
+  async verify(challengeId: string, code: string, ip: string | undefined, purpose: OtpPurpose = 'login'): Promise<VerifiedPhone> {
     await this.hit(this.redis.key('otp', 'verify', 'ip', ip ?? 'unknown'), 3600, VERIFIES_PER_IP_PER_HOUR);
 
     const outcome = await this.uow.run({ workspaceId: null, userId: null }, async ({ tx }) => {
@@ -115,7 +138,8 @@ export class OtpService {
         .from(otpChallenges)
         .where(eq(otpChallenges.id, challengeId))
         .for('update');
-      if (!challenge) return { kind: 'invalid' as const, remaining: 0 };
+      // A code for another purpose is as good as no code here.
+      if (!challenge || challenge.row.purpose !== purpose) return { kind: 'invalid' as const, remaining: 0 };
       const { row } = challenge;
       if (row.consumedAt || challenge.expired) return { kind: 'expired' as const };
       if (row.attempts >= MAX_ATTEMPTS) return { kind: 'locked' as const };

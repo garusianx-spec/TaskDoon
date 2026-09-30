@@ -12,6 +12,11 @@ import type { ProjectRole } from './work.js';
 export interface PlatformAdminMe {
   readonly userId: string;
   readonly fullName: string;
+  /**
+   * The session was opened with a password and not yet confirmed with an SMS code: the other
+   * admin routes answer SMS_CONFIRMATION_REQUIRED (checked before the step-up).
+   */
+  readonly smsConfirmationRequired: boolean;
   /** No password step-up in the last 15 minutes: the other admin routes answer STEP_UP_REQUIRED. */
   readonly stepUpRequired: boolean;
   /** The admin database role is configured here (otherwise the admin routes answer 503). */

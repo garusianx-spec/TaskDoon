@@ -41,8 +41,23 @@ export class PlatformAdminGuard implements CanActivate {
   }
 }
 
-/** Platform admin, and a password step-up within the last 15 minutes (checked in that order). */
-export const PlatformAdminOnly = () => applyDecorators(ApiBearerAuth(), UseGuards(PlatformAdminGuard), RequireStepUp());
+/**
+ * A platform admin's session must have shown the phone: opened with an SMS code, or, when opened
+ * with a password, confirmed with one since (`amr` holds `otp`). Password plus phone, then the
+ * step-up: two factors on the privileged surface.
+ */
+@Injectable()
+export class PlatformAdminSmsGuard implements CanActivate {
+  canActivate(execution: ExecutionContext): boolean {
+    const auth = execution.switchToHttp().getRequest<AdminRequest>().auth;
+    if (!auth) throw new ApiError('UNAUTHENTICATED');
+    if (!auth.amr.includes('otp')) throw new ApiError('SMS_CONFIRMATION_REQUIRED');
+    return true;
+  }
+}
+
+/** Platform admin, an SMS-confirmed session, and a password step-up within the last 15 minutes (in that order). */
+export const PlatformAdminOnly = () => applyDecorators(ApiBearerAuth(), UseGuards(PlatformAdminGuard, PlatformAdminSmsGuard), RequireStepUp());
 
 /** Platform admin, without the step-up: only the `/admin/me` probe. */
 export const PlatformAdminProbe = () => applyDecorators(ApiBearerAuth(), UseGuards(PlatformAdminGuard));

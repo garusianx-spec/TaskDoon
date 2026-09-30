@@ -70,7 +70,11 @@ export type ApiErrorCode =
   // Platform administration
   | 'PASSWORD_RESET_REQUIRED'
   | 'RESET_TOKEN_INVALID'
-  | 'PLATFORM_ADMIN_UNAVAILABLE';
+  | 'PLATFORM_ADMIN_UNAVAILABLE'
+  /** Sign-in with a password: the number, the password, or both are not right (one answer for all). */
+  | 'CREDENTIALS_INVALID'
+  /** The admin panel needs this session confirmed with an SMS code first. */
+  | 'SMS_CONFIRMATION_REQUIRED';
 
 export interface FieldError {
   /** Dotted path of the offending field, e.g. `recipients.2.address`. */

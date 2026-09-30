@@ -97,6 +97,95 @@
         ]
       }
     },
+    "/api/v1/auth/password/login": {
+      "post": {
+        "operationId": "Auth_passwordLogin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordSignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sign in with phone and password (for accounts that set one); the SMS code stays the default",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "operationId": "Auth_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordForgotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpChallengeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Text a password reset code to the number (same answer whether or not it has an account)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password/recover": {
+      "post": {
+        "operationId": "Auth_recoverPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordRecoverDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Set a new password with the reset code from the SMS (signs every session out)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/signup": {
       "post": {
         "operationId": "Auth_signup",
@@ -218,6 +307,70 @@
           }
         ],
         "summary": "Re-verify the admin password; the returned token allows sensitive actions for 15 minutes",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/otp/confirm/request": {
+      "post": {
+        "operationId": "Auth_requestConfirmation",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpChallengeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Text a confirmation code to the signed-in account’s own phone",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/otp/confirm": {
+      "post": {
+        "operationId": "Auth_confirmSession",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpConfirmDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm this session with that code (a password session then counts as SMS-confirmed)",
         "tags": [
           "auth"
         ]
@@ -5724,7 +5877,7 @@
             "bearer": []
           }
         ],
-        "summary": "Platform admin probe: 404 for everyone else; no step-up needed",
+        "summary": "Platform admin probe: 404 for everyone else; needs neither the SMS confirmation nor the step-up",
         "tags": [
           "platform-admin"
         ]
@@ -6626,6 +6779,65 @@
           "code"
         ]
       },
+      "PasswordSignInDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "0912 123 4567",
+            "description": "Any written form of an Iranian mobile number, Persian digits included"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          },
+          "deviceLabel": {
+            "type": "string",
+            "example": "کروم روی ویندوز"
+          }
+        },
+        "required": [
+          "phone",
+          "password"
+        ]
+      },
+      "PasswordForgotDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "0912 123 4567"
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "PasswordRecoverDto": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "482913",
+            "description": "6 digits, from the reset SMS"
+          },
+          "newPassword": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "challengeId",
+          "code",
+          "newPassword"
+        ]
+      },
       "SignupDto": {
         "type": "object",
         "properties": {
@@ -6657,6 +6869,24 @@
         },
         "required": [
           "password"
+        ]
+      },
+      "OtpConfirmDto": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "482913",
+            "description": "6 digits"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code"
         ]
       },
       "SetPasswordDto": {
@@ -11291,6 +11521,10 @@
           "fullName": {
             "type": "string"
           },
+          "smsConfirmationRequired": {
+            "type": "boolean",
+            "description": "The session was opened with a password and not yet confirmed with an SMS code"
+          },
           "stepUpRequired": {
             "type": "boolean"
           },
@@ -11301,6 +11535,7 @@
         "required": [
           "userId",
           "fullName",
+          "smsConfirmationRequired",
           "stepUpRequired",
           "available"
         ]

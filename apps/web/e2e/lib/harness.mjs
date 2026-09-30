@@ -69,9 +69,14 @@ export function launch(options = {}) {
   });
 }
 
-export function watchConsole(page) {
+/**
+ * Fails the suite on any console error or warning of `page`. `allow` lists the few messages a
+ * suite provokes on purpose (a wrong password's 401 is logged by the browser); nothing else.
+ */
+export function watchConsole(page, { allow = [] } = {}) {
   page.on('console', (message) => {
     if (message.type() === 'error' || message.type() === 'warning') {
+      if (allow.some((pattern) => pattern.test(message.text()))) return;
       consoleProblems.push(`[${message.type()}] ${message.text()}`);
     }
   });

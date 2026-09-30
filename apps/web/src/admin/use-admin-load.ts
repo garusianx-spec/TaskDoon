@@ -40,7 +40,7 @@ export function useAdminLoad<T>(key: string | null, load: () => Promise<T>): Adm
         if (ticket === latest.current) setState({ data, error: null, loading: false });
       },
       (error: unknown) => {
-        if (ticket !== latest.current || isProblem(error, 'STEP_UP_REQUIRED')) return;
+        if (ticket !== latest.current || isProblem(error, 'STEP_UP_REQUIRED') || isProblem(error, 'SMS_CONFIRMATION_REQUIRED')) return;
         setState((current) => ({ ...current, error: problemMessage(error, 'بارگذاری این بخش ممکن نشد.'), loading: false }));
       },
     );

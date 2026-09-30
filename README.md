@@ -79,7 +79,9 @@ Sign in with any Iranian mobile number; the API's console SMS driver writes the 
 (`"text":"کد ورود شما به تسک‌دون: 123456"`). A new number signs up with a name and then creates
 its first workspace, which asks for the admin password owners need for sensitive actions.
 Invitations sent by SMS log a link (`/invite?token=…`): open it in another browser, sign in with
-the invited number, and the account joins that workspace.
+the invited number, and the account joins that workspace. An account that has set a password (in
+«امنیت و ورود») may also sign in with phone and password; «فراموشی رمز عبور» texts a reset code
+(`"text":"کد بازنشانی رمز عبور تسک‌دون: 123456"`) that sets a new one (RFC Addendum I).
 
 **How the data flows.** The reducer the screens were built on is unchanged; `store/live` feeds
 it. After sign-in one round of parallel requests loads the workspace into the reducer. Every
@@ -124,7 +126,10 @@ step-up. Everyone else gets a 404, and the workspace app never links there.
 - **Flag an account** from the server: `npm run platform-admin -w @taskin/api -- grant 09121234567`. Use `revoke` to remove the flag and `list` to see who has it. It needs `DATABASE_MIGRATOR_URL`.
 - **Database role.** The API reads across tenants only through the read-only
   `taskin_platform_admin` role on its own pool: set `DATABASE_PLATFORM_ADMIN_URL` (the Compose
-  stack does). Without it the admin routes answer 503.
+  stack does). Without it, or with a role that cannot log in, the admin routes answer 503. If the
+  database volume is older than the role, run
+  `docker exec -i taskin-postgres-1 psql -U postgres -d taskin < infra/postgres/platform-admin-role.sql` once.
+- **With a password.** An admin may sign in with phone and password instead of the SMS code. The panel then asks once for a code sent to their own phone, and then for the usual password step-up.
 - **Live test.** `npm run test:e2e:live:admin` needs `API_LOG` like the live flow. It flags its
   operator with `GRANT_PLATFORM_ADMIN` (default: the local API build's CLI).
 

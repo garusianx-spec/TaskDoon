@@ -112,6 +112,7 @@ export class PlatformWorkspaceQueryDto {
 export class PlatformAdminMeDto implements PlatformAdminMe {
   @ApiProperty({ format: 'uuid' }) readonly userId!: string;
   @ApiProperty() readonly fullName!: string;
+  @ApiProperty({ description: 'The session was opened with a password and not yet confirmed with an SMS code' }) readonly smsConfirmationRequired!: boolean;
   @ApiProperty() readonly stepUpRequired!: boolean;
   @ApiProperty() readonly available!: boolean;
 }

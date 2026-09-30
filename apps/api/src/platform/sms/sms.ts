@@ -8,8 +8,11 @@ import { maskPhone } from '../logging/logging.js';
  * invitation link, a security alert. Numbers are E.164 at the port; each adapter converts to the
  * form its API expects.
  */
-/** `password_reset`: a link a platform admin sent to set a new password. */
-export type SmsTemplate = 'otp' | 'invite' | 'alert' | 'password_reset';
+/**
+ * `password_reset`: a link a platform admin sent to set a new password. `otp_reset`: a code the
+ * person asked for to choose a new password themselves.
+ */
+export type SmsTemplate = 'otp' | 'otp_reset' | 'invite' | 'alert' | 'password_reset';
 
 export interface SmsMessage {
   readonly to: string;
@@ -45,6 +48,8 @@ export function renderSms(message: SmsMessage): string {
   switch (message.template) {
     case 'otp':
       return `کد ورود شما به تسک‌دون: ${message.tokens.code}`;
+    case 'otp_reset':
+      return `کد بازنشانی رمز عبور تسک‌دون: ${message.tokens.code}`;
     case 'invite':
       return `شما به فضای کاری «${message.tokens.workspace}» در تسک‌دون دعوت شده‌اید: ${message.tokens.link}`;
     case 'alert':
@@ -181,6 +186,8 @@ export class SmsService {
         case 'kavenegar':
           return new KavenegarProvider(env.KAVENEGAR_API_KEY ?? '', {
             otp: env.KAVENEGAR_OTP_TEMPLATE,
+            // Until a template of its own is approved, the reset code goes out on the OTP template.
+            otp_reset: env.KAVENEGAR_RESET_OTP_TEMPLATE ?? env.KAVENEGAR_OTP_TEMPLATE,
             invite: env.KAVENEGAR_INVITE_TEMPLATE,
             alert: env.KAVENEGAR_ALERT_TEMPLATE,
             password_reset: env.KAVENEGAR_RESET_TEMPLATE,
@@ -188,6 +195,7 @@ export class SmsService {
         case 'smsir':
           return new SmsIrProvider(env.SMSIR_API_KEY ?? '', {
             otp: env.SMSIR_OTP_TEMPLATE_ID,
+            otp_reset: env.SMSIR_RESET_OTP_TEMPLATE_ID ?? env.SMSIR_OTP_TEMPLATE_ID,
             invite: env.SMSIR_INVITE_TEMPLATE_ID,
             alert: env.SMSIR_ALERT_TEMPLATE_ID,
             password_reset: env.SMSIR_RESET_TEMPLATE_ID,

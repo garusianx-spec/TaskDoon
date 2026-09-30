@@ -6,8 +6,12 @@ import type {
   AvatarTone,
   MeUser,
   OtpChallenge,
+  OtpConfirmBody,
   OtpRequestBody,
   OtpVerifyBody,
+  PasswordForgotBody,
+  PasswordRecoverBody,
+  PasswordSignInBody,
   SessionView,
   SetPasswordBody,
   SignupBody,
@@ -39,6 +43,60 @@ export class OtpVerifyDto implements OtpVerifyBody {
   @IsString()
   @MaxLength(120)
   readonly deviceLabel?: string;
+}
+
+const OTP_CODE = new RegExp(`^[0-9]{${OTP_LENGTH}}$`);
+
+export class PasswordSignInDto implements PasswordSignInBody {
+  @ApiProperty({ example: '0912 123 4567', description: 'Any written form of an Iranian mobile number, Persian digits included' })
+  @IsString()
+  @Length(10, 24)
+  readonly phone!: string;
+
+  @ApiProperty({ format: 'password' })
+  @IsString()
+  @Length(1, 128)
+  readonly password!: string;
+
+  @ApiPropertyOptional({ example: 'کروم روی ویندوز' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  readonly deviceLabel?: string;
+}
+
+export class PasswordForgotDto implements PasswordForgotBody {
+  @ApiProperty({ example: '0912 123 4567' })
+  @IsString()
+  @Length(10, 24)
+  readonly phone!: string;
+}
+
+export class PasswordRecoverDto implements PasswordRecoverBody {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  readonly challengeId!: string;
+
+  @ApiProperty({ example: '482913', description: `${OTP_LENGTH} digits, from the reset SMS` })
+  @IsString()
+  @Matches(OTP_CODE, { message: `code must be ${OTP_LENGTH} digits` })
+  readonly code!: string;
+
+  @ApiProperty({ format: 'password', minLength: 8, maxLength: 128 })
+  @IsString()
+  @Length(8, 128)
+  readonly newPassword!: string;
+}
+
+export class OtpConfirmDto implements OtpConfirmBody {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  readonly challengeId!: string;
+
+  @ApiProperty({ example: '482913', description: `${OTP_LENGTH} digits` })
+  @IsString()
+  @Matches(OTP_CODE, { message: `code must be ${OTP_LENGTH} digits` })
+  readonly code!: string;
 }
 
 export class SignupDto implements SignupBody {

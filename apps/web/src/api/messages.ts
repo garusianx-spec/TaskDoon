@@ -40,6 +40,8 @@ const MESSAGES: Partial<Record<ApiErrorCode | 'NETWORK', string>> = {
   PASSWORD_RESET_REQUIRED: 'رمز عبور شما بازنشانی شده است؛ با پیوند بازنشانی، رمز تازه‌ای بگذارید.',
   RESET_TOKEN_INVALID: 'این پیوند بازنشانی دیگر معتبر نیست؛ پیوند تازه‌ای بخواهید.',
   PLATFORM_ADMIN_UNAVAILABLE: 'پنل مدیریت پلتفرم روی این سرور راه‌اندازی نشده است.',
+  CREDENTIALS_INVALID: 'شماره موبایل یا رمز عبور درست نیست.',
+  SMS_CONFIRMATION_REQUIRED: 'برای ادامه، این ورود را با کد پیامکی تأیید کنید.',
   SCHEDULED_MESSAGE_CLOSED: 'این پیام زمان‌بندی‌شده پیش‌تر ارسال یا لغو شده است.',
   SCHEDULE_LIMIT_REACHED: 'در هر گفتگو حداکثر ۱۰۰ پیام زمان‌بندی‌شده می‌تواند در انتظار باشد.',
   PROJECT_CHANNEL: 'اعضای کانال پروژه همان اعضای پروژه‌اند؛ آن‌ها را در خود پروژه اضافه یا حذف کنید.',

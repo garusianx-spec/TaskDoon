@@ -113,11 +113,14 @@ export const envSchema = z
     KAVENEGAR_INVITE_TEMPLATE: z.string().default('taskin-invite'),
     KAVENEGAR_ALERT_TEMPLATE: z.string().default('taskin-alert'),
     KAVENEGAR_RESET_TEMPLATE: z.string().default('taskin-reset'),
+    /** The password-recovery code; falls back to the OTP template until one is approved. */
+    KAVENEGAR_RESET_OTP_TEMPLATE: z.string().optional(),
     SMSIR_API_KEY: z.string().optional(),
     SMSIR_OTP_TEMPLATE_ID: z.coerce.number().int().optional(),
     SMSIR_INVITE_TEMPLATE_ID: z.coerce.number().int().optional(),
     SMSIR_ALERT_TEMPLATE_ID: z.coerce.number().int().optional(),
     SMSIR_RESET_TEMPLATE_ID: z.coerce.number().int().optional(),
+    SMSIR_RESET_OTP_TEMPLATE_ID: z.coerce.number().int().optional(),
 
     SMTP_URL: z.url().default('smtp://localhost:1025'),
     MAIL_FROM: z.string().default('TaskDoon <no-reply@taskin.local>'),

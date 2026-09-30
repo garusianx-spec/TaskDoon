@@ -54,6 +54,30 @@ export const session = {
     return adopt(result.session);
   },
 
+  /** The alternative to the SMS code, for an account that has set a password. */
+  async passwordSignIn(phone: string, password: string): Promise<LiveSession> {
+    return adopt(await http.post<AuthSession>('/auth/password/login', { phone, password, deviceLabel: deviceLabel() }, { authenticated: false }));
+  },
+
+  /** «فراموشی رمز عبور»: texts a reset code (the same answer whether or not the number has an account). */
+  requestPasswordReset(phone: string): Promise<OtpChallenge> {
+    return http.post<OtpChallenge>('/auth/password/forgot', { phone }, { authenticated: false });
+  },
+
+  /** A new password with that code. Every session of the account ends; sign in again afterwards. */
+  async resetPassword(challengeId: string, code: string, newPassword: string): Promise<void> {
+    await http.post<void>('/auth/password/recover', { challengeId, code, newPassword }, { authenticated: false });
+  },
+
+  /** Texts a code to this account's own phone, to confirm a session opened with the password. */
+  requestConfirmCode(): Promise<OtpChallenge> {
+    return http.post<OtpChallenge>('/auth/otp/confirm/request');
+  },
+
+  async confirmCode(challengeId: string, code: string): Promise<void> {
+    adopt(await http.post<AuthSession>('/auth/otp/confirm', { challengeId, code }));
+  },
+
   async signUp(signupToken: string, fullName: string): Promise<LiveSession> {
     return adopt(await http.post<AuthSession>('/auth/signup', { signupToken, fullName, deviceLabel: deviceLabel() }, { authenticated: false }));
   },

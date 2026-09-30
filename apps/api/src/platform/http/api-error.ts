@@ -62,6 +62,8 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   PASSWORD_RESET_REQUIRED: { status: 409, title: 'Set a new password with the reset link first' },
   RESET_TOKEN_INVALID: { status: 410, title: 'The reset link is not valid any more' },
   PLATFORM_ADMIN_UNAVAILABLE: { status: 503, title: 'Platform administration is not configured here' },
+  CREDENTIALS_INVALID: { status: 401, title: 'The phone number or password is not right' },
+  SMS_CONFIRMATION_REQUIRED: { status: 401, title: 'Confirm this session with an SMS code first' },
 };
 
 /**

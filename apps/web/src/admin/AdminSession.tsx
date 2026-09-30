@@ -14,6 +14,7 @@ export type AdminPhase =
   | { readonly kind: 'signed-out' }
   | { readonly kind: 'not-admin' }
   | { readonly kind: 'unavailable'; readonly admin: PlatformAdminMe }
+  | { readonly kind: 'sms-confirm'; readonly admin: PlatformAdminMe }
   | { readonly kind: 'step-up'; readonly admin: PlatformAdminMe }
   | { readonly kind: 'ready'; readonly admin: PlatformAdminMe }
   | { readonly kind: 'error'; readonly message: string };
@@ -24,8 +25,12 @@ interface AdminContextValue {
   readonly generation: number;
   /** Asks the server who this is (after sign-in, after a step-up). */
   readonly probe: () => Promise<void>;
-  /** Runs an admin call; STEP_UP_REQUIRED brings the password prompt back, a dead session the sign-in. */
+  /**
+   * Runs an admin call: STEP_UP_REQUIRED brings the password prompt back, SMS_CONFIRMATION_REQUIRED
+   * the SMS confirmation, and a dead session the sign-in.
+   */
   readonly call: <T>(work: () => Promise<T>) => Promise<T>;
+  /** After an SMS confirmation or a step-up: ask again, and reload what it interrupted. */
   readonly steppedUp: () => Promise<void>;
   readonly signOut: () => Promise<void>;
 }
@@ -49,7 +54,8 @@ export function useAdminMe(): PlatformAdminMe {
  * The admin shell's session, apart from the workspace app's store: the same signed-in device
  * (the refresh cookie is shared), but nothing of any workspace is loaded here. Order of checks:
  * a session, the platform-admin flag (`/admin/me`, 404 for everyone else), the admin database,
- * and a password step-up in the last 15 minutes.
+ * an SMS-confirmed session (one opened with a password confirms a code first), and a password
+ * step-up in the last 15 minutes.
  */
 export function AdminSession({ children }: { readonly children: ReactNode }) {
   const [phase, setPhase] = useState<AdminPhase>(IS_LIVE ? { kind: 'restoring' } : { kind: 'demo' });
@@ -58,7 +64,15 @@ export function AdminSession({ children }: { readonly children: ReactNode }) {
   const probe = useCallback(async () => {
     try {
       const me = await adminApi.me();
-      setPhase(!me.available ? { kind: 'unavailable', admin: me } : me.stepUpRequired ? { kind: 'step-up', admin: me } : { kind: 'ready', admin: me });
+      setPhase(
+        !me.available
+          ? { kind: 'unavailable', admin: me }
+          : me.smsConfirmationRequired
+            ? { kind: 'sms-confirm', admin: me }
+            : me.stepUpRequired
+              ? { kind: 'step-up', admin: me }
+              : { kind: 'ready', admin: me },
+      );
     } catch (error) {
       if (isProblem(error, 'NOT_FOUND')) setPhase({ kind: 'not-admin' });
       else if (isProblem(error, 'UNAUTHENTICATED') || isProblem(error, 'SESSION_REVOKED')) setPhase({ kind: 'signed-out' });
@@ -89,6 +103,7 @@ export function AdminSession({ children }: { readonly children: ReactNode }) {
       return await work();
     } catch (error) {
       if (isProblem(error, 'STEP_UP_REQUIRED')) setPhase((current) => (current.kind === 'ready' ? { kind: 'step-up', admin: current.admin } : current));
+      else if (isProblem(error, 'SMS_CONFIRMATION_REQUIRED')) setPhase((current) => (current.kind === 'ready' ? { kind: 'sms-confirm', admin: current.admin } : current));
       else if (isProblem(error, 'SESSION_REVOKED') || isProblem(error, 'UNAUTHENTICATED')) setPhase({ kind: 'signed-out' });
       throw error;
     }

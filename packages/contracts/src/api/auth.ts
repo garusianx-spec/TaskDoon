@@ -1,9 +1,10 @@
 import type { AvatarTone } from '../domain.js';
 
 /**
- * Authentication contracts. The phone number is the account: sign-in is phone → SMS code. Only
- * owners and admins hold a password, and it is a second factor for sensitive actions (step-up),
- * never a way to sign in on its own.
+ * Authentication contracts. The phone number is the account: sign-in is phone → SMS code, or, for
+ * an account that has set a password, phone → password. A forgotten password is replaced only
+ * with an SMS code sent to that phone. The password is also the step-up factor for sensitive
+ * actions; signing in with it does not count as a step-up.
  *
  * The access token travels in `Authorization: Bearer`. The refresh token never reaches script: it
  * lives in an HttpOnly cookie scoped to `/api/v1/auth`, and the refresh and logout calls must echo
@@ -22,6 +23,32 @@ export interface OtpChallenge {
   readonly expiresInSeconds: number;
   /** Seconds before another code may be requested for this number. */
   readonly resendInSeconds: number;
+}
+
+/** `POST /auth/password/login`: the alternative to the SMS code. */
+export interface PasswordSignInBody {
+  /** Any written form of an Iranian mobile number. */
+  readonly phone: string;
+  readonly password: string;
+  readonly deviceLabel?: string;
+}
+
+/** `POST /auth/password/forgot`: texts a reset code (answers an `OtpChallenge` whether or not the number has an account). */
+export interface PasswordForgotBody {
+  readonly phone: string;
+}
+
+/** `POST /auth/password/recover`: a new password, with the reset code from the SMS. */
+export interface PasswordRecoverBody {
+  readonly challengeId: string;
+  readonly code: string;
+  readonly newPassword: string;
+}
+
+/** `POST /auth/otp/confirm`: confirms the signed-in session with a code sent to the account's own phone. */
+export interface OtpConfirmBody {
+  readonly challengeId: string;
+  readonly code: string;
 }
 
 export interface OtpVerifyBody {

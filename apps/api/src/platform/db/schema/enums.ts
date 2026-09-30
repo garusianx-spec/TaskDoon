@@ -5,7 +5,7 @@ import { PERMISSION_ACTION_IDS, PERMISSION_MODULE_IDS } from '@taskin/contracts'
 
 export const userStatus = pgEnum('user_status', ['active', 'suspended', 'deleted']);
 
-export const otpPurpose = pgEnum('otp_purpose', ['login', 'step_up', 'phone_change']);
+export const otpPurpose = pgEnum('otp_purpose', ['login', 'step_up', 'phone_change', 'password_reset']);
 
 export const sessionRevokeReason = pgEnum('session_revoke_reason', [
   'logout',

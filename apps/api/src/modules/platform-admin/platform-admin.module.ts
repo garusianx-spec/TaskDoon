@@ -4,7 +4,7 @@ import { PlatformAdminDatabase } from './admin-database.js';
 import { PlatformAdminUnitOfWork } from './admin-unit-of-work.js';
 import { PasswordResetService } from './password-reset.service.js';
 import { NoStoreInterceptor, PasswordResetController, PlatformAdminController, PlatformAdminProbeController } from './platform-admin.controller.js';
-import { PlatformAdminGuard } from './platform-admin.guard.js';
+import { PlatformAdminGuard, PlatformAdminSmsGuard } from './platform-admin.guard.js';
 import { PlatformAuditWriter } from './platform-audit.writer.js';
 import { PlatformConversationsService } from './platform-conversations.service.js';
 import { PlatformUsersService } from './platform-users.service.js';
@@ -22,6 +22,7 @@ import { PlatformWorkspacesService } from './platform-workspaces.service.js';
     PlatformAdminDatabase,
     PlatformAdminUnitOfWork,
     PlatformAdminGuard,
+    PlatformAdminSmsGuard,
     PlatformAuditWriter,
     PlatformUsersService,
     PlatformConversationsService,
