@@ -1,0 +1,42 @@
+{
+  "name": "@taskin/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Taskin web app — Next.js, RTL, Jalali",
+  "scripts": {
+    "build:deps": "tsc -b ../../packages/contracts ../../packages/jalali ../../packages/text",
+    "predev": "npm run build:deps",
+    "dev": "next dev",
+    "prebuild": "npm run build:deps",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint src",
+    "pretypecheck": "npm run build:deps",
+    "typecheck": "tsc --noEmit",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "test:e2e": "node e2e/run.mjs",
+    "test:e2e:live": "node e2e/live/flow.mjs"
+  },
+  "dependencies": {
+    "@taskin/contracts": "0.1.0",
+    "@taskin/jalali": "0.1.0",
+    "@taskin/text": "0.1.0",
+    "next": "15.5.25",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "socket.io-client": "4.8.3"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@types/node": "22.10.2",
+    "@types/react": "19.0.2",
+    "@types/react-dom": "19.0.2",
+    "autoprefixer": "10.4.21",
+    "eslint": "9.17.0",
+    "eslint-config-next": "15.5.25",
+    "playwright-core": "1.63.0",
+    "postcss": "8.5.6",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.7.2"
+  }
+}

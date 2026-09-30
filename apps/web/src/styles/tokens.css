@@ -1,0 +1,367 @@
+/*
+ * Token architecture
+ * ------------------
+ * Layer 1  Primitive ramps   — raw channel triplets (`R G B`, so Tailwind's `<alpha-value>`
+ *                              slot works: `rgb(var(--gray-500) / 0.4)`).
+ * Layer 2  Accent alias      — `--brand-50…900` re-points at one of six accent ramps via
+ *                              `[data-accent]`, together with three accessible anchors:
+ *                                --brand-solid        fill that carries white text
+ *                                --brand-solid-hover  its hover/pressed step
+ *                                --brand-ink          brand text on light surfaces
+ *                              They default to 600 / 700 / 600 and move one step darker on
+ *                              any palette whose 600 misses 4.5:1 against white or its own
+ *                              hover tint (Teal ink, Ocean ink and fill), so each palette
+ *                              keeps its identity colour for rings, borders and swatches
+ *                              while text stays WCAG AA. Components never name an accent.
+ * Layer 3  Semantic surface  — `--bg-*`, `--fg-*`, `--border-*`, `--status-*`. These flip in
+ *                              dark mode; every component reads only this layer.
+ *
+ * `scripts/check-contrast.mjs` parses this file and asserts every text/fill pair for all
+ * six palettes in both modes.
+ *
+ * Mode is driven by `data-theme="light" | "dark"` on <html>. "System" resolves to one of the
+ * two at runtime (see ThemeProvider) so there is a single source of truth in the DOM.
+ */
+
+:root {
+  /* ---------- Layer 1: neutral ramp (Untitled UI Gray, light) ---------- */
+  --gray-25: 252 252 253;   /* #FCFCFD */
+  --gray-50: 249 250 251;   /* #F9FAFB */
+  --gray-100: 242 244 247;  /* #F2F4F7 */
+  --gray-200: 234 236 240;  /* #EAECF0 */
+  --gray-300: 208 213 221;  /* #D0D5DD */
+  --gray-400: 152 162 179;  /* #98A2B3 */
+  --gray-500: 102 112 133;  /* #667085 */
+  --gray-600: 71 84 103;    /* #475467 */
+  --gray-700: 52 64 84;     /* #344054 */
+  --gray-800: 24 34 48;     /* #182230 */
+  --gray-900: 16 24 40;     /* #101828 */
+  --gray-950: 12 17 29;     /* #0C111D */
+
+  /* ---------- Layer 1: status ramps (shared by both modes) ---------- */
+  --success-50: 236 253 243;  /* #ECFDF3 */
+  --success-100: 209 250 223; /* #D1FADF */
+  --success-200: 166 244 197; /* #A6F4C5 */
+  --success-500: 18 183 106;  /* #12B76A */
+  --success-600: 3 152 85;    /* #039855 */
+  --success-700: 2 122 72;    /* #027A48 — Done / Success */
+  --success-900: 5 76 48;     /* #054C30 */
+
+  --warning-50: 255 250 235;  /* #FFFAEB */
+  --warning-100: 254 240 199; /* #FEF0C7 */
+  --warning-200: 254 223 137; /* #FEDF89 */
+  --warning-500: 247 144 9;   /* #F79009 */
+  --warning-600: 220 104 3;   /* #DC6803 */
+  --warning-700: 181 71 8;    /* #B54708 — In Progress / Warning */
+  --warning-900: 122 46 14;   /* #7A2E0E */
+
+  --error-50: 254 243 242;    /* #FEF3F2 */
+  --error-100: 254 228 226;   /* #FEE4E2 */
+  --error-200: 254 205 202;   /* #FECDCA */
+  --error-500: 240 68 56;     /* #F04438 */
+  --error-600: 217 45 32;     /* #D92D20 */
+  --error-700: 180 35 24;     /* #B42318 — Urgent / Blocked */
+  --error-900: 122 39 26;     /* #7A271A */
+
+  /* ---------- Layer 1: tag tones (custom columns, note colour tags) ----------
+     A fixed set that never follows the workspace accent, so a "red" column stays red
+     under every palette. `-bg`/`-fg`/`-border` form a badge that clears WCAG AA. */
+  --tag-gray: 102 112 133;       /* #667085 */
+  --tag-gray-bg: 242 244 247;    /* #F2F4F7 */
+  --tag-gray-fg: 52 64 84;       /* #344054 */
+  --tag-gray-border: 208 213 221;
+  --tag-blue: 46 144 250;        /* #2E90FA */
+  --tag-blue-bg: 239 248 255;    /* #EFF8FF */
+  --tag-blue-fg: 23 92 211;      /* #175CD3 */
+  --tag-blue-border: 178 221 255;
+  --tag-teal: 21 183 158;        /* #15B79E */
+  --tag-teal-bg: 240 253 249;    /* #F0FDF9 */
+  --tag-teal-fg: 16 117 105;     /* #107569 */
+  --tag-teal-border: 153 246 224;
+  --tag-green: 18 183 106;       /* #12B76A */
+  --tag-green-bg: 236 253 243;   /* #ECFDF3 */
+  --tag-green-fg: 2 122 72;      /* #027A48 */
+  --tag-green-border: 166 244 197;
+  --tag-amber: 247 144 9;        /* #F79009 */
+  --tag-amber-bg: 255 250 235;   /* #FFFAEB */
+  --tag-amber-fg: 181 71 8;      /* #B54708 */
+  --tag-amber-border: 254 223 137;
+  --tag-red: 240 68 56;          /* #F04438 */
+  --tag-red-bg: 254 243 242;     /* #FEF3F2 */
+  --tag-red-fg: 180 35 24;       /* #B42318 */
+  --tag-red-border: 254 205 202;
+  --tag-pink: 238 70 188;        /* #EE46BC */
+  --tag-pink-bg: 253 242 250;    /* #FDF2FA */
+  --tag-pink-fg: 193 21 116;     /* #C11574 */
+  --tag-pink-border: 252 206 238;
+  --tag-violet: 122 90 248;      /* #7A5AF8 */
+  --tag-violet-bg: 244 243 255;  /* #F4F3FF */
+  --tag-violet-fg: 89 37 220;    /* #5925DC */
+  --tag-violet-border: 217 214 254;
+
+  /* ---------- Layer 3: semantic surfaces (light mode default) ---------- */
+  --bg-canvas: var(--gray-50);
+  --bg-surface: 255 255 255;
+  --bg-raised: 255 255 255;
+  --bg-sunken: var(--gray-100);
+  --bg-rail: 255 255 255;
+  --bg-hover: var(--gray-50);
+  --bg-active: var(--gray-100);
+  --bg-disabled: var(--gray-100);
+  --bg-overlay: 12 17 29;
+  --bg-brand-subtle: var(--brand-50);
+  --bg-brand-subtle-hover: var(--brand-100);
+  --bg-brand-solid: var(--brand-solid);
+  --bg-brand-solid-hover: var(--brand-solid-hover);
+
+  --fg-primary: var(--gray-900);
+  --fg-secondary: var(--gray-700);
+  --fg-tertiary: var(--gray-500);
+  --fg-quaternary: var(--gray-400);
+  --fg-placeholder: var(--gray-400);
+  --fg-disabled: var(--gray-400);
+  --fg-on-brand: 255 255 255;
+  --fg-brand: var(--brand-ink);
+
+  --border-primary: var(--gray-300);
+  --border-secondary: var(--gray-200);
+  --border-tertiary: var(--gray-100);
+  --border-brand: var(--brand-600);
+  --border-disabled: var(--gray-200);
+
+  --ring-brand: var(--brand-ring);
+  --ring-error: var(--error-500);
+
+  --status-done: var(--success-700);
+  --status-done-bg: var(--success-50);
+  --status-done-border: var(--success-200);
+  --status-progress: var(--warning-700);
+  --status-progress-bg: var(--warning-50);
+  --status-progress-border: var(--warning-200);
+  --status-blocked: var(--error-700);
+  --status-blocked-bg: var(--error-50);
+  --status-blocked-border: var(--error-200);
+  --status-todo: var(--gray-500);
+  --status-todo-bg: var(--gray-50);
+  --status-todo-border: var(--gray-200);
+  --status-review: var(--brand-ink);
+  --status-review-bg: var(--brand-50);
+  --status-review-border: var(--brand-200);
+
+  --shadow-xs: 0 1px 2px 0 rgb(16 24 40 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(16 24 40 / 0.1), 0 1px 2px -1px rgb(16 24 40 / 0.06);
+  --shadow-md: 0 4px 8px -2px rgb(16 24 40 / 0.1), 0 2px 4px -2px rgb(16 24 40 / 0.06);
+  --shadow-lg: 0 12px 16px -4px rgb(16 24 40 / 0.08), 0 4px 6px -2px rgb(16 24 40 / 0.03);
+  --shadow-xl: 0 20px 24px -4px rgb(16 24 40 / 0.08), 0 8px 8px -4px rgb(16 24 40 / 0.03);
+}
+
+/* ---------- OLED Charcoal dark mode ---------- */
+[data-theme='dark'] {
+  /* Untitled UI "Gray dark" ramp, inverted so 25 stays the lightest step. */
+  --gray-25: 250 250 250;   /* #FAFAFA */
+  --gray-50: 245 245 246;   /* #F5F5F6 */
+  --gray-100: 240 241 241;  /* #F0F1F1 */
+  --gray-200: 236 236 237;  /* #ECECED */
+  --gray-300: 206 207 210;  /* #CECFD2 */
+  --gray-400: 148 150 156;  /* #94969C */
+  --gray-500: 133 136 142;  /* #85888E */
+  --gray-600: 97 100 108;   /* #61646C */
+  --gray-700: 51 55 65;     /* #333741 */
+  --gray-800: 31 36 47;     /* #1F242F */
+  --gray-900: 22 27 38;     /* #161B26 */
+  --gray-950: 12 17 29;     /* #0C111D */
+
+  --bg-canvas: 12 17 29;    /* #0C111D */
+  --bg-surface: 22 27 38;   /* #161B26 */
+  --bg-raised: 31 36 47;    /* #1F242F */
+  --bg-sunken: 12 17 29;
+  --bg-rail: 22 27 38;
+  --bg-hover: 31 36 47;
+  --bg-active: 51 55 65;
+  --bg-disabled: 31 36 47;
+  --bg-overlay: 0 0 0;
+  --bg-brand-subtle: var(--brand-900);
+  --bg-brand-subtle-hover: var(--brand-800);
+  --bg-brand-solid: var(--brand-solid);
+  --bg-brand-solid-hover: var(--brand-solid-hover);
+
+  --fg-primary: 247 248 250;
+  --fg-secondary: var(--gray-300);
+  --fg-tertiary: var(--gray-400);
+  --fg-quaternary: var(--gray-500);
+  --fg-placeholder: var(--gray-500);
+  --fg-disabled: var(--gray-600);
+  --fg-on-brand: 255 255 255;
+  --fg-brand: var(--brand-300);
+
+  --border-primary: 51 55 65;   /* #333741 */
+  --border-secondary: 31 36 47; /* #1F242F */
+  --border-tertiary: 31 36 47;
+  /* 400, not 500: every palette's 400 clears 3:1 against the charcoal surface, so selected
+     and hovered card borders read identically under all six accents. */
+  --border-brand: var(--brand-400);
+  --border-disabled: var(--gray-700);
+
+  --ring-brand: var(--brand-400);
+
+  /* Status text lifts to the 300/400 steps so it clears WCAG AA on charcoal. */
+  --status-done: 108 233 166;
+  --status-done-bg: 5 51 33;
+  --status-done-border: 7 81 52;
+  --status-progress: 253 176 34;
+  --status-progress-bg: 60 28 8;
+  --status-progress-border: 93 44 12;
+  --status-blocked: 253 162 155;
+  --status-blocked-bg: 66 20 14;
+  --status-blocked-border: 101 30 22;
+  --status-todo: var(--gray-400);
+  --status-todo-bg: 31 36 47;
+  --status-todo-border: 51 55 65;
+  --status-review: var(--brand-300);
+  --status-review-bg: var(--brand-900);
+  --status-review-border: var(--brand-800);
+
+  /* Tag tones: solid dots keep their hue; badge fills drop to the 950 step and text lifts
+     to 300 so they read on charcoal. */
+  --tag-gray: 133 136 142;
+  --tag-gray-bg: 31 36 47;
+  --tag-gray-fg: 206 207 210;
+  --tag-gray-border: 51 55 65;
+  --tag-blue-bg: 16 42 86;
+  --tag-blue-fg: 132 202 255;
+  --tag-blue-border: 25 65 133;
+  --tag-teal-bg: 10 41 38;
+  --tag-teal-fg: 95 233 208;
+  --tag-teal-border: 19 78 72;
+  --tag-green-bg: 5 51 33;
+  --tag-green-fg: 108 233 166;
+  --tag-green-border: 5 79 49;
+  --tag-amber-bg: 78 29 9;
+  --tag-amber-fg: 253 176 34;
+  --tag-amber-border: 122 46 14;
+  --tag-red-bg: 85 22 12;
+  --tag-red-fg: 253 162 155;
+  --tag-red-border: 122 39 26;
+  --tag-pink-bg: 78 13 48;
+  --tag-pink-fg: 250 167 224;
+  --tag-pink-border: 133 22 81;
+  --tag-violet-bg: 39 17 95;
+  --tag-violet-fg: 189 180 254;
+  --tag-violet-border: 73 28 150;
+
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 8px -2px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 12px 16px -4px rgb(0 0 0 / 0.55), 0 4px 6px -2px rgb(0 0 0 / 0.3);
+  --shadow-xl: 0 20px 24px -4px rgb(0 0 0 / 0.6), 0 8px 8px -4px rgb(0 0 0 / 0.3);
+}
+
+/* ================= Layer 2: swappable accent ramps ================= */
+
+/* Accessible anchors, shared by every palette unless it overrides them below. */
+[data-accent] {
+  --brand-solid: var(--brand-600);
+  --brand-solid-hover: var(--brand-700);
+  --brand-ink: var(--brand-600);
+  --brand-ring: var(--brand-500);
+}
+
+/* 1. Corporate default — Indigo. Primary 600 = #3538CD */
+[data-accent='indigo'] {
+  --brand-25: 245 248 255;  /* #F5F8FF */
+  --brand-50: 238 244 255;  /* #EEF4FF */
+  --brand-100: 224 234 255; /* #E0EAFF */
+  --brand-200: 199 215 254; /* #C7D7FE */
+  --brand-300: 164 188 253; /* #A4BCFD */
+  --brand-400: 128 152 249; /* #8098F9 */
+  --brand-500: 97 114 243;  /* #6172F3 */
+  --brand-600: 53 56 205;   /* #3538CD */
+  --brand-700: 45 49 166;   /* #2D31A6 */
+  --brand-800: 45 50 130;   /* #2D3282 */
+  --brand-900: 31 33 99;    /* #1F2163 */
+}
+
+/* 2. Deep Focus — Teal. Primary 600 = #0E766E */
+[data-accent='teal'] {
+  --brand-25: 242 251 250;  /* #F2FBFA */
+  --brand-50: 230 247 245;  /* #E6F7F5 */
+  --brand-100: 204 239 235; /* #CCEFEB */
+  --brand-200: 153 223 216; /* #99DFD8 */
+  --brand-300: 94 207 196;  /* #5ECFC4 */
+  --brand-400: 43 179 166;  /* #2BB3A6 */
+  --brand-500: 21 148 137;  /* #159489 */
+  --brand-600: 14 118 110;  /* #0E766E */
+  --brand-700: 11 92 86;    /* #0B5C56 */
+  --brand-800: 9 72 67;     /* #094843 */
+  --brand-900: 6 55 51;     /* #063733 */
+  /* 600 on the 100 hover tint is 4.46:1 — brand text steps down to 700. */
+  --brand-ink: var(--brand-700);
+}
+
+/* 3. Modern Startup — Electric Violet (Untitled UI signature). Primary 600 = #6941C6 */
+[data-accent='violet'] {
+  --brand-25: 252 250 255;  /* #FCFAFF */
+  --brand-50: 249 245 255;  /* #F9F5FF */
+  --brand-100: 244 235 255; /* #F4EBFF */
+  --brand-200: 233 215 254; /* #E9D7FE */
+  --brand-300: 214 187 251; /* #D6BBFB */
+  --brand-400: 182 146 246; /* #B692F6 */
+  --brand-500: 158 119 237; /* #9E77ED */
+  --brand-600: 105 65 198;  /* #6941C6 */
+  --brand-700: 83 56 158;   /* #53389E */
+  --brand-800: 66 48 125;   /* #42307D */
+  --brand-900: 47 35 98;    /* #2F2362 */
+}
+
+/* 4. Rose / Burgundy. Primary 600 = #9E165F */
+[data-accent='rose'] {
+  --brand-25: 254 246 251;  /* #FEF6FB */
+  --brand-50: 253 242 250;  /* #FDF2FA */
+  --brand-100: 252 231 246; /* #FCE7F6 */
+  --brand-200: 252 206 238; /* #FCCEEE */
+  --brand-300: 250 167 224; /* #FAA7E0 */
+  --brand-400: 246 112 199; /* #F670C7 */
+  --brand-500: 193 21 116;  /* #C11574 */
+  --brand-600: 158 22 95;   /* #9E165F */
+  --brand-700: 133 22 81;   /* #851651 */
+  --brand-800: 107 17 66;   /* #6B1142 */
+  --brand-900: 78 13 48;    /* #4E0D30 */
+}
+
+/* 5. Enterprise Warmth — Amber. Primary 600 = #B54708 */
+[data-accent='amber'] {
+  --brand-25: 255 252 245;  /* #FFFCF5 */
+  --brand-50: 255 250 235;  /* #FFFAEB */
+  --brand-100: 254 240 199; /* #FEF0C7 */
+  --brand-200: 254 223 137; /* #FEDF89 */
+  --brand-300: 254 200 75;  /* #FEC84B */
+  --brand-400: 253 176 34;  /* #FDB022 */
+  --brand-500: 247 144 9;   /* #F79009 */
+  --brand-600: 181 71 8;    /* #B54708 */
+  --brand-700: 147 55 13;   /* #93370D */
+  --brand-800: 122 46 14;   /* #7A2E0E */
+  --brand-900: 78 29 9;     /* #4E1D09 */
+  /* Amber 500 is too light for a focus ring on white (2.2:1); ring on 600 instead. */
+  --brand-ring: var(--brand-600);
+}
+
+/* 6. Deep Ocean — Cyan. Primary 600 = #088AB2 */
+[data-accent='ocean'] {
+  --brand-25: 245 254 255;  /* #F5FEFF */
+  --brand-50: 236 253 255;  /* #ECFDFF */
+  --brand-100: 207 249 254; /* #CFF9FE */
+  --brand-200: 165 240 252; /* #A5F0FC */
+  --brand-300: 103 227 249; /* #67E3F9 */
+  --brand-400: 34 204 238;  /* #22CCEE */
+  --brand-500: 6 174 212;   /* #06AED4 */
+  --brand-600: 8 138 178;   /* #088AB2 */
+  --brand-700: 14 112 144;  /* #0E7090 */
+  --brand-800: 21 91 117;   /* #155B75 */
+  --brand-900: 22 76 99;    /* #164C63 */
+  /* #088AB2 is 3.9:1 against white — enough for rings and borders, not for text. Filled
+     buttons and brand text step down to 700 (5.6:1); the 600 identity stays everywhere else. */
+  --brand-solid: var(--brand-700);
+  --brand-solid-hover: var(--brand-800);
+  --brand-ink: var(--brand-700);
+  --brand-ring: var(--brand-600);
+}

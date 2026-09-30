@@ -1,0 +1,21 @@
+{
+  "name": "@taskin/jalali",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Jalali (Solar Hijri) calendar engine with Persian formatting",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "lint": "eslint src test",
+    "test": "tsc -b && node --test test/*.test.mjs"
+  }
+}

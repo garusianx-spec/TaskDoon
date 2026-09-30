@@ -1,0 +1,186 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Typecheck, lint, unit tests, contrast, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run check:contrast
+      - run: npm run build
+
+  api:
+    name: API integration (PostgreSQL 18, Redis 7.4, S3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 3s --health-timeout 3s --health-retries 30
+      redis:
+        image: redis:7.4-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s --health-timeout 3s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Service containers cannot take a command, so the S3 gateway starts here.
+      - name: Start S3 (SeaweedFS) and create the bucket
+        run: |
+          docker run -d --name s3 -p 8333:8333 \
+            -v "$PWD/infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro" \
+            chrislusf/seaweedfs:4.47 server -dir=/data -volume.max=0 -master.volumeSizeLimitMB=256 \
+            -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+          for attempt in $(seq 1 60); do
+            docker exec s3 wget -q -O /dev/null http://127.0.0.1:8333/status && break
+            sleep 1
+          done
+          docker exec s3 sh -c "echo 's3.bucket.create -name taskin-files' | weed shell -master=127.0.0.1:9333"
+      - name: Migrations are consistent, and the schema has no ungenerated changes
+        run: |
+          # drizzle-kit loads the schema, which imports the workspace packages: build them first.
+          npm run build -w @taskin/contracts -w @taskin/jalali -w @taskin/text
+          npm run db:check -w @taskin/api
+          # drizzle-kit exits 0 even when it cannot load the schema, so an error in its output fails the step.
+          npm run db:generate -w @taskin/api 2>&1 | tee "$RUNNER_TEMP/db-generate.log"
+          if grep -qi 'error' "$RUNNER_TEMP/db-generate.log"; then exit 1; fi
+          test -z "$(git status --porcelain apps/api/db)" || { git status --porcelain apps/api/db; exit 1; }
+      - name: Integration suite (migrates a fresh database from zero)
+        run: npm run test:int
+      - name: S3 logs
+        if: failure()
+        run: docker logs s3 | tail -100
+
+  compose:
+    name: Compose stack (infra:up, API image, migrate, health)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the API image and start every service
+        run: docker compose -f infra/docker-compose.yml --profile app up -d --build --wait --wait-timeout 300
+      - name: The API answers through PgBouncer
+        run: |
+          curl -fsS http://localhost:4000/health/ready
+          curl -fsS -X POST http://localhost:4000/api/v1/auth/otp/request \
+            -H 'content-type: application/json' -d '{"phone":"09121112233"}'
+      - name: Service logs
+        if: failure()
+        run: docker compose -f infra/docker-compose.yml --profile app logs --tail 100
+
+  scale:
+    name: Scaled stack (REST node, two WebSocket nodes, worker, nginx)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --workspace @taskin/api --include-workspace-root
+      - name: Build the API image and start the scaled topology
+        run: docker compose -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale up -d --build --wait --wait-timeout 300
+      - name: Cross-node delivery, edge routing and relay-driven room changes
+        run: node apps/api/scripts/scale-smoke.mjs
+      - name: Service logs
+        if: failure()
+        run: docker compose -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale logs --tail 100
+
+  e2e:
+    name: Playwright suites (production build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for playwright-core
+        run: npx playwright-core install --with-deps chromium
+      # These suites drive the demo fixtures; the live app has its own job below.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_DATA_SOURCE: demo
+      - run: npm run test:e2e
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: apps/web/e2e/out
+          retention-days: 7
+
+  e2e-live:
+    name: Live app end to end (web on the Compose API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for playwright-core
+        run: npx playwright-core install --with-deps chromium
+      - name: Start the API and its services
+        run: docker compose -f infra/docker-compose.yml --profile app up -d --build --wait --wait-timeout 300
+      - name: Build the live web app and serve it on :3000 (proxying /api/v1 and /rt to :4000)
+        run: |
+          npm run build -w @taskin/web
+          nohup npm run start -w @taskin/web -- -p 3000 > "$RUNNER_TEMP/web.log" 2>&1 &
+          for attempt in $(seq 1 60); do curl -fsS -o /dev/null http://localhost:3000/feed && break; sleep 1; done
+      - name: Two people, one workspace (sign-in, invitation, tasks, chat, notifications, sign-out)
+        run: |
+          # The console SMS driver logs sign-in codes and invitation links; the suite reads them here.
+          docker compose -f infra/docker-compose.yml --profile app logs -f --no-log-prefix api > "$RUNNER_TEMP/api.log" 2>&1 &
+          API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live
+      - name: Logs
+        if: failure()
+        run: |
+          tail -100 "$RUNNER_TEMP/web.log"
+          docker compose -f infra/docker-compose.yml --profile app logs --tail 100 api
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-live-screenshots
+          path: apps/web/e2e/out
+          retention-days: 7

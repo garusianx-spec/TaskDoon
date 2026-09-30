@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": ".",
+    "types": ["node", "vitest/importMeta"]
+  },
+  "include": ["src", "test", "vitest.config.ts", "vitest.integration.config.ts", "drizzle.config.ts"]
+}

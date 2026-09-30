@@ -1,0 +1,67 @@
+# The scaled topology (RFC §2, M3): one REST node, two WebSocket nodes and a worker, behind nginx
+# on http://localhost:8080 (REST under /api, Socket.IO on /rt, round-robin over both WebSocket
+# nodes). Each WebSocket node is also published directly (4101, 4102), so a test can pick one.
+#
+#   docker compose -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale up -d --build --wait
+#   node apps/api/scripts/scale-smoke.mjs
+#
+# Every node shares the development signing key in scale/dev.env: a token issued by the REST
+# node must verify on the WebSocket nodes.
+services:
+  migrate:
+    profiles: [app, scale]
+
+  api-http:
+    profiles: [scale]
+    extends: { file: docker-compose.yml, service: api }
+    env_file: [scale/dev.env]
+    environment:
+      APP_ROLE: http
+      # nginx is the one proxy in front: the REST limits count the real client IP.
+      TRUST_PROXY: "1"
+      # The load run (scripts/chat-load.mjs) sends all its REST traffic from one address.
+      THROTTLE_IP_PER_MINUTE: ${THROTTLE_IP_PER_MINUTE:-300}
+    ports: !override []
+
+  api-ws-1:
+    profiles: [scale]
+    extends: { file: docker-compose.yml, service: api }
+    env_file: [scale/dev.env]
+    environment:
+      APP_ROLE: ws
+      WS_NODE_ID: ws-1
+    ports: !override ["4101:4000"]
+
+  api-ws-2:
+    profiles: [scale]
+    extends: { file: docker-compose.yml, service: api }
+    env_file: [scale/dev.env]
+    environment:
+      APP_ROLE: ws
+      WS_NODE_ID: ws-2
+    ports: !override ["4102:4000"]
+
+  api-worker:
+    profiles: [scale]
+    extends: { file: docker-compose.yml, service: api }
+    env_file: [scale/dev.env]
+    environment:
+      APP_ROLE: worker
+    ports: !override []
+
+  nginx:
+    profiles: [scale]
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx/scale.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api-http: { condition: service_healthy }
+      api-ws-1: { condition: service_healthy }
+      api-ws-2: { condition: service_healthy }
+      api-worker: { condition: service_healthy }
+    ports: ["8080:8080"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health/ready || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 20

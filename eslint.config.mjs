@@ -1,15 +1,12 @@
-import { dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { FlatCompat } from '@eslint/eslintrc';
+import tseslint from 'typescript-eslint';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({ baseDirectory: __dirname });
-
-const eslintConfig = [
-  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts'] },
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+/**
+ * Lint config for the framework-free workspace packages and the API. `apps/web` has its own
+ * config (Next.js rules) and ESLint picks the nearest one, so the two never mix.
+ */
+export default tseslint.config(
+  { ignores: ['**/dist/**', '**/node_modules/**', 'apps/web/**', 'apps/api/db/**'] },
+  ...tseslint.configs.recommended,
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
@@ -19,6 +16,15 @@ const eslintConfig = [
       ],
     },
   },
-];
-
-export default eslintConfig;
+  {
+    // Nest resolves constructor dependencies from decorator metadata, so a class used only as a
+    // parameter type is still a runtime import. These parser options let the rule see that.
+    files: ['apps/api/**/*.ts'],
+    languageOptions: {
+      parserOptions: { emitDecoratorMetadata: true, experimentalDecorators: true },
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
+);

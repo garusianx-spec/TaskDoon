@@ -1,0 +1,1302 @@
+## columns
+activity_events.actor_id uuid
+activity_events.context text not null default ''::text
+activity_events.created_at timestamp with time zone not null default now()
+activity_events.id uuid not null default app.uuidv7()
+activity_events.kind activity_kind not null
+activity_events.project_id uuid
+activity_events.source_event_id bigint
+activity_events.target_id uuid not null
+activity_events.target_title text not null
+activity_events.target_type text not null
+activity_events.workspace_id uuid not null
+attachments.bucket text not null
+attachments.checksum_sha256 bytea
+attachments.created_at timestamp with time zone not null default now()
+attachments.deleted_at timestamp with time zone
+attachments.file_name text not null
+attachments.id uuid not null default app.uuidv7()
+attachments.kind attachment_kind not null
+attachments.meta jsonb
+attachments.mime_type text not null
+attachments.multipart_upload_id text
+attachments.object_key text not null
+attachments.ready_at timestamp with time zone
+attachments.size_bytes bigint not null
+attachments.status attachment_status not null default 'pending'::attachment_status
+attachments.thumbnail_key text
+attachments.uploader_id uuid not null
+attachments.workspace_id uuid not null
+audit_logs.action text not null
+audit_logs.actor_session_id uuid
+audit_logs.actor_user_id uuid
+audit_logs.changes jsonb
+audit_logs.created_at timestamp with time zone not null default now()
+audit_logs.id bigint not null identity
+audit_logs.ip inet
+audit_logs.request_id text
+audit_logs.resource_id text
+audit_logs.resource_type text
+audit_logs.trace_id text
+audit_logs.user_agent text
+audit_logs.workspace_id uuid
+auth_sessions.absolute_expires_at timestamp with time zone not null
+auth_sessions.amr text[] not null
+auth_sessions.created_at timestamp with time zone not null default now()
+auth_sessions.device_label text
+auth_sessions.geo_city text
+auth_sessions.id uuid not null default app.uuidv7()
+auth_sessions.idle_expires_at timestamp with time zone not null
+auth_sessions.ip inet
+auth_sessions.last_active_at timestamp with time zone not null default now()
+auth_sessions.revoke_reason session_revoke_reason
+auth_sessions.revoked_at timestamp with time zone
+auth_sessions.stepped_up_at timestamp with time zone
+auth_sessions.user_agent text
+auth_sessions.user_id uuid not null
+auto_reply_log.replied_at timestamp with time zone not null default now()
+auto_reply_log.sender_id uuid not null
+auto_reply_log.user_id uuid not null
+auto_reply_log.workspace_id uuid not null
+board_columns.created_at timestamp with time zone not null default now()
+board_columns.deleted_at timestamp with time zone
+board_columns.id uuid not null default app.uuidv7()
+board_columns.is_builtin boolean not null default false
+board_columns.position text not null
+board_columns.status task_status not null
+board_columns.title text not null
+board_columns.tone tag_tone
+board_columns.updated_at timestamp with time zone not null default now()
+board_columns.workflow_id uuid not null
+board_columns.workspace_id uuid not null
+calendar_event_attendees.event_id uuid not null
+calendar_event_attendees.response attendee_response not null default 'pending'::attendee_response
+calendar_event_attendees.user_id uuid not null
+calendar_event_attendees.workspace_id uuid not null
+calendar_events.all_day boolean not null
+calendar_events.created_at timestamp with time zone not null default now()
+calendar_events.created_by uuid not null
+calendar_events.deleted_at timestamp with time zone
+calendar_events.description text not null default ''::text
+calendar_events.end_date date
+calendar_events.ends_at timestamp with time zone
+calendar_events.id uuid not null default app.uuidv7()
+calendar_events.kind event_kind not null
+calendar_events.project_id uuid
+calendar_events.recurrence_rule text
+calendar_events.start_date date
+calendar_events.starts_at timestamp with time zone
+calendar_events.time_zone text not null
+calendar_events.title text not null
+calendar_events.updated_at timestamp with time zone not null default now()
+calendar_events.version integer not null default 1
+calendar_events.workspace_id uuid not null
+conversation_members.conversation_id uuid not null
+conversation_members.hidden_at timestamp with time zone
+conversation_members.joined_at timestamp with time zone not null default now()
+conversation_members.last_delivered_seq bigint not null default 0
+conversation_members.last_read_seq bigint not null default 0
+conversation_members.left_at timestamp with time zone
+conversation_members.muted_until timestamp with time zone
+conversation_members.notification_level notification_level not null default 'all'::notification_level
+conversation_members.pinned_at timestamp with time zone
+conversation_members.role conversation_role not null default 'member'::conversation_role
+conversation_members.user_id uuid not null
+conversation_members.workspace_id uuid not null
+conversations.archived_at timestamp with time zone
+conversations.created_at timestamp with time zone not null default now()
+conversations.created_by uuid not null
+conversations.direct_key text
+conversations.id uuid not null default app.uuidv7()
+conversations.is_private boolean not null default true
+conversations.kind conversation_kind not null
+conversations.last_message_at timestamp with time zone
+conversations.last_seq bigint not null default 0
+conversations.membership_mode membership_mode not null default 'manual'::membership_mode
+conversations.post_policy post_policy not null default 'everyone'::post_policy
+conversations.project_id uuid
+conversations.title text
+conversations.tone avatar_tone not null default 'brand'::avatar_tone
+conversations.topic text not null default ''::text
+conversations.updated_at timestamp with time zone not null default now()
+conversations.workspace_id uuid not null
+departments.created_at timestamp with time zone not null default now()
+departments.id uuid not null default app.uuidv7()
+departments.name text not null
+departments.position integer not null default 0
+departments.updated_at timestamp with time zone not null default now()
+departments.workspace_id uuid not null
+idempotency_keys.created_at timestamp with time zone not null default now()
+idempotency_keys.expires_at timestamp with time zone not null
+idempotency_keys.key text not null
+idempotency_keys.request_hash bytea not null
+idempotency_keys.response_body jsonb
+idempotency_keys.response_status integer
+idempotency_keys.scope text not null
+idempotency_keys.state text not null
+idempotency_keys.updated_at timestamp with time zone not null default now()
+idempotency_keys.user_id uuid not null
+invitations.accepted_at timestamp with time zone
+invitations.accepted_by uuid
+invitations.address text not null
+invitations.channel invitation_channel not null
+invitations.created_at timestamp with time zone not null default now()
+invitations.department_id uuid
+invitations.expires_at timestamp with time zone not null
+invitations.id uuid not null default app.uuidv7()
+invitations.invited_by uuid not null
+invitations.message text not null default ''::text
+invitations.role_id uuid not null
+invitations.status invitation_status not null default 'pending'::invitation_status
+invitations.token_hash bytea not null
+invitations.workspace_id uuid not null
+labels.created_at timestamp with time zone not null default now()
+labels.id uuid not null default app.uuidv7()
+labels.name text not null
+labels.tone tag_tone not null default 'gray'::tag_tone
+labels.workspace_id uuid not null
+member_working_hours.auto_reply_enabled boolean not null default false
+member_working_hours.created_at timestamp with time zone not null default now()
+member_working_hours.days text[] not null
+member_working_hours.end_time text not null
+member_working_hours.message text not null
+member_working_hours.start_time text not null
+member_working_hours.updated_at timestamp with time zone not null default now()
+member_working_hours.user_id uuid not null
+member_working_hours.workspace_id uuid not null
+message_mentions.message_id uuid not null
+message_mentions.user_id uuid not null
+message_mentions.workspace_id uuid not null
+message_reactions.created_at timestamp with time zone not null default now()
+message_reactions.emoji text not null
+message_reactions.message_id uuid not null
+message_reactions.user_id uuid not null
+message_reactions.workspace_id uuid not null
+messages.attachment_id uuid
+messages.author_id uuid
+messages.body_meta jsonb
+messages.body_text text
+messages.client_msg_id uuid
+messages.conversation_id uuid not null
+messages.created_at timestamp with time zone not null default now()
+messages.deleted_at timestamp with time zone
+messages.edited_at timestamp with time zone
+messages.id uuid not null default app.uuidv7()
+messages.kind message_kind not null
+messages.reply_to_id uuid
+messages.search_text text
+messages.seq bigint not null
+messages.source_event_id bigint
+messages.workspace_id uuid not null
+note_categories.created_at timestamp with time zone not null default now()
+note_categories.deleted_at timestamp with time zone
+note_categories.id uuid not null default app.uuidv7()
+note_categories.is_builtin boolean not null default false
+note_categories.key text
+note_categories.label text not null
+note_categories.owner_id uuid not null
+note_categories.position integer not null default 0
+note_categories.workspace_id uuid not null
+notes.body text not null default ''::text
+notes.category_id uuid
+notes.colors tag_tone[] not null default '{}'::tag_tone[]
+notes.created_at timestamp with time zone not null default now()
+notes.id uuid not null default app.uuidv7()
+notes.owner_id uuid not null
+notes.pinned_at timestamp with time zone
+notes.search_text text not null
+notes.title text not null default ''::text
+notes.updated_at timestamp with time zone not null default now()
+notes.version integer not null default 1
+notes.workspace_id uuid not null
+notifications.actor_id uuid
+notifications.created_at timestamp with time zone not null default now()
+notifications.dedupe_key text
+notifications.id uuid not null default app.uuidv7()
+notifications.kind notification_kind not null
+notifications.payload jsonb not null default '{}'::jsonb
+notifications.read_at timestamp with time zone
+notifications.recipient_id uuid not null
+notifications.subject text not null
+notifications.target_id uuid not null
+notifications.target_type text not null
+notifications.workspace_id uuid not null
+otp_challenges.attempts smallint not null default 0
+otp_challenges.code_hash bytea not null
+otp_challenges.consumed_at timestamp with time zone
+otp_challenges.created_at timestamp with time zone not null default now()
+otp_challenges.expires_at timestamp with time zone not null
+otp_challenges.id uuid not null
+otp_challenges.ip inet
+otp_challenges.phone text not null
+otp_challenges.provider text not null
+otp_challenges.provider_message_id text
+otp_challenges.purpose otp_purpose not null
+otp_challenges.user_agent text
+outbox_events.aggregate_id text not null
+outbox_events.aggregate_type text not null
+outbox_events.created_at timestamp with time zone not null default now()
+outbox_events.event_type text not null
+outbox_events.headers jsonb not null default '{}'::jsonb
+outbox_events.id bigint not null identity
+outbox_events.payload jsonb not null
+outbox_events.published_at timestamp with time zone
+outbox_events.workspace_id uuid
+plans.created_at timestamp with time zone not null default now()
+plans.id text not null
+plans.limits jsonb not null
+plans.name text not null
+project_members.added_at timestamp with time zone not null default now()
+project_members.added_by uuid
+project_members.project_id uuid not null
+project_members.role project_role not null
+project_members.user_id uuid not null
+project_members.workspace_id uuid not null
+project_stars.created_at timestamp with time zone not null default now()
+project_stars.project_id uuid not null
+project_stars.user_id uuid not null
+project_stars.workspace_id uuid not null
+projects.archived_at timestamp with time zone
+projects.color avatar_tone not null default 'brand'::avatar_tone
+projects.created_at timestamp with time zone not null default now()
+projects.created_by uuid not null
+projects.deleted_at timestamp with time zone
+projects.deleted_by uuid
+projects.department_id uuid
+projects.description text not null default ''::text
+projects.id uuid not null default app.uuidv7()
+projects.key text not null
+projects.name text not null
+projects.parent_id uuid
+projects.task_seq bigint not null default 0
+projects.updated_at timestamp with time zone not null default now()
+projects.visibility project_visibility not null default 'workspace'::project_visibility
+projects.workflow_id uuid not null
+projects.workspace_id uuid not null
+refresh_tokens.expires_at timestamp with time zone not null
+refresh_tokens.id uuid not null default app.uuidv7()
+refresh_tokens.issued_at timestamp with time zone not null default now()
+refresh_tokens.replaced_by uuid
+refresh_tokens.session_id uuid not null
+refresh_tokens.token_hash bytea not null
+refresh_tokens.used_at timestamp with time zone
+role_permissions.action permission_action not null
+role_permissions.module permission_module not null
+role_permissions.role_id uuid not null
+role_permissions.workspace_id uuid not null
+roles.created_at timestamp with time zone not null default now()
+roles.id uuid not null default app.uuidv7()
+roles.is_locked boolean not null
+roles.is_system boolean not null
+roles.key text not null
+roles.rank smallint not null
+roles.updated_at timestamp with time zone not null default now()
+roles.version integer not null default 1
+roles.workspace_id uuid not null
+scheduled_messages.attachment_id uuid
+scheduled_messages.author_id uuid not null
+scheduled_messages.body_meta jsonb
+scheduled_messages.body_text text
+scheduled_messages.cancelled_at timestamp with time zone
+scheduled_messages.claimed_at timestamp with time zone
+scheduled_messages.client_msg_id uuid not null
+scheduled_messages.conversation_id uuid not null
+scheduled_messages.created_at timestamp with time zone not null default now()
+scheduled_messages.failure_code text
+scheduled_messages.id uuid not null default app.uuidv7()
+scheduled_messages.kind message_kind not null
+scheduled_messages.message_id uuid
+scheduled_messages.reply_to_id uuid
+scheduled_messages.scheduled_at timestamp with time zone not null
+scheduled_messages.sent_at timestamp with time zone
+scheduled_messages.status scheduled_message_status not null default 'pending'::scheduled_message_status
+scheduled_messages.updated_at timestamp with time zone not null default now()
+scheduled_messages.workspace_id uuid not null
+subtasks.assignee_id uuid
+subtasks.completed_at timestamp with time zone
+subtasks.created_at timestamp with time zone not null default now()
+subtasks.done boolean not null default false
+subtasks.id uuid not null default app.uuidv7()
+subtasks.position text not null
+subtasks.task_id uuid not null
+subtasks.title text not null
+subtasks.updated_at timestamp with time zone not null default now()
+subtasks.workspace_id uuid not null
+task_assignees.assigned_at timestamp with time zone not null default now()
+task_assignees.assigned_by uuid
+task_assignees.task_id uuid not null
+task_assignees.user_id uuid not null
+task_assignees.workspace_id uuid not null
+task_attachments.added_at timestamp with time zone not null default now()
+task_attachments.added_by uuid
+task_attachments.attachment_id uuid not null
+task_attachments.task_id uuid not null
+task_attachments.workspace_id uuid not null
+task_comments.author_id uuid not null
+task_comments.body text not null
+task_comments.created_at timestamp with time zone not null default now()
+task_comments.deleted_at timestamp with time zone
+task_comments.edited_at timestamp with time zone
+task_comments.id uuid not null default app.uuidv7()
+task_comments.reply_to_id uuid
+task_comments.task_id uuid not null
+task_comments.workspace_id uuid not null
+task_events.actor_id uuid
+task_events.created_at timestamp with time zone not null default now()
+task_events.id uuid not null default app.uuidv7()
+task_events.payload jsonb not null default '{}'::jsonb
+task_events.task_id uuid not null
+task_events.type text not null
+task_events.workspace_id uuid not null
+task_labels.label_id uuid not null
+task_labels.task_id uuid not null
+task_labels.workspace_id uuid not null
+task_stars.created_at timestamp with time zone not null default now()
+task_stars.task_id uuid not null
+task_stars.user_id uuid not null
+task_stars.workspace_id uuid not null
+tasks.archived_at timestamp with time zone
+tasks.column_id uuid not null
+tasks.completed_at timestamp with time zone
+tasks.created_at timestamp with time zone not null default now()
+tasks.created_by uuid not null
+tasks.deleted_at timestamp with time zone
+tasks.description text not null default ''::text
+tasks.due_date date
+tasks.id uuid not null default app.uuidv7()
+tasks.number bigint not null
+tasks.position text not null
+tasks.priority task_priority not null default 'medium'::task_priority
+tasks.project_id uuid not null
+tasks.reopen_column_id uuid
+tasks.reviewer_id uuid
+tasks.search_text text not null
+tasks.source_message_id uuid
+tasks.source_note_id uuid
+tasks.start_date date not null
+tasks.status task_status not null
+tasks.title text not null
+tasks.updated_at timestamp with time zone not null default now()
+tasks.version integer not null default 1
+tasks.workspace_id uuid not null
+users.avatar_key text
+users.avatar_tone avatar_tone not null default 'brand'::avatar_tone
+users.created_at timestamp with time zone not null default now()
+users.deleted_at timestamp with time zone
+users.email citext
+users.email_verified_at timestamp with time zone
+users.failed_password_attempts integer not null default 0
+users.full_name text not null
+users.id uuid not null default app.uuidv7()
+users.locale text not null default 'fa-IR'::text
+users.locked_until timestamp with time zone
+users.password_changed_at timestamp with time zone
+users.password_hash text
+users.phone text not null
+users.phone_verified_at timestamp with time zone not null
+users.security_version integer not null default 1
+users.status user_status not null default 'active'::user_status
+users.time_zone text not null default 'Asia/Tehran'::text
+users.updated_at timestamp with time zone not null default now()
+workflows.created_at timestamp with time zone not null default now()
+workflows.id uuid not null default app.uuidv7()
+workflows.is_default boolean not null default true
+workflows.name text not null
+workflows.updated_at timestamp with time zone not null default now()
+workflows.version integer not null default 1
+workflows.workspace_id uuid not null
+workspace_members.department_id uuid
+workspace_members.invited_by uuid
+workspace_members.job_title text not null default ''::text
+workspace_members.joined_at timestamp with time zone not null default now()
+workspace_members.left_at timestamp with time zone
+workspace_members.presence_status presence_status not null default 'online'::presence_status
+workspace_members.role_id uuid not null
+workspace_members.status member_status not null default 'active'::member_status
+workspace_members.status_message text not null default ''::text
+workspace_members.updated_at timestamp with time zone not null default now()
+workspace_members.user_id uuid not null
+workspace_members.workspace_id uuid not null
+workspaces.created_at timestamp with time zone not null default now()
+workspaces.deleted_at timestamp with time zone
+workspaces.description text not null default ''::text
+workspaces.icon_key text
+workspaces.id uuid not null default app.uuidv7()
+workspaces.initials text not null
+workspaces.member_count integer not null default 1
+workspaces.name text not null
+workspaces.owner_user_id uuid not null
+workspaces.plan_id text not null default 'free'::text
+workspaces.purge_after timestamp with time zone
+workspaces.rbac_version integer not null default 1
+workspaces.settings jsonb not null default '{"weekend": ["friday"], "timeZone": "Asia/Tehran", "weekStart": "saturday", "allowedEmailDomains": [], "systemMessageOnConvert": true}'::jsonb
+workspaces.slug citext not null
+workspaces.storage_reserved_bytes bigint not null default 0
+workspaces.storage_used_bytes bigint not null default 0
+workspaces.tone avatar_tone not null
+workspaces.updated_at timestamp with time zone not null default now()
+
+## constraints
+activity_events activity_events_context_not_null: NOT NULL context
+activity_events activity_events_created_at_not_null: NOT NULL created_at
+activity_events activity_events_id_not_null: NOT NULL id
+activity_events activity_events_kind_not_null: NOT NULL kind
+activity_events activity_events_pkey: PRIMARY KEY (id)
+activity_events activity_events_target_id_not_null: NOT NULL target_id
+activity_events activity_events_target_title_not_null: NOT NULL target_title
+activity_events activity_events_target_type_not_null: NOT NULL target_type
+activity_events activity_events_workspace_id_not_null: NOT NULL workspace_id
+activity_events activity_events_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+attachments attachments_bucket_not_null: NOT NULL bucket
+attachments attachments_created_at_not_null: NOT NULL created_at
+attachments attachments_file_name_not_null: NOT NULL file_name
+attachments attachments_id_not_null: NOT NULL id
+attachments attachments_kind_not_null: NOT NULL kind
+attachments attachments_mime_type_not_null: NOT NULL mime_type
+attachments attachments_name_len: CHECK (((char_length(file_name) >= 1) AND (char_length(file_name) <= 255)))
+attachments attachments_object_key_not_null: NOT NULL object_key
+attachments attachments_object_key_uq: UNIQUE (object_key)
+attachments attachments_pkey: PRIMARY KEY (id)
+attachments attachments_size: CHECK ((size_bytes > 0))
+attachments attachments_size_bytes_not_null: NOT NULL size_bytes
+attachments attachments_status_not_null: NOT NULL status
+attachments attachments_uploader_fk: FOREIGN KEY (workspace_id, uploader_id) REFERENCES workspace_members(workspace_id, user_id)
+attachments attachments_uploader_id_not_null: NOT NULL uploader_id
+attachments attachments_workspace_id_not_null: NOT NULL workspace_id
+attachments attachments_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+attachments attachments_ws_id_uq: UNIQUE (workspace_id, id)
+audit_logs audit_logs_action_not_null: NOT NULL action
+audit_logs audit_logs_created_at_not_null: NOT NULL created_at
+audit_logs audit_logs_id_not_null: NOT NULL id
+audit_logs audit_logs_pkey: PRIMARY KEY (id, created_at)
+auth_sessions auth_sessions_absolute_expires_at_not_null: NOT NULL absolute_expires_at
+auth_sessions auth_sessions_amr_not_null: NOT NULL amr
+auth_sessions auth_sessions_created_at_not_null: NOT NULL created_at
+auth_sessions auth_sessions_id_not_null: NOT NULL id
+auth_sessions auth_sessions_idle_expires_at_not_null: NOT NULL idle_expires_at
+auth_sessions auth_sessions_last_active_at_not_null: NOT NULL last_active_at
+auth_sessions auth_sessions_pkey: PRIMARY KEY (id)
+auth_sessions auth_sessions_user_id_not_null: NOT NULL user_id
+auth_sessions auth_sessions_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+auto_reply_log auto_reply_log_pk: PRIMARY KEY (workspace_id, user_id, sender_id)
+auto_reply_log auto_reply_log_replied_at_not_null: NOT NULL replied_at
+auto_reply_log auto_reply_log_sender_fk: FOREIGN KEY (workspace_id, sender_id) REFERENCES workspace_members(workspace_id, user_id) ON DELETE CASCADE
+auto_reply_log auto_reply_log_sender_id_not_null: NOT NULL sender_id
+auto_reply_log auto_reply_log_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id) ON DELETE CASCADE
+auto_reply_log auto_reply_log_user_id_not_null: NOT NULL user_id
+auto_reply_log auto_reply_log_workspace_id_not_null: NOT NULL workspace_id
+auto_reply_log auto_reply_log_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+board_columns board_columns_categories: TRIGGER DEFERRABLE INITIALLY DEFERRED
+board_columns board_columns_created_at_not_null: NOT NULL created_at
+board_columns board_columns_id_not_null: NOT NULL id
+board_columns board_columns_is_builtin_not_null: NOT NULL is_builtin
+board_columns board_columns_pkey: PRIMARY KEY (id)
+board_columns board_columns_position_not_null: NOT NULL "position"
+board_columns board_columns_status_not_null: NOT NULL status
+board_columns board_columns_title_len: CHECK (((char_length(title) >= 1) AND (char_length(title) <= 32)))
+board_columns board_columns_title_not_null: NOT NULL title
+board_columns board_columns_updated_at_not_null: NOT NULL updated_at
+board_columns board_columns_workflow_fk: FOREIGN KEY (workspace_id, workflow_id) REFERENCES workflows(workspace_id, id) ON DELETE CASCADE
+board_columns board_columns_workflow_id_not_null: NOT NULL workflow_id
+board_columns board_columns_workspace_id_not_null: NOT NULL workspace_id
+board_columns board_columns_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+board_columns board_columns_ws_id_uq: UNIQUE (workspace_id, id)
+calendar_event_attendees calendar_event_attendees_event_fk: FOREIGN KEY (workspace_id, event_id) REFERENCES calendar_events(workspace_id, id) ON DELETE CASCADE
+calendar_event_attendees calendar_event_attendees_event_id_not_null: NOT NULL event_id
+calendar_event_attendees calendar_event_attendees_pk: PRIMARY KEY (event_id, user_id)
+calendar_event_attendees calendar_event_attendees_response_not_null: NOT NULL response
+calendar_event_attendees calendar_event_attendees_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id)
+calendar_event_attendees calendar_event_attendees_user_id_not_null: NOT NULL user_id
+calendar_event_attendees calendar_event_attendees_workspace_id_not_null: NOT NULL workspace_id
+calendar_event_attendees calendar_event_attendees_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+calendar_events calendar_events_all_day_not_null: NOT NULL all_day
+calendar_events calendar_events_created_at_not_null: NOT NULL created_at
+calendar_events calendar_events_created_by_fk: FOREIGN KEY (workspace_id, created_by) REFERENCES workspace_members(workspace_id, user_id)
+calendar_events calendar_events_created_by_not_null: NOT NULL created_by
+calendar_events calendar_events_description_not_null: NOT NULL description
+calendar_events calendar_events_id_not_null: NOT NULL id
+calendar_events calendar_events_kind_not_null: NOT NULL kind
+calendar_events calendar_events_pkey: PRIMARY KEY (id)
+calendar_events calendar_events_project_fk: FOREIGN KEY (workspace_id, project_id) REFERENCES projects(workspace_id, id)
+calendar_events calendar_events_time_zone_not_null: NOT NULL time_zone
+calendar_events calendar_events_timing: CHECK (((all_day AND (start_date IS NOT NULL) AND (starts_at IS NULL) AND ((end_date IS NULL) OR (end_date >= start_date))) OR ((NOT all_day) AND (starts_at IS NOT NULL) AND ((ends_at IS NULL) OR (ends_at > starts_at)))))
+calendar_events calendar_events_title_len: CHECK (((char_length(title) >= 1) AND (char_length(title) <= 120)))
+calendar_events calendar_events_title_not_null: NOT NULL title
+calendar_events calendar_events_updated_at_not_null: NOT NULL updated_at
+calendar_events calendar_events_version_not_null: NOT NULL version
+calendar_events calendar_events_workspace_id_not_null: NOT NULL workspace_id
+calendar_events calendar_events_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+calendar_events calendar_events_ws_id_uq: UNIQUE (workspace_id, id)
+conversation_members conversation_members_conversation_fk: FOREIGN KEY (workspace_id, conversation_id) REFERENCES conversations(workspace_id, id) ON DELETE CASCADE
+conversation_members conversation_members_conversation_id_not_null: NOT NULL conversation_id
+conversation_members conversation_members_joined_at_not_null: NOT NULL joined_at
+conversation_members conversation_members_last_delivered_seq_not_null: NOT NULL last_delivered_seq
+conversation_members conversation_members_last_read_seq_not_null: NOT NULL last_read_seq
+conversation_members conversation_members_notification_level_not_null: NOT NULL notification_level
+conversation_members conversation_members_pk: PRIMARY KEY (conversation_id, user_id)
+conversation_members conversation_members_role_not_null: NOT NULL role
+conversation_members conversation_members_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id)
+conversation_members conversation_members_user_id_not_null: NOT NULL user_id
+conversation_members conversation_members_workspace_id_not_null: NOT NULL workspace_id
+conversation_members conversation_members_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+conversations conversations_created_at_not_null: NOT NULL created_at
+conversations conversations_created_by_fk: FOREIGN KEY (workspace_id, created_by) REFERENCES workspace_members(workspace_id, user_id)
+conversations conversations_created_by_not_null: NOT NULL created_by
+conversations conversations_direct_key: CHECK (((kind = 'direct'::conversation_kind) = (direct_key IS NOT NULL)))
+conversations conversations_direct_shape: CHECK (((kind <> 'direct'::conversation_kind) OR (is_private AND (post_policy = 'everyone'::post_policy))))
+conversations conversations_id_not_null: NOT NULL id
+conversations conversations_is_private_not_null: NOT NULL is_private
+conversations conversations_kind_not_null: NOT NULL kind
+conversations conversations_last_seq_not_null: NOT NULL last_seq
+conversations conversations_membership_mode_not_null: NOT NULL membership_mode
+conversations conversations_pkey: PRIMARY KEY (id)
+conversations conversations_post_policy_not_null: NOT NULL post_policy
+conversations conversations_project_fk: FOREIGN KEY (workspace_id, project_id) REFERENCES projects(workspace_id, id) ON DELETE SET NULL (project_id)
+conversations conversations_title: CHECK (((kind = 'direct'::conversation_kind) OR ((char_length(title) >= 1) AND (char_length(title) <= 80))))
+conversations conversations_tone_not_null: NOT NULL tone
+conversations conversations_topic_len: CHECK ((char_length(topic) <= 250))
+conversations conversations_topic_not_null: NOT NULL topic
+conversations conversations_updated_at_not_null: NOT NULL updated_at
+conversations conversations_workspace_id_not_null: NOT NULL workspace_id
+conversations conversations_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+conversations conversations_ws_id_uq: UNIQUE (workspace_id, id)
+departments departments_created_at_not_null: NOT NULL created_at
+departments departments_id_not_null: NOT NULL id
+departments departments_name_len: CHECK (((char_length(name) >= 1) AND (char_length(name) <= 60)))
+departments departments_name_not_null: NOT NULL name
+departments departments_pkey: PRIMARY KEY (id)
+departments departments_position_not_null: NOT NULL "position"
+departments departments_updated_at_not_null: NOT NULL updated_at
+departments departments_workspace_id_not_null: NOT NULL workspace_id
+departments departments_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+departments departments_ws_id_uq: UNIQUE (workspace_id, id)
+idempotency_keys idempotency_keys_created_at_not_null: NOT NULL created_at
+idempotency_keys idempotency_keys_expires_at_not_null: NOT NULL expires_at
+idempotency_keys idempotency_keys_key_len: CHECK (((char_length(key) >= 8) AND (char_length(key) <= 64)))
+idempotency_keys idempotency_keys_key_not_null: NOT NULL key
+idempotency_keys idempotency_keys_pk: PRIMARY KEY (user_id, scope, key)
+idempotency_keys idempotency_keys_request_hash_not_null: NOT NULL request_hash
+idempotency_keys idempotency_keys_scope_not_null: NOT NULL scope
+idempotency_keys idempotency_keys_state: CHECK ((state = ANY (ARRAY['in_progress'::text, 'completed'::text])))
+idempotency_keys idempotency_keys_state_not_null: NOT NULL state
+idempotency_keys idempotency_keys_updated_at_not_null: NOT NULL updated_at
+idempotency_keys idempotency_keys_user_id_not_null: NOT NULL user_id
+idempotency_keys idempotency_keys_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+invitations invitations_accepted_by_users_id_fk: FOREIGN KEY (accepted_by) REFERENCES users(id) ON DELETE SET NULL
+invitations invitations_address_not_null: NOT NULL address
+invitations invitations_channel_not_null: NOT NULL channel
+invitations invitations_created_at_not_null: NOT NULL created_at
+invitations invitations_department_fk: FOREIGN KEY (workspace_id, department_id) REFERENCES departments(workspace_id, id) ON DELETE RESTRICT
+invitations invitations_expires_at_not_null: NOT NULL expires_at
+invitations invitations_id_not_null: NOT NULL id
+invitations invitations_invited_by_not_null: NOT NULL invited_by
+invitations invitations_invited_by_users_id_fk: FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE CASCADE
+invitations invitations_message_len: CHECK ((char_length(message) <= 280))
+invitations invitations_message_not_null: NOT NULL message
+invitations invitations_pkey: PRIMARY KEY (id)
+invitations invitations_role_fk: FOREIGN KEY (workspace_id, role_id) REFERENCES roles(workspace_id, id) ON DELETE RESTRICT
+invitations invitations_role_id_not_null: NOT NULL role_id
+invitations invitations_status_not_null: NOT NULL status
+invitations invitations_token_hash_not_null: NOT NULL token_hash
+invitations invitations_token_uq: UNIQUE (token_hash)
+invitations invitations_workspace_id_not_null: NOT NULL workspace_id
+invitations invitations_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+labels labels_created_at_not_null: NOT NULL created_at
+labels labels_id_not_null: NOT NULL id
+labels labels_name_len: CHECK (((char_length(name) >= 1) AND (char_length(name) <= 40)))
+labels labels_name_not_null: NOT NULL name
+labels labels_pkey: PRIMARY KEY (id)
+labels labels_tone_not_null: NOT NULL tone
+labels labels_workspace_id_not_null: NOT NULL workspace_id
+labels labels_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+labels labels_ws_id_uq: UNIQUE (workspace_id, id)
+member_working_hours member_working_hours_auto_reply_enabled_not_null: NOT NULL auto_reply_enabled
+member_working_hours member_working_hours_created_at_not_null: NOT NULL created_at
+member_working_hours member_working_hours_days: CHECK ((days <@ ARRAY['saturday'::text, 'sunday'::text, 'monday'::text, 'tuesday'::text, 'wednesday'::text, 'thursday'::text, 'friday'::text]))
+member_working_hours member_working_hours_days_not_null: NOT NULL days
+member_working_hours member_working_hours_end: CHECK ((end_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text))
+member_working_hours member_working_hours_end_time_not_null: NOT NULL end_time
+member_working_hours member_working_hours_message_len: CHECK (((char_length(message) >= 1) AND (char_length(message) <= 500)))
+member_working_hours member_working_hours_message_not_null: NOT NULL message
+member_working_hours member_working_hours_pk: PRIMARY KEY (workspace_id, user_id)
+member_working_hours member_working_hours_start: CHECK ((start_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text))
+member_working_hours member_working_hours_start_time_not_null: NOT NULL start_time
+member_working_hours member_working_hours_updated_at_not_null: NOT NULL updated_at
+member_working_hours member_working_hours_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id) ON DELETE CASCADE
+member_working_hours member_working_hours_user_id_not_null: NOT NULL user_id
+member_working_hours member_working_hours_window: CHECK ((start_time <> end_time))
+member_working_hours member_working_hours_workspace_id_not_null: NOT NULL workspace_id
+member_working_hours member_working_hours_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+message_mentions message_mentions_message_fk: FOREIGN KEY (workspace_id, message_id) REFERENCES messages(workspace_id, id) ON DELETE CASCADE
+message_mentions message_mentions_message_id_not_null: NOT NULL message_id
+message_mentions message_mentions_pk: PRIMARY KEY (message_id, user_id)
+message_mentions message_mentions_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id)
+message_mentions message_mentions_user_id_not_null: NOT NULL user_id
+message_mentions message_mentions_workspace_id_not_null: NOT NULL workspace_id
+message_mentions message_mentions_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+message_reactions message_reactions_created_at_not_null: NOT NULL created_at
+message_reactions message_reactions_emoji_len: CHECK (((octet_length(emoji) >= 1) AND (octet_length(emoji) <= 32)))
+message_reactions message_reactions_emoji_not_null: NOT NULL emoji
+message_reactions message_reactions_message_fk: FOREIGN KEY (workspace_id, message_id) REFERENCES messages(workspace_id, id) ON DELETE CASCADE
+message_reactions message_reactions_message_id_not_null: NOT NULL message_id
+message_reactions message_reactions_pk: PRIMARY KEY (message_id, user_id, emoji)
+message_reactions message_reactions_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id)
+message_reactions message_reactions_user_id_not_null: NOT NULL user_id
+message_reactions message_reactions_workspace_id_not_null: NOT NULL workspace_id
+message_reactions message_reactions_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+messages messages_attachment_fk: FOREIGN KEY (workspace_id, attachment_id) REFERENCES attachments(workspace_id, id)
+messages messages_author: CHECK (((kind = 'system'::message_kind) = (author_id IS NULL)))
+messages messages_author_fk: FOREIGN KEY (workspace_id, author_id) REFERENCES workspace_members(workspace_id, user_id)
+messages messages_body_len: CHECK ((char_length(body_text) <= 8000))
+messages messages_conversation_fk: FOREIGN KEY (workspace_id, conversation_id) REFERENCES conversations(workspace_id, id) ON DELETE CASCADE
+messages messages_conversation_id_not_null: NOT NULL conversation_id
+messages messages_conversation_seq_uq: UNIQUE (conversation_id, seq)
+messages messages_created_at_not_null: NOT NULL created_at
+messages messages_id_not_null: NOT NULL id
+messages messages_kind_not_null: NOT NULL kind
+messages messages_pkey: PRIMARY KEY (id)
+messages messages_reply_to_fk: FOREIGN KEY (workspace_id, reply_to_id) REFERENCES messages(workspace_id, id) ON DELETE SET NULL (reply_to_id)
+messages messages_seq_not_null: NOT NULL seq
+messages messages_seq_positive: CHECK ((seq > 0))
+messages messages_workspace_id_not_null: NOT NULL workspace_id
+messages messages_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+messages messages_ws_id_uq: UNIQUE (workspace_id, id)
+note_categories note_categories_created_at_not_null: NOT NULL created_at
+note_categories note_categories_id_not_null: NOT NULL id
+note_categories note_categories_is_builtin_not_null: NOT NULL is_builtin
+note_categories note_categories_label_len: CHECK (((char_length(label) >= 1) AND (char_length(label) <= 40)))
+note_categories note_categories_label_not_null: NOT NULL label
+note_categories note_categories_owner_fk: FOREIGN KEY (workspace_id, owner_id) REFERENCES workspace_members(workspace_id, user_id)
+note_categories note_categories_owner_id_not_null: NOT NULL owner_id
+note_categories note_categories_pkey: PRIMARY KEY (id)
+note_categories note_categories_position_not_null: NOT NULL "position"
+note_categories note_categories_workspace_id_not_null: NOT NULL workspace_id
+note_categories note_categories_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+note_categories note_categories_ws_id_uq: UNIQUE (workspace_id, id)
+notes notes_body_len: CHECK ((char_length(body) <= 100000))
+notes notes_body_not_null: NOT NULL body
+notes notes_category_fk: FOREIGN KEY (workspace_id, category_id) REFERENCES note_categories(workspace_id, id)
+notes notes_colors_not_null: NOT NULL colors
+notes notes_created_at_not_null: NOT NULL created_at
+notes notes_id_not_null: NOT NULL id
+notes notes_owner_fk: FOREIGN KEY (workspace_id, owner_id) REFERENCES workspace_members(workspace_id, user_id)
+notes notes_owner_id_not_null: NOT NULL owner_id
+notes notes_pkey: PRIMARY KEY (id)
+notes notes_search_text_not_null: NOT NULL search_text
+notes notes_title_len: CHECK ((char_length(title) <= 200))
+notes notes_title_not_null: NOT NULL title
+notes notes_updated_at_not_null: NOT NULL updated_at
+notes notes_version_not_null: NOT NULL version
+notes notes_workspace_id_not_null: NOT NULL workspace_id
+notes notes_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+notes notes_ws_id_uq: UNIQUE (workspace_id, id)
+notifications notifications_created_at_not_null: NOT NULL created_at
+notifications notifications_id_not_null: NOT NULL id
+notifications notifications_kind_not_null: NOT NULL kind
+notifications notifications_payload_not_null: NOT NULL payload
+notifications notifications_pkey: PRIMARY KEY (id)
+notifications notifications_recipient_id_not_null: NOT NULL recipient_id
+notifications notifications_recipient_id_users_id_fk: FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
+notifications notifications_subject_not_null: NOT NULL subject
+notifications notifications_target_id_not_null: NOT NULL target_id
+notifications notifications_target_type: CHECK ((target_type = ANY (ARRAY['task'::text, 'conversation'::text, 'message'::text, 'event'::text, 'workspace'::text])))
+notifications notifications_target_type_not_null: NOT NULL target_type
+notifications notifications_workspace_id_not_null: NOT NULL workspace_id
+notifications notifications_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+otp_challenges otp_challenges_attempts: CHECK (((attempts >= 0) AND (attempts <= 5)))
+otp_challenges otp_challenges_attempts_not_null: NOT NULL attempts
+otp_challenges otp_challenges_code_hash_not_null: NOT NULL code_hash
+otp_challenges otp_challenges_created_at_not_null: NOT NULL created_at
+otp_challenges otp_challenges_expires_at_not_null: NOT NULL expires_at
+otp_challenges otp_challenges_id_not_null: NOT NULL id
+otp_challenges otp_challenges_phone_not_null: NOT NULL phone
+otp_challenges otp_challenges_pkey: PRIMARY KEY (id)
+otp_challenges otp_challenges_provider_not_null: NOT NULL provider
+otp_challenges otp_challenges_purpose_not_null: NOT NULL purpose
+outbox_events outbox_events_aggregate_id_not_null: NOT NULL aggregate_id
+outbox_events outbox_events_aggregate_type_not_null: NOT NULL aggregate_type
+outbox_events outbox_events_created_at_not_null: NOT NULL created_at
+outbox_events outbox_events_event_type_not_null: NOT NULL event_type
+outbox_events outbox_events_headers_not_null: NOT NULL headers
+outbox_events outbox_events_id_not_null: NOT NULL id
+outbox_events outbox_events_payload_not_null: NOT NULL payload
+outbox_events outbox_events_pkey: PRIMARY KEY (id)
+plans plans_created_at_not_null: NOT NULL created_at
+plans plans_id_not_null: NOT NULL id
+plans plans_limits_not_null: NOT NULL limits
+plans plans_name_not_null: NOT NULL name
+plans plans_pkey: PRIMARY KEY (id)
+project_members project_members_added_at_not_null: NOT NULL added_at
+project_members project_members_pk: PRIMARY KEY (project_id, user_id)
+project_members project_members_project_fk: FOREIGN KEY (workspace_id, project_id) REFERENCES projects(workspace_id, id) ON DELETE CASCADE
+project_members project_members_project_id_not_null: NOT NULL project_id
+project_members project_members_role_not_null: NOT NULL role
+project_members project_members_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id)
+project_members project_members_user_id_not_null: NOT NULL user_id
+project_members project_members_workspace_id_not_null: NOT NULL workspace_id
+project_members project_members_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+project_stars project_stars_created_at_not_null: NOT NULL created_at
+project_stars project_stars_pk: PRIMARY KEY (user_id, project_id)
+project_stars project_stars_project_fk: FOREIGN KEY (workspace_id, project_id) REFERENCES projects(workspace_id, id) ON DELETE CASCADE
+project_stars project_stars_project_id_not_null: NOT NULL project_id
+project_stars project_stars_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id)
+project_stars project_stars_user_id_not_null: NOT NULL user_id
+project_stars project_stars_workspace_id_not_null: NOT NULL workspace_id
+project_stars project_stars_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+projects projects_color_not_null: NOT NULL color
+projects projects_created_at_not_null: NOT NULL created_at
+projects projects_created_by_fk: FOREIGN KEY (workspace_id, created_by) REFERENCES workspace_members(workspace_id, user_id)
+projects projects_created_by_not_null: NOT NULL created_by
+projects projects_deleted_by_fk: FOREIGN KEY (workspace_id, deleted_by) REFERENCES workspace_members(workspace_id, user_id)
+projects projects_department_fk: FOREIGN KEY (workspace_id, department_id) REFERENCES departments(workspace_id, id) ON DELETE SET NULL (department_id)
+projects projects_description_len: CHECK ((char_length(description) <= 2000))
+projects projects_description_not_null: NOT NULL description
+projects projects_flat: CHECK ((parent_id IS NULL))
+projects projects_id_not_null: NOT NULL id
+projects projects_key_format: CHECK ((key ~ '^[A-Z][A-Z0-9]{1,5}$'::text))
+projects projects_key_not_null: NOT NULL key
+projects projects_name_len: CHECK (((char_length(name) >= 1) AND (char_length(name) <= 80)))
+projects projects_name_not_null: NOT NULL name
+projects projects_not_own_parent: CHECK ((parent_id IS DISTINCT FROM id))
+projects projects_parent_fk: FOREIGN KEY (workspace_id, parent_id) REFERENCES projects(workspace_id, id)
+projects projects_pkey: PRIMARY KEY (id)
+projects projects_task_seq_not_null: NOT NULL task_seq
+projects projects_updated_at_not_null: NOT NULL updated_at
+projects projects_visibility_not_null: NOT NULL visibility
+projects projects_workflow_fk: FOREIGN KEY (workspace_id, workflow_id) REFERENCES workflows(workspace_id, id)
+projects projects_workflow_id_not_null: NOT NULL workflow_id
+projects projects_workspace_id_not_null: NOT NULL workspace_id
+projects projects_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+projects projects_ws_id_uq: UNIQUE (workspace_id, id)
+refresh_tokens refresh_tokens_expires_at_not_null: NOT NULL expires_at
+refresh_tokens refresh_tokens_hash_uq: UNIQUE (token_hash)
+refresh_tokens refresh_tokens_id_not_null: NOT NULL id
+refresh_tokens refresh_tokens_issued_at_not_null: NOT NULL issued_at
+refresh_tokens refresh_tokens_pkey: PRIMARY KEY (id)
+refresh_tokens refresh_tokens_session_id_auth_sessions_id_fk: FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON DELETE CASCADE
+refresh_tokens refresh_tokens_session_id_not_null: NOT NULL session_id
+refresh_tokens refresh_tokens_token_hash_not_null: NOT NULL token_hash
+role_permissions role_permissions_action_not_null: NOT NULL action
+role_permissions role_permissions_module_not_null: NOT NULL module
+role_permissions role_permissions_pk: PRIMARY KEY (role_id, module, action)
+role_permissions role_permissions_role_fk: FOREIGN KEY (workspace_id, role_id) REFERENCES roles(workspace_id, id) ON DELETE CASCADE
+role_permissions role_permissions_role_id_not_null: NOT NULL role_id
+role_permissions role_permissions_workspace_id_not_null: NOT NULL workspace_id
+roles roles_created_at_not_null: NOT NULL created_at
+roles roles_id_not_null: NOT NULL id
+roles roles_is_locked_not_null: NOT NULL is_locked
+roles roles_is_system_not_null: NOT NULL is_system
+roles roles_key_format: CHECK ((key ~ '^[a-z][a-z0-9_-]{1,31}$'::text))
+roles roles_key_not_null: NOT NULL key
+roles roles_pkey: PRIMARY KEY (id)
+roles roles_rank_not_null: NOT NULL rank
+roles roles_updated_at_not_null: NOT NULL updated_at
+roles roles_version_not_null: NOT NULL version
+roles roles_workspace_id_not_null: NOT NULL workspace_id
+roles roles_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+roles roles_ws_id_uq: UNIQUE (workspace_id, id)
+roles roles_ws_key_uq: UNIQUE (workspace_id, key)
+scheduled_messages scheduled_messages_attachment_fk: FOREIGN KEY (workspace_id, attachment_id) REFERENCES attachments(workspace_id, id)
+scheduled_messages scheduled_messages_author_fk: FOREIGN KEY (workspace_id, author_id) REFERENCES workspace_members(workspace_id, user_id)
+scheduled_messages scheduled_messages_author_id_not_null: NOT NULL author_id
+scheduled_messages scheduled_messages_body_len: CHECK ((char_length(body_text) <= 8000))
+scheduled_messages scheduled_messages_client_msg_id_not_null: NOT NULL client_msg_id
+scheduled_messages scheduled_messages_conversation_fk: FOREIGN KEY (workspace_id, conversation_id) REFERENCES conversations(workspace_id, id) ON DELETE CASCADE
+scheduled_messages scheduled_messages_conversation_id_not_null: NOT NULL conversation_id
+scheduled_messages scheduled_messages_created_at_not_null: NOT NULL created_at
+scheduled_messages scheduled_messages_id_not_null: NOT NULL id
+scheduled_messages scheduled_messages_kind: CHECK ((kind <> 'system'::message_kind))
+scheduled_messages scheduled_messages_kind_not_null: NOT NULL kind
+scheduled_messages scheduled_messages_message_fk: FOREIGN KEY (workspace_id, message_id) REFERENCES messages(workspace_id, id) ON DELETE SET NULL (message_id)
+scheduled_messages scheduled_messages_pkey: PRIMARY KEY (id)
+scheduled_messages scheduled_messages_reply_to_fk: FOREIGN KEY (workspace_id, reply_to_id) REFERENCES messages(workspace_id, id) ON DELETE SET NULL (reply_to_id)
+scheduled_messages scheduled_messages_scheduled_at_not_null: NOT NULL scheduled_at
+scheduled_messages scheduled_messages_sent: CHECK (((status = 'sent'::scheduled_message_status) = (sent_at IS NOT NULL)))
+scheduled_messages scheduled_messages_status_not_null: NOT NULL status
+scheduled_messages scheduled_messages_updated_at_not_null: NOT NULL updated_at
+scheduled_messages scheduled_messages_workspace_id_not_null: NOT NULL workspace_id
+scheduled_messages scheduled_messages_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+scheduled_messages scheduled_messages_ws_id_uq: UNIQUE (workspace_id, id)
+subtasks subtasks_assignee_fk: FOREIGN KEY (workspace_id, assignee_id) REFERENCES workspace_members(workspace_id, user_id)
+subtasks subtasks_created_at_not_null: NOT NULL created_at
+subtasks subtasks_done_not_null: NOT NULL done
+subtasks subtasks_id_not_null: NOT NULL id
+subtasks subtasks_pkey: PRIMARY KEY (id)
+subtasks subtasks_position_not_null: NOT NULL "position"
+subtasks subtasks_task_fk: FOREIGN KEY (workspace_id, task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+subtasks subtasks_task_id_not_null: NOT NULL task_id
+subtasks subtasks_title_len: CHECK (((char_length(title) >= 1) AND (char_length(title) <= 200)))
+subtasks subtasks_title_not_null: NOT NULL title
+subtasks subtasks_updated_at_not_null: NOT NULL updated_at
+subtasks subtasks_workspace_id_not_null: NOT NULL workspace_id
+subtasks subtasks_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+subtasks subtasks_ws_id_uq: UNIQUE (workspace_id, id)
+task_assignees task_assignees_assigned_at_not_null: NOT NULL assigned_at
+task_assignees task_assignees_pk: PRIMARY KEY (task_id, user_id)
+task_assignees task_assignees_task_fk: FOREIGN KEY (workspace_id, task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+task_assignees task_assignees_task_id_not_null: NOT NULL task_id
+task_assignees task_assignees_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id)
+task_assignees task_assignees_user_id_not_null: NOT NULL user_id
+task_assignees task_assignees_workspace_id_not_null: NOT NULL workspace_id
+task_assignees task_assignees_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+task_attachments task_attachments_added_at_not_null: NOT NULL added_at
+task_attachments task_attachments_attachment_fk: FOREIGN KEY (workspace_id, attachment_id) REFERENCES attachments(workspace_id, id)
+task_attachments task_attachments_attachment_id_not_null: NOT NULL attachment_id
+task_attachments task_attachments_pk: PRIMARY KEY (task_id, attachment_id)
+task_attachments task_attachments_task_fk: FOREIGN KEY (workspace_id, task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+task_attachments task_attachments_task_id_not_null: NOT NULL task_id
+task_attachments task_attachments_workspace_id_not_null: NOT NULL workspace_id
+task_attachments task_attachments_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+task_comments task_comments_author_fk: FOREIGN KEY (workspace_id, author_id) REFERENCES workspace_members(workspace_id, user_id)
+task_comments task_comments_author_id_not_null: NOT NULL author_id
+task_comments task_comments_body_len: CHECK (((char_length(body) >= 1) AND (char_length(body) <= 4000)))
+task_comments task_comments_body_not_null: NOT NULL body
+task_comments task_comments_created_at_not_null: NOT NULL created_at
+task_comments task_comments_id_not_null: NOT NULL id
+task_comments task_comments_pkey: PRIMARY KEY (id)
+task_comments task_comments_reply_fk: FOREIGN KEY (workspace_id, reply_to_id) REFERENCES task_comments(workspace_id, id)
+task_comments task_comments_task_fk: FOREIGN KEY (workspace_id, task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+task_comments task_comments_task_id_not_null: NOT NULL task_id
+task_comments task_comments_workspace_id_not_null: NOT NULL workspace_id
+task_comments task_comments_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+task_comments task_comments_ws_id_uq: UNIQUE (workspace_id, id)
+task_events task_events_created_at_not_null: NOT NULL created_at
+task_events task_events_id_not_null: NOT NULL id
+task_events task_events_payload_not_null: NOT NULL payload
+task_events task_events_pkey: PRIMARY KEY (id)
+task_events task_events_task_fk: FOREIGN KEY (workspace_id, task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+task_events task_events_task_id_not_null: NOT NULL task_id
+task_events task_events_type_not_null: NOT NULL type
+task_events task_events_workspace_id_not_null: NOT NULL workspace_id
+task_events task_events_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+task_labels task_labels_label_fk: FOREIGN KEY (workspace_id, label_id) REFERENCES labels(workspace_id, id) ON DELETE CASCADE
+task_labels task_labels_label_id_not_null: NOT NULL label_id
+task_labels task_labels_pk: PRIMARY KEY (task_id, label_id)
+task_labels task_labels_task_fk: FOREIGN KEY (workspace_id, task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+task_labels task_labels_task_id_not_null: NOT NULL task_id
+task_labels task_labels_workspace_id_not_null: NOT NULL workspace_id
+task_labels task_labels_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+task_stars task_stars_created_at_not_null: NOT NULL created_at
+task_stars task_stars_pk: PRIMARY KEY (user_id, task_id)
+task_stars task_stars_task_fk: FOREIGN KEY (workspace_id, task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
+task_stars task_stars_task_id_not_null: NOT NULL task_id
+task_stars task_stars_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id)
+task_stars task_stars_user_id_not_null: NOT NULL user_id
+task_stars task_stars_workspace_id_not_null: NOT NULL workspace_id
+task_stars task_stars_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+tasks tasks_column_fk: FOREIGN KEY (workspace_id, column_id) REFERENCES board_columns(workspace_id, id)
+tasks tasks_column_id_not_null: NOT NULL column_id
+tasks tasks_created_at_not_null: NOT NULL created_at
+tasks tasks_created_by_fk: FOREIGN KEY (workspace_id, created_by) REFERENCES workspace_members(workspace_id, user_id)
+tasks tasks_created_by_not_null: NOT NULL created_by
+tasks tasks_dates: CHECK (((due_date IS NULL) OR (due_date >= start_date)))
+tasks tasks_description_len: CHECK ((char_length(description) <= 20000))
+tasks tasks_description_not_null: NOT NULL description
+tasks tasks_id_not_null: NOT NULL id
+tasks tasks_number_not_null: NOT NULL number
+tasks tasks_pkey: PRIMARY KEY (id)
+tasks tasks_position_not_null: NOT NULL "position"
+tasks tasks_priority_not_null: NOT NULL priority
+tasks tasks_project_fk: FOREIGN KEY (workspace_id, project_id) REFERENCES projects(workspace_id, id)
+tasks tasks_project_id_not_null: NOT NULL project_id
+tasks tasks_project_number_uq: UNIQUE (project_id, number)
+tasks tasks_reopen_column_fk: FOREIGN KEY (workspace_id, reopen_column_id) REFERENCES board_columns(workspace_id, id)
+tasks tasks_reviewer_fk: FOREIGN KEY (workspace_id, reviewer_id) REFERENCES workspace_members(workspace_id, user_id)
+tasks tasks_search_text_not_null: NOT NULL search_text
+tasks tasks_source_message_fk: FOREIGN KEY (workspace_id, source_message_id) REFERENCES messages(workspace_id, id) ON DELETE SET NULL (source_message_id)
+tasks tasks_source_note_fk: FOREIGN KEY (workspace_id, source_note_id) REFERENCES notes(workspace_id, id) ON DELETE SET NULL (source_note_id)
+tasks tasks_start_date_not_null: NOT NULL start_date
+tasks tasks_status_not_null: NOT NULL status
+tasks tasks_title_len: CHECK (((char_length(title) >= 1) AND (char_length(title) <= 200)))
+tasks tasks_title_not_null: NOT NULL title
+tasks tasks_updated_at_not_null: NOT NULL updated_at
+tasks tasks_version_not_null: NOT NULL version
+tasks tasks_workspace_id_not_null: NOT NULL workspace_id
+tasks tasks_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+tasks tasks_ws_id_uq: UNIQUE (workspace_id, id)
+users users_avatar_tone_not_null: NOT NULL avatar_tone
+users users_created_at_not_null: NOT NULL created_at
+users users_failed_password_attempts_not_null: NOT NULL failed_password_attempts
+users users_full_name_len: CHECK (((char_length(full_name) >= 2) AND (char_length(full_name) <= 80)))
+users users_full_name_not_null: NOT NULL full_name
+users users_id_not_null: NOT NULL id
+users users_locale_not_null: NOT NULL locale
+users users_phone_e164: CHECK ((phone ~ '^\+[1-9][0-9]{7,14}$'::text))
+users users_phone_not_null: NOT NULL phone
+users users_phone_verified_at_not_null: NOT NULL phone_verified_at
+users users_pkey: PRIMARY KEY (id)
+users users_security_version_not_null: NOT NULL security_version
+users users_status_not_null: NOT NULL status
+users users_time_zone_not_null: NOT NULL time_zone
+users users_updated_at_not_null: NOT NULL updated_at
+workflows workflows_created_at_not_null: NOT NULL created_at
+workflows workflows_id_not_null: NOT NULL id
+workflows workflows_is_default_not_null: NOT NULL is_default
+workflows workflows_name_not_null: NOT NULL name
+workflows workflows_pkey: PRIMARY KEY (id)
+workflows workflows_updated_at_not_null: NOT NULL updated_at
+workflows workflows_version_not_null: NOT NULL version
+workflows workflows_workspace_id_not_null: NOT NULL workspace_id
+workflows workflows_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+workflows workflows_ws_id_uq: UNIQUE (workspace_id, id)
+workspace_members workspace_members_department_fk: FOREIGN KEY (workspace_id, department_id) REFERENCES departments(workspace_id, id) ON DELETE RESTRICT
+workspace_members workspace_members_invited_by_users_id_fk: FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
+workspace_members workspace_members_job_title_len: CHECK ((char_length(job_title) <= 80))
+workspace_members workspace_members_job_title_not_null: NOT NULL job_title
+workspace_members workspace_members_joined_at_not_null: NOT NULL joined_at
+workspace_members workspace_members_pk: PRIMARY KEY (workspace_id, user_id)
+workspace_members workspace_members_presence_status_not_null: NOT NULL presence_status
+workspace_members workspace_members_role_fk: FOREIGN KEY (workspace_id, role_id) REFERENCES roles(workspace_id, id) ON DELETE RESTRICT
+workspace_members workspace_members_role_id_not_null: NOT NULL role_id
+workspace_members workspace_members_status_message_len: CHECK ((char_length(status_message) <= 80))
+workspace_members workspace_members_status_message_not_null: NOT NULL status_message
+workspace_members workspace_members_status_not_null: NOT NULL status
+workspace_members workspace_members_updated_at_not_null: NOT NULL updated_at
+workspace_members workspace_members_user_id_not_null: NOT NULL user_id
+workspace_members workspace_members_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+workspace_members workspace_members_workspace_id_not_null: NOT NULL workspace_id
+workspace_members workspace_members_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+workspaces workspaces_created_at_not_null: NOT NULL created_at
+workspaces workspaces_description_len: CHECK ((char_length(description) <= 160))
+workspaces workspaces_description_not_null: NOT NULL description
+workspaces workspaces_id_not_null: NOT NULL id
+workspaces workspaces_initials_not_null: NOT NULL initials
+workspaces workspaces_member_count: CHECK ((member_count >= 0))
+workspaces workspaces_member_count_not_null: NOT NULL member_count
+workspaces workspaces_name_len: CHECK (((char_length(name) >= 1) AND (char_length(name) <= 40)))
+workspaces workspaces_name_not_null: NOT NULL name
+workspaces workspaces_owner_user_id_not_null: NOT NULL owner_user_id
+workspaces workspaces_owner_user_id_users_id_fk: FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE RESTRICT
+workspaces workspaces_pkey: PRIMARY KEY (id)
+workspaces workspaces_plan_id_not_null: NOT NULL plan_id
+workspaces workspaces_plan_id_plans_id_fk: FOREIGN KEY (plan_id) REFERENCES plans(id)
+workspaces workspaces_rbac_version_not_null: NOT NULL rbac_version
+workspaces workspaces_settings_not_null: NOT NULL settings
+workspaces workspaces_slug_not_null: NOT NULL slug
+workspaces workspaces_slug_uq: UNIQUE (slug)
+workspaces workspaces_storage_reserved_bytes_not_null: NOT NULL storage_reserved_bytes
+workspaces workspaces_storage_used_bytes_not_null: NOT NULL storage_used_bytes
+workspaces workspaces_tone_not_null: NOT NULL tone
+workspaces workspaces_updated_at_not_null: NOT NULL updated_at
+
+## indexes
+activity_events CREATE INDEX activity_events_ws_idx ON public.activity_events USING btree (workspace_id, created_at DESC NULLS LAST, id DESC NULLS LAST)
+activity_events CREATE UNIQUE INDEX activity_events_pkey ON public.activity_events USING btree (id)
+activity_events CREATE UNIQUE INDEX activity_events_source_uq ON public.activity_events USING btree (source_event_id) WHERE (source_event_id IS NOT NULL)
+attachments CREATE INDEX attachments_status_idx ON public.attachments USING btree (workspace_id, status, created_at)
+attachments CREATE UNIQUE INDEX attachments_object_key_uq ON public.attachments USING btree (object_key)
+attachments CREATE UNIQUE INDEX attachments_pkey ON public.attachments USING btree (id)
+attachments CREATE UNIQUE INDEX attachments_ws_id_uq ON public.attachments USING btree (workspace_id, id)
+audit_logs CREATE INDEX audit_logs_request_idx ON ONLY public.audit_logs USING btree (request_id)
+audit_logs CREATE INDEX audit_logs_resource_idx ON ONLY public.audit_logs USING btree (workspace_id, resource_type, resource_id)
+audit_logs CREATE INDEX audit_logs_ws_created_idx ON ONLY public.audit_logs USING btree (workspace_id, created_at DESC)
+audit_logs CREATE UNIQUE INDEX audit_logs_pkey ON ONLY public.audit_logs USING btree (id, created_at)
+auth_sessions CREATE INDEX auth_sessions_user_active_idx ON public.auth_sessions USING btree (user_id) WHERE (revoked_at IS NULL)
+auth_sessions CREATE UNIQUE INDEX auth_sessions_pkey ON public.auth_sessions USING btree (id)
+auto_reply_log CREATE UNIQUE INDEX auto_reply_log_pk ON public.auto_reply_log USING btree (workspace_id, user_id, sender_id)
+board_columns CREATE INDEX board_columns_position_idx ON public.board_columns USING btree (workflow_id, "position") WHERE (deleted_at IS NULL)
+board_columns CREATE UNIQUE INDEX board_columns_pkey ON public.board_columns USING btree (id)
+board_columns CREATE UNIQUE INDEX board_columns_title_uq ON public.board_columns USING btree (workflow_id, lower(title)) WHERE (deleted_at IS NULL)
+board_columns CREATE UNIQUE INDEX board_columns_ws_id_uq ON public.board_columns USING btree (workspace_id, id)
+calendar_event_attendees CREATE INDEX calendar_event_attendees_user_idx ON public.calendar_event_attendees USING btree (workspace_id, user_id)
+calendar_event_attendees CREATE UNIQUE INDEX calendar_event_attendees_pk ON public.calendar_event_attendees USING btree (event_id, user_id)
+calendar_events CREATE INDEX calendar_events_start_date_idx ON public.calendar_events USING btree (workspace_id, start_date) WHERE (deleted_at IS NULL)
+calendar_events CREATE INDEX calendar_events_starts_idx ON public.calendar_events USING btree (workspace_id, starts_at) WHERE (deleted_at IS NULL)
+calendar_events CREATE UNIQUE INDEX calendar_events_pkey ON public.calendar_events USING btree (id)
+calendar_events CREATE UNIQUE INDEX calendar_events_ws_id_uq ON public.calendar_events USING btree (workspace_id, id)
+conversation_members CREATE INDEX conversation_members_user_idx ON public.conversation_members USING btree (workspace_id, user_id) WHERE (left_at IS NULL)
+conversation_members CREATE UNIQUE INDEX conversation_members_pk ON public.conversation_members USING btree (conversation_id, user_id)
+conversations CREATE INDEX conversations_project_idx ON public.conversations USING btree (workspace_id, project_id) WHERE (project_id IS NOT NULL)
+conversations CREATE INDEX conversations_public_idx ON public.conversations USING btree (workspace_id, created_at) WHERE ((kind = 'channel'::conversation_kind) AND (NOT is_private) AND (archived_at IS NULL))
+conversations CREATE UNIQUE INDEX conversations_direct_uq ON public.conversations USING btree (workspace_id, direct_key) WHERE (kind = 'direct'::conversation_kind)
+conversations CREATE UNIQUE INDEX conversations_pkey ON public.conversations USING btree (id)
+conversations CREATE UNIQUE INDEX conversations_ws_id_uq ON public.conversations USING btree (workspace_id, id)
+departments CREATE UNIQUE INDEX departments_pkey ON public.departments USING btree (id)
+departments CREATE UNIQUE INDEX departments_ws_id_uq ON public.departments USING btree (workspace_id, id)
+departments CREATE UNIQUE INDEX departments_ws_name_uq ON public.departments USING btree (workspace_id, lower(name))
+idempotency_keys CREATE INDEX idempotency_keys_expires_idx ON public.idempotency_keys USING btree (expires_at)
+idempotency_keys CREATE UNIQUE INDEX idempotency_keys_pk ON public.idempotency_keys USING btree (user_id, scope, key)
+invitations CREATE INDEX invitations_ws_status_idx ON public.invitations USING btree (workspace_id, status, created_at)
+invitations CREATE UNIQUE INDEX invitations_pending_uq ON public.invitations USING btree (workspace_id, channel, address) WHERE (status = 'pending'::invitation_status)
+invitations CREATE UNIQUE INDEX invitations_pkey ON public.invitations USING btree (id)
+invitations CREATE UNIQUE INDEX invitations_token_uq ON public.invitations USING btree (token_hash)
+labels CREATE UNIQUE INDEX labels_pkey ON public.labels USING btree (id)
+labels CREATE UNIQUE INDEX labels_ws_id_uq ON public.labels USING btree (workspace_id, id)
+labels CREATE UNIQUE INDEX labels_ws_name_uq ON public.labels USING btree (workspace_id, lower(name))
+member_working_hours CREATE INDEX member_working_hours_enabled_idx ON public.member_working_hours USING btree (workspace_id) WHERE auto_reply_enabled
+member_working_hours CREATE UNIQUE INDEX member_working_hours_pk ON public.member_working_hours USING btree (workspace_id, user_id)
+message_mentions CREATE INDEX message_mentions_user_idx ON public.message_mentions USING btree (workspace_id, user_id)
+message_mentions CREATE UNIQUE INDEX message_mentions_pk ON public.message_mentions USING btree (message_id, user_id)
+message_reactions CREATE UNIQUE INDEX message_reactions_pk ON public.message_reactions USING btree (message_id, user_id, emoji)
+messages CREATE INDEX messages_attachment_idx ON public.messages USING btree (conversation_id, seq) WHERE ((attachment_id IS NOT NULL) AND (deleted_at IS NULL))
+messages CREATE INDEX messages_attachment_ref_idx ON public.messages USING btree (attachment_id) WHERE (attachment_id IS NOT NULL)
+messages CREATE INDEX messages_links_idx ON public.messages USING btree (conversation_id, seq) WHERE ((body_text ~* 'https?://'::text) AND (deleted_at IS NULL))
+messages CREATE INDEX messages_search_idx ON public.messages USING gin (workspace_id, search_text gin_trgm_ops) WHERE (deleted_at IS NULL)
+messages CREATE UNIQUE INDEX messages_client_msg_uq ON public.messages USING btree (conversation_id, author_id, client_msg_id) WHERE (client_msg_id IS NOT NULL)
+messages CREATE UNIQUE INDEX messages_conversation_seq_uq ON public.messages USING btree (conversation_id, seq)
+messages CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id)
+messages CREATE UNIQUE INDEX messages_source_event_uq ON public.messages USING btree (conversation_id, source_event_id) WHERE (source_event_id IS NOT NULL)
+messages CREATE UNIQUE INDEX messages_ws_id_uq ON public.messages USING btree (workspace_id, id)
+note_categories CREATE UNIQUE INDEX note_categories_key_uq ON public.note_categories USING btree (workspace_id, owner_id, key) WHERE (key IS NOT NULL)
+note_categories CREATE UNIQUE INDEX note_categories_label_uq ON public.note_categories USING btree (workspace_id, owner_id, lower(label)) WHERE (deleted_at IS NULL)
+note_categories CREATE UNIQUE INDEX note_categories_pkey ON public.note_categories USING btree (id)
+note_categories CREATE UNIQUE INDEX note_categories_ws_id_uq ON public.note_categories USING btree (workspace_id, id)
+notes CREATE INDEX notes_owner_category_idx ON public.notes USING btree (workspace_id, owner_id, category_id, updated_at DESC NULLS LAST)
+notes CREATE INDEX notes_search_idx ON public.notes USING gin (workspace_id, search_text gin_trgm_ops)
+notes CREATE UNIQUE INDEX notes_pkey ON public.notes USING btree (id)
+notes CREATE UNIQUE INDEX notes_ws_id_uq ON public.notes USING btree (workspace_id, id)
+notifications CREATE INDEX notifications_recipient_idx ON public.notifications USING btree (recipient_id, workspace_id, created_at DESC NULLS LAST)
+notifications CREATE INDEX notifications_unread_idx ON public.notifications USING btree (recipient_id) WHERE (read_at IS NULL)
+notifications CREATE UNIQUE INDEX notifications_dedupe_uq ON public.notifications USING btree (recipient_id, dedupe_key) WHERE ((dedupe_key IS NOT NULL) AND (read_at IS NULL))
+notifications CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)
+otp_challenges CREATE INDEX otp_challenges_created_idx ON public.otp_challenges USING btree (created_at)
+otp_challenges CREATE INDEX otp_challenges_phone_idx ON public.otp_challenges USING btree (phone, purpose, created_at DESC NULLS LAST)
+otp_challenges CREATE UNIQUE INDEX otp_challenges_pkey ON public.otp_challenges USING btree (id)
+outbox_events CREATE INDEX outbox_events_published_idx ON public.outbox_events USING btree (published_at) WHERE (published_at IS NOT NULL)
+outbox_events CREATE INDEX outbox_events_unpublished_idx ON public.outbox_events USING btree (id) WHERE (published_at IS NULL)
+outbox_events CREATE UNIQUE INDEX outbox_events_pkey ON public.outbox_events USING btree (id)
+plans CREATE UNIQUE INDEX plans_pkey ON public.plans USING btree (id)
+project_members CREATE INDEX project_members_user_idx ON public.project_members USING btree (workspace_id, user_id)
+project_members CREATE UNIQUE INDEX project_members_pk ON public.project_members USING btree (project_id, user_id)
+project_stars CREATE UNIQUE INDEX project_stars_pk ON public.project_stars USING btree (user_id, project_id)
+projects CREATE INDEX projects_trash_idx ON public.projects USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
+projects CREATE INDEX projects_ws_parent_idx ON public.projects USING btree (workspace_id, parent_id)
+projects CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)
+projects CREATE UNIQUE INDEX projects_ws_id_uq ON public.projects USING btree (workspace_id, id)
+projects CREATE UNIQUE INDEX projects_ws_key_uq ON public.projects USING btree (workspace_id, key) WHERE (deleted_at IS NULL)
+refresh_tokens CREATE INDEX refresh_tokens_session_idx ON public.refresh_tokens USING btree (session_id)
+refresh_tokens CREATE UNIQUE INDEX refresh_tokens_hash_uq ON public.refresh_tokens USING btree (token_hash)
+refresh_tokens CREATE UNIQUE INDEX refresh_tokens_pkey ON public.refresh_tokens USING btree (id)
+role_permissions CREATE UNIQUE INDEX role_permissions_pk ON public.role_permissions USING btree (role_id, module, action)
+roles CREATE UNIQUE INDEX roles_pkey ON public.roles USING btree (id)
+roles CREATE UNIQUE INDEX roles_ws_id_uq ON public.roles USING btree (workspace_id, id)
+roles CREATE UNIQUE INDEX roles_ws_key_uq ON public.roles USING btree (workspace_id, key)
+scheduled_messages CREATE INDEX scheduled_messages_attachment_idx ON public.scheduled_messages USING btree (attachment_id) WHERE ((attachment_id IS NOT NULL) AND (status = 'pending'::scheduled_message_status))
+scheduled_messages CREATE INDEX scheduled_messages_author_idx ON public.scheduled_messages USING btree (workspace_id, author_id, conversation_id, scheduled_at) WHERE (status = 'pending'::scheduled_message_status)
+scheduled_messages CREATE INDEX scheduled_messages_due_idx ON public.scheduled_messages USING btree (scheduled_at) WHERE (status = 'pending'::scheduled_message_status)
+scheduled_messages CREATE UNIQUE INDEX scheduled_messages_client_msg_uq ON public.scheduled_messages USING btree (conversation_id, author_id, client_msg_id)
+scheduled_messages CREATE UNIQUE INDEX scheduled_messages_pkey ON public.scheduled_messages USING btree (id)
+scheduled_messages CREATE UNIQUE INDEX scheduled_messages_ws_id_uq ON public.scheduled_messages USING btree (workspace_id, id)
+subtasks CREATE INDEX subtasks_task_position_idx ON public.subtasks USING btree (task_id, "position")
+subtasks CREATE UNIQUE INDEX subtasks_pkey ON public.subtasks USING btree (id)
+subtasks CREATE UNIQUE INDEX subtasks_ws_id_uq ON public.subtasks USING btree (workspace_id, id)
+task_assignees CREATE INDEX task_assignees_user_idx ON public.task_assignees USING btree (workspace_id, user_id)
+task_assignees CREATE UNIQUE INDEX task_assignees_pk ON public.task_assignees USING btree (task_id, user_id)
+task_attachments CREATE INDEX task_attachments_attachment_idx ON public.task_attachments USING btree (attachment_id)
+task_attachments CREATE UNIQUE INDEX task_attachments_pk ON public.task_attachments USING btree (task_id, attachment_id)
+task_comments CREATE INDEX task_comments_task_idx ON public.task_comments USING btree (task_id, created_at)
+task_comments CREATE UNIQUE INDEX task_comments_pkey ON public.task_comments USING btree (id)
+task_comments CREATE UNIQUE INDEX task_comments_ws_id_uq ON public.task_comments USING btree (workspace_id, id)
+task_events CREATE INDEX task_events_task_idx ON public.task_events USING btree (task_id, created_at)
+task_events CREATE UNIQUE INDEX task_events_pkey ON public.task_events USING btree (id)
+task_labels CREATE INDEX task_labels_label_idx ON public.task_labels USING btree (label_id)
+task_labels CREATE UNIQUE INDEX task_labels_pk ON public.task_labels USING btree (task_id, label_id)
+task_stars CREATE UNIQUE INDEX task_stars_pk ON public.task_stars USING btree (user_id, task_id)
+tasks CREATE INDEX tasks_column_position_idx ON public.tasks USING btree (workspace_id, column_id, "position") WHERE ((deleted_at IS NULL) AND (archived_at IS NULL))
+tasks CREATE INDEX tasks_created_idx ON public.tasks USING btree (workspace_id, created_at, id) WHERE (deleted_at IS NULL)
+tasks CREATE INDEX tasks_due_idx ON public.tasks USING btree (workspace_id, due_date) WHERE ((deleted_at IS NULL) AND (archived_at IS NULL) AND (status <> 'done'::task_status))
+tasks CREATE INDEX tasks_project_status_idx ON public.tasks USING btree (workspace_id, project_id, status) WHERE ((deleted_at IS NULL) AND (archived_at IS NULL))
+tasks CREATE INDEX tasks_search_idx ON public.tasks USING gin (workspace_id, search_text gin_trgm_ops) WHERE (deleted_at IS NULL)
+tasks CREATE UNIQUE INDEX tasks_pkey ON public.tasks USING btree (id)
+tasks CREATE UNIQUE INDEX tasks_project_number_uq ON public.tasks USING btree (project_id, number)
+tasks CREATE UNIQUE INDEX tasks_source_message_uq ON public.tasks USING btree (source_message_id) WHERE ((source_message_id IS NOT NULL) AND (deleted_at IS NULL))
+tasks CREATE UNIQUE INDEX tasks_source_note_uq ON public.tasks USING btree (source_note_id) WHERE ((source_note_id IS NOT NULL) AND (deleted_at IS NULL))
+tasks CREATE UNIQUE INDEX tasks_ws_id_uq ON public.tasks USING btree (workspace_id, id)
+users CREATE UNIQUE INDEX users_email_uq ON public.users USING btree (email) WHERE ((email IS NOT NULL) AND (deleted_at IS NULL))
+users CREATE UNIQUE INDEX users_phone_uq ON public.users USING btree (phone) WHERE (deleted_at IS NULL)
+users CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)
+workflows CREATE UNIQUE INDEX workflows_default_uq ON public.workflows USING btree (workspace_id) WHERE is_default
+workflows CREATE UNIQUE INDEX workflows_pkey ON public.workflows USING btree (id)
+workflows CREATE UNIQUE INDEX workflows_ws_id_uq ON public.workflows USING btree (workspace_id, id)
+workspace_members CREATE INDEX workspace_members_user_active_idx ON public.workspace_members USING btree (user_id) WHERE (status = 'active'::member_status)
+workspace_members CREATE UNIQUE INDEX workspace_members_pk ON public.workspace_members USING btree (workspace_id, user_id)
+workspaces CREATE INDEX workspaces_purge_idx ON public.workspaces USING btree (purge_after) WHERE (deleted_at IS NOT NULL)
+workspaces CREATE UNIQUE INDEX workspaces_pkey ON public.workspaces USING btree (id)
+workspaces CREATE UNIQUE INDEX workspaces_slug_uq ON public.workspaces USING btree (slug)
+
+## row level security
+activity_events enabled=true forced=true
+attachments enabled=true forced=true
+audit_logs enabled=true forced=true
+auth_sessions enabled=false forced=false
+auto_reply_log enabled=true forced=true
+board_columns enabled=true forced=true
+calendar_event_attendees enabled=true forced=true
+calendar_events enabled=true forced=true
+conversation_members enabled=true forced=true
+conversations enabled=true forced=true
+departments enabled=true forced=true
+idempotency_keys enabled=false forced=false
+invitations enabled=true forced=true
+labels enabled=true forced=true
+member_working_hours enabled=true forced=true
+message_mentions enabled=true forced=true
+message_reactions enabled=true forced=true
+messages enabled=true forced=true
+note_categories enabled=true forced=true
+notes enabled=true forced=true
+notifications enabled=true forced=true
+otp_challenges enabled=false forced=false
+outbox_events enabled=false forced=false
+plans enabled=false forced=false
+project_members enabled=true forced=true
+project_stars enabled=true forced=true
+projects enabled=true forced=true
+refresh_tokens enabled=false forced=false
+role_permissions enabled=true forced=true
+roles enabled=true forced=true
+scheduled_messages enabled=true forced=true
+subtasks enabled=true forced=true
+task_assignees enabled=true forced=true
+task_attachments enabled=true forced=true
+task_comments enabled=true forced=true
+task_events enabled=true forced=true
+task_labels enabled=true forced=true
+task_stars enabled=true forced=true
+tasks enabled=true forced=true
+users enabled=false forced=false
+workflows enabled=true forced=true
+workspace_members enabled=true forced=true
+workspaces enabled=true forced=true
+
+## policies
+activity_events activity_events_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+attachments attachments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+audit_logs audit_logs_insert INSERT using() check(((workspace_id IS NULL) OR (workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))))
+audit_logs audit_logs_tenant_read SELECT using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check()
+auto_reply_log auto_reply_log_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+board_columns board_columns_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+calendar_event_attendees calendar_event_attendees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+calendar_events calendar_events_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+conversation_members conversation_members_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+conversations conversations_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+departments departments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+invitations invitations_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+labels labels_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+member_working_hours member_working_hours_own ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (user_id = ( SELECT app.current_user_id() AS current_user_id)))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (user_id = ( SELECT app.current_user_id() AS current_user_id))))
+member_working_hours member_working_hours_tenant SELECT using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check()
+message_mentions message_mentions_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+message_reactions message_reactions_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+messages messages_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+note_categories note_categories_owner ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (owner_id = ( SELECT app.current_user_id() AS current_user_id)))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (owner_id = ( SELECT app.current_user_id() AS current_user_id))))
+notes notes_owner ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (owner_id = ( SELECT app.current_user_id() AS current_user_id)))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (owner_id = ( SELECT app.current_user_id() AS current_user_id))))
+notifications notifications_fanout ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (( SELECT app.current_user_id() AS current_user_id) IS NULL))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (( SELECT app.current_user_id() AS current_user_id) IS NULL)))
+notifications notifications_recipient ALL using((recipient_id = ( SELECT app.current_user_id() AS current_user_id))) check()
+project_members project_members_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+project_stars project_stars_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+projects projects_hide_deleted SELECT using(((deleted_at IS NULL) OR ( SELECT app.include_deleted() AS include_deleted))) check()
+projects projects_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+role_permissions role_permissions_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+roles roles_member_read SELECT using((EXISTS ( SELECT 1
+   FROM workspace_members m
+  WHERE ((m.workspace_id = roles.workspace_id) AND (m.user_id = ( SELECT app.current_user_id() AS current_user_id)) AND (m.status = 'active'::member_status))))) check()
+roles roles_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+scheduled_messages scheduled_messages_author ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (author_id = ( SELECT app.current_user_id() AS current_user_id)))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (author_id = ( SELECT app.current_user_id() AS current_user_id))))
+subtasks subtasks_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+task_assignees task_assignees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+task_attachments task_attachments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+task_comments task_comments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+task_events task_events_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+task_labels task_labels_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+task_stars task_stars_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+tasks tasks_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+workflows workflows_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+workspace_members workspace_members_self_read SELECT using((user_id = ( SELECT app.current_user_id() AS current_user_id))) check()
+workspace_members workspace_members_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+workspaces workspaces_member_read SELECT using((EXISTS ( SELECT 1
+   FROM workspace_members m
+  WHERE ((m.workspace_id = workspaces.id) AND (m.user_id = ( SELECT app.current_user_id() AS current_user_id)) AND (m.status = 'active'::member_status))))) check()
+workspaces workspaces_tenant ALL using((id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+
+## triggers
+board_columns board_columns_categories -> check_workflow_categories
+board_columns board_columns_touch -> touch_updated_at
+calendar_events calendar_events_touch -> touch_updated_at
+conversations conversations_touch -> touch_updated_at
+departments departments_touch -> touch_updated_at
+idempotency_keys idempotency_keys_touch -> touch_updated_at
+member_working_hours member_working_hours_touch -> touch_updated_at
+notes notes_touch -> touch_updated_at
+outbox_events outbox_events_notify -> notify_outbox
+projects projects_touch -> touch_updated_at
+role_permissions role_permissions_protect_locked -> protect_locked_role_permissions
+roles roles_protect_locked -> protect_locked_roles
+roles roles_touch -> touch_updated_at
+scheduled_messages scheduled_messages_touch -> touch_updated_at
+subtasks subtasks_touch -> touch_updated_at
+tasks tasks_sync_status -> sync_task_status
+tasks tasks_touch -> touch_updated_at
+users users_touch -> touch_updated_at
+workflows workflows_touch -> touch_updated_at
+workspace_members workspace_members_touch -> touch_updated_at
+workspaces workspaces_touch -> touch_updated_at
+
+## functions
+app.active_workspaces_of(p_users uuid[]) security definer
+app.advance_cursors(p_workspaces uuid[], p_conversations uuid[], p_users uuid[], p_read bigint[], p_delivered bigint[]) security definer
+app.attachments_due_for_gc(p_limit integer) security definer
+app.check_workflow_categories() invoker
+app.current_user_id() invoker
+app.current_workspace_id() invoker
+app.departed_members_due(p_days integer, p_limit integer) security definer
+app.drop_expired_audit_partitions(keep_months integer) security definer
+app.ensure_audit_partitions(months_ahead integer) security definer
+app.find_invitation(p_token_hash bytea) security definer
+app.include_deleted() invoker
+app.notify_outbox() invoker
+app.projects_due_for_purge(p_days integer, p_limit integer) security definer
+app.protect_locked_role_permissions() invoker
+app.protect_locked_roles() invoker
+app.scheduled_messages_due(p_limit integer) security definer
+app.search_note_ids(p_pattern text) security definer
+app.search_task_ids(p_pattern text) security definer
+app.send_message(p_workspace uuid, p_user uuid, p_request_id text, p_conversation uuid, p_client_msg_id uuid, p_kind message_kind, p_text text, p_meta jsonb, p_attachment uuid, p_reply_to uuid, p_search text, p_mentions uuid[]) invoker
+app.sync_task_status() invoker
+app.touch_updated_at() invoker
+app.uuidv7() invoker
+app.workspaces_due_for_purge(p_limit integer) security definer
+
+## grants to taskin_app
+activity_events DELETE,INSERT,SELECT,UPDATE
+attachments DELETE,INSERT,SELECT,UPDATE
+audit_logs INSERT,SELECT
+auth_sessions DELETE,INSERT,SELECT,UPDATE
+auto_reply_log DELETE,INSERT,SELECT,UPDATE
+board_columns DELETE,INSERT,SELECT,UPDATE
+calendar_event_attendees DELETE,INSERT,SELECT,UPDATE
+calendar_events DELETE,INSERT,SELECT,UPDATE
+conversation_members DELETE,INSERT,SELECT,UPDATE
+conversations DELETE,INSERT,SELECT,UPDATE
+departments DELETE,INSERT,SELECT,UPDATE
+idempotency_keys DELETE,INSERT,SELECT,UPDATE
+invitations DELETE,INSERT,SELECT,UPDATE
+labels DELETE,INSERT,SELECT,UPDATE
+member_working_hours DELETE,INSERT,SELECT,UPDATE
+message_mentions DELETE,INSERT,SELECT,UPDATE
+message_reactions DELETE,INSERT,SELECT,UPDATE
+messages DELETE,INSERT,SELECT,UPDATE
+note_categories DELETE,INSERT,SELECT,UPDATE
+notes DELETE,INSERT,SELECT,UPDATE
+notifications DELETE,INSERT,SELECT,UPDATE
+otp_challenges DELETE,INSERT,SELECT,UPDATE
+outbox_events DELETE,INSERT,SELECT,UPDATE
+plans SELECT
+project_members DELETE,INSERT,SELECT,UPDATE
+project_stars DELETE,INSERT,SELECT,UPDATE
+projects DELETE,INSERT,SELECT,UPDATE
+refresh_tokens DELETE,INSERT,SELECT,UPDATE
+role_permissions DELETE,INSERT,SELECT,UPDATE
+roles DELETE,INSERT,SELECT,UPDATE
+scheduled_messages DELETE,INSERT,SELECT,UPDATE
+subtasks DELETE,INSERT,SELECT,UPDATE
+task_assignees DELETE,INSERT,SELECT,UPDATE
+task_attachments DELETE,INSERT,SELECT,UPDATE
+task_comments DELETE,INSERT,SELECT,UPDATE
+task_events DELETE,INSERT,SELECT,UPDATE
+task_labels DELETE,INSERT,SELECT,UPDATE
+task_stars DELETE,INSERT,SELECT,UPDATE
+tasks DELETE,INSERT,SELECT,UPDATE
+users DELETE,INSERT,SELECT,UPDATE
+workflows DELETE,INSERT,SELECT,UPDATE
+workspace_members DELETE,INSERT,SELECT,UPDATE
+workspaces DELETE,INSERT,SELECT,UPDATE

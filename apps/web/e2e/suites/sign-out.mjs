@@ -1,0 +1,24 @@
+import { base, check, finish, launch, watchConsole } from '../lib/harness.mjs';
+const browser = await launch();
+const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+watchConsole(page);
+const rail = page.getByRole('navigation', { name: 'ناوبری اصلی' });
+await page.goto(base + '/feed', { waitUntil: 'networkidle' });
+await rail.getByRole('link', { name: 'پروژه‌ها و وظایف' }).click();
+await page.waitForURL('**/tasks');
+// change something so we can see it is cleared
+await page.getByRole('checkbox', { name: /تهیه سند معماری/ }).click();
+await rail.getByRole('button', { name: /حساب کاربری/ }).click();
+await page.getByRole('menuitem', { name: 'خروج از حساب' }).click();
+await page.getByRole('dialog', { name: 'خروج از حساب کاربری' }).getByRole('button', { name: 'خروج از حساب' }).click();
+await page.waitForURL('**/signed-out');
+await page.evaluate(() => window.history.back());
+await page.waitForTimeout(1000);
+check(page.url().endsWith('/signed-out'), `client-side back to /feed bounced to /signed-out (${page.url()})`);
+await page.getByRole('button', { name: 'ورود دوباره' }).click();
+await page.waitForURL('**/feed');
+await rail.getByRole('link', { name: 'پروژه‌ها و وظایف' }).click();
+await page.waitForURL('**/tasks');
+const done = page.getByRole('region', { name: 'ستون انجام شد' });
+check(await done.getByRole('group', { name: /تهیه سند معماری/ }).count() === 0, 'session state cleared on sign-out');
+await finish(browser);

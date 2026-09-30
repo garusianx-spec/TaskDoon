@@ -11,3 +11,11 @@ yarn-error.log*
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# workspace packages
+dist
+# Playwright screenshots and traces
+apps/web/e2e/out
+
+# local environment (apps/api/.env.example is the template)
+.env

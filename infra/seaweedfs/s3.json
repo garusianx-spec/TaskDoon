@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "taskin-dev",
+      "credentials": [{ "accessKey": "taskin", "secretKey": "taskin-dev-secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}
