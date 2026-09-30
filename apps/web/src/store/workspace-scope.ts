@@ -1,5 +1,6 @@
 import type { WorkspaceState } from './workspace-reducer';
 import { BUILT_IN_NOTE_CATEGORIES } from '@/data/reference';
+import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 
 /**
  * The slices that belong to one workspace. Switching workspaces parks the current values and
@@ -22,6 +23,8 @@ export const SCOPED_KEYS = [
   'mutedConversationIds',
   'unreadByConversation',
   'activeConversationId',
+  'scheduledMessages',
+  'workingHours',
 ] as const satisfies ReadonlyArray<keyof WorkspaceState>;
 
 export type WorkspaceScope = Pick<WorkspaceState, (typeof SCOPED_KEYS)[number]>;
@@ -44,6 +47,8 @@ export const EMPTY_SCOPE: WorkspaceScope = {
   mutedConversationIds: [],
   unreadByConversation: {},
   activeConversationId: '',
+  scheduledMessages: [],
+  workingHours: DEFAULT_WORKING_HOURS,
 };
 
 export function scopeOf(state: WorkspaceState): WorkspaceScope {

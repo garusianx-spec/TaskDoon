@@ -22,7 +22,7 @@ import type {
 import { toISODate } from '@taskin/jalali';
 import { api } from '@/api/endpoints';
 import { ApiProblem, http, isProblem } from '@/api/http';
-import { problemMessage } from '@/api/messages';
+import { codeMessage, problemMessage } from '@/api/messages';
 import {
   activityFromView,
   apiColumnFor,
@@ -38,7 +38,9 @@ import {
   noteFromView,
   notificationFromView,
   projectFromView,
+  scheduledFromView,
   trashedProjectFromView,
+  workingHoursFromView,
   sessionFromView,
   taskFromCard,
   taskFromDetail,
@@ -51,6 +53,7 @@ import { setFileResolver, type FileDisposition } from '../files';
 import { session } from '@/api/session';
 import { DEFAULT_PERMISSION_MATRIX, DEPARTMENTS } from '@/data/reference';
 import { LIVE_EMPTY_STATE } from '../initial-state';
+import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 import type { ConversationDraft, PickedFile, TaskPatch, VoiceRecording, WorkspaceAction, WorkspaceState } from '../workspace-reducer';
 
 export type LivePhase = 'restoring' | 'signed-out' | 'loading' | 'no-workspace' | 'ready';
@@ -126,6 +129,13 @@ export class LiveStore {
    * two adds in flight at once could take the same key and come back in either order.
    */
   private readonly subtaskAdds = new Map<string, Promise<void>>();
+  /** Phase 3.2: schedules made here and not yet acknowledged, by client id → their local id. */
+  private readonly scheduling = new Map<string, string>();
+  /**
+   * «ارسال فوری» in flight, by the schedule's client id → the local copy of its message. The
+   * server broadcasts the message to this member's socket too; it replaces the copy in place.
+   */
+  private readonly sendingNow = new Map<string, string>();
   /** This member's messages that did not reach the server: how to send each again, or let it go. */
   private readonly unsent = new Map<string, { readonly retry: () => void; readonly discard: () => void }>();
 
@@ -291,7 +301,7 @@ export class LiveStore {
       const today = new Date();
       const from = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 45));
       const to = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 54));
-      const [view, members, departments, projects, workflow, cards, conversations, inbox, activity, calendar, invitations, roles, categories, notes, sessions] = await Promise.all([
+      const [view, members, departments, projects, workflow, cards, conversations, inbox, activity, calendar, invitations, roles, categories, notes, sessions, scheduled, hours] = await Promise.all([
         api.workspaces.get(w),
         api.workspaces.members(w, true),
         optional(http.get<Array<{ readonly id: string; readonly name: string }>>(`/workspaces/${w}/departments`), []),
@@ -307,6 +317,8 @@ export class LiveStore {
         optional(api.notes.categories(w), []),
         optional(api.notes.all(w), []),
         optional(api.sessions.list(), []),
+        optional(api.scheduled.list(w), []),
+        optional(api.workingHours.get(w), null),
       ]);
       if (token !== this.loadToken) return;
 
@@ -366,6 +378,8 @@ export class LiveStore {
           noteCategories: [...categories].sort((a, b) => a.position - b.position).map(noteCategoryFromView),
           notes: notes.map(noteFromView),
           loginSessions: sessions.map(sessionFromView),
+          scheduledMessages: scheduled.map(scheduledFromView),
+          workingHours: hours ? workingHoursFromView(hours) : DEFAULT_WORKING_HOURS,
           profile: { presence: mine?.presence ?? 'online', statusMessage: mine?.statusMessage ?? '' },
           typingByConversation: {},
           inspector: quiet ? state.inspector : { kind: 'none' },
@@ -630,6 +644,61 @@ export class LiveStore {
         return;
       case 'send-message':
         this.sendMessage(action.conversationId, action.text, action.replyToId, prev, next);
+        return;
+      case 'schedule-message': {
+        const clientMsgId = crypto.randomUUID();
+        this.scheduling.set(clientMsgId, action.scheduledId);
+        this.track(
+          action.scheduledId,
+          async () => {
+            const view = await api.scheduled.create(this.workspaceId, await this.serverId(action.conversationId), {
+              clientMsgId,
+              kind: 'text',
+              text: action.text,
+              scheduledAt: action.scheduledAt,
+              ...(action.replyToId ? { replyToId: await this.serverId(action.replyToId) } : {}),
+            });
+            this.scheduling.delete(clientMsgId);
+            this.apply({ type: 'sync/upsert-scheduled', scheduled: scheduledFromView(view), replaceId: action.scheduledId });
+            return view.id;
+          },
+          () => {
+            this.scheduling.delete(clientMsgId);
+            this.apply({ type: 'sync/remove-scheduled', scheduledId: action.scheduledId });
+          },
+        );
+        return;
+      }
+      case 'cancel-scheduled-message':
+        this.run(async () => api.scheduled.cancel(this.workspaceId, await this.serverId(action.scheduledId)), () => this.refreshScheduled());
+        return;
+      case 'send-scheduled-now': {
+        const scheduled = prev.scheduledMessages.find((entry) => entry.id === action.scheduledId);
+        const clientMsgId = scheduled?.clientMsgId ?? [...this.scheduling].find(([, localId]) => localId === action.scheduledId)?.[0];
+        if (clientMsgId) this.sendingNow.set(clientMsgId, action.messageId);
+        this.run(
+          async () => {
+            const view = await api.scheduled.sendNow(this.workspaceId, await this.serverId(action.scheduledId));
+            // The stored message replaces the local copy; its message:new may have come first.
+            const state = this.getState();
+            const local = state.messages.find((message) => message.id === action.messageId);
+            if (!view.messageId || !local) return;
+            if (state.messages.some((message) => message.id === view.messageId)) this.apply({ type: 'sync/remove-message', messageId: action.messageId });
+            else this.apply({ type: 'sync/upsert-messages', messages: [{ ...local, id: view.messageId }], replaceId: action.messageId });
+          },
+          async () => {
+            if (clientMsgId) this.sendingNow.delete(clientMsgId);
+            this.apply({ type: 'sync/remove-message', messageId: action.messageId });
+            await this.refreshScheduled();
+          },
+        );
+        return;
+      }
+      case 'update-working-hours':
+        this.run(async () => {
+          const view = await api.workingHours.put(this.workspaceId, action.hours);
+          this.apply({ type: 'sync/merge', patch: { workingHours: workingHoursFromView(view) } });
+        }, () => this.refreshWorkingHours());
         return;
       case 'toggle-reaction':
         void this.react(action.messageId, action.emoji, next);
@@ -1320,6 +1389,16 @@ export class LiveStore {
   }
 
   /** «آرشیو / سطل زباله»: the owner's view of deleted projects, as the server keeps them. */
+  private async refreshScheduled(): Promise<void> {
+    const scheduled = await api.scheduled.list(this.workspaceId);
+    this.apply({ type: 'sync/merge', patch: { scheduledMessages: scheduled.map(scheduledFromView) } });
+  }
+
+  private async refreshWorkingHours(): Promise<void> {
+    const hours = await api.workingHours.get(this.workspaceId);
+    this.apply({ type: 'sync/merge', patch: { workingHours: workingHoursFromView(hours) } });
+  }
+
   private async refreshProjectTrash(): Promise<void> {
     if (!this.getState().workspaces.some((workspace) => workspace.id === this.workspaceId && workspace.ownerId === this.getState().meId)) return;
     const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
@@ -1371,6 +1450,22 @@ export class LiveStore {
         const data = event('message:deleted');
         const existing = data && this.getState().messages.find((message) => message.id === data.messageId);
         if (existing) this.apply({ type: 'sync/upsert-messages', messages: [{ ...existing, body: { kind: 'system', text: 'این پیام حذف شد.' }, reactions: [] }] });
+        return;
+      }
+      case 'scheduled:updated': {
+        // One of this member's schedules, from any of their devices (or the server's worker).
+        const data = event('scheduled:updated');
+        if (!data) return;
+        const localId = this.scheduling.get(data.clientMsgId);
+        if (data.status === 'pending') {
+          this.apply({ type: 'sync/upsert-scheduled', scheduled: scheduledFromView(data), ...(localId ? { replaceId: localId } : {}) });
+          return;
+        }
+        this.apply({ type: 'sync/remove-scheduled', scheduledId: data.id });
+        if (data.status === 'failed') {
+          const reason = codeMessage(data.failureCode);
+          this.notify(reason ? `پیام زمان‌بندی‌شده ارسال نشد: ${reason}` : 'پیام زمان‌بندی‌شده ارسال نشد.');
+        }
         return;
       }
       case 'reaction:updated': {
@@ -1486,7 +1581,10 @@ export class LiveStore {
     this.lastSeq.set(view.conversationId, Math.max(this.lastSeq.get(view.conversationId) ?? 0, view.seq));
     const existing = state.messages.find((message) => message.id === view.id);
     const message = this.messageFrom(view);
-    this.apply({ type: 'sync/upsert-messages', messages: [existing ? { ...message, readByIds: existing.readByIds } : message] });
+    // A scheduled message sent from here with «ارسال فوری»: the server's copy takes the local one's place.
+    const localId = view.clientMsgId ? this.sendingNow.get(view.clientMsgId) : undefined;
+    if (localId && view.clientMsgId) this.sendingNow.delete(view.clientMsgId);
+    this.apply({ type: 'sync/upsert-messages', messages: [existing ? { ...message, readByIds: existing.readByIds } : message], ...(localId ? { replaceId: localId } : {}) });
     if (!isNew || view.authorId === state.meId) return;
     const watching =
       state.activeConversationId === view.conversationId &&

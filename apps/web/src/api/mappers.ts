@@ -1,4 +1,8 @@
 import type {
+  ScheduledMessage,
+  ScheduledMessageView,
+  WorkingHours,
+  WorkingHoursView,
   ActivityItem,
   ActivityView,
   AppNotification,
@@ -337,7 +341,27 @@ export function messageFromView(view: MessageView, readByIds: readonly string[],
     edited: view.editedAt !== null,
     linkedTaskId: view.linkedTaskId,
     readByIds,
+    ...(view.meta && 'autoReply' in view.meta ? { autoReply: true } : {}),
   };
+}
+
+/* ============================================================ Phase 3.2 */
+
+export function scheduledFromView(view: ScheduledMessageView): ScheduledMessage {
+  return {
+    id: view.id,
+    conversationId: view.conversationId,
+    authorId: view.authorId,
+    text: view.text ?? '',
+    replyToId: view.replyToId,
+    scheduledAt: view.scheduledAt,
+    attachmentName: view.attachment?.name ?? null,
+    clientMsgId: view.clientMsgId,
+  };
+}
+
+export function workingHoursFromView(view: WorkingHoursView): WorkingHours {
+  return { autoReplyEnabled: view.autoReplyEnabled, days: view.days, start: view.start, end: view.end, message: view.message };
 }
 
 /* ============================================================ calendar, notes */

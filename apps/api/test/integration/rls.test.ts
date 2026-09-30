@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CalendarService } from '../../src/modules/content/calendar.service.js';
@@ -12,7 +13,7 @@ const CROSS_TENANT_BY_DESIGN = new Set([
 ]);
 
 /** Private to their owner as well as their tenant: reads need the user setting too. */
-const OWNER_SCOPED = new Set(['notes', 'note_categories']);
+const OWNER_SCOPED = new Set(['notes', 'note_categories', 'scheduled_messages']);
 
 /** Gives a workspace at least one row in every tenant table, through the API where it can. */
 async function populate(t: TestApp, owner: Session, workspaceId: string): Promise<void> {
@@ -37,6 +38,11 @@ async function populate(t: TestApp, owner: Session, workspaceId: string): Promis
   const group = await createConversation(t, owner, workspaceId, { kind: 'group', title: 'گفتگو', memberIds: [] });
   const sent = await sendRest(t, owner, workspaceId, group.id, { text: `<@${owner.userId}> سلام` });
   expectStatus(await t.http().put(`${base}/conversations/${group.id}/messages/${sent.id}/reactions/${encodeURIComponent('👍')}`).set(bearer(owner)), 200);
+  // Phase 3.2: a scheduled message, working hours, and an auto-reply slot (written directly: it needs a second person).
+  const later = new Date(Date.now() + 3600_000).toISOString();
+  expectStatus(await t.http().post(`${base}/conversations/${group.id}/scheduled-messages`).set(bearer(owner)).send({ clientMsgId: randomUUID(), kind: 'text', text: 'بعداً', scheduledAt: later }), 201);
+  expectStatus(await t.http().put(`${base}/me/working-hours`).set(bearer(owner)).send({ autoReplyEnabled: true, days: ['saturday'], start: '09:00', end: '17:00', message: 'بیرون از ساعت کاری' }), 200);
+  await t.admin.query('insert into auto_reply_log (workspace_id, user_id, sender_id) values ($1, $2, $2)', [workspaceId, owner.userId]);
   // Activity (file-shared) and a notification (the reminder) come from the worker.
   await t.flushNotifications();
   await t.app.get(CalendarService).remind(workspaceId, event.body.id, event.body.version);

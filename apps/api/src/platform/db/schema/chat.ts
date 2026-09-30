@@ -1,7 +1,16 @@
 import { sql } from 'drizzle-orm';
 import { bigint, boolean, check, foreignKey, index, jsonb, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, instant, updatedAt, uuidPk } from './columns.js';
-import { avatarTone, conversationKind, conversationRole, membershipMode, messageKind, notificationLevel, postPolicy } from './enums.js';
+import {
+  avatarTone,
+  conversationKind,
+  conversationRole,
+  membershipMode,
+  messageKind,
+  notificationLevel,
+  postPolicy,
+  scheduledMessageStatus,
+} from './enums.js';
 import { attachments } from './content.js';
 import { workspaceMembers, workspaces } from './tenancy.js';
 
@@ -181,5 +190,118 @@ export const messageMentions = pgTable(
     }).onDelete('cascade'),
     member('message_mentions_user_fk', [t.workspaceId, t.userId]),
     index('message_mentions_user_idx').on(t.workspaceId, t.userId),
+  ],
+);
+
+/* ---------------------------------------------------------------- Phase 3.2 */
+
+/**
+ * Messages waiting for their time. Private to their author (row-level security narrows them to
+ * `app.user_id`, like notes) until the worker sends them as the author; the sent message takes
+ * the same `client_msg_id`, so a dispatch retried after a crash still stores it once. A
+ * dispatcher holds `claimed_at` while it sends; a claim older than two minutes is abandoned and
+ * taken over. `reply_to_id` and `message_id` are column-list SET NULL references in SQL (0013).
+ */
+export const scheduledMessages = pgTable(
+  'scheduled_messages',
+  {
+    id: uuidPk(),
+    workspaceId: tenant(),
+    conversationId: uuid().notNull(),
+    authorId: uuid().notNull(),
+    kind: messageKind().notNull(),
+    bodyText: text(),
+    /** Voice: `{durationSec, waveform}`. Files: `{asFile}`. */
+    bodyMeta: jsonb().$type<Record<string, unknown>>(),
+    attachmentId: uuid(),
+    replyToId: uuid(),
+    clientMsgId: uuid().notNull(),
+    scheduledAt: instant().notNull(),
+    status: scheduledMessageStatus().notNull().default('pending'),
+    claimedAt: instant(),
+    /** The message it became. */
+    messageId: uuid(),
+    /** The API error code that kept it from going out. */
+    failureCode: text(),
+    sentAt: instant(),
+    cancelledAt: instant(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique('scheduled_messages_ws_id_uq').on(t.workspaceId, t.id),
+    // A retried schedule returns the first one; the sent message reuses the id.
+    uniqueIndex('scheduled_messages_client_msg_uq').on(t.conversationId, t.authorId, t.clientMsgId),
+    foreignKey({
+      name: 'scheduled_messages_conversation_fk',
+      columns: [t.workspaceId, t.conversationId],
+      foreignColumns: [conversations.workspaceId, conversations.id],
+    }).onDelete('cascade'),
+    member('scheduled_messages_author_fk', [t.workspaceId, t.authorId]),
+    foreignKey({ name: 'scheduled_messages_attachment_fk', columns: [t.workspaceId, t.attachmentId], foreignColumns: [attachments.workspaceId, attachments.id] }),
+    // The author's list in one conversation (the bar above the composer), soonest first.
+    index('scheduled_messages_author_idx').on(t.workspaceId, t.authorId, t.conversationId, t.scheduledAt).where(sql`${t.status} = 'pending'`),
+    // The worker's sweep for anything due that its delayed job missed.
+    index('scheduled_messages_due_idx').on(t.scheduledAt).where(sql`${t.status} = 'pending'`),
+    // Garbage collection asks whether a pending schedule still needs a file.
+    index('scheduled_messages_attachment_idx').on(t.attachmentId).where(sql`${t.attachmentId} is not null and ${t.status} = 'pending'`),
+    check('scheduled_messages_kind', sql`${t.kind} <> 'system'`),
+    check('scheduled_messages_body_len', sql`char_length(${t.bodyText}) <= 8000`),
+    check('scheduled_messages_sent', sql`(${t.status} = 'sent') = (${t.sentAt} is not null)`),
+  ],
+);
+
+/**
+ * A member's working hours in one workspace and their out-of-office auto-reply (Phase 3.2).
+ * Hours are `HH:mm` wall-clock times read in the workspace's zone; an end before the start runs
+ * past midnight. No row means the defaults, with the auto-reply off.
+ */
+export const memberWorkingHours = pgTable(
+  'member_working_hours',
+  {
+    workspaceId: tenant(),
+    userId: uuid().notNull(),
+    autoReplyEnabled: boolean().notNull().default(false),
+    days: text().array().notNull(),
+    startTime: text().notNull(),
+    endTime: text().notNull(),
+    message: text().notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    primaryKey({ name: 'member_working_hours_pk', columns: [t.workspaceId, t.userId] }),
+    member('member_working_hours_user_fk', [t.workspaceId, t.userId]).onDelete('cascade'),
+    // Who in a workspace answers automatically (the per-node cache reads this).
+    index('member_working_hours_enabled_idx').on(t.workspaceId).where(sql`${t.autoReplyEnabled}`),
+    check(
+      'member_working_hours_days',
+      sql`${t.days} <@ array['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday']::text[]`,
+    ),
+    check('member_working_hours_start', sql`${t.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`),
+    check('member_working_hours_end', sql`${t.endTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`),
+    check('member_working_hours_window', sql`${t.startTime} <> ${t.endTime}`),
+    check('member_working_hours_message_len', sql`char_length(${t.message}) between 1 and 500`),
+  ],
+);
+
+/**
+ * When a member's auto-reply last answered each person (Phase 3.2): at most once in 24 hours per
+ * pair, so two people who are both away cannot answer each other in a loop.
+ */
+export const autoReplyLog = pgTable(
+  'auto_reply_log',
+  {
+    workspaceId: tenant(),
+    /** The member who is away. */
+    userId: uuid().notNull(),
+    /** The person whose direct message was answered. */
+    senderId: uuid().notNull(),
+    repliedAt: instant().notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: 'auto_reply_log_pk', columns: [t.workspaceId, t.userId, t.senderId] }),
+    member('auto_reply_log_user_fk', [t.workspaceId, t.userId]).onDelete('cascade'),
+    member('auto_reply_log_sender_fk', [t.workspaceId, t.senderId]).onDelete('cascade'),
   ],
 );

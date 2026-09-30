@@ -20,6 +20,7 @@ import {
   type WorkJobs,
 } from '../platform/queue/queues.js';
 import { SmsService } from '../platform/sms/sms.js';
+import { ScheduledMessagesService } from '../modules/chat/scheduled-messages.service.js';
 import { CalendarService } from '../modules/content/calendar.service.js';
 import { FeedService } from '../modules/content/feed.service.js';
 import { FilesService } from '../modules/content/files.service.js';
@@ -82,13 +83,14 @@ export class NotificationsProcessor {
   }
 }
 
-/** Domain side effects of outbox events: inbox and feed fan-out, file scanning, reminders. */
+/** Domain side effects of outbox events: inbox and feed fan-out, file scanning, reminders, scheduled messages. */
 @Injectable()
 export class WorkProcessor {
   constructor(
     private readonly feed: FeedService,
     private readonly files: FilesService,
     private readonly calendar: CalendarService,
+    private readonly scheduled: ScheduledMessagesService,
   ) {}
 
   async handle<N extends keyof WorkJobs>(name: N, data: WorkJobData<N>): Promise<unknown> {
@@ -102,6 +104,10 @@ export class WorkProcessor {
       case 'event.remind': {
         const payload = data.payload as WorkJobs['event.remind'];
         return this.calendar.remind(payload.workspaceId, payload.eventId, payload.version);
+      }
+      case 'message.dispatch': {
+        const payload = data.payload as WorkJobs['message.dispatch'];
+        return this.scheduled.dispatch(payload.workspaceId, payload.scheduledId, payload.authorId);
       }
       default:
         return undefined;
@@ -120,6 +126,7 @@ export class MaintenanceProcessor {
     private readonly files: FilesService,
     private readonly projects: ProjectsService,
     private readonly members: MembersService,
+    private readonly scheduled: ScheduledMessagesService,
   ) {}
 
   async handle(name: MaintenanceJob): Promise<unknown> {
@@ -138,6 +145,8 @@ export class MaintenanceProcessor {
         return { purged: await this.members.purgeDeparted() };
       case 'files.gc':
         return this.files.collectGarbage();
+      case 'scheduled.sweep':
+        return this.scheduled.dispatchDue();
       case 'cleanup': {
         const challenges = await this.database.db
           .delete(otpChallenges)
@@ -197,6 +206,7 @@ export class QueueWorkers implements OnApplicationBootstrap, OnModuleDestroy {
     await this.queues.maintenance.upsertJobScheduler('members-purge', { every: 3600 * 1000 }, { name: 'members.purge' });
     await this.queues.maintenance.upsertJobScheduler('cleanup', { every: 3600 * 1000 }, { name: 'cleanup' });
     await this.queues.maintenance.upsertJobScheduler('files-gc', { every: 3600 * 1000 }, { name: 'files.gc' });
+    await this.queues.maintenance.upsertJobScheduler('scheduled-sweep', { every: 60 * 1000 }, { name: 'scheduled.sweep' });
   }
 
   async onModuleDestroy(): Promise<void> {

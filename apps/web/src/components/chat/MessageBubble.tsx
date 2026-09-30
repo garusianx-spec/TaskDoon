@@ -108,6 +108,12 @@ export function MessageBubble({
                 عضو سابق
               </Badge>
             )}
+            {/* Phase 3.2: answered for them, outside their working hours. */}
+            {message.autoReply && (
+              <Badge tone="brand" size="sm">
+                پاسخ خودکار
+              </Badge>
+            )}
             <ClockTime iso={message.sentAt} className="numeric text-micro text-fg-quaternary" />
           </div>
         )}

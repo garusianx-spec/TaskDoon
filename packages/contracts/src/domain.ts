@@ -286,6 +286,40 @@ export interface Message {
   readonly readByIds: readonly string[];
   /** The sender's own copy of a message that did not reach the server; it can be sent again. */
   readonly failed?: boolean;
+  /** The author's out-of-office answer (Phase 3.2), posted for them outside their working hours. */
+  readonly autoReply?: boolean;
+}
+
+/** A message waiting for `scheduledAt` (Phase 3.2). Until it is sent, only its author sees it. */
+export interface ScheduledMessage {
+  readonly id: string;
+  readonly conversationId: string;
+  readonly authorId: string;
+  readonly text: string;
+  readonly replyToId: string | null;
+  /** An ISO instant. */
+  readonly scheduledAt: string;
+  /** The file it will send, by name (schedules made through the API can carry one). */
+  readonly attachmentName?: string | null;
+  /** Live: the client id its message will carry, so the sent message can be matched to it. */
+  readonly clientMsgId?: string;
+}
+
+/** Working days, in the order the week starts in Iran. */
+export type WorkDay = 'saturday' | 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday';
+
+/**
+ * A member's working hours in a workspace and their out-of-office auto-reply (Phase 3.2): outside
+ * these hours a direct message is answered with `message`, once a day per person.
+ */
+export interface WorkingHours {
+  readonly autoReplyEnabled: boolean;
+  /** None: away all week (on leave). */
+  readonly days: readonly WorkDay[];
+  /** `HH:mm`; an end before the start runs past midnight. */
+  readonly start: string;
+  readonly end: string;
+  readonly message: string;
 }
 
 export interface Conversation {

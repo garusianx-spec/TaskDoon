@@ -395,6 +395,102 @@ try {
     'the read state is stored: no unread badge after a reload',
   );
 
+  /* ------------------------------------------------ Phase 3.2: the guest's out-of-office auto-reply */
+
+  const openHours = async (page) => {
+    await railOf(page).getByRole('button', { name: /حساب کاربری/ }).click();
+    await page.getByRole('menuitem', { name: 'ساعات کاری و پاسخ خودکار' }).click();
+    const settings = page.getByRole('dialog', { name: 'ساعات کاری و پاسخ خودکار' });
+    await settings.waitFor();
+    return settings;
+  };
+  let hours = await openHours(guest);
+  await hours.getByRole('switch', { name: 'پاسخ خودکار خارج از ساعت کاری' }).click();
+  // No working days at all: away all week.
+  for (const day of ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه']) await hours.getByRole('button', { name: day, exact: true }).click();
+  const awayText = `در مرخصی هستم؛ ${runId}`;
+  await hours.getByLabel('متن پاسخ خودکار').fill(awayText);
+  await hours.getByRole('button', { name: 'ذخیره' }).click();
+  await hours.waitFor({ state: 'detached' });
+  await guest.reload();
+  hours = await openHours(guest);
+  check(
+    await eventually(async () => (await hours.getByRole('switch', { name: 'پاسخ خودکار خارج از ساعت کاری' }).getAttribute('aria-checked')) === 'true', 10_000),
+    'the guest’s auto-reply is stored on the server: on after a reload',
+  );
+  check((await hours.getByLabel('متن پاسخ خودکار').inputValue()) === awayText, '…with their text');
+  await guest.keyboard.press('Escape');
+
+  await railOf(owner).getByRole('link', { name: 'گفتگوها' }).click();
+  await owner.waitForURL('**/chats');
+  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click();
+  const awayComposer = owner.getByRole('textbox', { name: `نوشتن پیام در ${guestName}` });
+  await awayComposer.fill('فردا جلسه داریم؟');
+  await awayComposer.press('Enter');
+  const autoReplies = ownerThread.locator('div.group\\/message').filter({ hasText: 'پاسخ خودکار' });
+  check(await eventually(async () => (await autoReplies.count()) === 1, 15_000), 'a direct message to the away guest gets their auto-reply, from the server');
+  check(await visible(autoReplies.getByText(awayText)), '…with their text, under their name');
+  await awayComposer.fill('باشد، بعداً هماهنگ می‌کنیم.');
+  await awayComposer.press('Enter');
+  await owner.waitForTimeout(1_500);
+  check((await autoReplies.count()) === 1, 'a second message the same day gets no second answer');
+  await owner.screenshot({ path: `${out}/live_autoreply.png` });
+
+  /* ------------------------------------------------ Phase 3.2: scheduled messages */
+
+  const scheduleIn = async (text, pick) => {
+    await awayComposer.fill(text);
+    await ownerThread.getByRole('button', { name: 'زمان‌بندی ارسال' }).click();
+    const scheduler = owner.getByRole('dialog', { name: 'زمان‌بندی ارسال پیام' });
+    await pick(scheduler);
+    await scheduler.getByRole('button', { name: 'زمان‌بندی ارسال' }).click();
+    await scheduler.waitFor({ state: 'detached' });
+  };
+  // One goes out by itself, through the server's worker: two minutes ahead (the scheduler's
+  // default day is the day an hour from now; within the last hour before midnight that is
+  // tomorrow, so the timed send is left to the other runs).
+  const timed = `پیام خودکار سر وقت ${runId}`;
+  const soon = new Date(Date.now() + 2 * 60_000);
+  const timedToday = new Date(Date.now() + 65 * 60_000).getDate() === soon.getDate();
+  if (timedToday) {
+    await scheduleIn(timed, async (scheduler) => {
+      await scheduler.getByLabel('ساعت ارسال').fill(`${String(soon.getHours()).padStart(2, '0')}:${String(soon.getMinutes()).padStart(2, '0')}`);
+    });
+  }
+  const now1 = `ارسال فوری ${runId}`;
+  const dropped = `لغوشده ${runId}`;
+  await scheduleIn(now1, (scheduler) => scheduler.getByRole('button', { name: /^فردا ساعت/ }).click());
+  await scheduleIn(dropped, (scheduler) => scheduler.getByRole('button', { name: /^فردا ساعت/ }).click());
+  const waitingBar = ownerThread.getByRole('button', { name: /پیام‌های زمان‌بندی‌شده/ });
+  check(await visible(waitingBar), 'the owner’s scheduled messages wait above the composer');
+  check((await ownerThread.getByText(now1).count()) === 0, '…and are not in the thread');
+  await owner.reload();
+  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click({ timeout: 20_000 });
+  check(await visible(waitingBar, 20_000), 'they are stored on the server: still waiting after a reload');
+  await railOf(guest).getByRole('link', { name: 'گفتگوها' }).click();
+  await guest.waitForURL('**/chats');
+  await guest.getByRole('button', { name: new RegExp(ownerName) }).first().click();
+  check(await visible(guestThread, 10_000), 'the guest has the direct chat open');
+  check((await guestThread.getByText(now1).count()) === 0, 'the guest does not see them before they are sent');
+
+  await waitingBar.click();
+  const waitingList = owner.getByRole('dialog', { name: 'پیام‌های زمان‌بندی‌شده' });
+  const waitingItems = waitingList.getByRole('listitem');
+  check(await eventually(async () => (await waitingItems.count()) === (timedToday ? 3 : 2), 10_000), 'the list holds each of them');
+  await waitingItems.filter({ hasText: now1 }).getByRole('button', { name: 'ارسال فوری' }).click();
+  check(await visible(guestThread.getByText(now1), 15_000), '«ارسال فوری»: the guest receives it live');
+  check(await visible(ownerThread.getByText(now1), 10_000), '…and it is in the owner’s thread');
+  await waitingItems.filter({ hasText: dropped }).getByRole('button', { name: 'لغو / حذف' }).click();
+  check(await eventually(async () => (await waitingItems.filter({ hasText: dropped }).count()) === 0, 10_000), '«لغو / حذف» takes it off the list');
+  await owner.keyboard.press('Escape');
+  if (timedToday) {
+    check(await visible(guestThread.getByText(timed), 180_000), 'at its time the worker sends it: the guest receives it live');
+    check(await eventually(async () => (await waitingBar.count()) === 0, 15_000), '…and the owner’s list is empty');
+  }
+  check((await guestThread.getByText(dropped).count()) === 0 && (await ownerThread.getByText(dropped).count()) === 0, 'the cancelled one is never sent');
+  check((await autoReplies.count()) === 1, 'scheduled messages to the away guest do not set off another answer the same day');
+  await owner.screenshot({ path: `${out}/live_scheduled.png` });
+
   /* ------------------------------------------------ profile menu: sign out clears the session */
 
   await railOf(guest).getByRole('button', { name: /حساب کاربری/ }).click();

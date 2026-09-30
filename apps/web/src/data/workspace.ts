@@ -12,6 +12,7 @@ import type {
   Project,
   Task,
   User,
+  WorkingHours,
 } from '@taskin/contracts';
 
 /**
@@ -1450,3 +1451,17 @@ export const ACTIVITY: readonly ActivityItem[] = [
     context: 'با نقش همکار مهمان',
   },
 ];
+
+/**
+ * Phase 3.2, demo only: a teammate on leave with the out-of-office auto-reply on, so a direct
+ * message to her is answered (once a day). In the live app the server answers.
+ */
+export const TEAMMATE_WORKING_HOURS: Readonly<Record<string, WorkingHours>> = {
+  'u-leila': {
+    autoReplyEnabled: true,
+    days: [],
+    start: '09:00',
+    end: '17:00',
+    message: 'سلام، تا پایان هفته در مرخصی هستم. برای کارهای فوری مالی با کامران فتحی هماهنگ کنید.',
+  },
+};

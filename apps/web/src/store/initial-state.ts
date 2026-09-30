@@ -14,11 +14,13 @@ import {
   PRIMARY_WORKSPACE_ID,
   PROJECTS,
   TASKS,
+  TEAMMATE_WORKING_HOURS,
   USERS,
   WORKSPACES,
 } from '@/data/workspace';
 import { builtInColumnsFor, BUILT_IN_NOTE_CATEGORIES, DEFAULT_PERMISSION_MATRIX } from '@/data/reference';
 import { IS_LIVE } from '@/lib/data-source';
+import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 
 /** The demo workspace (`NEXT_PUBLIC_DATA_SOURCE=demo`): the fixtures in `src/data`. */
 export const DEMO_WORKSPACE_STATE: WorkspaceState = {
@@ -66,6 +68,10 @@ export const DEMO_WORKSPACE_STATE: WorkspaceState = {
   chatSearch: '',
   taskSearch: '',
   announcement: '',
+  scheduledMessages: [],
+  workingHours: DEFAULT_WORKING_HOURS,
+  teammateHours: TEAMMATE_WORKING_HOURS,
+  autoRepliedAt: {},
 };
 
 /**
@@ -98,6 +104,10 @@ export const LIVE_EMPTY_STATE: WorkspaceState = {
   mutedConversationIds: [],
   unreadByConversation: {},
   activeConversationId: '',
+  scheduledMessages: [],
+  workingHours: DEFAULT_WORKING_HOURS,
+  teammateHours: {},
+  autoRepliedAt: {},
 };
 
 /**

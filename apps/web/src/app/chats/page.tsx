@@ -147,6 +147,20 @@ function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatContentPro
       }
       focusedMessageId={state.focusedMessageId}
       onFocusShown={clearFocus}
+      scheduled={state.scheduledMessages.filter((entry) => entry.conversationId === conversation.id && entry.authorId === currentUserId)}
+      onSchedule={(text, replyToId, at) =>
+        dispatch({
+          type: 'schedule-message',
+          scheduledId: nextLocalId('sched'),
+          conversationId: conversation.id,
+          authorId: currentUserId,
+          text,
+          replyToId,
+          scheduledAt: at.toISOString(),
+        })
+      }
+      onSendScheduledNow={(scheduledId) => dispatch({ type: 'send-scheduled-now', scheduledId, messageId: nextLocalId('m') })}
+      onCancelScheduled={(scheduledId) => dispatch({ type: 'cancel-scheduled-message', scheduledId })}
       {...(live ? { onTyping: (active: boolean) => live.store.typing(conversation.id, active) } : {})}
     />
   );

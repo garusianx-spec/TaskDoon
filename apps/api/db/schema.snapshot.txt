@@ -54,6 +54,10 @@ auth_sessions.revoked_at timestamp with time zone
 auth_sessions.stepped_up_at timestamp with time zone
 auth_sessions.user_agent text
 auth_sessions.user_id uuid not null
+auto_reply_log.replied_at timestamp with time zone not null default now()
+auto_reply_log.sender_id uuid not null
+auto_reply_log.user_id uuid not null
+auto_reply_log.workspace_id uuid not null
 board_columns.created_at timestamp with time zone not null default now()
 board_columns.deleted_at timestamp with time zone
 board_columns.id uuid not null default app.uuidv7()
@@ -151,6 +155,15 @@ labels.id uuid not null default app.uuidv7()
 labels.name text not null
 labels.tone tag_tone not null default 'gray'::tag_tone
 labels.workspace_id uuid not null
+member_working_hours.auto_reply_enabled boolean not null default false
+member_working_hours.created_at timestamp with time zone not null default now()
+member_working_hours.days text[] not null
+member_working_hours.end_time text not null
+member_working_hours.message text not null
+member_working_hours.start_time text not null
+member_working_hours.updated_at timestamp with time zone not null default now()
+member_working_hours.user_id uuid not null
+member_working_hours.workspace_id uuid not null
 message_mentions.message_id uuid not null
 message_mentions.user_id uuid not null
 message_mentions.workspace_id uuid not null
@@ -280,6 +293,25 @@ roles.rank smallint not null
 roles.updated_at timestamp with time zone not null default now()
 roles.version integer not null default 1
 roles.workspace_id uuid not null
+scheduled_messages.attachment_id uuid
+scheduled_messages.author_id uuid not null
+scheduled_messages.body_meta jsonb
+scheduled_messages.body_text text
+scheduled_messages.cancelled_at timestamp with time zone
+scheduled_messages.claimed_at timestamp with time zone
+scheduled_messages.client_msg_id uuid not null
+scheduled_messages.conversation_id uuid not null
+scheduled_messages.created_at timestamp with time zone not null default now()
+scheduled_messages.failure_code text
+scheduled_messages.id uuid not null default app.uuidv7()
+scheduled_messages.kind message_kind not null
+scheduled_messages.message_id uuid
+scheduled_messages.reply_to_id uuid
+scheduled_messages.scheduled_at timestamp with time zone not null
+scheduled_messages.sent_at timestamp with time zone
+scheduled_messages.status scheduled_message_status not null default 'pending'::scheduled_message_status
+scheduled_messages.updated_at timestamp with time zone not null default now()
+scheduled_messages.workspace_id uuid not null
 subtasks.assignee_id uuid
 subtasks.completed_at timestamp with time zone
 subtasks.created_at timestamp with time zone not null default now()
@@ -446,6 +478,14 @@ auth_sessions auth_sessions_last_active_at_not_null: NOT NULL last_active_at
 auth_sessions auth_sessions_pkey: PRIMARY KEY (id)
 auth_sessions auth_sessions_user_id_not_null: NOT NULL user_id
 auth_sessions auth_sessions_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+auto_reply_log auto_reply_log_pk: PRIMARY KEY (workspace_id, user_id, sender_id)
+auto_reply_log auto_reply_log_replied_at_not_null: NOT NULL replied_at
+auto_reply_log auto_reply_log_sender_fk: FOREIGN KEY (workspace_id, sender_id) REFERENCES workspace_members(workspace_id, user_id) ON DELETE CASCADE
+auto_reply_log auto_reply_log_sender_id_not_null: NOT NULL sender_id
+auto_reply_log auto_reply_log_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id) ON DELETE CASCADE
+auto_reply_log auto_reply_log_user_id_not_null: NOT NULL user_id
+auto_reply_log auto_reply_log_workspace_id_not_null: NOT NULL workspace_id
+auto_reply_log auto_reply_log_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 board_columns board_columns_categories: TRIGGER DEFERRABLE INITIALLY DEFERRED
 board_columns board_columns_created_at_not_null: NOT NULL created_at
 board_columns board_columns_id_not_null: NOT NULL id
@@ -570,6 +610,23 @@ labels labels_tone_not_null: NOT NULL tone
 labels labels_workspace_id_not_null: NOT NULL workspace_id
 labels labels_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 labels labels_ws_id_uq: UNIQUE (workspace_id, id)
+member_working_hours member_working_hours_auto_reply_enabled_not_null: NOT NULL auto_reply_enabled
+member_working_hours member_working_hours_created_at_not_null: NOT NULL created_at
+member_working_hours member_working_hours_days: CHECK ((days <@ ARRAY['saturday'::text, 'sunday'::text, 'monday'::text, 'tuesday'::text, 'wednesday'::text, 'thursday'::text, 'friday'::text]))
+member_working_hours member_working_hours_days_not_null: NOT NULL days
+member_working_hours member_working_hours_end: CHECK ((end_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text))
+member_working_hours member_working_hours_end_time_not_null: NOT NULL end_time
+member_working_hours member_working_hours_message_len: CHECK (((char_length(message) >= 1) AND (char_length(message) <= 500)))
+member_working_hours member_working_hours_message_not_null: NOT NULL message
+member_working_hours member_working_hours_pk: PRIMARY KEY (workspace_id, user_id)
+member_working_hours member_working_hours_start: CHECK ((start_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text))
+member_working_hours member_working_hours_start_time_not_null: NOT NULL start_time
+member_working_hours member_working_hours_updated_at_not_null: NOT NULL updated_at
+member_working_hours member_working_hours_user_fk: FOREIGN KEY (workspace_id, user_id) REFERENCES workspace_members(workspace_id, user_id) ON DELETE CASCADE
+member_working_hours member_working_hours_user_id_not_null: NOT NULL user_id
+member_working_hours member_working_hours_window: CHECK ((start_time <> end_time))
+member_working_hours member_working_hours_workspace_id_not_null: NOT NULL workspace_id
+member_working_hours member_working_hours_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 message_mentions message_mentions_message_fk: FOREIGN KEY (workspace_id, message_id) REFERENCES messages(workspace_id, id) ON DELETE CASCADE
 message_mentions message_mentions_message_id_not_null: NOT NULL message_id
 message_mentions message_mentions_pk: PRIMARY KEY (message_id, user_id)
@@ -739,6 +796,27 @@ roles roles_workspace_id_not_null: NOT NULL workspace_id
 roles roles_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 roles roles_ws_id_uq: UNIQUE (workspace_id, id)
 roles roles_ws_key_uq: UNIQUE (workspace_id, key)
+scheduled_messages scheduled_messages_attachment_fk: FOREIGN KEY (workspace_id, attachment_id) REFERENCES attachments(workspace_id, id)
+scheduled_messages scheduled_messages_author_fk: FOREIGN KEY (workspace_id, author_id) REFERENCES workspace_members(workspace_id, user_id)
+scheduled_messages scheduled_messages_author_id_not_null: NOT NULL author_id
+scheduled_messages scheduled_messages_body_len: CHECK ((char_length(body_text) <= 8000))
+scheduled_messages scheduled_messages_client_msg_id_not_null: NOT NULL client_msg_id
+scheduled_messages scheduled_messages_conversation_fk: FOREIGN KEY (workspace_id, conversation_id) REFERENCES conversations(workspace_id, id) ON DELETE CASCADE
+scheduled_messages scheduled_messages_conversation_id_not_null: NOT NULL conversation_id
+scheduled_messages scheduled_messages_created_at_not_null: NOT NULL created_at
+scheduled_messages scheduled_messages_id_not_null: NOT NULL id
+scheduled_messages scheduled_messages_kind: CHECK ((kind <> 'system'::message_kind))
+scheduled_messages scheduled_messages_kind_not_null: NOT NULL kind
+scheduled_messages scheduled_messages_message_fk: FOREIGN KEY (workspace_id, message_id) REFERENCES messages(workspace_id, id) ON DELETE SET NULL (message_id)
+scheduled_messages scheduled_messages_pkey: PRIMARY KEY (id)
+scheduled_messages scheduled_messages_reply_to_fk: FOREIGN KEY (workspace_id, reply_to_id) REFERENCES messages(workspace_id, id) ON DELETE SET NULL (reply_to_id)
+scheduled_messages scheduled_messages_scheduled_at_not_null: NOT NULL scheduled_at
+scheduled_messages scheduled_messages_sent: CHECK (((status = 'sent'::scheduled_message_status) = (sent_at IS NOT NULL)))
+scheduled_messages scheduled_messages_status_not_null: NOT NULL status
+scheduled_messages scheduled_messages_updated_at_not_null: NOT NULL updated_at
+scheduled_messages scheduled_messages_workspace_id_not_null: NOT NULL workspace_id
+scheduled_messages scheduled_messages_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+scheduled_messages scheduled_messages_ws_id_uq: UNIQUE (workspace_id, id)
 subtasks subtasks_assignee_fk: FOREIGN KEY (workspace_id, assignee_id) REFERENCES workspace_members(workspace_id, user_id)
 subtasks subtasks_created_at_not_null: NOT NULL created_at
 subtasks subtasks_done_not_null: NOT NULL done
@@ -915,6 +993,7 @@ audit_logs CREATE INDEX audit_logs_ws_created_idx ON ONLY public.audit_logs USIN
 audit_logs CREATE UNIQUE INDEX audit_logs_pkey ON ONLY public.audit_logs USING btree (id, created_at)
 auth_sessions CREATE INDEX auth_sessions_user_active_idx ON public.auth_sessions USING btree (user_id) WHERE (revoked_at IS NULL)
 auth_sessions CREATE UNIQUE INDEX auth_sessions_pkey ON public.auth_sessions USING btree (id)
+auto_reply_log CREATE UNIQUE INDEX auto_reply_log_pk ON public.auto_reply_log USING btree (workspace_id, user_id, sender_id)
 board_columns CREATE INDEX board_columns_position_idx ON public.board_columns USING btree (workflow_id, "position") WHERE (deleted_at IS NULL)
 board_columns CREATE UNIQUE INDEX board_columns_pkey ON public.board_columns USING btree (id)
 board_columns CREATE UNIQUE INDEX board_columns_title_uq ON public.board_columns USING btree (workflow_id, lower(title)) WHERE (deleted_at IS NULL)
@@ -944,6 +1023,8 @@ invitations CREATE UNIQUE INDEX invitations_token_uq ON public.invitations USING
 labels CREATE UNIQUE INDEX labels_pkey ON public.labels USING btree (id)
 labels CREATE UNIQUE INDEX labels_ws_id_uq ON public.labels USING btree (workspace_id, id)
 labels CREATE UNIQUE INDEX labels_ws_name_uq ON public.labels USING btree (workspace_id, lower(name))
+member_working_hours CREATE INDEX member_working_hours_enabled_idx ON public.member_working_hours USING btree (workspace_id) WHERE auto_reply_enabled
+member_working_hours CREATE UNIQUE INDEX member_working_hours_pk ON public.member_working_hours USING btree (workspace_id, user_id)
 message_mentions CREATE INDEX message_mentions_user_idx ON public.message_mentions USING btree (workspace_id, user_id)
 message_mentions CREATE UNIQUE INDEX message_mentions_pk ON public.message_mentions USING btree (message_id, user_id)
 message_reactions CREATE UNIQUE INDEX message_reactions_pk ON public.message_reactions USING btree (message_id, user_id, emoji)
@@ -990,6 +1071,12 @@ role_permissions CREATE UNIQUE INDEX role_permissions_pk ON public.role_permissi
 roles CREATE UNIQUE INDEX roles_pkey ON public.roles USING btree (id)
 roles CREATE UNIQUE INDEX roles_ws_id_uq ON public.roles USING btree (workspace_id, id)
 roles CREATE UNIQUE INDEX roles_ws_key_uq ON public.roles USING btree (workspace_id, key)
+scheduled_messages CREATE INDEX scheduled_messages_attachment_idx ON public.scheduled_messages USING btree (attachment_id) WHERE ((attachment_id IS NOT NULL) AND (status = 'pending'::scheduled_message_status))
+scheduled_messages CREATE INDEX scheduled_messages_author_idx ON public.scheduled_messages USING btree (workspace_id, author_id, conversation_id, scheduled_at) WHERE (status = 'pending'::scheduled_message_status)
+scheduled_messages CREATE INDEX scheduled_messages_due_idx ON public.scheduled_messages USING btree (scheduled_at) WHERE (status = 'pending'::scheduled_message_status)
+scheduled_messages CREATE UNIQUE INDEX scheduled_messages_client_msg_uq ON public.scheduled_messages USING btree (conversation_id, author_id, client_msg_id)
+scheduled_messages CREATE UNIQUE INDEX scheduled_messages_pkey ON public.scheduled_messages USING btree (id)
+scheduled_messages CREATE UNIQUE INDEX scheduled_messages_ws_id_uq ON public.scheduled_messages USING btree (workspace_id, id)
 subtasks CREATE INDEX subtasks_task_position_idx ON public.subtasks USING btree (task_id, "position")
 subtasks CREATE UNIQUE INDEX subtasks_pkey ON public.subtasks USING btree (id)
 subtasks CREATE UNIQUE INDEX subtasks_ws_id_uq ON public.subtasks USING btree (workspace_id, id)
@@ -1032,6 +1119,7 @@ activity_events enabled=true forced=true
 attachments enabled=true forced=true
 audit_logs enabled=true forced=true
 auth_sessions enabled=false forced=false
+auto_reply_log enabled=true forced=true
 board_columns enabled=true forced=true
 calendar_event_attendees enabled=true forced=true
 calendar_events enabled=true forced=true
@@ -1041,6 +1129,7 @@ departments enabled=true forced=true
 idempotency_keys enabled=false forced=false
 invitations enabled=true forced=true
 labels enabled=true forced=true
+member_working_hours enabled=true forced=true
 message_mentions enabled=true forced=true
 message_reactions enabled=true forced=true
 messages enabled=true forced=true
@@ -1056,6 +1145,7 @@ projects enabled=true forced=true
 refresh_tokens enabled=false forced=false
 role_permissions enabled=true forced=true
 roles enabled=true forced=true
+scheduled_messages enabled=true forced=true
 subtasks enabled=true forced=true
 task_assignees enabled=true forced=true
 task_attachments enabled=true forced=true
@@ -1074,6 +1164,7 @@ activity_events activity_events_tenant ALL using((workspace_id = ( SELECT app.cu
 attachments attachments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 audit_logs audit_logs_insert INSERT using() check(((workspace_id IS NULL) OR (workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))))
 audit_logs audit_logs_tenant_read SELECT using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check()
+auto_reply_log auto_reply_log_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 board_columns board_columns_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 calendar_event_attendees calendar_event_attendees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 calendar_events calendar_events_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
@@ -1082,6 +1173,8 @@ conversations conversations_tenant ALL using((workspace_id = ( SELECT app.curren
 departments departments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 invitations invitations_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 labels labels_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+member_working_hours member_working_hours_own ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (user_id = ( SELECT app.current_user_id() AS current_user_id)))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (user_id = ( SELECT app.current_user_id() AS current_user_id))))
+member_working_hours member_working_hours_tenant SELECT using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check()
 message_mentions message_mentions_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 message_reactions message_reactions_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 messages messages_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
@@ -1098,6 +1191,7 @@ roles roles_member_read SELECT using((EXISTS ( SELECT 1
    FROM workspace_members m
   WHERE ((m.workspace_id = roles.workspace_id) AND (m.user_id = ( SELECT app.current_user_id() AS current_user_id)) AND (m.status = 'active'::member_status))))) check()
 roles roles_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+scheduled_messages scheduled_messages_author ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (author_id = ( SELECT app.current_user_id() AS current_user_id)))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (author_id = ( SELECT app.current_user_id() AS current_user_id))))
 subtasks subtasks_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_assignees task_assignees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_attachments task_attachments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
@@ -1121,12 +1215,14 @@ calendar_events calendar_events_touch -> touch_updated_at
 conversations conversations_touch -> touch_updated_at
 departments departments_touch -> touch_updated_at
 idempotency_keys idempotency_keys_touch -> touch_updated_at
+member_working_hours member_working_hours_touch -> touch_updated_at
 notes notes_touch -> touch_updated_at
 outbox_events outbox_events_notify -> notify_outbox
 projects projects_touch -> touch_updated_at
 role_permissions role_permissions_protect_locked -> protect_locked_role_permissions
 roles roles_protect_locked -> protect_locked_roles
 roles roles_touch -> touch_updated_at
+scheduled_messages scheduled_messages_touch -> touch_updated_at
 subtasks subtasks_touch -> touch_updated_at
 tasks tasks_sync_status -> sync_task_status
 tasks tasks_touch -> touch_updated_at
@@ -1151,6 +1247,7 @@ app.notify_outbox() invoker
 app.projects_due_for_purge(p_days integer, p_limit integer) security definer
 app.protect_locked_role_permissions() invoker
 app.protect_locked_roles() invoker
+app.scheduled_messages_due(p_limit integer) security definer
 app.search_note_ids(p_pattern text) security definer
 app.search_task_ids(p_pattern text) security definer
 app.send_message(p_workspace uuid, p_user uuid, p_request_id text, p_conversation uuid, p_client_msg_id uuid, p_kind message_kind, p_text text, p_meta jsonb, p_attachment uuid, p_reply_to uuid, p_search text, p_mentions uuid[]) invoker
@@ -1164,6 +1261,7 @@ activity_events DELETE,INSERT,SELECT,UPDATE
 attachments DELETE,INSERT,SELECT,UPDATE
 audit_logs INSERT,SELECT
 auth_sessions DELETE,INSERT,SELECT,UPDATE
+auto_reply_log DELETE,INSERT,SELECT,UPDATE
 board_columns DELETE,INSERT,SELECT,UPDATE
 calendar_event_attendees DELETE,INSERT,SELECT,UPDATE
 calendar_events DELETE,INSERT,SELECT,UPDATE
@@ -1173,6 +1271,7 @@ departments DELETE,INSERT,SELECT,UPDATE
 idempotency_keys DELETE,INSERT,SELECT,UPDATE
 invitations DELETE,INSERT,SELECT,UPDATE
 labels DELETE,INSERT,SELECT,UPDATE
+member_working_hours DELETE,INSERT,SELECT,UPDATE
 message_mentions DELETE,INSERT,SELECT,UPDATE
 message_reactions DELETE,INSERT,SELECT,UPDATE
 messages DELETE,INSERT,SELECT,UPDATE
@@ -1188,6 +1287,7 @@ projects DELETE,INSERT,SELECT,UPDATE
 refresh_tokens DELETE,INSERT,SELECT,UPDATE
 role_permissions DELETE,INSERT,SELECT,UPDATE
 roles DELETE,INSERT,SELECT,UPDATE
+scheduled_messages DELETE,INSERT,SELECT,UPDATE
 subtasks DELETE,INSERT,SELECT,UPDATE
 task_assignees DELETE,INSERT,SELECT,UPDATE
 task_attachments DELETE,INSERT,SELECT,UPDATE

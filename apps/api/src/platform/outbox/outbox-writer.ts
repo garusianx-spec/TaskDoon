@@ -78,6 +78,8 @@ export interface OutboxEventMap {
   /** A member joined, rejoined or changed role. */
   'conversation.member.added': { readonly conversationId: string; readonly userId: string; readonly role: string };
   'conversation.member.removed': { readonly conversationId: string; readonly userId: string };
+  /** Phase 3.2: a message scheduled for later; the relay turns it into a delayed dispatch job. */
+  'message.scheduled': { readonly scheduledId: string; readonly authorId: string; readonly scheduledAt: string };
   /** Only for messages with mentions or a reply: their notifications. */
   'message.posted': {
     readonly conversationId: string;

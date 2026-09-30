@@ -57,6 +57,8 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   MESSAGE_GONE: { status: 410, title: 'The message was deleted' },
   MESSAGE_NOT_CONVERTIBLE: { status: 422, title: 'Only a text, file or voice message becomes a task' },
   NOT_SUBSCRIBED: { status: 409, title: 'Subscribe to the workspace first' },
+  SCHEDULED_MESSAGE_CLOSED: { status: 409, title: 'The scheduled message was sent or cancelled already' },
+  SCHEDULE_LIMIT_REACHED: { status: 409, title: 'Too many messages are scheduled in this conversation' },
 };
 
 /**

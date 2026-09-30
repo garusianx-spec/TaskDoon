@@ -87,3 +87,7 @@ export const membershipMode = pgEnum('membership_mode', ['manual', 'project_sync
 export const notificationLevel = pgEnum('notification_level', ['all', 'mentions', 'none']);
 
 export const messageKind = pgEnum('message_kind', ['text', 'voice', 'file', 'system']);
+
+/* ---------------------------------------------------------------- Phase 3.2: scheduled messages */
+
+export const scheduledMessageStatus = pgEnum('scheduled_message_status', ['pending', 'sent', 'cancelled', 'failed']);

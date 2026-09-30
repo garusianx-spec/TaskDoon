@@ -5,7 +5,8 @@ import { toPersianDigits } from '@taskin/jalali';
 import { cn } from '@/lib/cn';
 import { type Recorded, useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { IconButton, Tooltip } from '@/components/ui';
-import { CloseIcon, EmojiIcon, MicrophoneIcon, PaperclipIcon, SendIcon } from '@/components/icons';
+import { ClockIcon, CloseIcon, EmojiIcon, MicrophoneIcon, PaperclipIcon, SendIcon } from '@/components/icons';
+import { ScheduleMessageDialog } from './ScheduleMessageDialog';
 
 export interface ChatComposerProps {
   readonly onSend: (text: string) => void;
@@ -18,6 +19,11 @@ export interface ChatComposerProps {
   readonly onAttach?: (files: readonly File[]) => void;
   /** A voice note recorded with the microphone button. */
   readonly onVoice?: (recording: Recorded) => void;
+  /**
+   * «زمان‌بندی ارسال» (Phase 3.2): the draft goes out at `at` instead of now. Offered by the clock
+   * button beside «ارسال پیام», and by right-clicking (or long-pressing) «ارسال پیام» itself.
+   */
+  readonly onSchedule?: (text: string, at: Date) => void;
 }
 
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
@@ -28,8 +34,9 @@ const EMOJI_PALETTE = ['👍', '🙏', '🔥', '✅', '👀', '🎉', '❤️', 
  * Message composer. Enter sends, Shift+Enter inserts a newline, and the textarea grows with
  * the content up to six lines before scrolling.
  */
-export function ChatComposer({ onSend, replyPreview, onCancelReply, conversationTitle, onTyping, onAttach, onVoice }: ChatComposerProps) {
+export function ChatComposer({ onSend, replyPreview, onCancelReply, conversationTitle, onTyping, onAttach, onVoice, onSchedule }: ChatComposerProps) {
   const [draft, setDraft] = useState('');
+  const [scheduling, setScheduling] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -57,16 +64,24 @@ export function ChatComposer({ onSend, replyPreview, onCancelReply, conversation
     element.style.height = `${Math.min(element.scrollHeight, 144)}px`;
   };
 
-  const submit = () => {
-    const text = draft.trim();
-    if (!text) return;
-    onSend(text);
+  const clear = () => {
     setDraft('');
     const element = textareaRef.current;
     if (element) {
       element.style.height = 'auto';
       element.focus();
     }
+  };
+
+  const submit = () => {
+    const text = draft.trim();
+    if (!text) return;
+    onSend(text);
+    clear();
+  };
+
+  const openScheduler = () => {
+    if (onSchedule && draft.trim()) setScheduling(true);
   };
 
   const insertEmoji = (emoji: string) => {
@@ -195,6 +210,20 @@ export function ChatComposer({ onSend, replyPreview, onCancelReply, conversation
           </Tooltip>
         )}
 
+        {!recording && onSchedule && (
+          <Tooltip content="زمان‌بندی ارسال">
+            <IconButton
+              label="زمان‌بندی ارسال"
+              icon={<ClockIcon size={20} />}
+              size="sm"
+              aria-haspopup="dialog"
+              onClick={openScheduler}
+              disabled={draft.trim().length === 0}
+              className={cn(draft.trim().length === 0 && 'opacity-50')}
+            />
+          </Tooltip>
+        )}
+
         {recording ? (
           <IconButton label="ارسال پیام صوتی" icon={<SendIcon size={20} />} size="sm" variant="primary" onClick={() => void finishRecording()} />
         ) : (
@@ -204,11 +233,31 @@ export function ChatComposer({ onSend, replyPreview, onCancelReply, conversation
             size="sm"
             variant="primary"
             onClick={submit}
+            // Right-click, or a long press on touch screens: send it later instead.
+            onContextMenu={(event) => {
+              if (!onSchedule || !draft.trim()) return;
+              event.preventDefault();
+              openScheduler();
+            }}
             disabled={draft.trim().length === 0}
             className={cn(draft.trim().length === 0 && 'opacity-50')}
           />
         )}
       </div>
+      {onSchedule && (
+        <ScheduleMessageDialog
+          open={scheduling}
+          text={draft.trim()}
+          onClose={() => setScheduling(false)}
+          onConfirm={(at) => {
+            const text = draft.trim();
+            setScheduling(false);
+            if (!text) return;
+            onSchedule(text, at);
+            clear();
+          }}
+        />
+      )}
       {(fileError || recorder.state.phase === 'error') && (
         <p role="alert" className="mt-1.5 px-1 text-caption text-status-blocked">
           {recorder.state.phase === 'error' ? recorder.state.message : fileError}

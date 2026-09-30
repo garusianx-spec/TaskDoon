@@ -1,4 +1,8 @@
 import type {
+  ScheduledMessageView,
+  ScheduleMessageBody,
+  UpdateWorkingHoursBody,
+  WorkingHoursView,
   AcceptInvitationResult,
   AttachmentView,
   CompleteUploadBody,
@@ -184,6 +188,23 @@ export const api = {
     /** «تبدیل پیام به وظیفه». */
     convert: (workspaceId: string, conversationId: string, messageId: string, body: ConvertMessageBody) =>
       http.post<ConvertMessageResult>(`${ws(workspaceId)}/conversations/${conversationId}/messages/${messageId}/task`, body, { idempotent: true }),
+  },
+
+  /** Phase 3.2: this member's scheduled messages. A retried schedule (same clientMsgId) returns the first. */
+  scheduled: {
+    list: (workspaceId: string) => http.get<ScheduledMessageView[]>(`${ws(workspaceId)}/scheduled-messages`),
+    create: (workspaceId: string, conversationId: string, body: ScheduleMessageBody) =>
+      http.post<ScheduledMessageView>(`${ws(workspaceId)}/conversations/${conversationId}/scheduled-messages`, body),
+    /** «ارسال فوری». */
+    sendNow: (workspaceId: string, scheduledId: string) => http.post<ScheduledMessageView>(`${ws(workspaceId)}/scheduled-messages/${scheduledId}/send`),
+    /** «لغو / حذف». */
+    cancel: (workspaceId: string, scheduledId: string) => http.delete<void>(`${ws(workspaceId)}/scheduled-messages/${scheduledId}`),
+  },
+
+  /** Phase 3.2: working hours and the out-of-office auto-reply, per workspace. */
+  workingHours: {
+    get: (workspaceId: string) => http.get<WorkingHoursView>(`${ws(workspaceId)}/me/working-hours`),
+    put: (workspaceId: string, body: UpdateWorkingHoursBody) => http.put<WorkingHoursView>(`${ws(workspaceId)}/me/working-hours`, body),
   },
 
   calendar: {

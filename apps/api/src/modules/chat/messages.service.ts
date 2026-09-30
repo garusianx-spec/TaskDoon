@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import type {
@@ -23,6 +24,7 @@ import type { MembershipContext } from '../../platform/http/request.js';
 import { OutboxWriter } from '../../platform/outbox/outbox-writer.js';
 import { RealtimePublisher } from '../../platform/realtime/realtime-publisher.js';
 import { rooms } from '../../platform/realtime/rooms.js';
+import { AutoReplyService } from './auto-reply.service.js';
 import { accessFrom, accessRowSql, loadConversation, mentionedIds, messageGrant, requireMessageGrant } from './chat-access.js';
 import { attachmentView, type MessageRow, messagesQuery, toMessageView, withinHistory } from './message-queries.js';
 
@@ -46,6 +48,8 @@ export interface SendOptions {
   readonly audit?: boolean;
   /** The sender's socket, left out of the broadcast (its ack already says the message is stored). */
   readonly socketId?: string;
+  /** Phase 3.2: the out-of-office answer posted for its author. Marked as one, and never answered in turn. */
+  readonly autoReply?: boolean;
 }
 
 export interface SendResult {
@@ -100,6 +104,7 @@ export class MessagesService implements OnModuleDestroy {
     private readonly outbox: OutboxWriter,
     private readonly audit: AuditWriter,
     private readonly publisher: RealtimePublisher,
+    private readonly autoReply: AutoReplyService,
   ) {}
 
   onModuleDestroy(): void {
@@ -208,7 +213,8 @@ export class MessagesService implements OnModuleDestroy {
 
     const scope = { workspaceId: member.workspaceId, userId: member.userId };
     const attempt = async (runner: Runner, unit: Unit | null) => {
-      const prepared = unit ? await this.prepare(unit.tx, member, conversationId, body, text) : plainPrepared(body.kind, text);
+      const base = unit ? await this.prepare(unit.tx, member, conversationId, body, text) : plainPrepared(body.kind, text);
+      const prepared: PreparedSend = options.autoReply ? { ...base, meta: { autoReply: true } } : base;
       let row: SendRow;
       try {
         row = await this.insert(runner, member, conversationId, body.clientMsgId, prepared);
@@ -296,8 +302,27 @@ export class MessagesService implements OnModuleDestroy {
         except: options.socketId ? [options.socketId] : undefined,
         data: message,
       });
+      if (!options.autoReply) this.answerIfAway(member, conversationId);
     }
     return { sent: result.sent, message };
+  }
+
+  /**
+   * Phase 3.2: a direct message to someone outside their working hours gets their auto-reply. It
+   * runs after the broadcast, off the sender's path; a failure only means no auto-reply.
+   */
+  private answerIfAway(member: MembershipContext, conversationId: string): void {
+    this.autoReply.track(
+      this.autoReply.due(member, conversationId).then(async (reply) => {
+        if (!reply) return;
+        try {
+          await this.send(reply.responder, conversationId, { clientMsgId: randomUUID(), kind: 'text', text: reply.text }, { autoReply: true });
+        } catch (error) {
+          await reply.release();
+          throw error;
+        }
+      }),
+    );
   }
 
   /** Validates what the send refers to (attachment, reply) — only when it refers to something. */

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import type { Recorded } from '@/hooks/useVoiceRecorder';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
-import type { Conversation, Message, TaskDraft } from '@taskin/contracts';
+import type { Conversation, Message, ScheduledMessage, TaskDraft } from '@taskin/contracts';
 import { cn } from '@/lib/cn';
 import { formatDateDivider, fromISODate, toPersianDigits } from '@taskin/jalali';
 import { formatCount, truncate } from '@/lib/format';
@@ -22,6 +22,7 @@ import { MessageBubble, SystemLine } from './MessageBubble';
 import { ChatComposer, MAX_FILE_BYTES } from './ChatComposer';
 import { AttachmentPreviewModal, type OutgoingFile } from './AttachmentPreviewModal';
 import { MessageActionSheet } from './MessageActionSheet';
+import { ScheduledMessagesBar, ScheduledMessagesModal } from './ScheduledMessages';
 import {
   ArrowBackwardIcon,
   HashIcon,
@@ -54,6 +55,11 @@ export interface ChatViewProps {
   /** A message to scroll to and highlight (a task's «پیام مبدأ»); `onFocusShown` clears it. */
   readonly focusedMessageId?: string | null;
   readonly onFocusShown?: () => void;
+  /** Phase 3.2: this member's messages waiting to be sent here, and what can be done with them. */
+  readonly scheduled?: readonly ScheduledMessage[];
+  readonly onSchedule?: (text: string, replyToId: string | null, at: Date) => void;
+  readonly onSendScheduledNow?: (scheduledId: string) => void;
+  readonly onCancelScheduled?: (scheduledId: string) => void;
 }
 
 const HIGHLIGHT_MS = 2400;
@@ -81,7 +87,18 @@ export function ChatView({
   onDiscard,
   focusedMessageId = null,
   onFocusShown,
+  scheduled = [],
+  onSchedule,
+  onSendScheduledNow,
+  onCancelScheduled,
 }: ChatViewProps) {
+  const [scheduledOpen, setScheduledOpen] = useState(false);
+  // The list closes with its last entry (sent, cancelled, or another conversation opened) and
+  // stays closed: the next schedule shows in the bar, it does not pop the list open.
+  const hasScheduled = scheduled.length > 0;
+  useEffect(() => {
+    if (!hasScheduled) setScheduledOpen(false);
+  }, [hasScheduled, conversation.id]);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [inChatQuery, setInChatQuery] = useState('');
@@ -354,6 +371,17 @@ export function ChatView({
         </p>
       )}
 
+      {scheduled.length > 0 && <ScheduledMessagesBar count={scheduled.length} onOpen={() => setScheduledOpen(true)} />}
+      {onSendScheduledNow && onCancelScheduled && (
+        <ScheduledMessagesModal
+          open={scheduledOpen && scheduled.length > 0}
+          entries={scheduled}
+          onClose={() => setScheduledOpen(false)}
+          onSendNow={onSendScheduledNow}
+          onCancel={onCancelScheduled}
+        />
+      )}
+
       <ChatComposer
         conversationTitle={conversation.title}
         replyPreview={replyPreview}
@@ -365,6 +393,14 @@ export function ChatView({
           onSend(text, replyToId);
           setReplyToId(null);
         }}
+        {...(onSchedule
+          ? {
+              onSchedule: (text: string, at: Date) => {
+                onSchedule(text, replyToId, at);
+                setReplyToId(null);
+              },
+            }
+          : {})}
       />
 
       {onAttach && (

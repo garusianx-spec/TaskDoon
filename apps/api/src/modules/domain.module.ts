@@ -18,6 +18,8 @@ import { MembersService } from './workspaces/members.service.js';
 import { WorkspacesService } from './workspaces/workspaces.service.js';
 import { ConversationsService } from './chat/conversations.service.js';
 import { MessagesService } from './chat/messages.service.js';
+import { AutoReplyService } from './chat/auto-reply.service.js';
+import { ScheduledMessagesService } from './chat/scheduled-messages.service.js';
 import { MessageTasksService } from './bridges/message-tasks.service.js';
 import { CalendarService } from './content/calendar.service.js';
 import { FeedService } from './content/feed.service.js';
@@ -69,7 +71,9 @@ const services = [
   ReportsService,
   // chat
   ConversationsService,
+  AutoReplyService,
   MessagesService,
+  ScheduledMessagesService,
   // bridges
   MessageTasksService,
 ];

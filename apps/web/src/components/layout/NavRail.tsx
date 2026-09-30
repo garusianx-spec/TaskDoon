@@ -25,6 +25,7 @@ import {
   PaletteIcon,
   PeopleIcon,
   SettingsIcon,
+  ClockIcon,
   ShieldIcon,
   TaskSquareIcon,
   UserIcon,
@@ -253,6 +254,9 @@ function ProfileMenu({ fullName, initials, jobTitle, presence, statusMessage }: 
               </MenuItem>
               <MenuItem onSelect={run(() => open({ kind: 'security' }))} icon={<ShieldIcon size={18} />}>
                 امنیت و ورود
+              </MenuItem>
+              <MenuItem onSelect={run(() => open({ kind: 'working-hours' }))} icon={<ClockIcon size={18} />}>
+                ساعات کاری و پاسخ خودکار
               </MenuItem>
               <PopoverDivider />
               <MenuItem

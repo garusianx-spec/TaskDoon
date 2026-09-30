@@ -68,6 +68,20 @@ export function publicationsFor(row: OutboxRow, now: number): readonly Publicati
         },
       ];
     }
+    case 'message.scheduled': {
+      const payload = row.payload as unknown as OutboxEventMap['message.scheduled'];
+      if (!row.workspaceId) return [];
+      return [
+        {
+          queue: 'work',
+          name: 'message.dispatch',
+          payload: { workspaceId: row.workspaceId, scheduledId: payload.scheduledId, authorId: payload.authorId },
+          // One job per schedule; the sweep covers a job that is lost.
+          jobId: `scheduled-${payload.scheduledId}`,
+          delay: Math.max(0, Date.parse(payload.scheduledAt) - now),
+        },
+      ];
+    }
     // Everything else is realtime only (see realtimeFor), or nothing yet.
     default:
       return [];

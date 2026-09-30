@@ -37,11 +37,18 @@ const MESSAGES: Partial<Record<ApiErrorCode | 'NETWORK', string>> = {
   ASSIGNEE_NO_ACCESS: 'مسئول انتخاب‌شده به این پروژه دسترسی ندارد.',
   CONVERSATION_ARCHIVED: 'این گفتگو بایگانی شده است.',
   POSTING_RESTRICTED: 'در این کانال فقط مدیران می‌توانند پیام بفرستند.',
+  SCHEDULED_MESSAGE_CLOSED: 'این پیام زمان‌بندی‌شده پیش‌تر ارسال یا لغو شده است.',
+  SCHEDULE_LIMIT_REACHED: 'در هر گفتگو حداکثر ۱۰۰ پیام زمان‌بندی‌شده می‌تواند در انتظار باشد.',
   PROJECT_CHANNEL: 'اعضای کانال پروژه همان اعضای پروژه‌اند؛ آن‌ها را در خود پروژه اضافه یا حذف کنید.',
   EDIT_WINDOW_CLOSED: 'مهلت ویرایش این پیام گذشته است.',
   MESSAGE_GONE: 'این پیام حذف شده است.',
   NOTE_CATEGORY_IN_USE: 'این دفترچه هنوز یادداشت دارد.',
 };
+
+/** The text for an error code carried as data (a scheduled message's `failureCode`), if there is one. */
+export function codeMessage(code: string | null): string | null {
+  return code ? (MESSAGES[code as ApiErrorCode] ?? null) : null;
+}
 
 export function problemMessage(error: unknown, fallback = 'انجام این کار ممکن نشد.'): string {
   if (error instanceof ApiProblem) return MESSAGES[error.code] ?? error.body?.detail ?? fallback;

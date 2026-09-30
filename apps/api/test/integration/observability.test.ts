@@ -231,6 +231,18 @@ describe('M1 checklist: audit trail and correlation', () => {
     await traced('post', `${cv}/{conversationId}/messages/{messageId}/task`, `${mg}/task`, (r) => idem(r).send({ projectId: project.id, title: 'از پیام' }));
     await traced('post', `${cv}/{conversationId}/read`, `${cn}/read`, (r) => r.set(bearer(user)).send({ seq: 1 }));
     await traced('delete', `${cv}/{conversationId}/messages/{messageId}`, mg, (r) => r.set(bearer(user)));
+    // Phase 3.2: scheduled messages (one sent at once, one cancelled) and working hours.
+    const sm = '/api/v1/workspaces/{workspaceId}/scheduled-messages';
+    const later = new Date(Date.now() + 3600_000).toISOString();
+    const scheduleOne = (text: string) =>
+      traced('post', `${cv}/{conversationId}/scheduled-messages`, `${cn}/scheduled-messages`, (r) => r.set(bearer(user)).send({ clientMsgId: randomUUID(), kind: 'text', text, scheduledAt: later }));
+    const soon = (await scheduleOne('زمان‌بندی‌شده')).body;
+    await traced('post', `${sm}/{scheduledId}/send`, `${ws}/scheduled-messages/${soon.id}/send`, (r) => r.set(bearer(user)));
+    const dropped = (await scheduleOne('لغوشده')).body;
+    await traced('delete', `${sm}/{scheduledId}`, `${ws}/scheduled-messages/${dropped.id}`, (r) => r.set(bearer(user)));
+    await traced('put', '/api/v1/workspaces/{workspaceId}/me/working-hours', `${ws}/me/working-hours`, (r) =>
+      r.set(bearer(user)).send({ autoReplyEnabled: true, days: ['saturday'], start: '09:00', end: '17:00', message: 'بیرون از ساعت کاری' }),
+    );
     await traced('delete', `${cv}/{conversationId}/members/{userId}`, `${cn}/members/${joiner.userId}`, (r) => r.set(bearer(user)));
     await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) => r.set(bearer(user)));
     // Phase 3.1: out of the trash, and back into it.

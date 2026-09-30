@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsIn,
@@ -11,6 +12,7 @@ import {
   IsString,
   IsUUID,
   Length,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -39,15 +41,22 @@ import type {
   PutConversationMemberBody,
   ReactionView,
   ReadCursorBody,
+  ScheduledMessageStatus,
+  ScheduledMessageView,
+  ScheduleMessageBody,
   SendMessageBody,
   SentMessage,
   TaskPriority,
   UpdateConversationBody,
   UpdateMyConversationBody,
+  UpdateWorkingHoursBody,
+  WeekDay,
+  WorkingHoursView,
 } from '@taskin/contracts';
 import { AVATAR_TONES } from '../users/me.controller.js';
 import { OptionalNullableDate, OptionalNullableUuid } from '../../platform/http/dto.js';
 import { AttachmentViewDto, TASK_PRIORITIES, TaskDetailDto } from '../work/work.dto.js';
+import { WEEK_DAYS } from './working-hours.js';
 
 export const CONVERSATION_KINDS: readonly ConversationKind[] = ['direct', 'group', 'channel'];
 export const CONVERSATION_ROLES: readonly ConversationRole[] = ['owner', 'admin', 'member'];
@@ -283,4 +292,65 @@ export class ConvertMessageDto implements ConvertMessageBody {
 export class ConvertMessageResultDto implements ConvertMessageResult {
   @ApiProperty({ type: TaskDetailDto }) readonly task!: TaskDetailDto;
   @ApiProperty({ description: '`true` when the message already had a live task, which is returned' }) readonly existing!: boolean;
+}
+
+/* ------------------------------------------------------------------ Phase 3.2: scheduled messages */
+
+export const SCHEDULED_STATUSES: readonly ScheduledMessageStatus[] = ['pending', 'sent', 'cancelled', 'failed'];
+
+export class ScheduleMessageDto extends SendMessageDto implements ScheduleMessageBody {
+  @ApiProperty({ format: 'date-time', description: 'At least ten seconds ahead, at most a year away' })
+  @IsISO8601({ strict: true })
+  readonly scheduledAt!: string;
+}
+
+export class ScheduledListQueryDto {
+  @ApiPropertyOptional({ format: 'uuid', description: 'Only this conversation' }) @IsOptional() @IsUUID() readonly conversationId?: string;
+}
+
+export class ScheduledMessageViewDto implements ScheduledMessageView {
+  @ApiProperty({ format: 'uuid' }) readonly id!: string;
+  @ApiProperty({ format: 'uuid' }) readonly conversationId!: string;
+  @ApiProperty({ format: 'uuid' }) readonly authorId!: string;
+  @ApiProperty({ enum: ['text', 'voice', 'file'] }) readonly kind!: 'text' | 'voice' | 'file';
+  @ApiProperty({ type: String, nullable: true }) readonly text!: string | null;
+  @ApiProperty({ type: Object, nullable: true, description: 'Voice: {durationSec, waveform}; files: {asFile}' }) readonly meta!: ScheduledMessageView['meta'];
+  @ApiProperty({ type: AttachmentViewDto, nullable: true }) readonly attachment!: AttachmentViewDto | null;
+  @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly replyToId!: string | null;
+  @ApiProperty({ format: 'uuid', description: 'The sent message carries the same client id' }) readonly clientMsgId!: string;
+  @ApiProperty({ format: 'date-time' }) readonly scheduledAt!: string;
+  @ApiProperty({ enum: SCHEDULED_STATUSES }) readonly status!: ScheduledMessageStatus;
+  @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly messageId!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'The API error code that kept it from going out' }) readonly failureCode!: ScheduledMessageView['failureCode'];
+  @ApiProperty({ format: 'date-time' }) readonly createdAt!: string;
+}
+
+/* ------------------------------------------------------------------ Phase 3.2: working hours */
+
+const HH_MM_MESSAGE = { message: '$property must be HH:mm' };
+
+export class UpdateWorkingHoursDto implements UpdateWorkingHoursBody {
+  @ApiProperty() @IsBoolean() readonly autoReplyEnabled!: boolean;
+  @ApiProperty({ enum: WEEK_DAYS, isArray: true, description: 'Working days; none means away all week' })
+  @IsArray()
+  @ArrayMaxSize(7)
+  @ArrayUnique()
+  @IsIn(WEEK_DAYS, { each: true })
+  readonly days!: WeekDay[];
+  @ApiProperty({ example: '09:00' }) @IsString() @Matches(/^([01][0-9]|2[0-3]):[0-5][0-9]$/, HH_MM_MESSAGE) readonly start!: string;
+  @ApiProperty({ example: '18:00', description: 'Before the start: the hours run past midnight' })
+  @IsString()
+  @Matches(/^([01][0-9]|2[0-3]):[0-5][0-9]$/, HH_MM_MESSAGE)
+  readonly end!: string;
+  @ApiProperty({ minLength: 1, maxLength: 500 }) @IsString() @Length(1, 500) readonly message!: string;
+}
+
+export class WorkingHoursViewDto implements WorkingHoursView {
+  @ApiProperty() readonly autoReplyEnabled!: boolean;
+  @ApiProperty({ enum: WEEK_DAYS, isArray: true }) readonly days!: WeekDay[];
+  @ApiProperty({ example: '09:00' }) readonly start!: string;
+  @ApiProperty({ example: '18:00' }) readonly end!: string;
+  @ApiProperty() readonly message!: string;
+  @ApiProperty({ example: 'Asia/Tehran', description: "The workspace's zone, which the hours are read in" }) readonly timeZone!: string;
+  @ApiProperty({ type: String, nullable: true, format: 'date-time', description: '`null`: never saved, these are the defaults' }) readonly updatedAt!: string | null;
 }

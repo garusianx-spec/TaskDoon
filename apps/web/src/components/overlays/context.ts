@@ -22,6 +22,8 @@ export type Overlay =
   | { readonly kind: 'workspace-delete'; readonly workspaceId: string }
   | { readonly kind: 'profile' }
   | { readonly kind: 'security' }
+  /** Phase 3.2: working hours and the out-of-office auto-reply. */
+  | { readonly kind: 'working-hours' }
   | { readonly kind: 'sign-out' }
   | { readonly kind: 'global-search' }
   | { readonly kind: 'notifications' };

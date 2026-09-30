@@ -64,7 +64,9 @@ export type ApiErrorCode =
   | 'EDIT_WINDOW_CLOSED'
   | 'MESSAGE_GONE'
   | 'MESSAGE_NOT_CONVERTIBLE'
-  | 'NOT_SUBSCRIBED';
+  | 'NOT_SUBSCRIBED'
+  | 'SCHEDULED_MESSAGE_CLOSED'
+  | 'SCHEDULE_LIMIT_REACHED';
 
 export interface FieldError {
   /** Dotted path of the offending field, e.g. `recipients.2.address`. */

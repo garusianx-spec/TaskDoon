@@ -1,6 +1,6 @@
 import type { ManualPresence } from './api/workspaces.js';
 import type { ApiErrorCode } from './api/errors.js';
-import type { MessageView, ReactionView, SendMessageBody, SentMessage } from './api/chat.js';
+import type { MessageView, ReactionView, ScheduledMessageView, SendMessageBody, SentMessage } from './api/chat.js';
 import type { NotificationView } from './api/content.js';
 
 /**
@@ -36,6 +36,8 @@ export interface RealtimeEventMap {
   /** A message became a task. Only the code travels: not every member can see the project. */
   'message:task_linked': { readonly conversationId: string; readonly messageId: string; readonly taskId: string; readonly code: string };
   'reaction:updated': { readonly conversationId: string; readonly messageId: string } & ReactionView;
+  /** One of your scheduled messages was scheduled, sent, cancelled or could not go out (your user room only). */
+  'scheduled:updated': ScheduledMessageView;
   /** Coalesced: at most one per member and conversation per second. */
   'read:updated': {
     readonly conversationId: string;

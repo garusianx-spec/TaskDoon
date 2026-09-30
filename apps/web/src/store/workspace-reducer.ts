@@ -24,6 +24,7 @@ import type {
   ProfileSettings,
   Project,
   RoleId,
+  ScheduledMessage,
   SessionStatus,
   SmartViewId,
   TagTone,
@@ -35,6 +36,7 @@ import type {
   User,
   Workspace,
   WorkspaceDraft,
+  WorkingHours,
 } from '@taskin/contracts';
 import {
   BUILT_IN_COLUMNS,
@@ -46,6 +48,7 @@ import {
 } from '@/data/reference';
 import { toPersianDigits } from '@taskin/jalali';
 import { attachmentKindOf } from '@/lib/attachments';
+import { AUTO_REPLY_WINDOW_MS, isWorkingTime } from '@/lib/working-hours';
 import { columnForTask, projectColumns } from './selectors';
 import { nextLocalId as nextId } from './ids';
 import { INITIAL_WORKSPACE_STATE } from './initial-state';
@@ -106,6 +109,17 @@ export interface WorkspaceState {
   readonly taskSearch: string;
   /** Text pushed to the shell's `aria-live` region after a non-visual state change. */
   readonly announcement: string;
+  /** This member's messages waiting to be sent, soonest first (Phase 3.2). Nobody else sees them. */
+  readonly scheduledMessages: readonly ScheduledMessage[];
+  /** This member's working hours and out-of-office auto-reply in the active workspace. */
+  readonly workingHours: WorkingHours;
+  /**
+   * Demo only: teammates' working hours, so that a direct message to one who is away gets their
+   * auto-reply, and when each of them last answered whom (`responderId:senderId`). The live app
+   * answers on the server.
+   */
+  readonly teammateHours: Readonly<Record<string, WorkingHours>>;
+  readonly autoRepliedAt: Readonly<Record<string, string>>;
 }
 
 export type WorkspaceAction =
@@ -161,6 +175,22 @@ export type WorkspaceAction =
   | { readonly type: 'discard-message'; readonly messageId: string }
   | { readonly type: 'focus-message'; readonly conversationId: string; readonly messageId: string }
   | { readonly type: 'clear-message-focus' }
+  /** Phase 3.2: a message to send later («زمان‌بندی ارسال»), and what becomes of it. */
+  | {
+      readonly type: 'schedule-message';
+      readonly scheduledId: string;
+      readonly conversationId: string;
+      readonly authorId: string;
+      readonly text: string;
+      readonly replyToId: string | null;
+      readonly scheduledAt: string;
+    }
+  | { readonly type: 'cancel-scheduled-message'; readonly scheduledId: string }
+  /** «ارسال فوری»: it goes out now, as `messageId` until the server's id replaces it. */
+  | { readonly type: 'send-scheduled-now'; readonly scheduledId: string; readonly messageId: string }
+  /** Demo only: the schedules whose time has come go out (in the live app, the server's worker sends them). */
+  | { readonly type: 'deliver-due-scheduled'; readonly now: string }
+  | { readonly type: 'update-working-hours'; readonly hours: WorkingHours }
   | { readonly type: 'toggle-reaction'; readonly messageId: string; readonly emoji: string; readonly userId: string }
   | { readonly type: 'mark-conversation-read'; readonly conversationId: string }
   | { readonly type: 'toggle-conversation-pin'; readonly conversationId: string }
@@ -230,6 +260,8 @@ export type SyncAction =
   | { readonly type: 'sync/remove-conversation'; readonly conversationId: string }
   | { readonly type: 'sync/upsert-messages'; readonly messages: readonly Message[]; readonly replaceId?: string }
   | { readonly type: 'sync/remove-message'; readonly messageId: string }
+  | { readonly type: 'sync/upsert-scheduled'; readonly scheduled: ScheduledMessage; readonly replaceId?: string }
+  | { readonly type: 'sync/remove-scheduled'; readonly scheduledId: string }
   | { readonly type: 'sync/project-trash'; readonly entries: readonly TrashedProject[] }
   | { readonly type: 'sync/message-failed'; readonly messageId: string }
   | { readonly type: 'sync/reaction'; readonly messageId: string; readonly emoji: string; readonly userIds: readonly string[] }
@@ -792,7 +824,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         linkedTaskId: null,
         readByIds: [],
       };
-      return { ...state, messages: [...state.messages, message] };
+      return answerIfAway({ ...state, messages: [...state.messages, message] }, message);
     }
 
     case 'send-file': {
@@ -834,6 +866,47 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case 'discard-message':
       return { ...state, messages: state.messages.filter((message) => message.id !== action.messageId) };
+
+    case 'schedule-message': {
+      const scheduled: ScheduledMessage = {
+        id: action.scheduledId,
+        conversationId: action.conversationId,
+        authorId: action.authorId,
+        text: action.text,
+        replyToId: action.replyToId,
+        scheduledAt: action.scheduledAt,
+      };
+      return {
+        ...state,
+        scheduledMessages: [...state.scheduledMessages, scheduled].sort(bySchedule),
+        announcement: 'پیام زمان‌بندی شد و در زمان انتخاب‌شده ارسال می‌شود.',
+      };
+    }
+
+    case 'cancel-scheduled-message':
+      return {
+        ...state,
+        scheduledMessages: state.scheduledMessages.filter((entry) => entry.id !== action.scheduledId),
+        announcement: 'پیام زمان‌بندی‌شده لغو شد.',
+      };
+
+    case 'send-scheduled-now': {
+      const scheduled = state.scheduledMessages.find((entry) => entry.id === action.scheduledId);
+      if (!scheduled) return state;
+      const rest = { ...state, scheduledMessages: state.scheduledMessages.filter((entry) => entry.id !== scheduled.id) };
+      return deliverScheduled(rest, scheduled, action.messageId, new Date());
+    }
+
+    case 'deliver-due-scheduled': {
+      const due = state.scheduledMessages.filter((entry) => entry.scheduledAt <= action.now);
+      if (due.length === 0) return state;
+      let next: WorkspaceState = { ...state, scheduledMessages: state.scheduledMessages.filter((entry) => entry.scheduledAt > action.now) };
+      for (const scheduled of due) next = deliverScheduled(next, scheduled, nextId('m'), new Date(action.now));
+      return next;
+    }
+
+    case 'update-working-hours':
+      return { ...state, workingHours: action.hours, announcement: 'ساعات کاری و پاسخ خودکار ذخیره شد.' };
 
     case 'focus-message':
       return { ...state, activeConversationId: action.conversationId, focusedMessageId: action.messageId, inspector: { kind: 'none' } };
@@ -1286,6 +1359,8 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'sync/remove-conversation':
     case 'sync/upsert-messages':
     case 'sync/remove-message':
+    case 'sync/upsert-scheduled':
+    case 'sync/remove-scheduled':
     case 'sync/project-trash':
     case 'sync/message-failed':
     case 'sync/reaction':
@@ -1326,6 +1401,55 @@ function upsert<T extends { readonly id: string }>(items: readonly T[], item: T,
 }
 
 const byTime = (a: Message, b: Message): number => a.sentAt.localeCompare(b.sentAt);
+
+const bySchedule = (a: ScheduledMessage, b: ScheduledMessage): number => a.scheduledAt.localeCompare(b.scheduledAt) || a.id.localeCompare(b.id);
+
+/** A scheduled message going out: a plain message of its author's, now. */
+function deliverScheduled(state: WorkspaceState, scheduled: ScheduledMessage, messageId: string, at: Date): WorkspaceState {
+  const message: Message = {
+    id: messageId,
+    conversationId: scheduled.conversationId,
+    authorId: scheduled.authorId,
+    sentAt: at.toISOString(),
+    body: { kind: 'text', text: scheduled.text },
+    replyToId: scheduled.replyToId,
+    reactions: [],
+    edited: false,
+    linkedTaskId: null,
+    readByIds: [],
+  };
+  return answerIfAway({ ...state, messages: [...state.messages, message] }, message);
+}
+
+/**
+ * Demo only (the live app answers on the server): a direct message to a teammate who is away gets
+ * their auto-reply, at most once a day per person who writes. Groups and channels never do.
+ */
+function answerIfAway(state: WorkspaceState, message: Message): WorkspaceState {
+  const conversation = state.conversations.find((entry) => entry.id === message.conversationId);
+  if (conversation?.kind !== 'direct') return state;
+  const responderId = conversation.memberIds.find((id) => id !== message.authorId);
+  const hours = responderId ? state.teammateHours[responderId] : undefined;
+  const at = new Date(message.sentAt);
+  if (!responderId || !hours?.autoReplyEnabled || isWorkingTime(hours, at)) return state;
+  const key = `${responderId}:${message.authorId}`;
+  const last = state.autoRepliedAt[key];
+  if (last && at.getTime() - Date.parse(last) < AUTO_REPLY_WINDOW_MS) return state;
+  const reply: Message = {
+    id: nextId('m'),
+    conversationId: conversation.id,
+    authorId: responderId,
+    sentAt: new Date(at.getTime() + 1).toISOString(),
+    body: { kind: 'text', text: hours.message },
+    replyToId: null,
+    reactions: [],
+    edited: false,
+    linkedTaskId: null,
+    readByIds: [],
+    autoReply: true,
+  };
+  return { ...state, messages: [...state.messages, reply], autoRepliedAt: { ...state.autoRepliedAt, [key]: at.toISOString() } };
+}
 
 function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState {
   switch (action.type) {
@@ -1393,6 +1517,12 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
 
     case 'sync/remove-message':
       return { ...state, messages: state.messages.filter((message) => message.id !== action.messageId) };
+
+    case 'sync/upsert-scheduled':
+      return { ...state, scheduledMessages: [...upsert(state.scheduledMessages, action.scheduled, action.replaceId, true)].sort(bySchedule) };
+
+    case 'sync/remove-scheduled':
+      return { ...state, scheduledMessages: state.scheduledMessages.filter((entry) => entry.id !== action.scheduledId) };
 
     case 'sync/message-failed':
       return { ...state, messages: state.messages.map((message) => (message.id === action.messageId ? { ...message, failed: true } : message)) };

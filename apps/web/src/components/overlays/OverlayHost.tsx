@@ -12,6 +12,7 @@ import { CalendarEventModal } from '@/components/calendar/CalendarEventModal';
 import { InviteMemberModal } from '@/components/directory/InviteMemberModal';
 import { ProfileModal } from '@/components/account/ProfileModal';
 import { SecurityModal } from '@/components/account/SecurityModal';
+import { WorkingHoursModal } from '@/components/account/WorkingHoursModal';
 import { SignOutModal } from '@/components/account/SignOutModal';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal';
@@ -207,6 +208,16 @@ export function OverlayHost() {
         onRevokeSession={(sessionId) => dispatch({ type: 'revoke-login-session', sessionId })}
         onRevokeOtherSessions={() => dispatch({ type: 'revoke-other-login-sessions' })}
         {...(live ? { live: { hasPassword, onChangePassword: (current, next) => live.store.changePassword(current, next) } } : {})}
+      />
+
+      <WorkingHoursModal
+        open={active?.kind === 'working-hours'}
+        hours={state.workingHours}
+        onClose={close}
+        onSave={(hours) => {
+          dispatch({ type: 'update-working-hours', hours });
+          close();
+        }}
       />
 
       <SignOutModal

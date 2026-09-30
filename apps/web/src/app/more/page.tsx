@@ -12,6 +12,7 @@ import { WorkspaceAvatar } from '@/components/workspace/WorkspaceAvatar';
 import { WorkspaceMenu } from '@/components/workspace/WorkspaceMenu';
 import {
   ChevronForwardIcon,
+  ClockIcon,
   KeyIcon,
   LogoutIcon,
   NotebookIcon,
@@ -126,6 +127,12 @@ function MoreContent() {
           description="رمز عبور، ورود دومرحله‌ای و نشست‌ها"
           icon={<KeyIcon size={20} variant="twotone" />}
           onClick={() => open({ kind: 'security' })}
+        />
+        <ActionRow
+          label="ساعات کاری و پاسخ خودکار"
+          description="روزها و ساعت‌های کاری و پاسخ پیام‌های مستقیم بیرون از آن‌ها"
+          icon={<ClockIcon size={20} />}
+          onClick={() => open({ kind: 'working-hours' })}
         />
 
         <ActionRow

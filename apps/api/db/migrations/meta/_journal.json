@@ -85,6 +85,20 @@
       "when": 1790703908588,
       "tag": "0011_project_trash_and_departed_members",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790711687502,
+      "tag": "0012_scheduled_messages_and_working_hours",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790711697931,
+      "tag": "0013_scheduled_dispatch_and_auto_reply_security",
+      "breakpoints": true
     }
   ]
 }

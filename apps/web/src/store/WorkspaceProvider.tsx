@@ -95,6 +95,15 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     void live?.start();
   }, [live]);
 
+  // Demo only: scheduled messages go out when their time comes (in the live app the server's
+  // worker sends them). Checked every second, and only while something is waiting.
+  const waiting = state.scheduledMessages.length > 0;
+  useEffect(() => {
+    if (live || !waiting) return;
+    const timer = window.setInterval(() => dispatch({ type: 'deliver-due-scheduled', now: new Date().toISOString() }), 1_000);
+    return () => window.clearInterval(timer);
+  }, [live, waiting, dispatch]);
+
   // Lookups by id (`userById`, `projectById`) read the directory; keep it equal to the state.
   setDirectory(state.users, state.projects, state.formerUsers);
 

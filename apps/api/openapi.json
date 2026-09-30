@@ -5428,6 +5428,280 @@
           "chat"
         ]
       }
+    },
+    "/api/v1/workspaces/{workspaceId}/scheduled-messages": {
+      "get": {
+        "operationId": "Scheduling_list",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "required": false,
+            "in": "query",
+            "description": "Only this conversation",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduledMessageViewDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Your pending scheduled messages, soonest first",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/conversations/{conversationId}/scheduled-messages": {
+      "post": {
+        "operationId": "Scheduling_schedule",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A retry: the message scheduled with this clientMsgId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledMessageViewDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledMessageViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Schedule a message: the worker sends it at scheduledAt, as you",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/scheduled-messages/{scheduledId}/send": {
+      "post": {
+        "operationId": "Scheduling_sendNow",
+        "parameters": [
+          {
+            "name": "scheduledId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledMessageViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "ارسال فوری: send it now",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/scheduled-messages/{scheduledId}": {
+      "delete": {
+        "operationId": "Scheduling_cancel",
+        "parameters": [
+          {
+            "name": "scheduledId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "لغو: cancel it (a message already sent cannot be)",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/me/working-hours": {
+      "get": {
+        "operationId": "Scheduling_workingHours",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkingHoursViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Your working hours and out-of-office auto-reply in this workspace",
+        "tags": [
+          "chat"
+        ]
+      },
+      "put": {
+        "operationId": "Scheduling_putWorkingHours",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkingHoursDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkingHoursViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sets your working hours; outside them, direct messages get your auto-reply (once a day per person)",
+        "tags": [
+          "chat"
+        ]
+      }
     }
   },
   "info": {
@@ -9995,6 +10269,257 @@
         "required": [
           "items",
           "nextCursor"
+        ]
+      },
+      "ScheduledMessageViewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "voice",
+              "file"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "meta": {
+            "type": "object",
+            "nullable": true,
+            "description": "Voice: {durationSec, waveform}; files: {asFile}"
+          },
+          "attachment": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttachmentViewDto"
+              }
+            ]
+          },
+          "replyToId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "clientMsgId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The sent message carries the same client id"
+          },
+          "scheduledAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "sent",
+              "cancelled",
+              "failed"
+            ]
+          },
+          "messageId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "failureCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "The API error code that kept it from going out"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "authorId",
+          "kind",
+          "text",
+          "meta",
+          "attachment",
+          "replyToId",
+          "clientMsgId",
+          "scheduledAt",
+          "status",
+          "messageId",
+          "failureCode",
+          "createdAt"
+        ]
+      },
+      "ScheduleMessageDto": {
+        "type": "object",
+        "properties": {
+          "clientMsgId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chosen by the client; a retry with the same id returns the first message"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "voice",
+              "file"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "attachmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "replyToId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "durationSec": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3600
+          },
+          "waveform": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "asFile": {
+            "type": "boolean",
+            "description": "Files only: a picture sent as a document (a download card, not an inline photo)"
+          },
+          "scheduledAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "At least ten seconds ahead, at most a year away"
+          }
+        },
+        "required": [
+          "clientMsgId",
+          "kind",
+          "scheduledAt"
+        ]
+      },
+      "WorkingHoursViewDto": {
+        "type": "object",
+        "properties": {
+          "autoReplyEnabled": {
+            "type": "boolean"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "saturday",
+                "sunday",
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday"
+              ]
+            }
+          },
+          "start": {
+            "type": "string",
+            "example": "09:00"
+          },
+          "end": {
+            "type": "string",
+            "example": "18:00"
+          },
+          "message": {
+            "type": "string"
+          },
+          "timeZone": {
+            "type": "string",
+            "example": "Asia/Tehran",
+            "description": "The workspace's zone, which the hours are read in"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "`null`: never saved, these are the defaults"
+          }
+        },
+        "required": [
+          "autoReplyEnabled",
+          "days",
+          "start",
+          "end",
+          "message",
+          "timeZone",
+          "updatedAt"
+        ]
+      },
+      "UpdateWorkingHoursDto": {
+        "type": "object",
+        "properties": {
+          "autoReplyEnabled": {
+            "type": "boolean"
+          },
+          "days": {
+            "type": "array",
+            "description": "Working days; none means away all week",
+            "items": {
+              "type": "string",
+              "enum": [
+                "saturday",
+                "sunday",
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday"
+              ]
+            }
+          },
+          "start": {
+            "type": "string",
+            "example": "09:00"
+          },
+          "end": {
+            "type": "string",
+            "example": "18:00",
+            "description": "Before the start: the hours run past midnight"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "autoReplyEnabled",
+          "days",
+          "start",
+          "end",
+          "message"
         ]
       }
     }

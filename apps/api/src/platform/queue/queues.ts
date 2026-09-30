@@ -15,6 +15,8 @@ export interface WorkJobs {
   'file.scan': { readonly workspaceId: string; readonly attachmentId: string };
   /** A calendar reminder; stale versions no-op when they fire. */
   'event.remind': { readonly workspaceId: string; readonly eventId: string; readonly version: number };
+  /** A scheduled message's time came: send it as its author (a no-op once sent or cancelled). */
+  'message.dispatch': { readonly workspaceId: string; readonly scheduledId: string; readonly authorId: string };
 }
 
 /** One outbox event, as the fan-out handler needs it. */
@@ -26,8 +28,11 @@ export interface FeedFanoutJob {
   readonly payload: Readonly<Record<string, unknown>>;
 }
 
-/** `projects.purge` and `members.purge`: the 40-day retention of the project trash and of departed members. */
-export type MaintenanceJob = 'audit.partitions' | 'workspace.purge' | 'projects.purge' | 'members.purge' | 'cleanup' | 'files.gc';
+/**
+ * `projects.purge` and `members.purge`: the 40-day retention of the project trash and of departed
+ * members. `scheduled.sweep`: scheduled messages that are due and were not sent by their own job.
+ */
+export type MaintenanceJob = 'audit.partitions' | 'workspace.purge' | 'projects.purge' | 'members.purge' | 'cleanup' | 'files.gc' | 'scheduled.sweep';
 
 /** Correlation carried from the request (or outbox row) that caused a job. */
 export interface JobHeaders {

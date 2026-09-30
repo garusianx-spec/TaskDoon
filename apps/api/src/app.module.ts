@@ -10,6 +10,7 @@ import type { Env } from './config/env.js';
 import { AuthController } from './modules/auth/auth.controller.js';
 import { JwtAuthGuard } from './modules/auth/guards.js';
 import { ChatController } from './modules/chat/chat.controller.js';
+import { SchedulingController } from './modules/chat/scheduling.controller.js';
 import { DomainModule } from './modules/domain.module.js';
 import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { MeController } from './modules/users/me.controller.js';
@@ -69,7 +70,7 @@ class HttpApiModule {
           }),
         }),
       ],
-      controllers: [AuthController, MeController, InboxController, WorkspaceEntryController, WorkspaceController, WorkController, ContentController, ChatController],
+      controllers: [AuthController, MeController, InboxController, WorkspaceEntryController, WorkspaceController, WorkController, ContentController, ChatController, SchedulingController],
       providers: pipeline,
     };
   }

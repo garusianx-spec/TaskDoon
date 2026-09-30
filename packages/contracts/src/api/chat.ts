@@ -1,6 +1,8 @@
 import type { AvatarTone, ConversationKind } from '../domain.js';
 import type { TaskPriority } from '../domain.js';
+import type { ApiErrorCode } from './errors.js';
 import type { AttachmentView, TaskDetail } from './work.js';
+import type { WeekDay } from './workspaces.js';
 
 /* ============================================================== conversations */
 
@@ -130,12 +132,14 @@ export interface ReactionView {
 
 /**
  * Voice notes: duration and a 64-sample waveform (0–100). System messages: a type and its params.
- * Files: `asFile` when a picture was sent as a document rather than a photo.
+ * Files: `asFile` when a picture was sent as a document rather than a photo. `autoReply`: the
+ * author's out-of-office answer, posted for them outside their working hours.
  */
 export type MessageMeta =
   | { readonly durationSec: number; readonly waveform: readonly number[] }
   | { readonly type: string; readonly params: Readonly<Record<string, string>> }
-  | { readonly asFile: true };
+  | { readonly asFile: true }
+  | { readonly autoReply: true };
 
 export interface MessageView {
   readonly id: string;
@@ -246,4 +250,74 @@ export interface ConvertMessageResult {
   readonly task: TaskDetail;
   /** `true` when the message already had a live task: that task is returned. */
   readonly existing: boolean;
+}
+
+/* ============================================================== scheduled messages */
+
+/**
+ * `pending` until it goes out; `sent` once it is a message of the conversation; `cancelled` by its
+ * author; `failed` when it could not go out when it was due (`failureCode` says why: the author
+ * left or may no longer post there, the conversation was archived, the file or the message it
+ * replied to is gone).
+ */
+export type ScheduledMessageStatus = 'pending' | 'sent' | 'cancelled' | 'failed';
+
+/** A message that waits for `scheduledAt`. Until it is sent, only its author sees it. */
+export interface ScheduledMessageView {
+  readonly id: string;
+  readonly conversationId: string;
+  readonly authorId: string;
+  readonly kind: 'text' | 'voice' | 'file';
+  readonly text: string | null;
+  readonly meta: MessageMeta | null;
+  readonly attachment: AttachmentView | null;
+  readonly replyToId: string | null;
+  /** The sent message's client id as well: its `message:new` carries the same one. */
+  readonly clientMsgId: string;
+  readonly scheduledAt: string;
+  readonly status: ScheduledMessageStatus;
+  /** The message it became (`sent`). */
+  readonly messageId: string | null;
+  /** Why it could not go out (`failed`). */
+  readonly failureCode: ApiErrorCode | null;
+  readonly createdAt: string;
+}
+
+/**
+ * What `POST …/messages` takes, plus when to send it. A retry with the same `clientMsgId` returns
+ * the message already scheduled.
+ */
+export interface ScheduleMessageBody extends SendMessageBody {
+  /** An instant at least ten seconds ahead and at most a year away. */
+  readonly scheduledAt: string;
+}
+
+/* ============================================================== working hours and auto-reply */
+
+/**
+ * A member's working hours in one workspace, read in the workspace's time zone, and their
+ * out-of-office auto-reply: a direct message that arrives outside these hours is answered with
+ * `message` on their behalf, at most once a day for each person who writes. Groups, channels and
+ * project channels are never answered.
+ */
+export interface WorkingHoursView {
+  readonly autoReplyEnabled: boolean;
+  /** Working days. None at all means away all week (on leave). */
+  readonly days: readonly WeekDay[];
+  /** `HH:mm`. An end before the start is a shift that runs past midnight. */
+  readonly start: string;
+  readonly end: string;
+  readonly message: string;
+  /** The workspace's zone, which the hours are read in. */
+  readonly timeZone: string;
+  /** `null` until first saved: the view shows the defaults. */
+  readonly updatedAt: string | null;
+}
+
+export interface UpdateWorkingHoursBody {
+  readonly autoReplyEnabled: boolean;
+  readonly days: readonly WeekDay[];
+  readonly start: string;
+  readonly end: string;
+  readonly message: string;
 }
