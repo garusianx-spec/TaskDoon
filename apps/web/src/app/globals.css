@@ -92,3 +92,20 @@
     @apply rounded-xl border border-secondary bg-surface shadow-lg;
   }
 }
+
+/*
+ * TaskDoon logo colours (components/brand/Logo.tsx). The brand blues as drawn; on dark surfaces
+ * lighter ones, so the deep blue and the charcoal lettering do not sink into the background.
+ */
+:root {
+  --logo-front: #1063e1;
+  --logo-back: #153b94;
+  --logo-ink: #272a36;
+  --logo-accent: #153b94;
+}
+[data-theme='dark'] {
+  --logo-front: #4c8df6;
+  --logo-back: #2e5cc9;
+  --logo-ink: #f5f5f6;
+  --logo-accent: #6d9bf6;
+}

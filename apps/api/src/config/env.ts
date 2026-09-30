@@ -111,7 +111,7 @@ export const envSchema = z
     SMSIR_ALERT_TEMPLATE_ID: z.coerce.number().int().optional(),
 
     SMTP_URL: z.url().default('smtp://localhost:1025'),
-    MAIL_FROM: z.string().default('Taskin <no-reply@taskin.local>'),
+    MAIL_FROM: z.string().default('TaskDoon <no-reply@taskin.local>'),
 
     S3_ENDPOINT: z.url(),
     /** The host browsers reach; presigned URLs are signed for it. Defaults to S3_ENDPOINT. */

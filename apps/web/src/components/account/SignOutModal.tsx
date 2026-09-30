@@ -18,7 +18,7 @@ export function SignOutModal({ open, fullName, onClose, onConfirm }: SignOutModa
       onClose={onClose}
       size="sm"
       title="خروج از حساب کاربری"
-      description={`${fullName}، آیا می‌خواهید از تسکین خارج شوید؟`}
+      description={`${fullName}، آیا می‌خواهید از تسک‌دون خارج شوید؟`}
       icon={<LogoutIcon size={20} />}
       footer={
         <>

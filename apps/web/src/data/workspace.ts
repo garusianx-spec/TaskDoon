@@ -1353,7 +1353,7 @@ export const LOGIN_SESSIONS: readonly LoginSession[] = [
   },
   {
     id: 'ls-2',
-    device: 'اپلیکیشن تسکین روی اندروید',
+    device: 'اپلیکیشن تسک‌دون روی اندروید',
     location: 'تهران، ایران',
     lastActiveAt: minutesAgo(60 * 3),
     current: false,

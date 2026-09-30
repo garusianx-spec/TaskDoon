@@ -28,7 +28,7 @@ export default function SignedOutPage() {
           </h1>
           <p className="text-body-sm text-fg-tertiary">
             {signedOut
-              ? 'نشست شما در تسکین پایان یافت و اطلاعات همه فضاهای کاری از این مرورگر پاک شد.'
+              ? 'نشست شما در تسک‌دون پایان یافت و اطلاعات همه فضاهای کاری از این مرورگر پاک شد.'
               : `نشست شما در ${activeWorkspace.name} هنوز فعال است.`}
           </p>
         </div>

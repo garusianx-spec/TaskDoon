@@ -129,7 +129,7 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
 
   if (step.kind === 'name') {
     return (
-      <AuthCard labelledBy="sign-in-title" title="به تسکین خوش آمدید" description="برای ساخت حساب، نام خود را همان‌طور که همکاران می‌شناسند بنویسید.">
+      <AuthCard labelledBy="sign-in-title" title="به تسک‌دون خوش آمدید" description="برای ساخت حساب، نام خود را همان‌طور که همکاران می‌شناسند بنویسید.">
         <form className="flex flex-col gap-4" onSubmit={onName} noValidate>
           <Input
             ref={fieldRef}
@@ -153,7 +153,7 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
   return (
     <AuthCard
       labelledBy="sign-in-title"
-      title={store.invited ? 'پیوستن به فضای کاری' : 'ورود به تسکین'}
+      title={store.invited ? 'پیوستن به فضای کاری' : 'ورود به تسک‌دون'}
       description={
         store.invited
           ? 'به یک فضای کاری دعوت شده‌اید. با شماره موبایلی که دعوت‌نامه به آن رسیده وارد شوید.'

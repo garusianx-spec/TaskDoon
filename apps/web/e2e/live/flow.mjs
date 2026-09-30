@@ -1,5 +1,5 @@
 /**
- * The live app against a running Taskin API: two people, two browsers, one workspace.
+ * The live app against a running TaskDoon API: two people, two browsers, one workspace.
  *
  *   API_LOG=/path/to/api.log npm run test:e2e:live      # BASE_URL defaults to http://localhost:3000
  *
@@ -32,7 +32,7 @@ if (!apiLog) {
   process.exit(2);
 }
 
-const OTP = /"text":"کد ورود شما به تسکین: (\d{6})"/g;
+const OTP = /"text":"کد ورود شما به تسک‌دون: (\d{6})"/g;
 const INVITE = /"text":"[^"]*?(https?:\/\/[^"\s]+\/invite\?token=[^"\s]+)"/g;
 const runId = String(Date.now()).slice(-4);
 const phoneOf = () => `0912${String(Math.floor(Math.random() * 9_000_000) + 1_000_000)}`;
@@ -93,7 +93,7 @@ try {
   /* ------------------------------------------------ owner: sign-up and first workspace */
 
   await owner.goto(`${base}/feed`);
-  check(await visible(owner.getByRole('heading', { name: 'ورود به تسکین' }), 30_000), 'signed out: the sign-in screen replaces the workspace');
+  check(await visible(owner.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000), 'signed out: the sign-in screen replaces the workspace');
   check((await owner.locator('html').getAttribute('dir')) === 'rtl', 'the document is right-to-left');
   await signIn(owner, ownerPhone, ownerName);
   check(await visible(owner.getByRole('heading', { name: `${ownerName}، خوش آمدید` }), 15_000), 'a new account is asked for its first workspace');
@@ -500,11 +500,11 @@ try {
   await railOf(guest).getByRole('button', { name: /حساب کاربری/ }).click();
   await guest.getByRole('menuitem', { name: 'خروج از حساب' }).click();
   await guest.getByRole('dialog', { name: 'خروج از حساب کاربری' }).getByRole('button', { name: 'خروج از حساب' }).click();
-  check(await visible(guest.getByRole('heading', { name: 'ورود به تسکین' }), 15_000), 'signing out shows the sign-in screen');
+  check(await visible(guest.getByRole('heading', { name: 'ورود به تسک‌دون' }), 15_000), 'signing out shows the sign-in screen');
   const cookies = await guestContext.cookies();
   check(!cookies.some((cookie) => /taskin_rt$/.test(cookie.name) && cookie.value), 'the refresh cookie is cleared');
   await guest.reload();
-  check(await visible(guest.getByRole('heading', { name: 'ورود به تسکین' }), 30_000), 'the session stays gone after a reload');
+  check(await visible(guest.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000), 'the session stays gone after a reload');
 
   /* ------------------------------------------------ Phase 2: a note is stored with its first words */
 

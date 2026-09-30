@@ -5705,8 +5705,8 @@
     }
   },
   "info": {
-    "title": "Taskin API",
-    "description": "REST API of the Taskin collaboration platform (RFC 0001). Errors are RFC 9457 problem details.",
+    "title": "TaskDoon API",
+    "description": "REST API of the TaskDoon collaboration platform (RFC 0001). Errors are RFC 9457 problem details.",
     "version": "1",
     "contact": {}
   },

@@ -16,7 +16,7 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   AUTH_INVALID: { status: 401, title: 'The access token is not valid' },
   SESSION_REVOKED: { status: 401, title: 'This session was signed out' },
   STEP_UP_REQUIRED: { status: 401, title: 'Confirm your password to continue' },
-  CSRF_FAILED: { status: 403, title: 'The request did not come from the Taskin app' },
+  CSRF_FAILED: { status: 403, title: 'The request did not come from the TaskDoon app' },
   OTP_INVALID: { status: 400, title: 'The code is not correct' },
   OTP_EXPIRED: { status: 400, title: 'The code expired' },
   OTP_ATTEMPTS_EXCEEDED: { status: 429, title: 'Too many wrong codes' },

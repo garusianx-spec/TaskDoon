@@ -43,11 +43,11 @@ export function toLocalMobile(e164: string): string {
 export function renderSms(message: SmsMessage): string {
   switch (message.template) {
     case 'otp':
-      return `کد ورود شما به تسکین: ${message.tokens.code}`;
+      return `کد ورود شما به تسک‌دون: ${message.tokens.code}`;
     case 'invite':
-      return `شما به فضای کاری «${message.tokens.workspace}» در تسکین دعوت شده‌اید: ${message.tokens.link}`;
+      return `شما به فضای کاری «${message.tokens.workspace}» در تسک‌دون دعوت شده‌اید: ${message.tokens.link}`;
     case 'alert':
-      return `هشدار امنیتی تسکین: ${message.tokens.event}`;
+      return `هشدار امنیتی تسک‌دون: ${message.tokens.event}`;
   }
 }
 

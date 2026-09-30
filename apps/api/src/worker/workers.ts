@@ -43,9 +43,9 @@ function inviteMail(params: Readonly<Record<string, string>>): { subject: string
   const link = params.link ?? '';
   const note = params.message ? `\n\n«${params.message}»` : '';
   return {
-    subject: `دعوت به فضای کاری «${workspace}» در تسکین`,
-    text: `شما به فضای کاری «${workspace}» در تسکین دعوت شده‌اید.${note}\n\nبرای پیوستن: ${link}\n\nاین پیوند تا هفت روز معتبر است.`,
-    html: `<div dir="rtl" style="font-family:Vazirmatn,Tahoma,sans-serif"><p>شما به فضای کاری «${escapeHtml(workspace)}» در تسکین دعوت شده‌اید.</p>${
+    subject: `دعوت به فضای کاری «${workspace}» در تسک‌دون`,
+    text: `شما به فضای کاری «${workspace}» در تسک‌دون دعوت شده‌اید.${note}\n\nبرای پیوستن: ${link}\n\nاین پیوند تا هفت روز معتبر است.`,
+    html: `<div dir="rtl" style="font-family:Vazirmatn,Tahoma,sans-serif"><p>شما به فضای کاری «${escapeHtml(workspace)}» در تسک‌دون دعوت شده‌اید.</p>${
       params.message ? `<blockquote>${escapeHtml(params.message)}</blockquote>` : ''
     }<p><a href="${escapeHtml(link)}">پیوستن به فضای کاری</a></p><p>این پیوند تا هفت روز معتبر است.</p></div>`,
   };

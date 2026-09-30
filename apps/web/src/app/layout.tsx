@@ -7,14 +7,26 @@ import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { WorkspaceProvider } from '@/store/WorkspaceProvider';
 import { OverlayProvider } from '@/components/overlays/OverlayProvider';
 
+const BRAND_TITLE = 'تسک‌دون | TaskDoon';
+const DESCRIPTION =
+  'تسک‌دون (TaskDoon)، پلتفرم یکپارچه گفتگو، مدیریت پروژه و وظایف سازمانی با تقویم هجری شمسی، طراحی راست‌به‌چپ و موتور چندپوسته‌ای.';
+
+// Icons come from the files beside this one: favicon.ico, icon.svg and apple-icon.png.
 export const metadata: Metadata = {
   title: {
-    default: 'تسکین — پلتفرم ارتباط و مدیریت وظایف سازمانی',
-    template: '%s | تسکین',
+    default: BRAND_TITLE,
+    template: '%s | تسک‌دون',
   },
-  description:
-    'پلتفرم یکپارچه گفتگو، مدیریت پروژه و وظایف سازمانی با تقویم هجری شمسی، طراحی راست‌به‌چپ و موتور چندپوسته‌ای.',
-  applicationName: 'تسکین',
+  description: DESCRIPTION,
+  applicationName: 'تسک‌دون',
+  appleWebApp: { title: 'تسک‌دون' },
+  openGraph: {
+    type: 'website',
+    locale: 'fa_IR',
+    siteName: BRAND_TITLE,
+    title: BRAND_TITLE,
+    description: DESCRIPTION,
+  },
   formatDetection: { telephone: false },
 };
 

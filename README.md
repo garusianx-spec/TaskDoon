@@ -1,4 +1,4 @@
-# تسکین — Taskin
+# تسک‌دون — TaskDoon
 
 پلتفرم ارتباط و مدیریت وظایف سازمانی، راست‌به‌چپ و با تقویم هجری شمسی.
 
@@ -63,7 +63,7 @@ It needs a demo build and says so when it finds a live one (the root element car
 
 ## Live app
 
-By default the web app runs against the Taskin API. Next.js proxies `/api/v1/*` and the
+By default the web app runs against the TaskDoon API. Next.js proxies `/api/v1/*` and the
 Socket.IO path `/rt/` to the API, so the browser only ever talks to the app's own origin: the
 refresh cookie is first-party and no CORS is involved. In production the edge (nginx) routes
 both paths the same way.
@@ -76,7 +76,7 @@ both paths the same way.
 
 Locally: `npm run infra:app` (or `infra:up` plus the API from `apps/api`), then `npm run dev`.
 Sign in with any Iranian mobile number; the API's console SMS driver writes the code to its log
-(`"text":"کد ورود شما به تسکین: 123456"`). A new number signs up with a name and then creates
+(`"text":"کد ورود شما به تسک‌دون: 123456"`). A new number signs up with a name and then creates
 its first workspace, which asks for the admin password owners need for sensitive actions.
 Invitations sent by SMS log a link (`/invite?token=…`): open it in another browser, sign in with
 the invited number, and the account joins that workspace.

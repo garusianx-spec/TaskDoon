@@ -25,7 +25,7 @@ export async function downloadAttachment(attachment: Attachment): Promise<void> 
       `حجم: ${formatFileSize(attachment.size)}`,
       `بارگذاری: ${formatJalali(attachment.uploadedAt, 'full')}`,
       '',
-      'این نسخه نمایشی تسکین است و محتوای واقعی فایل روی سرور ذخیره نشده است.',
+      'این نسخه نمایشی تسک‌دون است و محتوای واقعی فایل روی سرور ذخیره نشده است.',
     ].join('\n');
     const blobUrl = URL.createObjectURL(new Blob([receipt], { type: 'text/plain;charset=utf-8' }));
     anchor.href = blobUrl;
