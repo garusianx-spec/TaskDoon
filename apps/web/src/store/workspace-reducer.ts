@@ -29,7 +29,9 @@ import type {
   SmartViewId,
   TagTone,
   Task,
+  TaskDependencyType,
   TaskDraft,
+  TaskLink,
   TaskPlacement,
   TaskStatus,
   TaskViewMode,
@@ -37,6 +39,7 @@ import type {
   Workspace,
   WorkspaceDraft,
   WorkingHours,
+  Worklog,
 } from '@taskin/contracts';
 import {
   BUILT_IN_COLUMNS,
@@ -47,6 +50,7 @@ import {
   statusLabel,
 } from '@/data/reference';
 import { toPersianDigits } from '@taskin/jalali';
+import { inverseKind, linkProblem, openBlockers } from '@/lib/agile';
 import { attachmentKindOf } from '@/lib/attachments';
 import { AUTO_REPLY_WINDOW_MS, isWorkingTime } from '@/lib/working-hours';
 import { columnForTask, projectColumns } from './selectors';
@@ -120,6 +124,25 @@ export interface WorkspaceState {
    */
   readonly teammateHours: Readonly<Record<string, WorkingHours>>;
   readonly autoRepliedAt: Readonly<Record<string, string>>;
+  /*
+   * Agile tracking. Optional: states written before it (fixtures, the live store's empty state)
+   * carry none, which reads as "nothing loaded yet".
+   */
+  /** Worklogs of the tasks whose detail has been opened (the demo keeps them all), newest first. */
+  readonly taskWorklogs?: Readonly<Record<string, readonly Worklog[]>>;
+  /** Links of those tasks, each seen from its own side. */
+  readonly taskLinks?: Readonly<Record<string, readonly TaskLink[]>>;
+  /** Set when a task entered Done while something still blocks it: a warning, never a veto. */
+  readonly blockedDoneNotice?: BlockedDoneNotice | null;
+}
+
+export interface BlockedDoneNotice {
+  /** Bumped on every notice, so the same task warned twice still re-announces. */
+  readonly id: number;
+  readonly taskId: string;
+  readonly title: string;
+  /** Codes of the unfinished tasks blocking it. */
+  readonly blockerCodes: readonly string[];
 }
 
 export type WorkspaceAction =
@@ -246,6 +269,11 @@ export type WorkspaceAction =
   | { readonly type: 'set-role-permissions'; readonly role: RoleId; readonly value: boolean }
   | { readonly type: 'replace-permissions'; readonly permissions: PermissionMatrix }
   | { readonly type: 'announce'; readonly message: string }
+  | { readonly type: 'log-work'; readonly taskId: string; readonly minutes: number; readonly note: string }
+  | { readonly type: 'remove-worklog'; readonly taskId: string; readonly worklogId: string }
+  | { readonly type: 'add-task-link'; readonly taskId: string; readonly otherTaskId: string; readonly kind: TaskDependencyType }
+  | { readonly type: 'remove-task-link'; readonly taskId: string; readonly linkId: string }
+  | { readonly type: 'dismiss-blocked-notice' }
   | SyncAction;
 
 /**
@@ -274,7 +302,8 @@ export type SyncAction =
   | { readonly type: 'sync/upsert-note'; readonly note: Note; readonly replaceId?: string }
   | { readonly type: 'sync/upsert-note-category'; readonly category: NoteCategory; readonly replaceId?: string }
   | { readonly type: 'sync/upsert-project'; readonly project: Project; readonly replaceId?: string }
-  | { readonly type: 'sync/presence'; readonly userId: string; readonly presence: PresenceState };
+  | { readonly type: 'sync/presence'; readonly userId: string; readonly presence: PresenceState }
+  | { readonly type: 'sync/task-agile'; readonly taskId: string; readonly worklogs?: readonly Worklog[]; readonly links?: readonly TaskLink[] };
 
 /** What happens to the cards of a column being deleted. Irrelevant when it is empty. */
 export type ColumnDisposition =
@@ -359,6 +388,11 @@ export interface TaskPatch {
   readonly startDate?: string;
   readonly title?: string;
   readonly description?: string;
+  /** Agile tracking; a type other than `bug` clears the severity. */
+  readonly type?: Task['type'];
+  readonly severity?: Task['severity'];
+  readonly estimatedMinutes?: Task['estimatedMinutes'];
+  readonly isBacklog?: boolean;
 }
 
 const LOCKED_ROLES: readonly RoleId[] = ['owner'];
@@ -411,6 +445,24 @@ function placementForColumn(columns: readonly BoardColumn[], columnId: string): 
   if (!column) return null;
   return { status: column.status, boardColumnId: column.custom ? column.id : null };
 }
+
+/**
+ * `after` plus a warning when `taskId` has just entered Done while a task blocking it is not done
+ * yet. The move itself always stands: dependencies inform, they never veto.
+ */
+function noticeIfBlocked(before: WorkspaceState, after: WorkspaceState, taskId: string): WorkspaceState {
+  const was = before.tasks.find((task) => task.id === taskId);
+  const now = after.tasks.find((task) => task.id === taskId);
+  if (!was || !now || was.status === 'done' || now.status !== 'done') return after;
+  const blockers = openBlockers(now, after.tasks);
+  if (blockers.length === 0) return after;
+  return {
+    ...after,
+    blockedDoneNotice: { id: (before.blockedDoneNotice?.id ?? 0) + 1, taskId, title: now.title, blockerCodes: blockers.map((task) => task.code) },
+  };
+}
+
+const without = (ids: readonly string[] | undefined, id: string): readonly string[] => (ids ?? []).filter((entry) => entry !== id);
 
 function columnTitle(columns: readonly BoardColumn[], placement: TaskPlacement): string {
   const id = placement.boardColumnId ?? placement.status;
@@ -482,26 +534,26 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return { ...state, taskSearch: action.query };
 
     case 'move-task':
-      return {
+      return noticeIfBlocked(state, {
         ...state,
         tasks: mapTask(state.tasks, action.taskId, (task) =>
           placeTask(task, { status: action.status, boardColumnId: null }),
         ),
-      };
+      }, action.taskId);
 
     case 'move-task-to-column': {
       // The status columns of views across projects count as targets too.
       const target = [...state.boardColumns, ...BUILT_IN_COLUMNS].find((column) => column.id === action.columnId);
       const placement = placementForColumn([...state.boardColumns, ...BUILT_IN_COLUMNS], action.columnId);
       if (!target || !placement) return state;
-      return {
+      return noticeIfBlocked(state, {
         ...state,
         tasks: mapTask(state.tasks, action.taskId, (task) =>
           // Another project's column (a sub-project's card on its parent's board) only lends its
           // status: the card lands in its own project's column for that status.
           placeTask(task, target.projectId === undefined || target.projectId === task.projectId ? placement : { status: target.status, boardColumnId: null }),
         ),
-      };
+      }, action.taskId);
     }
 
     case 'set-task-completed': {
@@ -509,13 +561,13 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       if (!task || (task.status === 'done') === action.completed) return state;
 
       if (action.completed) {
-        return {
+        return noticeIfBlocked(state, {
           ...state,
           tasks: mapTask(state.tasks, action.taskId, (entry) =>
             placeTask(entry, { status: 'done', boardColumnId: null }),
           ),
           announcement: `وظیفه «${task.title}» انجام شد.`,
-        };
+        }, action.taskId);
       }
 
       // Back to where it was — unless that custom column has since been removed, in which
@@ -626,7 +678,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'patch-task':
       return {
         ...state,
-        tasks: mapTask(state.tasks, action.taskId, (task) => ({ ...task, ...action.patch })),
+        tasks: mapTask(state.tasks, action.taskId, (task) => ({
+          ...task,
+          ...action.patch,
+          // Severity belongs to bugs: another type drops it (as the API does).
+          ...(action.patch.type !== undefined && action.patch.type !== 'bug' ? { severity: null } : {}),
+        })),
       };
 
     case 'toggle-task-star':
@@ -734,6 +791,9 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         sourceMessageId: draft.sourceMessageId,
         boardColumnId: placement.boardColumnId,
         reopenTo: null,
+        ...(draft.type !== undefined ? { type: draft.type } : {}),
+        ...(draft.type === 'bug' && draft.severity ? { severity: draft.severity } : {}),
+        ...(draft.isBacklog ? { isBacklog: true } : {}),
       };
 
       return {
@@ -753,6 +813,64 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         announcement: `وظیفه «${draft.title}» ایجاد شد.`,
       };
     }
+
+    case 'log-work': {
+      const minutes = Math.round(action.minutes);
+      if (minutes < 1 || !state.tasks.some((task) => task.id === action.taskId)) return state;
+      const entry: Worklog = { id: nextId('wl'), userId: state.meId, minutes, note: action.note.trim(), loggedAt: nowIso() };
+      return {
+        ...state,
+        taskWorklogs: { ...state.taskWorklogs, [action.taskId]: [entry, ...(state.taskWorklogs?.[action.taskId] ?? [])] },
+        tasks: mapTask(state.tasks, action.taskId, (task) => ({ ...task, spentMinutes: (task.spentMinutes ?? 0) + minutes })),
+        announcement: `زمان کار روی «${state.tasks.find((task) => task.id === action.taskId)?.title ?? ''}» ثبت شد.`,
+      };
+    }
+
+    case 'remove-worklog': {
+      const entry = state.taskWorklogs?.[action.taskId]?.find((worklog) => worklog.id === action.worklogId);
+      if (!entry) return state;
+      return {
+        ...state,
+        taskWorklogs: { ...state.taskWorklogs, [action.taskId]: (state.taskWorklogs?.[action.taskId] ?? []).filter((worklog) => worklog.id !== entry.id) },
+        tasks: mapTask(state.tasks, action.taskId, (task) => ({ ...task, spentMinutes: Math.max(0, (task.spentMinutes ?? 0) - entry.minutes) })),
+      };
+    }
+
+    case 'add-task-link': {
+      const task = state.tasks.find((entry) => entry.id === action.taskId);
+      const other = state.tasks.find((entry) => entry.id === action.otherTaskId);
+      const links = state.taskLinks?.[action.taskId] ?? [];
+      if (!task || !other || linkProblem(state.tasks, links, task, other, action.kind) !== null) return state;
+      const id = nextId('lnk');
+      const mine: TaskLink = { id, kind: action.kind, taskId: other.id, code: other.code, title: other.title, status: other.status };
+      const theirs: TaskLink = { id, kind: inverseKind(action.kind), taskId: task.id, code: task.code, title: task.title, status: task.status };
+      const blocked = action.kind === 'blocks' ? other.id : action.kind === 'blocked_by' ? task.id : null;
+      const blocker = blocked === other.id ? task.id : other.id;
+      return {
+        ...state,
+        taskLinks: { ...state.taskLinks, [task.id]: [...links, mine], [other.id]: [...(state.taskLinks?.[other.id] ?? []), theirs] },
+        tasks: blocked ? mapTask(state.tasks, blocked, (entry) => ({ ...entry, blockedByIds: [...without(entry.blockedByIds, blocker), blocker] })) : state.tasks,
+      };
+    }
+
+    case 'remove-task-link': {
+      const link = state.taskLinks?.[action.taskId]?.find((entry) => entry.id === action.linkId);
+      if (!link) return state;
+      const blocked = link.kind === 'blocks' ? link.taskId : link.kind === 'blocked_by' ? action.taskId : null;
+      const blocker = blocked === link.taskId ? action.taskId : link.taskId;
+      return {
+        ...state,
+        taskLinks: {
+          ...state.taskLinks,
+          [action.taskId]: (state.taskLinks?.[action.taskId] ?? []).filter((entry) => entry.id !== link.id),
+          [link.taskId]: (state.taskLinks?.[link.taskId] ?? []).filter((entry) => entry.id !== link.id),
+        },
+        tasks: blocked ? mapTask(state.tasks, blocked, (entry) => ({ ...entry, blockedByIds: without(entry.blockedByIds, blocker) })) : state.tasks,
+      };
+    }
+
+    case 'dismiss-blocked-notice':
+      return state.blockedDoneNotice ? { ...state, blockedDoneNotice: null } : state;
 
     case 'create-conversation': {
       const { draft } = action;
@@ -1374,6 +1492,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'sync/upsert-note-category':
     case 'sync/upsert-project':
     case 'sync/presence':
+    case 'sync/task-agile':
       return syncReducer(state, action);
 
     default: {
@@ -1468,6 +1587,13 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
         notes: replaceId === undefined ? state.notes : state.notes.map((note) => (note.linkedTaskId === replaceId ? { ...note, linkedTaskId: task.id } : note)),
       };
     }
+
+    case 'sync/task-agile':
+      return {
+        ...state,
+        ...(action.worklogs ? { taskWorklogs: { ...state.taskWorklogs, [action.taskId]: action.worklogs } } : {}),
+        ...(action.links ? { taskLinks: { ...state.taskLinks, [action.taskId]: action.links } } : {}),
+      };
 
     case 'sync/remove-task':
       return {

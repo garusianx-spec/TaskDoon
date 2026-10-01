@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { Task, TaskViewMode } from '@taskin/contracts';
+import type { IssueType, Task, TaskViewMode } from '@taskin/contracts';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { filterTasks, projectColumns } from '@/store/selectors';
 import { BUILT_IN_COLUMNS } from '@/data/reference';
@@ -16,8 +16,11 @@ import { TaskListView } from '@/components/tasks/TaskListView';
 import { GanttView } from '@/components/tasks/GanttView';
 import { SwipeableTaskRow } from '@/components/tasks/SwipeableTaskRow';
 import { PostponeSheet } from '@/components/tasks/PostponeSheet';
-import { Badge, Button, EmptyState, ExpandableSearch, SegmentedControl } from '@/components/ui';
-import { AddIcon, FilterIcon, GanttIcon, KanbanIcon, ListIcon, TaskSquareIcon } from '@/components/icons';
+import { BacklogView } from '@/components/tasks/agile/BacklogView';
+import { IssueTypeIcon } from '@/components/tasks/agile/IssueTypeIcon';
+import { ISSUE_TYPES, isBacklog, issueTypeOf } from '@/lib/agile';
+import { Badge, Button, EmptyState, ExpandableSearch, SegmentedControl, Select } from '@/components/ui';
+import { AddIcon, BacklogIcon, FilterIcon, GanttIcon, KanbanIcon, ListIcon, TaskSquareIcon } from '@/components/icons';
 
 export default function TasksPage() {
   const { state, dispatch, currentUser } = useWorkspace();
@@ -110,6 +113,7 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
   const { state, dispatch } = useWorkspace();
   const { openTaskComposer } = useOverlays();
   const [postponeTarget, setPostponeTarget] = useState<Task | null>(null);
+  const [typeFilter, setTypeFilter] = useState<IssueType | 'all'>('all');
 
   const selectedTaskId = state.inspector.kind === 'task' ? state.inspector.taskId : null;
   // A project's board shows its own columns; views across projects group every card by status,
@@ -120,8 +124,17 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
   const openTask = (taskId: string) => dispatch({ type: 'open-task', taskId });
   const toggleComplete = (taskId: string, completed: boolean) =>
     dispatch({ type: 'set-task-completed', taskId, completed });
-  const openTasks = tasks.filter((task) => task.status !== 'done');
-  const completedTasks = tasks.filter((task) => task.status === 'done');
+  // Agile tracking: the board, list and Gantt show board items of the chosen type; the backlog
+  // tab shows the rest. With no type chosen and nothing in the backlog, `boardTasks` is `tasks`
+  // itself, so the board gets exactly what it always did.
+  const ofType = (task: Task) => typeFilter === 'all' || issueTypeOf(task) === typeFilter;
+  const boardTasks = useMemo(() => {
+    const kept = tasks.filter((task) => !isBacklog(task) && (typeFilter === 'all' || issueTypeOf(task) === typeFilter));
+    return kept.length === tasks.length ? tasks : kept;
+  }, [tasks, typeFilter]);
+  const backlogTasks = tasks.filter((task) => isBacklog(task) && ofType(task));
+  const openTasks = boardTasks.filter((task) => task.status !== 'done');
+  const completedTasks = boardTasks.filter((task) => task.status === 'done');
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -129,7 +142,7 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
         <div className="flex min-w-0 flex-col">
           <h1 className="text-heading-sm font-bold text-fg-primary">پروژه‌ها و وظایف</h1>
           <span className="numeric text-caption text-fg-tertiary">
-            {`${formatCount(tasks.length)} وظیفه در نمای فعلی`}
+            {`${formatCount(view === 'backlog' ? backlogTasks.length : boardTasks.length)} وظیفه در نمای فعلی`}
           </span>
         </div>
 
@@ -143,6 +156,18 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
           >
             فیلترها
           </Button>
+          <div className="hidden w-40 md:block">
+            <Select
+              label="فیلتر نوع وظیفه"
+              size="sm"
+              value={typeFilter}
+              onValueChange={setTypeFilter}
+              options={[
+                { value: 'all' as const, label: 'همه نوع‌ها' },
+                ...ISSUE_TYPES.map((entry) => ({ value: entry.id, label: entry.label, icon: <IssueTypeIcon type={entry.id} showTask decorative size={15} /> })),
+              ]}
+            />
+          </div>
           <SegmentedControl
             ariaLabel="حالت نمایش وظایف"
             size="md"
@@ -153,6 +178,7 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
               { value: 'board', label: 'بورد', icon: <KanbanIcon size={16} /> },
               { value: 'list', label: 'فهرست', icon: <ListIcon size={16} /> },
               { value: 'gantt', label: 'گانت', icon: <GanttIcon size={16} /> },
+              { value: 'backlog', label: 'بک‌لاگ', icon: <BacklogIcon size={16} /> },
             ]}
           />
           <ExpandableSearch
@@ -176,7 +202,7 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
       <div className="hidden min-h-0 flex-1 md:flex md:flex-col">
         {view === 'board' && (
           <KanbanBoard
-            tasks={tasks}
+            tasks={boardTasks}
             allTasks={state.tasks}
             columns={boardColumns}
             editable={columnsEditable}
@@ -205,7 +231,7 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
         )}
         {view === 'list' && (
           <TaskListView
-            tasks={tasks}
+            tasks={boardTasks}
             columns={boardColumns}
             onOpenTask={openTask}
             onToggleComplete={toggleComplete}
@@ -213,7 +239,21 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
           />
         )}
         {view === 'gantt' && (
-          <GanttView tasks={tasks} onOpenTask={openTask} selectedTaskId={selectedTaskId} />
+          <GanttView tasks={boardTasks} onOpenTask={openTask} selectedTaskId={selectedTaskId} />
+        )}
+        {view === 'backlog' && (
+          <BacklogView
+            tasks={backlogTasks}
+            selectedTaskId={selectedTaskId}
+            onOpenTask={openTask}
+            onMoveToBoard={(task) => {
+              dispatch({ type: 'patch-task', taskId: task.id, patch: { isBacklog: false } });
+              dispatch({ type: 'announce', message: `وظیفه «${task.title}» به بورد منتقل شد.` });
+            }}
+            onCreate={() =>
+              openTaskComposer(taskDraft({ projectId: state.projectFilterId ?? tasks[0]?.projectId ?? taskDraft().projectId, isBacklog: true }))
+            }
+          />
         )}
       </div>
 
@@ -222,7 +262,7 @@ function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }: TaskW
         board's semantics move into per-row gestures instead of a horizontal scroller.
       */}
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-3 md:hidden">
-        {tasks.length === 0 ? (
+        {boardTasks.length === 0 ? (
           <EmptyState
             icon={<TaskSquareIcon size={26} />}
             title="وظیفه‌ای یافت نشد"

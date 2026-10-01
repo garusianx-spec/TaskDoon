@@ -9,6 +9,9 @@ import { attachmentCount, projectById, subtaskProgress, usersByIds } from '@/sto
 import { AvatarStack, Badge, ProgressBar } from '@/components/ui';
 import { CalendarIcon, FlagIcon, PaperclipIcon, StarFilledIcon, SubtaskIcon } from '@/components/icons';
 import { TaskCompleteCheckbox, completedTitleClass } from './TaskCompleteCheckbox';
+import { issueTypeOf } from '@/lib/agile';
+import { BlockedPill } from './agile/BlockedPill';
+import { IssueTypeIcon } from './agile/IssueTypeIcon';
 
 export interface TaskCardProps {
   readonly task: Task;
@@ -79,6 +82,9 @@ export function TaskCard({
           {priorityLabel(task.priority)}
         </Badge>
         {task.starred && <StarFilledIcon size={14} className="text-status-progress" label="ستاره‌دار" />}
+        {/* Agile tracking: nothing for a plain task without blockers, so such cards look as before. */}
+        <IssueTypeIcon type={issueTypeOf(task)} severity={task.severity ?? null} className="mt-0.5" />
+        {(task.blockedByIds?.length ?? 0) > 0 && <BlockedPill task={task} />}
         <span className="numeric ms-auto text-micro font-medium text-fg-quaternary latin-inline">
           {task.code}
         </span>

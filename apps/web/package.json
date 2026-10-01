@@ -17,7 +17,8 @@
     "test:e2e": "node e2e/run.mjs",
     "test:e2e:live": "node e2e/live/flow.mjs",
     "test:e2e:live:admin": "node e2e/live/admin.mjs",
-    "test:e2e:live:password": "node e2e/live/password.mjs"
+    "test:e2e:live:password": "node e2e/live/password.mjs",
+    "test:e2e:live:agile": "node e2e/live/agile.mjs"
   },
   "dependencies": {
     "@taskin/contracts": "0.1.0",

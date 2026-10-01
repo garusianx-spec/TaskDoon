@@ -11,6 +11,7 @@ import { BottomNav } from './BottomNav';
 import { Drawer } from '@/components/ui';
 import { TaskInspector, type TaskSourceView } from '@/components/tasks/TaskInspector';
 import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
+import { BlockedDoneNotice } from '@/components/tasks/agile/BlockedDoneNotice';
 import { ConversationInspector } from '@/components/chat/ConversationInspector';
 
 export interface AppShellProps {
@@ -188,6 +189,9 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
           />
         )}
       </TaskDetailDialog>
+
+      {/* Agile tracking: a task reached Done while still blocked (a warning; the move stands). */}
+      <BlockedDoneNotice />
 
       {/* Single live region for non-visual state changes (board moves, task creation). */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">

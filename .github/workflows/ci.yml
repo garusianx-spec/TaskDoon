@@ -180,6 +180,8 @@ jobs:
           npm run test:e2e:live:admin
       - name: Phone and password (sign-in, a wrong password, recovery with an SMS code)
         run: API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live:password
+      - name: Agile tracking (issue types, worklogs, dependencies, backlog)
+        run: API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live:agile
       - name: Logs
         if: failure()
         run: |

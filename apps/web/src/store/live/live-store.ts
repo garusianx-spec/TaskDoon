@@ -31,6 +31,7 @@ import {
   conversationFromView,
   eventFromView,
   invitationFromView,
+  linkFromView,
   meToUser,
   memberToUser,
   messageFromView,
@@ -44,6 +45,7 @@ import {
   sessionFromView,
   taskFromCard,
   taskFromDetail,
+  worklogFromView,
   workspaceFromMe,
   workspaceFromView,
 } from '@/api/mappers';
@@ -502,6 +504,7 @@ export class LiveStore {
         return;
       case 'open-task':
         void this.ensureDetail(action.taskId);
+        void this.refreshAgile(action.taskId);
         return;
       case 'move-task':
       case 'move-task-to-column':
@@ -569,6 +572,55 @@ export class LiveStore {
       case 'create-task':
         this.createTask(action.draft, prev, next);
         return;
+      case 'log-work':
+        this.run(
+          async () => {
+            const { id, projectId } = await this.agileTarget(action.taskId);
+            const note = action.note.trim();
+            await api.agile.logWork(this.workspaceId, projectId, id, { durationMinutes: Math.round(action.minutes), ...(note ? { description: note } : {}) });
+            await Promise.all([this.refreshAgile(id), this.refreshTask(id)]);
+          },
+          () => Promise.all([this.refreshAgile(action.taskId), this.refreshTask(action.taskId)]),
+        );
+        return;
+      case 'remove-worklog':
+        if (isLocal(action.worklogId)) return;
+        this.run(
+          async () => {
+            const { id, projectId } = await this.agileTarget(action.taskId);
+            await api.agile.removeWorklog(this.workspaceId, projectId, id, action.worklogId);
+            await Promise.all([this.refreshAgile(id), this.refreshTask(id)]);
+          },
+          () => Promise.all([this.refreshAgile(action.taskId), this.refreshTask(action.taskId)]),
+        );
+        return;
+      case 'add-task-link': {
+        // The reducer refuses what the rules refuse; only a link it added goes to the server.
+        if ((next.taskLinks?.[action.taskId]?.length ?? 0) === (prev.taskLinks?.[action.taskId]?.length ?? 0)) return;
+        this.run(
+          async () => {
+            const { id, projectId } = await this.agileTarget(action.taskId);
+            const other = await this.serverId(action.otherTaskId);
+            await api.agile.link(this.workspaceId, projectId, id, { targetTaskId: other, type: action.kind });
+            await Promise.all([this.refreshAgile(id), this.refreshAgile(other, true), this.refreshTask(id), this.refreshTask(other)]);
+          },
+          () => Promise.all([this.refreshAgile(action.taskId), this.refreshTask(action.taskId), this.refreshTask(action.otherTaskId)]),
+        );
+        return;
+      }
+      case 'remove-task-link': {
+        const link = prev.taskLinks?.[action.taskId]?.find((entry) => entry.id === action.linkId);
+        if (!link || isLocal(link.id)) return;
+        this.run(
+          async () => {
+            const { id, projectId } = await this.agileTarget(action.taskId);
+            await api.agile.unlink(this.workspaceId, projectId, id, link.id);
+            await Promise.all([this.refreshAgile(id), this.refreshAgile(link.taskId, true), this.refreshTask(id), this.refreshTask(link.taskId)]);
+          },
+          () => Promise.all([this.refreshAgile(action.taskId), this.refreshTask(action.taskId), this.refreshTask(link.taskId)]),
+        );
+        return;
+      }
       case 'move-subtask':
         void this.moveSubtask(action.taskId, action.subtaskId, next);
         return;
@@ -910,7 +962,13 @@ export class LiveStore {
           assigneeIds: draft.assigneeIds,
           dueDate: draft.dueDate,
           subtasks: draft.subtaskTitles,
+          ...agileFieldsOf(draft),
         });
+      }
+      // Conversions take no agile fields: the converted task gets them in a second step.
+      const agile = agileFieldsOf(draft);
+      if ((draft.sourceMessageId || draft.sourceNoteId) && Object.keys(agile).length > 0) {
+        detail = await api.tasks.update(this.workspaceId, detail.id, detail.version, agile);
       }
       this.detailLoaded.add(detail.id);
       this.upsertDetail(detail, local.id);
@@ -947,6 +1005,10 @@ export class LiveStore {
         ...(patch.reviewerId !== undefined ? { reviewerId: patch.reviewerId } : {}),
         ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : {}),
         ...(patch.startDate !== undefined ? { startDate: patch.startDate } : {}),
+        ...(patch.type !== undefined ? { type: patch.type } : {}),
+        ...(patch.severity !== undefined ? { severity: patch.severity } : {}),
+        ...(patch.estimatedMinutes !== undefined ? { estimatedMinutes: patch.estimatedMinutes } : {}),
+        ...(patch.isBacklog !== undefined ? { isBacklog: patch.isBacklog } : {}),
       };
       this.upsertDetail(await api.tasks.update(this.workspaceId, id, version, body));
     });
@@ -986,6 +1048,35 @@ export class LiveStore {
     this.versions.set(detail.id, detail.version);
     this.detailLoaded.add(detail.id);
     this.apply({ type: 'sync/upsert-task', task: taskFromDetail(detail, this.getState().boardColumns), ...(replaceId ? { replaceId } : {}) });
+  }
+
+  /** The server ids of a task and its project, for the agile routes. */
+  private async agileTarget(taskId: string): Promise<{ id: string; projectId: string }> {
+    const id = await this.serverId(taskId);
+    const task = this.getState().tasks.find((entry) => entry.id === id || entry.id === taskId);
+    if (!task) throw new ApiProblem(404, 'NOT_FOUND', 'The task is gone.', null);
+    return { id, projectId: await this.serverId(task.projectId) };
+  }
+
+  /**
+   * A task's worklogs and links (they change without its version). `onlyIfLoaded` skips tasks
+   * whose lists were never fetched: nobody is looking at them. Refusals just leave what is shown.
+   */
+  private async refreshAgile(taskId: string, onlyIfLoaded = false): Promise<void> {
+    const id = await this.serverId(taskId).catch(() => null);
+    if (!id || isLocal(id)) return;
+    const state = this.getState();
+    if (onlyIfLoaded && state.taskWorklogs?.[id] === undefined && state.taskLinks?.[id] === undefined) return;
+    try {
+      const { projectId } = await this.agileTarget(id);
+      const [worklogs, links] = await Promise.all([
+        api.agile.worklogs(this.workspaceId, projectId, id),
+        api.agile.dependencies(this.workspaceId, projectId, id),
+      ]);
+      this.apply({ type: 'sync/task-agile', taskId: id, worklogs: worklogs.items.map(worklogFromView), links: links.map(linkFromView) });
+    } catch {
+      // A task that just left (deleted, moved out of sight) is handled by its own refresh.
+    }
   }
 
   private async refreshTask(taskId: string): Promise<void> {
@@ -1521,10 +1612,12 @@ export class LiveStore {
       case 'task:moved': {
         const data = envelope.data as { readonly taskId: string; readonly fields?: readonly string[] };
         const known = this.versions.get(data.taskId);
-        // Checklist changes keep the task's version (see the API): they always refetch.
+        // Checklist, worklog and link changes keep the task's version (see the API): they always refetch.
+        const tracking = envelope.type === 'task:updated' && (data.fields ?? []).some((field) => field === 'worklogs' || field === 'dependencies');
         const checklist = envelope.type === 'task:updated' && (data.fields ?? []).includes('subtasks');
-        if (!checklist && known !== undefined && envelope.version !== undefined && envelope.version <= known) return;
+        if (!checklist && !tracking && known !== undefined && envelope.version !== undefined && envelope.version <= known) return;
         await this.refreshTask(data.taskId);
+        if (tracking) await this.refreshAgile(data.taskId, true);
         return;
       }
       case 'task:deleted': {
@@ -1686,6 +1779,15 @@ export class LiveStore {
 /* ================================================================== module helpers */
 
 const isLocal = (id: string): boolean => id.includes('-local-');
+
+/** The agile fields a draft sets, for the create (or a follow-up update) body. */
+function agileFieldsOf(draft: TaskDraft): { type?: NonNullable<TaskDraft['type']>; severity?: NonNullable<TaskDraft['severity']>; isBacklog?: boolean } {
+  return {
+    ...(draft.type !== undefined && draft.type !== 'task' ? { type: draft.type } : {}),
+    ...(draft.type === 'bug' && draft.severity ? { severity: draft.severity } : {}),
+    ...(draft.isBacklog ? { isBacklog: true } : {}),
+  };
+}
 
 /** A project's board columns the server knows (not ones still being created). */
 const serverColumnsOf = (state: WorkspaceState, projectId: string): BoardColumn[] =>

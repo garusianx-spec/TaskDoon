@@ -24,6 +24,9 @@ import { MenuItem, MenuList } from '@/components/ui/Menu';
 import { SubtaskList } from './SubtaskList';
 import { JalaliDatePicker } from './JalaliDatePicker';
 import { ColumnDot } from './ColumnDot';
+import { DependencyManager } from './agile/DependencyManager';
+import { IssueFields } from './agile/IssueFields';
+import { TimeTrackingPanel } from './agile/TimeTrackingPanel';
 import type { TaskPatch } from '@/store/workspace-reducer';
 import {
   CloseIcon,
@@ -173,6 +176,8 @@ export function TaskInspector({
             />
           </Field>
 
+          <IssueFields task={task} onPatch={onPatch} />
+
           <Field label="مسئولان">
             <PeoplePicker
               selectedIds={task.assigneeIds}
@@ -241,6 +246,10 @@ export function TaskInspector({
               onMove={onMoveSubtask}
             />
           </section>
+
+          <TimeTrackingPanel task={task} />
+
+          <DependencyManager task={task} />
   
           {source && (
             <section aria-labelledby="task-source-title" className="flex flex-col gap-2 rounded-xl border border-secondary bg-sunken p-3">
