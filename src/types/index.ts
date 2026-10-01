@@ -112,12 +112,46 @@ export interface TaskComment {
   readonly replyToId: string | null;
 }
 
+/* ------------------------------ Reminders ------------------------------ */
+
+/** How far ahead of the due date the reminder fires. */
+export type ReminderOffsetId = '15m' | '30m' | '1h' | '1d' | 'custom';
+
+export interface TaskReminder {
+  readonly offset: ReminderOffsetId;
+  /**
+   * Only meaningful when `offset` is `'custom'`: an explicit ISO-8601 instant chosen with
+   * the Jalali date/time picker. Null for the preset offsets, which are derived from the
+   * due date at read time so that moving the deadline moves the reminder with it.
+   */
+  readonly customAt: string | null;
+}
+
+/* ------------------------------ Recurrence ------------------------------ */
+
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+/** When the series stops generating occurrences. */
+export type RecurrenceEnd =
+  | { readonly kind: 'never' }
+  | { readonly kind: 'on-date'; readonly date: string }
+  | { readonly kind: 'after-count'; readonly count: number };
+
+export interface TaskRecurrence {
+  readonly frequency: RecurrenceFrequency;
+  /** Repeat every N periods — "هر ۲ هفته یک‌بار" is `weekly` with an interval of 2. */
+  readonly interval: number;
+  readonly end: RecurrenceEnd;
+}
+
 export interface Task {
   readonly id: string;
   readonly code: string;
   readonly title: string;
   readonly description: string;
   readonly status: TaskStatus;
+  /** Which board column the card sits in. Defaults to the column whose id is `status`. */
+  readonly columnId: string;
   readonly priority: TaskPriority;
   readonly projectId: string;
   readonly assigneeIds: readonly string[];
@@ -133,6 +167,10 @@ export interface Task {
   readonly starred: boolean;
   /** Set when the task was created from a chat message via "تبدیل به وظیفه". */
   readonly sourceMessageId: string | null;
+  /** Null when no reminder is configured. */
+  readonly reminder: TaskReminder | null;
+  /** Null for a one-off task; present turns the card into a series. */
+  readonly recurrence: TaskRecurrence | null;
 }
 
 export interface Project {
@@ -143,6 +181,26 @@ export interface Project {
   readonly starred: boolean;
   readonly parentId: string | null;
   readonly memberIds: readonly string[];
+  /** Conversation spawned alongside the project; null for projects created before linkage. */
+  readonly conversationId: string | null;
+}
+
+/**
+ * A Kanban column.
+ *
+ * Columns are data so workspaces can add their own, but `status` stays a closed union:
+ * every column maps onto one of the four canonical workflow statuses. That keeps filters,
+ * smart views, the Gantt and the calendar working off an exhaustively-switched type while
+ * the board renders whatever columns the project defines.
+ */
+export interface BoardColumn {
+  readonly id: string;
+  readonly title: string;
+  readonly tone: SemanticTone;
+  /** Which canonical status a card takes on when it lands in this column. */
+  readonly mapsTo: TaskStatus;
+  /** Built-in columns cannot be deleted; custom ones can. */
+  readonly custom: boolean;
 }
 
 export type TaskViewMode = 'board' | 'list' | 'gantt';
@@ -165,6 +223,15 @@ export interface MessageReaction {
   readonly userIds: readonly string[];
 }
 
+/** Provenance stamped onto a message that was forwarded out of another conversation. */
+export interface ForwardOrigin {
+  readonly authorId: string;
+  /** Null when the source conversation is no longer visible to the current user. */
+  readonly conversationId: string | null;
+  readonly originalMessageId: string;
+  readonly sentAt: string;
+}
+
 export interface Message {
   readonly id: string;
   readonly conversationId: string;
@@ -177,6 +244,25 @@ export interface Message {
   /** Populated once the message has been promoted to a task. */
   readonly linkedTaskId: string | null;
   readonly readByIds: readonly string[];
+  /** Pinned messages surface in the sticky banner at the top of the conversation. */
+  readonly pinned: boolean;
+  /** Non-null when this message was forwarded from elsewhere. */
+  readonly forwardedFrom: ForwardOrigin | null;
+}
+
+/**
+ * A place a message can be forwarded to. Boards are included because forwarding into a
+ * project board creates a task rather than a message, which the reducer handles separately.
+ */
+export type ForwardTargetKind = 'direct' | 'channel' | 'board';
+
+export interface ForwardTarget {
+  readonly id: string;
+  readonly kind: ForwardTargetKind;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly tone: AvatarTone;
+  readonly initials: string;
 }
 
 export interface Conversation {
@@ -189,9 +275,24 @@ export interface Conversation {
   readonly unreadCount: number;
   readonly tone: AvatarTone;
   readonly topic: string;
+  /** Set on channels auto-created for a project, enabling the cross-module jump. */
+  readonly projectId: string | null;
 }
 
 export type ChatFilterId = 'all' | 'direct' | 'groups' | 'unread';
+
+/** Tabs of the shared-media drawer. */
+export type SharedMediaTab = 'media' | 'docs' | 'voice' | 'links';
+
+/** A URL extracted from a message body, with whatever metadata we can derive. */
+export interface LinkPreview {
+  readonly url: string;
+  readonly host: string;
+  readonly title: string;
+  readonly messageId: string;
+  readonly sharedAt: string;
+  readonly sharedById: string;
+}
 
 /* ============================== Calendar & notes ============================== */
 
@@ -260,11 +361,39 @@ export interface ModuleDescriptor {
   readonly href: string;
 }
 
+/** Editable slice of the signed-in user's profile. */
+export interface ProfileDraft {
+  readonly fullName: string;
+  readonly jobTitle: string;
+  readonly initials: string;
+  readonly avatarTone: AvatarTone;
+  readonly presence: PresenceState;
+}
+
+/** A device/browser holding a live session, listed in the security dialog. */
+export interface ActiveSession {
+  readonly id: string;
+  readonly device: string;
+  readonly location: string;
+  readonly lastActiveAt: string;
+  readonly current: boolean;
+}
+
 /** What the right-hand inspector is currently bound to. */
 export type InspectorTarget =
   | { readonly kind: 'none' }
   | { readonly kind: 'task'; readonly taskId: string }
   | { readonly kind: 'conversation'; readonly conversationId: string };
+
+/** Draft handed to the project composer. */
+export interface ProjectDraft {
+  readonly name: string;
+  readonly departmentId: DepartmentId;
+  readonly color: AvatarTone;
+  readonly memberIds: readonly string[];
+  /** Spawns a linked chat channel named after the project. */
+  readonly createGroup: boolean;
+}
 
 /** Draft handed to the task composer when promoting a chat message. */
 export interface TaskDraft {
@@ -277,4 +406,8 @@ export interface TaskDraft {
   readonly dueDate: string | null;
   readonly sourceMessageId: string | null;
   readonly attachments: readonly Attachment[];
+  /** Checklist built inside the composer before the task exists. */
+  readonly subtasks: readonly Subtask[];
+  readonly reminder: TaskReminder | null;
+  readonly recurrence: TaskRecurrence | null;
 }

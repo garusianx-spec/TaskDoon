@@ -12,6 +12,7 @@ import {
   ArchiveIcon,
   ConvertToTaskIcon,
   CopyIcon,
+  PinIcon,
   DocumentIcon,
   DoubleCheckIcon,
   DownloadIcon,
@@ -22,6 +23,7 @@ import {
   SheetIcon,
   TaskSquareIcon,
 } from '@/components/icons';
+import { formatJalali } from '@/lib/jalali';
 
 const ATTACHMENT_ICONS = {
   image: ImageIcon,
@@ -48,6 +50,15 @@ export interface MessageBubbleProps {
   readonly onOpenLinkedTask: (taskId: string) => void;
   /** Mobile long-press (≥500ms) opens the action sheet. */
   readonly onLongPress: (message: Message) => void;
+  readonly onTogglePin: (messageId: string) => void;
+  readonly onForward: (message: Message) => void;
+  /** Pin is permission-gated; forwarding needs the `create` right on messages. */
+  readonly canPin: boolean;
+  readonly canForward: boolean;
+  /** Name of the original author when this message was forwarded in. */
+  readonly forwardedFromName: string | null;
+  /** Set while the jump-to-message pulse is playing on this bubble. */
+  readonly highlighted: boolean;
 }
 
 export function MessageBubble({
@@ -62,6 +73,12 @@ export function MessageBubble({
   onToggleReaction,
   onOpenLinkedTask,
   onLongPress,
+  onTogglePin,
+  onForward,
+  canPin,
+  canForward,
+  forwardedFromName,
+  highlighted,
 }: MessageBubbleProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const longPressTimer = useRef<number | null>(null);
@@ -117,12 +134,39 @@ export function MessageBubble({
         <div className={cn('flex items-center gap-1', outgoing ? 'flex-row-reverse' : 'flex-row')}>
           <div
             className={cn(
-              'relative min-w-0 rounded-2xl px-3.5 py-2.5 shadow-xs',
+              'relative min-w-0 rounded-2xl px-3.5 py-2.5 shadow-xs transition-shadow',
               outgoing
                 ? 'rounded-se-sm bg-brand-solid text-fg-on-brand'
                 : 'rounded-ss-sm border border-secondary bg-surface text-fg-primary',
+              highlighted && 'animate-pulse-ring ring-2 ring-brand ring-offset-2',
             )}
           >
+            {forwardedFromName && (
+              <p
+                className={cn(
+                  'mb-1.5 flex items-center gap-1 text-micro font-medium',
+                  outgoing ? 'text-fg-on-brand/75' : 'text-fg-tertiary',
+                )}
+              >
+                <ReplyIcon size={12} className="-scale-x-100" />
+                <span title={message.forwardedFrom ? formatJalali(message.forwardedFrom.sentAt, 'full') : undefined}>
+                  {`ارسال شده از ${forwardedFromName}`}
+                </span>
+              </p>
+            )}
+
+            {message.pinned && (
+              <span
+                className={cn(
+                  'absolute -top-1.5 flex size-5 items-center justify-center rounded-full shadow-xs',
+                  outgoing ? '-start-1.5 bg-white text-brand-600' : '-end-1.5 bg-brand-solid text-fg-on-brand',
+                )}
+                title="پیام پین‌شده"
+              >
+                <PinIcon size={11} />
+                <span className="sr-only">پیام پین‌شده</span>
+              </span>
+            )}
             {repliedTo && (
               <div
                 className={cn(
@@ -204,6 +248,17 @@ export function MessageBubble({
                 onClick={() => onConvertToTask(message)}
               />
             </Tooltip>
+            {canPin && (
+              <Tooltip content={message.pinned ? 'برداشتن پین' : 'پین کردن پیام در گفتگو'}>
+                <IconButton
+                  label={message.pinned ? 'برداشتن پین پیام' : 'پین کردن پیام در گفتگو'}
+                  icon={<PinIcon size={16} />}
+                  size="xs"
+                  active={message.pinned}
+                  onClick={() => onTogglePin(message.id)}
+                />
+              </Tooltip>
+            )}
             <Popover
               label="اقدام‌های پیام"
               haspopup="menu"
@@ -249,6 +304,28 @@ export function MessageBubble({
                   >
                     پاسخ
                   </MenuItem>
+                  {canForward && (
+                    <MenuItem
+                      icon={<ReplyIcon size={18} className="-scale-x-100" />}
+                      onSelect={() => {
+                        onForward(message);
+                        close();
+                      }}
+                    >
+                      فوروارد به…
+                    </MenuItem>
+                  )}
+                  {canPin && (
+                    <MenuItem
+                      icon={<PinIcon size={18} />}
+                      onSelect={() => {
+                        onTogglePin(message.id);
+                        close();
+                      }}
+                    >
+                      {message.pinned ? 'برداشتن پین پیام' : 'پین کردن پیام در گفتگو'}
+                    </MenuItem>
+                  )}
                   <MenuItem
                     icon={<CopyIcon size={18} />}
                     onSelect={() => {

@@ -13,6 +13,7 @@ export { Drawer, type DrawerProps } from './Drawer';
 export { BottomSheet, type BottomSheetProps } from './BottomSheet';
 export { Select, type SelectOption, type SelectProps } from './Select';
 export { ProgressBar, type ProgressBarProps } from './Progress';
+export { NumberField, type NumberFieldProps } from './NumberField';
 export { Tooltip, type TooltipProps } from './Tooltip';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { RelativeTime, type RelativeTimeProps } from './RelativeTime';

@@ -36,6 +36,32 @@ export function truncate(text: string, maxChars: number): string {
   return `${(lastSpace > maxChars * 0.6 ? slice.slice(0, lastSpace) : slice).trimEnd()}…`;
 }
 
+const ARABIC_INDIC = '٠١٢٣٤٥٦٧٨٩';
+const PERSIAN_INDIC = '۰۱۲۳۴۵۶۷۸۹';
+
+/**
+ * Parses a number typed in Persian, Arabic-Indic or ASCII digits. Returns null for input
+ * that contains no digits at all, so a field can distinguish "empty" from "zero".
+ */
+export function parseLocalisedNumber(input: string): number | null {
+  let normalised = '';
+  for (const char of input) {
+    const persian = PERSIAN_INDIC.indexOf(char);
+    if (persian !== -1) {
+      normalised += String(persian);
+      continue;
+    }
+    const arabic = ARABIC_INDIC.indexOf(char);
+    if (arabic !== -1) {
+      normalised += String(arabic);
+      continue;
+    }
+    if (char >= '0' && char <= '9') normalised += char;
+  }
+  if (normalised.length === 0) return null;
+  return Number(normalised);
+}
+
 /** Stable pseudo-random in [0,1) from a string — keeps mock visuals identical across renders. */
 export function seededUnit(seed: string): number {
   let hash = 2166136261;

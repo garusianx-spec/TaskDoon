@@ -1,19 +1,23 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { DepartmentId, RoleId } from '@/types';
 import { USERS } from '@/data/workspace';
 import { DEPARTMENTS, ROLES, roleLabel } from '@/data/reference';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { AppShell } from '@/components/layout/AppShell';
-import { Avatar, Badge, Button, EmptyState, Input, Select } from '@/components/ui';
-import { CallIcon, PeopleIcon, SearchIcon, SmsIcon, UserAddIcon } from '@/components/icons';
+import { useWorkspace } from '@/store/WorkspaceProvider';
+import { Avatar, Badge, Button, EmptyState, Input, Select, Tooltip } from '@/components/ui';
+import { CallIcon, MessagesIcon, PeopleIcon, SearchIcon, SmsIcon, UserAddIcon } from '@/components/icons';
 
 type DepartmentFilter = DepartmentId | 'all';
 type RoleFilter = RoleId | 'all';
 
 export default function DirectoryPage() {
+  const { dispatch, currentUser } = useWorkspace();
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState<DepartmentFilter>('all');
   const [role, setRole] = useState<RoleFilter>('all');
@@ -27,6 +31,15 @@ export default function DirectoryPage() {
       return `${user.fullName} ${user.jobTitle} ${user.email}`.toLowerCase().includes(normalised);
     });
   }, [query, department, role]);
+
+  /**
+   * Opens (or starts) the direct thread with a colleague and lands on it with the composer
+   * focused, so the action ends where the user intended rather than on a chat list.
+   */
+  const openDirectMessage = (userId: string) => {
+    dispatch({ type: 'open-direct-message', userId, currentUserId: currentUser.id });
+    router.push('/chats');
+  };
 
   return (
     <AppShell>
@@ -104,11 +117,38 @@ export default function DirectoryPage() {
                         {DEPARTMENTS.find((entry) => entry.id === user.department)?.name}
                       </span>
                     </div>
+
+                    {user.id !== currentUser.id && (
+                      <Tooltip content={`ارسال پیام به ${user.fullName}`}>
+                        <button
+                          type="button"
+                          onClick={() => openDirectMessage(user.id)}
+                          aria-label={`ارسال پیام به ${user.fullName}`}
+                          className={cn(
+                            'flex size-9 shrink-0 items-center justify-center rounded-lg border border-secondary bg-surface text-fg-tertiary shadow-xs',
+                            'transition-colors hover:border-brand hover:bg-brand-subtle hover:text-fg-brand',
+                          )}
+                        >
+                          <MessagesIcon size={18} />
+                        </button>
+                      </Tooltip>
+                    )}
                   </div>
 
                   <Badge tone={user.role === 'owner' ? 'brand' : 'neutral'} size="md" className="self-start">
                     {roleLabel(user.role)}
                   </Badge>
+
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    fullWidth
+                    iconStart={<MessagesIcon size={15} />}
+                    onClick={() => openDirectMessage(user.id)}
+                    disabled={user.id === currentUser.id}
+                  >
+                    {user.id === currentUser.id ? 'حساب شما' : 'ارسال پیام'}
+                  </Button>
 
                   <div className="flex flex-col gap-1.5 border-t border-secondary pt-3">
                     <a

@@ -1,8 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { conversationById, filterConversations } from '@/store/selectors';
+import { canForwardMessages, canManagePins } from '@/lib/permissions';
 import { PROJECTS } from '@/data/workspace';
 import { AppShell, useShellActions } from '@/components/layout/AppShell';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
@@ -18,8 +20,10 @@ export default function ChatsPage() {
 
 function ChatsShell() {
   const { state, dispatch, currentUser, conversations, unreadFor, isPinned, totalUnread } = useWorkspace();
-  // Mobile: the sidebar is the list screen until a conversation is opened.
-  const [mobileDetail, setMobileDetail] = useState(false);
+  // Mobile: the sidebar is the list screen until a conversation is opened. Arriving from
+  // another module (e.g. "ارسال پیام" in the directory) already picked a thread, so open
+  // straight onto it rather than dropping the user back on the list.
+  const [mobileDetail, setMobileDetail] = useState(state.focusComposer);
 
   const visible = useMemo(
     () =>
@@ -32,7 +36,7 @@ function ChatsShell() {
     [conversations, state.messages, state.chatFilter, state.chatSearch, state.unreadByConversation, state.pinnedConversationIds],
   );
 
-  const active = conversationById(state.activeConversationId);
+  const active = conversationById(conversations, state.activeConversationId);
   const defaultProjectId = PROJECTS[0]?.id ?? '';
 
   return (
@@ -83,9 +87,15 @@ interface ChatContentProps {
 
 /** Split out so the composer hook resolves inside the `AppShell` provider. */
 function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatContentProps) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, currentUser } = useWorkspace();
   const { openTaskComposer } = useShellActions();
-  const conversation = conversationById(state.activeConversationId);
+  const router = useRouter();
+  const conversation = conversationById(state.conversations, state.activeConversationId);
+
+  // Pin/forward rights come from the live RBAC matrix, so revoking them on the settings
+  // screen hides these actions immediately.
+  const canPin = canManagePins(currentUser, state.permissions);
+  const canForward = canForwardMessages(currentUser, state.permissions);
 
   if (!conversation) return null;
 
@@ -112,6 +122,26 @@ function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatContentPro
       onOpenTask={(taskId) => dispatch({ type: 'open-task', taskId })}
       onOpenDetails={() =>
         dispatch({ type: 'open-conversation-details', conversationId: conversation.id })
+      }
+      canPin={canPin}
+      canForward={canForward}
+      onTogglePin={(messageId) => dispatch({ type: 'toggle-message-pin', messageId })}
+      onUnpinAll={() => dispatch({ type: 'unpin-all-messages', conversationId: conversation.id })}
+      onForward={(messageId, targets) =>
+        dispatch({ type: 'forward-message', messageId, targets, authorId: currentUserId })
+      }
+      jumpToMessageId={state.jumpToMessageId}
+      onRequestJump={(messageId) => dispatch({ type: 'jump-to-message', messageId })}
+      onJumpHandled={() => dispatch({ type: 'clear-jump-target' })}
+      focusComposer={state.focusComposer}
+      onComposerFocused={() => dispatch({ type: 'focus-composer-handled' })}
+      onOpenProjectBoard={
+        conversation.projectId
+          ? () => {
+              dispatch({ type: 'set-project-filter', projectId: conversation.projectId });
+              router.push('/tasks');
+            }
+          : null
       }
     />
   );

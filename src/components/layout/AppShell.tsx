@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import type { TaskDraft } from '@/types';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { conversationById, taskById } from '@/store/selectors';
@@ -12,11 +13,16 @@ import { Drawer } from '@/components/ui';
 import { TaskInspector } from '@/components/tasks/TaskInspector';
 import { ConversationInspector } from '@/components/chat/ConversationInspector';
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
+import { EditProfileModal } from '@/components/account/EditProfileModal';
+import { SecurityModal } from '@/components/account/SecurityModal';
+import { SignedOutView } from '@/components/account/SignedOutView';
 
 interface ShellActions {
   /** Opens the task composer. Pass a draft to pre-fill it (e.g. from a chat message). */
   readonly openTaskComposer: (draft: TaskDraft | null) => void;
   readonly openGlobalSearch: () => void;
+  readonly openProfile: () => void;
+  readonly openSecurity: () => void;
 }
 
 const ShellActionsContext = createContext<ShellActions | null>(null);
@@ -47,16 +53,20 @@ export interface AppShellProps {
  * because each of them can be opened from more than one module.
  */
 export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppShellProps) {
-  const { state, dispatch, currentUser, isPinned, isMuted } = useWorkspace();
+  const { state, dispatch, currentUser, conversations, projects, sessions, isPinned, isMuted } =
+    useWorkspace();
   const [composerDraft, setComposerDraft] = useState<TaskDraft | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const router = useRouter();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [securityOpen, setSecurityOpen] = useState(false);
 
   const inspectorTask =
     state.inspector.kind === 'task' ? taskById(state.tasks, state.inspector.taskId) : undefined;
   const inspectorConversation =
     state.inspector.kind === 'conversation'
-      ? conversationById(state.inspector.conversationId)
+      ? conversationById(conversations, state.inspector.conversationId)
       : undefined;
   const inspectorOpen = Boolean(inspectorTask ?? inspectorConversation);
 
@@ -66,11 +76,26 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
   }, []);
 
   const actions = useMemo<ShellActions>(
-    () => ({ openTaskComposer, openGlobalSearch: () => setSearchOpen(true) }),
+    () => ({
+      openTaskComposer,
+      openGlobalSearch: () => setSearchOpen(true),
+      openProfile: () => setProfileOpen(true),
+      openSecurity: () => setSecurityOpen(true),
+    }),
     [openTaskComposer],
   );
 
   const closeInspector = useCallback(() => dispatch({ type: 'close-inspector' }), [dispatch]);
+
+  // Signing out tears down the whole workspace surface, not just the popover.
+  if (!state.signedIn) {
+    return (
+      <SignedOutView
+        fullName={currentUser.fullName}
+        onSignIn={() => dispatch({ type: 'sign-in' })}
+      />
+    );
+  }
 
   return (
     <ShellActionsContext.Provider value={actions}>
@@ -121,6 +146,7 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
             {inspectorTask && (
               <TaskInspector
                 task={inspectorTask}
+                projects={projects}
                 currentUser={currentUser}
                 onClose={closeInspector}
                 onPatch={(patch) => dispatch({ type: 'patch-task', taskId: inspectorTask.id, patch })}
@@ -144,6 +170,12 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
                     replyToId,
                   })
                 }
+                onReminderChange={(reminder) =>
+                  dispatch({ type: 'set-task-reminder', taskId: inspectorTask.id, reminder })
+                }
+                onRecurrenceChange={(recurrence) =>
+                  dispatch({ type: 'set-task-recurrence', taskId: inspectorTask.id, recurrence })
+                }
               />
             )}
 
@@ -160,6 +192,23 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
                   dispatch({ type: 'toggle-conversation-mute', conversationId: inspectorConversation.id })
                 }
                 onClose={closeInspector}
+                projectName={
+                  inspectorConversation.projectId
+                    ? (projects.find((p) => p.id === inspectorConversation.projectId)?.name ?? null)
+                    : null
+                }
+                onOpenProjectBoard={
+                  inspectorConversation.projectId
+                    ? () => {
+                        dispatch({
+                          type: 'set-project-filter',
+                          projectId: inspectorConversation.projectId,
+                        });
+                        closeInspector();
+                        router.push('/tasks');
+                      }
+                    : null
+                }
               />
             )}
           </Drawer>
@@ -174,6 +223,23 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
             setComposerOpen(false);
             setComposerDraft(null);
           }}
+        />
+
+        <EditProfileModal
+          open={profileOpen}
+          onClose={() => setProfileOpen(false)}
+          user={currentUser}
+          onSave={(profile) => dispatch({ type: 'update-profile', profile })}
+        />
+
+        <SecurityModal
+          open={securityOpen}
+          onClose={() => setSecurityOpen(false)}
+          sessions={sessions}
+          onRevokeSession={(sessionId) => dispatch({ type: 'revoke-session', sessionId })}
+          onChangePassword={() =>
+            dispatch({ type: 'announce', message: 'رمز عبور با موفقیت تغییر کرد.' })
+          }
         />
 
         <GlobalSearchModal

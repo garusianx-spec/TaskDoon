@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import type { Subtask } from '@/types';
 import { cn } from '@/lib/cn';
-import { formatFraction } from '@/lib/format';
+
+import { toPersianDigits } from '@/lib/jalali';
 import { userById } from '@/store/selectors';
 import { Avatar, Checkbox, IconButton, Input, ProgressBar } from '@/components/ui';
 import { AddIcon, ArrowDownIcon, ArrowUpIcon, DragHandleIcon, TrashIcon } from '@/components/icons';
@@ -49,9 +50,11 @@ export function SubtaskList({ subtasks, onToggle, onAdd, onRemove, onMove, taskT
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <h4 className="text-title-sm font-semibold text-fg-primary">زیروظیفه‌ها</h4>
-        <span className="numeric text-caption text-fg-tertiary">
-          {subtasks.length > 0 ? formatFraction(done, subtasks.length) : '—'}
+        <h4 className="text-title-sm font-semibold text-fg-primary">چک‌لیست وظیفه</h4>
+        <span className="numeric text-caption text-fg-tertiary" aria-live="polite">
+          {subtasks.length > 0
+            ? `${toPersianDigits(done)} از ${toPersianDigits(subtasks.length)} انجام شده`
+            : 'موردی ثبت نشده'}
         </span>
         {subtasks.length > 0 && (
           <ProgressBar
@@ -180,7 +183,6 @@ export function SubtaskList({ subtasks, onToggle, onAdd, onRemove, onMove, taskT
           }}
           placeholder="افزودن زیروظیفه…"
           containerClassName="flex-1"
-          iconStart={<AddIcon size={16} />}
         />
         <IconButton
           label="افزودن زیروظیفه"

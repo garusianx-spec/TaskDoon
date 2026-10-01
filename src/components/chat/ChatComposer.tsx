@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { IconButton, Tooltip } from '@/components/ui';
 import { CloseIcon, EmojiIcon, MicrophoneIcon, PaperclipIcon, SendIcon } from '@/components/icons';
@@ -10,6 +10,9 @@ export interface ChatComposerProps {
   readonly replyPreview: { readonly authorName: string; readonly preview: string } | null;
   readonly onCancelReply: () => void;
   readonly conversationTitle: string;
+  /** Set after a cross-module jump (e.g. from the directory) so typing can start at once. */
+  readonly autoFocus?: boolean;
+  readonly onAutoFocusHandled?: () => void;
 }
 
 const EMOJI_PALETTE = ['👍', '🙏', '🔥', '✅', '👀', '🎉', '❤️', '😀', '🤝', '⚡️'] as const;
@@ -18,10 +21,23 @@ const EMOJI_PALETTE = ['👍', '🙏', '🔥', '✅', '👀', '🎉', '❤️', 
  * Message composer. Enter sends, Shift+Enter inserts a newline, and the textarea grows with
  * the content up to six lines before scrolling.
  */
-export function ChatComposer({ onSend, replyPreview, onCancelReply, conversationTitle }: ChatComposerProps) {
+export function ChatComposer({
+  onSend,
+  replyPreview,
+  onCancelReply,
+  conversationTitle,
+  autoFocus = false,
+  onAutoFocusHandled,
+}: ChatComposerProps) {
   const [draft, setDraft] = useState('');
   const [emojiOpen, setEmojiOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    textareaRef.current?.focus();
+    onAutoFocusHandled?.();
+  }, [autoFocus, onAutoFocusHandled]);
 
   const resize = (element: HTMLTextAreaElement) => {
     element.style.height = 'auto';

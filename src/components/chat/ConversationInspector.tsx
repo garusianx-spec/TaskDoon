@@ -2,30 +2,12 @@
 
 import { useMemo } from 'react';
 import type { Conversation, Message } from '@/types';
-import { formatJalali } from '@/lib/jalali';
-import { formatCount, formatFileSize } from '@/lib/format';
+import { formatCount } from '@/lib/format';
 import { roleLabel } from '@/data/reference';
-import { conversationMessages, userById, usersByIds } from '@/store/selectors';
+import { usersByIds } from '@/store/selectors';
 import { Avatar, Badge, Button, IconButton, SwitchField } from '@/components/ui';
-import {
-  ArchiveIcon,
-  CloseIcon,
-  DocumentIcon,
-  DownloadIcon,
-  HashIcon,
-  ImageIcon,
-  SheetIcon,
-  UserAddIcon,
-} from '@/components/icons';
-
-const ATTACHMENT_ICONS = {
-  image: ImageIcon,
-  document: DocumentIcon,
-  sheet: SheetIcon,
-  archive: ArchiveIcon,
-  audio: DocumentIcon,
-  link: DocumentIcon,
-} as const;
+import { SharedMediaDrawer } from './SharedMediaDrawer';
+import { CloseIcon, HashIcon, TaskSquareIcon, UserAddIcon } from '@/components/icons';
 
 export interface ConversationInspectorProps {
   readonly conversation: Conversation;
@@ -35,6 +17,9 @@ export interface ConversationInspectorProps {
   readonly onTogglePin: () => void;
   readonly onToggleMute: () => void;
   readonly onClose: () => void;
+  /** Present when the conversation is a project channel. */
+  readonly onOpenProjectBoard: (() => void) | null;
+  readonly projectName: string | null;
 }
 
 /** Conversation details: members, the shared file drawer and notification preferences. */
@@ -46,18 +31,10 @@ export function ConversationInspector({
   onTogglePin,
   onToggleMute,
   onClose,
+  onOpenProjectBoard,
+  projectName,
 }: ConversationInspectorProps) {
   const members = useMemo(() => usersByIds(conversation.memberIds), [conversation.memberIds]);
-
-  const files = useMemo(
-    () =>
-      conversationMessages(messages, conversation.id)
-        .filter((message) => message.body.kind === 'file')
-        .map((message) => (message.body.kind === 'file' ? { message, attachment: message.body.attachment } : null))
-        .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-        .reverse(),
-    [messages, conversation.id],
-  );
 
   return (
     <>
@@ -75,6 +52,17 @@ export function ConversationInspector({
       </header>
 
       <div className="flex flex-col gap-6 p-4">
+        {onOpenProjectBoard && (
+          <Button
+            variant="secondary"
+            fullWidth
+            iconStart={<TaskSquareIcon size={16} />}
+            onClick={onOpenProjectBoard}
+          >
+            {`مشاهده بورد وظایف ${projectName ?? 'پروژه'}`}
+          </Button>
+        )}
+
         <section aria-label="اعضای گفتگو">
           <div className="mb-2 flex items-center gap-2">
             <h3 className="text-title-sm font-semibold text-fg-primary">اعضا</h3>
@@ -105,48 +93,7 @@ export function ConversationInspector({
           </ul>
         </section>
 
-        <section aria-label="کشوی فایل‌های گفتگو">
-          <div className="mb-2 flex items-center gap-2">
-            <h3 className="text-title-sm font-semibold text-fg-primary">فایل‌های مشترک</h3>
-            <span className="numeric text-caption text-fg-tertiary">{formatCount(files.length)}</span>
-          </div>
-
-          {files.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-primary px-3 py-4 text-center text-caption text-fg-tertiary">
-              هنوز فایلی در این گفتگو به اشتراک گذاشته نشده است.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-1.5">
-              {files.map(({ message, attachment }) => {
-                const Icon = ATTACHMENT_ICONS[attachment.kind];
-                const sender = userById(message.authorId);
-                return (
-                  <li
-                    key={message.id}
-                    className="flex items-center gap-2.5 rounded-lg border border-secondary bg-surface p-2"
-                  >
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sunken text-fg-brand">
-                      <Icon size={18} variant="twotone" />
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-caption font-semibold text-fg-primary">
-                        {attachment.name}
-                      </span>
-                      <span className="numeric truncate text-micro text-fg-tertiary">
-                        {`${formatFileSize(attachment.size)}، ${sender?.fullName ?? ''}، ${formatJalali(message.sentAt, 'day-month')}`}
-                      </span>
-                    </span>
-                    <IconButton
-                      label={`دانلود ${attachment.name}`}
-                      icon={<DownloadIcon size={16} />}
-                      size="xs"
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+        <SharedMediaDrawer conversationId={conversation.id} messages={messages} />
 
         <section aria-label="تنظیمات گفتگو" className="flex flex-col gap-3">
           <h3 className="text-title-sm font-semibold text-fg-primary">تنظیمات</h3>
