@@ -4,10 +4,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { normaliseIranMobile, toLatinDigits, formatMobile } from '@taskin/text';
 import { toPersianDigits } from '@taskin/jalali';
 import { session } from '@/api/session';
-import { problemMessage } from '@/api/messages';
+import { codeMessage, problemMessage } from '@/api/messages';
 import type { LiveStore } from '@/store/live/live-store';
 import { Button, Input } from '@/components/ui';
-import { ArrowRightIcon, KeyIcon, LockIcon, MobileIcon, UserIcon } from '@/components/icons';
+import { ArrowRightIcon, KeyIcon, LockIcon, MobileIcon, UserIcon, WarningIcon } from '@/components/icons';
 import { AuthCard } from './AuthCard';
 
 type Step =
@@ -35,6 +35,8 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
   const [repeat, setRepeat] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Signed out because the account was suspended: said once, above the first step. */
+  const [suspended] = useState(() => session.endReason() === 'suspended');
   const [now, setNow] = useState(() => Date.now());
   const fieldRef = useRef<HTMLInputElement>(null);
 
@@ -167,10 +169,18 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
     });
   };
 
+  const suspendedNotice = suspended && (
+    <p role="alert" className="flex items-start gap-2 rounded-lg border border-status-blocked-line bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked">
+      <WarningIcon size={18} className="mt-0.5 shrink-0" />
+      <span>{codeMessage('ACCOUNT_SUSPENDED')}</span>
+    </p>
+  );
+
   if (step.kind === 'password') {
     return (
       <AuthCard labelledBy="sign-in-title" title="ورود با رمز عبور" description="با شماره موبایل و رمز عبوری که در «امنیت و ورود» گذاشته‌اید وارد شوید.">
         <form className="flex flex-col gap-4" onSubmit={onPassword} noValidate>
+          {suspendedNotice}
           <Input
             ref={fieldRef}
             label="شماره موبایل"
@@ -365,6 +375,7 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
       }
     >
       <form className="flex flex-col gap-4" onSubmit={onPhone} noValidate>
+        {suspendedNotice}
         <Input
           ref={fieldRef}
           label="شماره موبایل"

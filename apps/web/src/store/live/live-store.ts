@@ -1558,7 +1558,7 @@ export class LiveStore {
         await this.load();
         return;
       case 'session:revoked':
-        session.end();
+        await session.revoked();
         return;
       case 'auth:expired':
         await session.restore();

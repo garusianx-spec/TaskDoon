@@ -20,6 +20,10 @@ type Listener = (session: LiveSession | null) => void;
 let current: LiveSession | null = null;
 let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 let inFlight: Promise<boolean> | null = null;
+/** Why the last session ended, when the server said: the account was suspended. */
+let endReason: 'suspended' | null = null;
+/** This device is signing out: the server's own `session:revoked` for it needs no refresh. */
+let signingOut = false;
 const listeners = new Set<Listener>();
 
 /** Refresh this long before the access token expires. */
@@ -99,16 +103,32 @@ export const session = {
 
   /** Signs this device out. The local session ends even if the server cannot be reached. */
   async signOut(): Promise<void> {
+    signingOut = true;
     try {
       await http.post<void>('/auth/logout', undefined, { headers: csrfHeader(), authenticated: true });
     } catch {
       // The cookie is cleared by the server when it answers; either way this tab is done.
     }
     end();
+    signingOut = false;
   },
 
   /** The server ended the session (revoked elsewhere, or the refresh token was reused). */
   end,
+
+  /**
+   * A socket heard `session:revoked`. One refresh asks the server why, so a suspended account
+   * can say so on the sign-in screen; the session ends either way.
+   */
+  async revoked(): Promise<void> {
+    if (current && !signingOut) await refresh();
+    end();
+  },
+
+  /** `suspended` when the last session ended because the account is suspended; cleared by a sign-in. */
+  endReason(): 'suspended' | null {
+    return endReason;
+  },
 };
 
 installCredentials({ token: () => current?.accessToken ?? null, refresh });
@@ -130,6 +150,7 @@ function adopt(body: AuthSession): LiveSession {
     user: body.user,
     expiresAt: Date.now() + body.expiresInSeconds * 1000,
   };
+  endReason = null;
   set(next);
   return next;
 }
@@ -147,6 +168,7 @@ function refresh(): Promise<boolean> {
     } catch (error) {
       // A network failure keeps the session (the next call retries); a refusal ends it.
       if (error instanceof ApiProblem && error.code === 'NETWORK') return current !== null;
+      if (error instanceof ApiProblem && error.code === 'ACCOUNT_SUSPENDED') endReason = 'suspended';
       end();
       return false;
     } finally {

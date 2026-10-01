@@ -180,6 +180,11 @@ jobs:
           npm run test:e2e:live:admin
       - name: Phone and password (sign-in, a wrong password, recovery with an SMS code)
         run: API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live:password
+      - name: Platform super admin, phase 2 (suspend, sessions, forced password change, audit)
+        run: |
+          API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 \
+          GRANT_PLATFORM_ADMIN="docker compose -f $GITHUB_WORKSPACE/infra/docker-compose.yml --profile app exec -T api node dist/cli/platform-admin.js grant" \
+          npm run test:e2e:live:moderation
       - name: Logs
         if: failure()
         run: |

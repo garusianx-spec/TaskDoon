@@ -15,9 +15,9 @@ import { Loaded, Panel, TABLE, TableFrame, TD, TH } from './AdminUi';
 type Filter = 'active' | 'revoked' | 'all';
 
 /** Session inspector: every signed-in device of a person, and ending one or all of them. */
-export function SessionsPanel({ userId, onChanged }: { readonly userId: string; readonly onChanged: () => void }) {
+export function SessionsPanel({ userId, onChanged, initialFilter = 'all' }: { readonly userId: string; readonly onChanged: () => void; readonly initialFilter?: Filter }) {
   const { call } = useAdmin();
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<Filter>(initialFilter);
   const sessions = useAdminLoad(`${userId}:${filter}`, () => adminApi.sessions(userId, filter));
   const [confirm, setConfirm] = useState<{ readonly kind: 'one'; readonly session: PlatformSessionView } | { readonly kind: 'all' } | null>(null);
   const [busy, setBusy] = useState(false);

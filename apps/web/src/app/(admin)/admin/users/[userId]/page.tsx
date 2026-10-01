@@ -3,22 +3,48 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { formatJalali } from '@taskin/jalali';
+import { formatJalali, toPersianDigits } from '@taskin/jalali';
+import type { PlatformModerationResult } from '@taskin/contracts';
 import { adminApi } from '@/admin/api';
+import { useAdminMe } from '@/admin/AdminSession';
 import { dateTimeLabel, MEMBER_STATUS, phoneLabel, PROJECT_ROLES, USER_STATUS } from '@/admin/format';
 import { useAdminLoad } from '@/admin/use-admin-load';
 import { Fact, Loaded, PageHeader, Panel, TABLE, TableFrame, TD, TH } from '@/components/admin/AdminUi';
 import { ConversationList } from '@/components/admin/ConversationList';
+import { ForcePasswordResetDialog } from '@/components/admin/ForcePasswordResetDialog';
 import { ResetPasswordDialog } from '@/components/admin/ResetPasswordDialog';
 import { SessionsPanel } from '@/components/admin/SessionsPanel';
+import { SuspendUserDialog } from '@/components/admin/SuspendUserDialog';
 import { Badge, Button } from '@/components/ui';
-import { ArrowRightIcon, CrownIcon, KeyIcon } from '@/components/icons';
+import { ArrowRightIcon, CheckCircleIcon, CrownIcon, KeyIcon, LockIcon, WarningIcon } from '@/components/icons';
 
 /** A person, across the platform: profile, workspaces and exact roles, devices, conversations. */
 export default function AdminUserPage() {
   const { userId } = useParams<{ userId: string }>();
   const user = useAdminLoad(userId, () => adminApi.user(userId));
+  const self = useAdminMe();
   const [resetOpen, setResetOpen] = useState(false);
+  const [moderating, setModerating] = useState<'suspension' | 'password' | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  /** Remounts the session inspector after an action that ended sessions. */
+  const [sessionsVersion, setSessionsVersion] = useState(0);
+
+  const onModerated = ({ user: changed, sessionsRevoked }: PlatformModerationResult) => {
+    const what = moderating;
+    setModerating(null);
+    const closed = sessionsRevoked > 0 ? ` ${toPersianDigits(sessionsRevoked)} نشست بسته شد.` : '';
+    setNotice(
+      what === 'suspension'
+        ? changed.status === 'suspended'
+          ? `حساب معلق شد.${closed}`
+          : 'تعلیق حساب برداشته شد.'
+        : changed.passwordResetRequired
+          ? `کاربر باید رمز عبور تازه‌ای بگذارد.${closed}`
+          : 'اجبار تغییر رمز لغو شد.',
+    );
+    if (sessionsRevoked > 0) setSessionsVersion((value) => value + 1);
+    user.reload();
+  };
 
   return (
     <>
@@ -33,11 +59,49 @@ export default function AdminUserPage() {
               title={profile.fullName}
               description="پروفایل، ورک‌اسپیس‌ها، نشست‌ها و گفتگوهای این کاربر"
               actions={
-                <Button variant="secondary" iconStart={<KeyIcon size={16} />} onClick={() => setResetOpen(true)}>
-                  بازنشانی رمز عبور
-                </Button>
+                <>
+                  <Button variant="secondary" iconStart={<KeyIcon size={16} />} onClick={() => setResetOpen(true)}>
+                    بازنشانی رمز عبور
+                  </Button>
+                  {profile.id !== self.userId && profile.status !== 'deleted' && (
+                    <>
+                      <Button variant="secondary" iconStart={<KeyIcon size={16} />} onClick={() => setModerating('password')}>
+                        {profile.passwordResetRequired ? 'لغو اجبار تغییر رمز' : 'اجبار به تغییر رمز عبور'}
+                      </Button>
+                      {profile.status === 'suspended' ? (
+                        <Button variant="primary" iconStart={<CheckCircleIcon size={16} />} onClick={() => setModerating('suspension')}>
+                          رفع تعلیق
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="destructive"
+                          iconStart={<LockIcon size={16} />}
+                          disabled={profile.isPlatformAdmin}
+                          title={profile.isPlatformAdmin ? 'مدیران پلتفرم را نمی‌توان از اینجا معلق کرد.' : undefined}
+                          onClick={() => setModerating('suspension')}
+                        >
+                          تعلیق کاربر
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </>
               }
             />
+            {notice && (
+              <p role="status" className="mb-4 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done">
+                {notice}
+              </p>
+            )}
+            {profile.status === 'suspended' && (
+              <div role="note" className="mb-4 flex items-start gap-2 rounded-lg border border-secondary bg-sunken px-3 py-2 text-body-sm text-fg-secondary">
+                <WarningIcon size={18} className="mt-0.5 shrink-0 text-warning-600" />
+                <span>
+                  این حساب معلق است: ورود و همه درخواست‌هایش رد می‌شود.
+                  {profile.suspension?.reason ? ` دلیل: ${profile.suspension.reason}` : ''}
+                </span>
+              </div>
+            )}
             <Panel title="پروفایل">
               <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Fact label="موبایل">
@@ -63,6 +127,15 @@ export default function AdminUserPage() {
                 </Fact>
                 <Fact label="آخرین فعالیت">{profile.lastActiveAt ? dateTimeLabel(profile.lastActiveAt) : '—'}</Fact>
                 <Fact label="نقش پلتفرم">{profile.isPlatformAdmin ? <Badge tone="brand" size="sm">مدیر پلتفرم</Badge> : 'کاربر عادی'}</Fact>
+                {profile.status === 'suspended' && profile.suspension && (
+                  <>
+                    <Fact label="تاریخ تعلیق">{dateTimeLabel(profile.suspension.at)}</Fact>
+                    <Fact label="تعلیق توسط">{profile.suspension.adminName ?? '—'}</Fact>
+                    <Fact label="دلیل تعلیق">
+                      <span dir="auto">{profile.suspension.reason ?? '—'}</span>
+                    </Fact>
+                  </>
+                )}
               </dl>
             </Panel>
             <Panel title="ورک‌اسپیس‌ها و نقش‌ها">
@@ -135,9 +208,13 @@ export default function AdminUserPage() {
                 </TableFrame>
               )}
             </Panel>
-            <SessionsPanel userId={profile.id} onChanged={user.reload} />
+            <SessionsPanel key={sessionsVersion} userId={profile.id} onChanged={user.reload} />
             <ConversationList userId={profile.id} />
             <ResetPasswordDialog user={profile} open={resetOpen} onClose={() => setResetOpen(false)} onIssued={user.reload} />
+            {moderating === 'suspension' && (
+              <SuspendUserDialog user={profile} mode={profile.status === 'suspended' ? 'unsuspend' : 'suspend'} open onClose={() => setModerating(null)} onDone={onModerated} />
+            )}
+            {moderating === 'password' && <ForcePasswordResetDialog user={profile} open onClose={() => setModerating(null)} onDone={onModerated} />}
           </>
         )}
       </Loaded>

@@ -1,32 +1,75 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
-import type { PlatformUserSummary } from '@taskin/contracts';
+import { useRef, useState, type FormEvent } from 'react';
+import type { PlatformModerationResult, PlatformUserSummary } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
 import { adminApi, type UserFilters } from '@/admin/api';
 import { phoneLabel, USER_STATUS } from '@/admin/format';
-import { useAdmin } from '@/admin/AdminSession';
+import { useAdmin, useAdminMe } from '@/admin/AdminSession';
 import { useAdminLoad } from '@/admin/use-admin-load';
 import { Loaded, PageHeader, Panel, TABLE, TableFrame, TD, TH } from '@/components/admin/AdminUi';
+import { ForcePasswordResetDialog } from '@/components/admin/ForcePasswordResetDialog';
+import { SessionsDrawer } from '@/components/admin/SessionsDrawer';
+import { SuspendUserDialog } from '@/components/admin/SuspendUserDialog';
+import { type UserAction, UserActionsMenu } from '@/components/admin/UserActionsMenu';
 import { Badge, Button, Input, RelativeTime, Select } from '@/components/ui';
 import { SearchIcon } from '@/components/icons';
 import { problemMessage } from '@/api/messages';
 
 const EMPTY: UserFilters = { q: '', phone: '', email: '', status: '', platformRole: '' };
 
+/** What the directory says once a moderation action is done. */
+function outcome(action: UserAction, { user, sessionsRevoked, changed }: PlatformModerationResult): string {
+  const closed = sessionsRevoked > 0 ? `؛ ${toPersianDigits(sessionsRevoked)} نشست بسته شد` : '';
+  switch (action) {
+    case 'suspend':
+      return changed ? `${user.fullName} معلق شد${closed}.` : `${user.fullName} از قبل معلق بود.`;
+    case 'unsuspend':
+      return changed ? `تعلیق ${user.fullName} برداشته شد.` : `${user.fullName} معلق نبود.`;
+    case 'require-reset':
+      return changed ? `${user.fullName} باید رمز عبور تازه‌ای بگذارد${closed}.` : `رمز ${user.fullName} از قبل در انتظار تغییر بود${closed}.`;
+    default:
+      return `اجبار تغییر رمز ${user.fullName} لغو شد.`;
+  }
+}
+
 /** «کاربران و سشن‌ها»: the directory. Searches run on submit (each one is audited). */
 export default function AdminUsersPage() {
   const { call } = useAdmin();
+  const self = useAdminMe();
   const [draft, setDraft] = useState<UserFilters>(EMPTY);
   const [applied, setApplied] = useState<UserFilters>(EMPTY);
   const [more, setMore] = useState<{ items: PlatformUserSummary[]; cursor: string | null } | null>(null);
   const [moreError, setMoreError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const page = useAdminLoad(JSON.stringify(applied), () => adminApi.users(applied));
+  /** Rows as the last moderation action left them, until the next search. */
+  const [updated, setUpdated] = useState<Readonly<Record<string, PlatformUserSummary>>>({});
+  const [acting, setActing] = useState<{ readonly action: UserAction; readonly user: PlatformUserSummary } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const sessionsChanged = useRef(false);
+
+  const onDone = (result: PlatformModerationResult) => {
+    if (!acting) return;
+    setUpdated((current) => ({ ...current, [result.user.id]: result.user }));
+    setNotice(outcome(acting.action, result));
+    setActing(null);
+  };
+  const closeSessions = () => {
+    setActing(null);
+    if (!sessionsChanged.current) return;
+    // Session counts changed: search again (and record it, as every search is).
+    sessionsChanged.current = false;
+    setMore(null);
+    setUpdated({});
+    page.reload();
+  };
 
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
+    setNotice(null);
+    setUpdated({});
     setMore(null);
     setApplied({ ...draft });
     if (JSON.stringify(draft) === JSON.stringify(applied)) page.reload();
@@ -63,7 +106,7 @@ export default function AdminUsersPage() {
             options={[
               { value: 'any', label: 'همه' },
               { value: 'active', label: 'فعال' },
-              { value: 'suspended', label: 'معلق' },
+              { value: 'suspended', label: USER_STATUS.suspended.label },
               { value: 'deleted', label: 'حذف‌شده' },
             ]}
           />
@@ -97,6 +140,11 @@ export default function AdminUsersPage() {
         </form>
       </Panel>
       <Panel title="کاربران">
+        {notice && (
+          <p role="status" className="mb-3 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done">
+            {notice}
+          </p>
+        )}
         <Loaded load={page} empty={(data) => data.items.length === 0}>
           {(data) => (
             <>
@@ -111,10 +159,11 @@ export default function AdminUsersPage() {
                       <th className={TH}>ورک‌اسپیس</th>
                       <th className={TH}>نشست فعال</th>
                       <th className={TH}>آخرین فعالیت</th>
+                      <th className={TH}>اقدام‌ها</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[...data.items, ...(more?.items ?? [])].map((user) => (
+                    {[...data.items, ...(more?.items ?? [])].map((listed) => updated[listed.id] ?? listed).map((user) => (
                       <tr key={user.id}>
                         <td className={TD}>
                           <Link href={`/admin/users/${user.id}`} className="font-semibold text-fg-brand hover:underline">
@@ -137,6 +186,9 @@ export default function AdminUsersPage() {
                         <td className={TD}>{toPersianDigits(user.workspaceCount)}</td>
                         <td className={TD}>{toPersianDigits(user.activeSessionCount)}</td>
                         <td className={TD}>{user.lastActiveAt ? <RelativeTime iso={user.lastActiveAt} /> : '—'}</td>
+                        <td className={TD}>
+                          <UserActionsMenu user={user} selfId={self.userId} onAction={(action) => setActing({ action, user })} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -154,6 +206,19 @@ export default function AdminUsersPage() {
           )}
         </Loaded>
       </Panel>
+      {acting && (acting.action === 'suspend' || acting.action === 'unsuspend') && (
+        <SuspendUserDialog user={acting.user} mode={acting.action} open onClose={() => setActing(null)} onDone={onDone} />
+      )}
+      {acting && (acting.action === 'require-reset' || acting.action === 'lift-reset') && (
+        <ForcePasswordResetDialog user={acting.user} open onClose={() => setActing(null)} onDone={onDone} />
+      )}
+      <SessionsDrawer
+        user={acting?.action === 'sessions' ? acting.user : null}
+        onClose={closeSessions}
+        onChanged={() => {
+          sessionsChanged.current = true;
+        }}
+      />
     </>
   );
 }

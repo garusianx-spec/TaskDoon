@@ -15,7 +15,7 @@ export function dateTimeLabel(iso: string): string {
 
 export const USER_STATUS: Readonly<Record<PlatformUserStatus, { readonly label: string; readonly tone: BadgeTone }>> = {
   active: { label: 'فعال', tone: 'success' },
-  suspended: { label: 'معلق', tone: 'warning' },
+  suspended: { label: 'معلق / مسدود', tone: 'warning' },
   deleted: { label: 'حذف‌شده', tone: 'error' },
 };
 
@@ -56,6 +56,9 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   'admin.session.revoke': 'پایان یک نشست',
   'admin.sessions.revoke_all': 'پایان همه نشست‌ها',
   'admin.password_reset.issue': 'صدور کد بازنشانی رمز',
+  'admin.user.suspend': 'تعلیق کاربر',
+  'admin.user.unsuspend': 'رفع تعلیق',
+  'admin.user.password_reset_required': 'اجبار به تغییر رمز عبور',
   'admin.conversations.list': 'فهرست گفتگوها',
   'admin.conversation.view': 'مشاهده گفتگو',
   'admin.messages.read': 'خواندن پیام‌ها',

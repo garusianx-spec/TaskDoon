@@ -1,6 +1,7 @@
 import type {
   PasswordResetChannel,
   PasswordResetIssued,
+  PasswordResetRequiredBody,
   PlatformAdminMe,
   PlatformAttachmentLink,
   PlatformAuditPage,
@@ -8,6 +9,7 @@ import type {
   PlatformConversationView,
   PlatformMessagePage,
   PlatformMessageType,
+  PlatformModerationResult,
   PlatformSessionsRevoked,
   PlatformSessionView,
   PlatformUserDetail,
@@ -51,6 +53,12 @@ export const adminApi = {
   revokeSession: (sessionId: string) => http.post<void>(`/admin/sessions/${sessionId}/revoke`),
   revokeAll: (userId: string) => http.post<PlatformSessionsRevoked>(`/admin/users/${userId}/sessions/revoke-all`),
   issueReset: (userId: string, channel: PasswordResetChannel) => http.post<PasswordResetIssued>(`/admin/users/${userId}/password-reset`, { channel }),
+
+  /** Moderation (phase 2): each takes effect at once and is recorded with its reason. */
+  suspend: (userId: string, reason: string) => http.post<PlatformModerationResult>(`/admin/users/${userId}/suspend`, { reason }),
+  unsuspend: (userId: string, reason?: string) => http.post<PlatformModerationResult>(`/admin/users/${userId}/unsuspend`, reason ? { reason } : {}),
+  setPasswordResetRequired: (userId: string, body: PasswordResetRequiredBody) =>
+    http.put<PlatformModerationResult>(`/admin/users/${userId}/password-reset-required`, body),
 
   conversations: (userId: string) => http.get<PlatformConversationView[]>(`/admin/users/${userId}/conversations`),
   conversation: (conversationId: string, targetUserId?: string | null) =>

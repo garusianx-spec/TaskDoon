@@ -20,6 +20,9 @@ const ACTION_FILTERS = [
   { value: 'admin.sessions', label: 'نشست‌ها' },
   { value: 'admin.session.revoke', label: 'پایان یک نشست' },
   { value: 'admin.password_reset', label: 'بازنشانی رمز' },
+  { value: 'admin.user.suspend', label: 'تعلیق کاربر' },
+  { value: 'admin.user.unsuspend', label: 'رفع تعلیق' },
+  { value: 'admin.user.password_reset_required', label: 'اجبار به تغییر رمز' },
   { value: 'admin.user', label: 'مشاهده پروفایل' },
   { value: 'admin.users', label: 'جستجوی کاربران' },
   { value: 'admin.workspace', label: 'ورک‌اسپیس‌ها' },
@@ -84,7 +87,7 @@ export default function AdminAuditPage() {
                       <th className={TH}>اقدام</th>
                       <th className={TH}>کاربر هدف</th>
                       <th className={TH}>IP</th>
-                      <th className={TH}>شناسه درخواست</th>
+                      <th className={TH}>شناسه درخواست / ردیابی</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -94,6 +97,11 @@ export default function AdminAuditPage() {
                         <td className={TD}>{entry.adminName}</td>
                         <td className={TD}>
                           <span className="block">{AUDIT_ACTIONS[entry.action] ?? entry.action}</span>
+                          {typeof entry.metadata?.reason === 'string' && (
+                            <span className="block text-caption text-fg-secondary" dir="auto">
+                              دلیل: {entry.metadata.reason}
+                            </span>
+                          )}
                           {entry.resourceType && (
                             <span dir="ltr" className="block text-start text-caption text-fg-tertiary">
                               {entry.resourceType}
@@ -117,6 +125,11 @@ export default function AdminAuditPage() {
                           <span dir="ltr" className="font-mono text-caption">
                             {entry.requestId ?? '—'}
                           </span>
+                          {entry.traceId && (
+                            <span dir="ltr" className="mt-0.5 block text-start font-mono text-micro text-fg-tertiary" title="شناسه ردیابی (trace id)">
+                              trace {entry.traceId}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
