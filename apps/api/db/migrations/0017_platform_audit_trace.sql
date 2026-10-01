@@ -1,0 +1,1 @@
+ALTER TABLE "platform_audit_logs" ADD COLUMN "trace_id" text;

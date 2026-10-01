@@ -260,6 +260,12 @@ describe('M1 checklist: audit trail and correlation', () => {
       r.set(bearer(operator)).send({ channel: 'manual' }),
     );
     await traced('post', '/api/v1/password-reset', '/api/v1/password-reset', (r) => r.send({ token: (reset.body as { code: string }).code, newPassword: 'Tazeh-Ramz-1405!' }));
+    // Phase 2: moderation.
+    await traced('put', '/api/v1/admin/users/{userId}/password-reset-required', `/api/v1/admin/users/${target.userId}/password-reset-required`, (r) =>
+      r.set(bearer(operator)).send({ required: true, reason: 'ورود مشکوک' }),
+    );
+    await traced('post', '/api/v1/admin/users/{userId}/suspend', `/api/v1/admin/users/${target.userId}/suspend`, (r) => r.set(bearer(operator)).send({ reason: 'نقض قوانین' }));
+    await traced('post', '/api/v1/admin/users/{userId}/unsuspend', `/api/v1/admin/users/${target.userId}/unsuspend`, (r) => r.set(bearer(operator)).send({}));
 
     // Phone and password: sign-in, confirming that session with an SMS code, and recovery.
     const keyholder = await withAdminPassword(t, await signIn(t, randomPhone(), 'دارنده رمز'));

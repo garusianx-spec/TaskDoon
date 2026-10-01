@@ -39,7 +39,7 @@ export interface PlatformUserFilters {
   readonly limit?: number;
 }
 
-interface UserRow extends Record<string, unknown> {
+export interface UserRow extends Record<string, unknown> {
   id: string;
   full_name: string;
   phone: string;
@@ -54,6 +54,13 @@ interface UserRow extends Record<string, unknown> {
   workspace_count: string;
   active_session_count: string;
   last_active_at: string | null;
+}
+
+interface SuspensionRow extends Record<string, unknown> {
+  created_at: string;
+  reason: string | null;
+  admin_id: string | null;
+  admin_name: string | null;
 }
 
 interface MembershipRow extends Record<string, unknown> {
@@ -72,7 +79,7 @@ interface MembershipRow extends Record<string, unknown> {
 }
 
 /** One person's line in the directory, with the counts the list shows. */
-const USER_COLUMNS = sql`
+export const USER_COLUMNS = sql`
   u.id, u.full_name, u.phone, u.email, u.status, u.is_platform_admin, u.password_hash is not null as has_password,
   u.password_reset_required, u.password_changed_at, u.created_at, u.created_at::text as cursor_at,
   (select count(*) from workspace_members wm where wm.user_id = u.id and wm.status <> 'left') as workspace_count,
@@ -86,7 +93,7 @@ function phoneFragment(raw: string): string {
   return digits.startsWith('0') ? digits.slice(1) : digits;
 }
 
-function summary(row: UserRow): PlatformUserSummary {
+export function summary(row: UserRow): PlatformUserSummary {
   return {
     id: row.id,
     fullName: row.full_name,
@@ -162,7 +169,7 @@ export class PlatformUsersService {
   }
 
   async detail(admin: PlatformAdmin, userId: string): Promise<PlatformUserDetail> {
-    const { user, memberships } = await this.admins.read(admin, async (tx) => {
+    const { user, memberships, suspension } = await this.admins.read(admin, async (tx) => {
       const [row] = (await tx.execute<UserRow>(sql`select ${USER_COLUMNS} from users u where u.id = ${userId}`)).rows;
       if (!row) throw ApiError.notFound('The user');
       const joined = await tx.execute<MembershipRow>(sql`
@@ -179,12 +186,27 @@ export class PlatformUsersService {
         left join departments d on d.workspace_id = wm.workspace_id and d.id = wm.department_id
         where wm.user_id = ${userId}
         order by wm.joined_at, w.name`);
-      return { user: row, memberships: joined.rows };
+      // While suspended: the latest suspension in the platform audit log says when, why and by whom.
+      const suspension =
+        row.status === 'suspended'
+          ? (
+              await tx.execute<SuspensionRow>(sql`
+                select l.created_at, l.metadata ->> 'reason' as reason, l.admin_id, a.full_name as admin_name
+                from platform_audit_logs l left join users a on a.id = l.admin_id
+                where l.target_user_id = ${userId} and l.action = 'admin.user.suspend' and coalesce((l.metadata ->> 'changed')::boolean, true)
+                order by l.id desc limit 1`)
+            ).rows[0] ?? null
+          : null;
+      return { user: row, memberships: joined.rows, suspension };
     });
     await this.auditLog.record(admin, { action: 'admin.user.view', targetUserId: userId, resourceType: 'user', resourceId: userId });
     return {
       ...summary(user),
       passwordChangedAt: isoOrNull(user.password_changed_at),
+      // A suspension made outside the panel (no audit row) shows as the status alone.
+      suspension: suspension
+        ? { at: iso(suspension.created_at), reason: suspension.reason, adminId: suspension.admin_id, adminName: suspension.admin_name }
+        : null,
       memberships: memberships.map((row) => ({
         workspaceId: row.workspace_id,
         workspaceName: row.workspace_name,

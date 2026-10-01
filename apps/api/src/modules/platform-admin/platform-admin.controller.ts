@@ -11,6 +11,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
   Req,
   UseInterceptors,
@@ -26,6 +27,7 @@ import type {
   PlatformConversationDetail,
   PlatformConversationView,
   PlatformMessagePage,
+  PlatformModerationResult,
   PlatformSessionsRevoked,
   PlatformSessionView,
   PlatformUserDetail,
@@ -50,6 +52,8 @@ import {
   PlatformConversationViewDto,
   PlatformMessagePageDto,
   PlatformMessageQueryDto,
+  PlatformModerationResultDto,
+  PasswordResetRequiredDto,
   PlatformSessionQueryDto,
   PlatformSessionsRevokedDto,
   PlatformSessionViewDto,
@@ -60,10 +64,13 @@ import {
   PlatformWorkspaceDetailDto,
   PlatformWorkspacePageDto,
   PlatformWorkspaceQueryDto,
+  SuspendUserDto,
+  UnsuspendUserDto,
 } from './platform-admin.dto.js';
 import { CurrentPlatformAdmin, type PlatformAdmin, PlatformAdminOnly, PlatformAdminProbe } from './platform-admin.guard.js';
 import { PlatformAdminUnitOfWork } from './admin-unit-of-work.js';
 import { PlatformConversationsService } from './platform-conversations.service.js';
+import { PlatformModerationService } from './platform-moderation.service.js';
 import { PlatformUsersService } from './platform-users.service.js';
 import { PlatformWorkspacesService } from './platform-workspaces.service.js';
 
@@ -115,6 +122,7 @@ export class PlatformAdminController {
     private readonly users: PlatformUsersService,
     private readonly conversations: PlatformConversationsService,
     private readonly workspaces: PlatformWorkspacesService,
+    private readonly moderation: PlatformModerationService,
   ) {}
 
   /* ---------------------------------------------------------------- users and sessions */
@@ -169,6 +177,43 @@ export class PlatformAdminController {
     @Body() body: IssuePasswordResetDto,
   ): Promise<PasswordResetIssued> {
     return this.users.issuePasswordReset(admin, userId, body.channel);
+  }
+
+  /* ---------------------------------------------------------------- moderation (phase 2) */
+
+  @Post('users/:userId/suspend')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Suspend an account: it stops working at once, every session ends (not for platform admins or oneself)' })
+  @ApiOkResponse({ type: PlatformModerationResultDto })
+  suspend(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() body: SuspendUserDto,
+  ): Promise<PlatformModerationResult> {
+    return this.moderation.suspend(admin, userId, body.reason);
+  }
+
+  @Post('users/:userId/unsuspend')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Lift a suspension: the person may sign in again' })
+  @ApiOkResponse({ type: PlatformModerationResultDto })
+  unsuspend(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() body: UnsuspendUserDto,
+  ): Promise<PlatformModerationResult> {
+    return this.moderation.unsuspend(admin, userId, body.reason);
+  }
+
+  @Put('users/:userId/password-reset-required')
+  @ApiOperation({ summary: 'Require (or stop requiring) a new password; requiring it signs every session out by default' })
+  @ApiOkResponse({ type: PlatformModerationResultDto })
+  setPasswordResetRequired(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() body: PasswordResetRequiredDto,
+  ): Promise<PlatformModerationResult> {
+    return this.moderation.setPasswordResetRequired(admin, userId, body);
   }
 
   /* ---------------------------------------------------------------- conversations and messages */

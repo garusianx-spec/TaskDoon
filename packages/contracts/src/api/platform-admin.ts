@@ -67,6 +67,15 @@ export interface PlatformMembership {
 export interface PlatformUserDetail extends PlatformUserSummary {
   readonly passwordChangedAt: string | null;
   readonly memberships: readonly PlatformMembership[];
+  /** While the account is suspended: when, why and by whom (from the platform audit log). */
+  readonly suspension?: PlatformSuspension | null;
+}
+
+export interface PlatformSuspension {
+  readonly at: string;
+  readonly reason: string | null;
+  readonly adminId: string | null;
+  readonly adminName: string | null;
 }
 
 export type PlatformSessionStatus = 'active' | 'revoked' | 'expired';
@@ -172,6 +181,8 @@ export interface PlatformAuditEntry {
   readonly ip: string | null;
   readonly userAgent: string | null;
   readonly requestId: string | null;
+  /** The request's trace id; `null` for entries written before it was recorded. */
+  readonly traceId?: string | null;
   readonly metadata: Readonly<Record<string, unknown>> | null;
   readonly createdAt: string;
 }
@@ -219,4 +230,35 @@ export interface PlatformWorkspaceDetail extends PlatformWorkspaceSummary {
     readonly joinedAt: string;
     readonly leftAt: string | null;
   }[];
+}
+
+/* ---------------------------------------------------------------- phase 2: moderation */
+
+/** `POST /admin/users/:userId/suspend`: the account stops working at once (every session ends). */
+export interface SuspendUserBody {
+  /** Why, for the audit log and the next admin (3 to 500 characters). */
+  readonly reason: string;
+}
+
+/** `POST /admin/users/:userId/unsuspend`: the person may sign in again. */
+export interface UnsuspendUserBody {
+  readonly reason?: string;
+}
+
+/** `PUT /admin/users/:userId/password-reset-required`. */
+export interface PasswordResetRequiredBody {
+  /** `true`: the password stops working until it is reset (by SMS code or an admin reset link). */
+  readonly required: boolean;
+  /** End every session as well (default `true` when requiring a reset). */
+  readonly signOut?: boolean;
+  readonly reason?: string;
+}
+
+/** What a moderation action left behind. */
+export interface PlatformModerationResult {
+  readonly user: PlatformUserSummary;
+  /** Sessions ended by this action. */
+  readonly sessionsRevoked: number;
+  /** `false` when the account was already in the requested state. */
+  readonly changed: boolean;
 }

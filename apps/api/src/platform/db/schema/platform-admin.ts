@@ -25,6 +25,8 @@ export const platformAuditLogs = pgTable(
     ip: inet(),
     userAgent: text(),
     requestId: text(),
+    /** The request's trace id (Phase 2), as on the matching `audit_logs` row. */
+    traceId: text(),
     /** Filters and counts of the inspection (never message content or secrets). */
     metadata: jsonb().$type<Record<string, unknown>>(),
     createdAt: createdAt(),

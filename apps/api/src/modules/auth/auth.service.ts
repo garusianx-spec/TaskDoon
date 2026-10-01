@@ -54,6 +54,7 @@ export class AuthService {
     const signedIn = await this.uow.run({ workspaceId: null, userId: null }, async (unit) => {
       const user = await this.usersService.findByPhone(unit.tx, phone);
       if (!user) return null;
+      if (user.status === 'suspended') throw new ApiError('ACCOUNT_SUSPENDED');
       if (user.status !== 'active') throw ApiError.forbidden('This account is suspended.');
       const { session, refresh } = await this.sessions.create(unit, user.id, device, ['otp']);
       await this.audit.write(unit.tx, { action: 'auth.signin', actorUserId: user.id, resourceType: 'session', resourceId: session.id });
@@ -210,6 +211,8 @@ export class AuthService {
       case 'revoked':
       case 'reuse':
         throw new ApiError('SESSION_REVOKED');
+      case 'suspended':
+        throw new ApiError('ACCOUNT_SUSPENDED');
       case 'rotated':
         return { body: await this.sessionBody(outcome.user, outcome.session), refresh: outcome.refresh };
     }

@@ -34,6 +34,7 @@ interface AuditRow extends Record<string, unknown> {
   ip: string | null;
   user_agent: string | null;
   request_id: string | null;
+  trace_id: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
 }
@@ -167,7 +168,7 @@ export class PlatformWorkspacesService {
       (
         await tx.execute<AuditRow>(sql`
           select l.id, l.admin_id, a.full_name as admin_name, l.target_user_id, t.full_name as target_name, l.action,
-            l.resource_type, l.resource_id, host(l.ip) as ip, l.user_agent, l.request_id, l.metadata, l.created_at
+            l.resource_type, l.resource_id, host(l.ip) as ip, l.user_agent, l.request_id, l.trace_id, l.metadata, l.created_at
           from platform_audit_logs l
           join users a on a.id = l.admin_id
           left join users t on t.id = l.target_user_id
@@ -191,6 +192,7 @@ export class PlatformWorkspacesService {
         ip: row.ip,
         userAgent: row.user_agent,
         requestId: row.request_id,
+        traceId: row.trace_id ?? null,
         metadata: row.metadata,
         createdAt: iso(row.created_at),
       })),

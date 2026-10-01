@@ -31,6 +31,8 @@ export type RefreshOutcome =
   | { readonly kind: 'rotated'; readonly session: SessionRow; readonly user: UserRow; readonly refresh: IssuedRefresh }
   | { readonly kind: 'invalid' }
   | { readonly kind: 'revoked' }
+  /** The account is suspended by a platform admin: its sessions are revoked too, but this says why. */
+  | { readonly kind: 'suspended' }
   | { readonly kind: 'reuse'; readonly userId: string };
 
 /** Two tabs refreshing with the same token at once is not theft; one reused later is. */
@@ -98,6 +100,7 @@ export class SessionService {
 
       if (!row) return { kind: 'invalid' };
       const { token, session, user } = row;
+      if (user.status === 'suspended' && !user.deletedAt) return { kind: 'suspended' };
       if (session.revokedAt) return { kind: 'revoked' };
       if (row.sessionExpired) {
         await this.revoke(unit, [session.id], 'expired', user.id);

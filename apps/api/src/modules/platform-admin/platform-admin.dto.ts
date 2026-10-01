@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Length, Matches, Max, MaxLength, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsBoolean, IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Length, Matches, Max, MaxLength, Min } from 'class-validator';
 import type {
   CompletePasswordResetBody,
   ConversationKind,
@@ -9,6 +9,7 @@ import type {
   MessageView,
   PasswordResetChannel,
   PasswordResetIssued,
+  PasswordResetRequiredBody,
   PlatformAdminMe,
   PlatformAttachmentLink,
   PlatformAuditEntry,
@@ -18,9 +19,11 @@ import type {
   PlatformMembership,
   PlatformMessagePage,
   PlatformMessageType,
+  PlatformModerationResult,
   PlatformSessionsRevoked,
   PlatformSessionStatus,
   PlatformSessionView,
+  PlatformSuspension,
   PlatformUserDetail,
   PlatformUserPage,
   PlatformUserStatus,
@@ -29,6 +32,8 @@ import type {
   PlatformWorkspacePage,
   PlatformWorkspaceSummary,
   ProjectRole,
+  SuspendUserBody,
+  UnsuspendUserBody,
 } from '@taskin/contracts';
 import { LatinDigits } from '../../platform/http/dto.js';
 import { CONVERSATION_KINDS, MessageViewDto } from '../chat/chat.dto.js';
@@ -160,9 +165,18 @@ export class PlatformMembershipDto implements PlatformMembership {
   @ApiProperty({ type: PlatformProjectMembershipDto, isArray: true }) readonly projects!: PlatformProjectMembershipDto[];
 }
 
+export class PlatformSuspensionDto implements PlatformSuspension {
+  @ApiProperty({ format: 'date-time' }) readonly at!: string;
+  @ApiProperty({ type: String, nullable: true }) readonly reason!: string | null;
+  @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly adminId!: string | null;
+  @ApiProperty({ type: String, nullable: true }) readonly adminName!: string | null;
+}
+
 export class PlatformUserDetailDto extends PlatformUserSummaryDto implements PlatformUserDetail {
   @ApiProperty({ type: String, nullable: true, format: 'date-time' }) readonly passwordChangedAt!: string | null;
   @ApiProperty({ type: PlatformMembershipDto, isArray: true }) readonly memberships!: PlatformMembershipDto[];
+  @ApiPropertyOptional({ type: PlatformSuspensionDto, nullable: true, description: 'While suspended: when, why and by whom' })
+  readonly suspension?: PlatformSuspensionDto | null;
 }
 
 export class PlatformSessionViewDto implements PlatformSessionView {
@@ -261,6 +275,7 @@ export class PlatformAuditEntryDto implements PlatformAuditEntry {
   @ApiProperty({ type: String, nullable: true }) readonly ip!: string | null;
   @ApiProperty({ type: String, nullable: true }) readonly userAgent!: string | null;
   @ApiProperty({ type: String, nullable: true }) readonly requestId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) readonly traceId?: string | null;
   @ApiProperty({ type: 'object', additionalProperties: true, nullable: true }) readonly metadata!: Record<string, unknown> | null;
   @ApiProperty({ format: 'date-time' }) readonly createdAt!: string;
 }
@@ -311,4 +326,29 @@ export class PlatformWorkspaceMemberDto {
 export class PlatformWorkspaceDetailDto extends PlatformWorkspaceSummaryDto implements PlatformWorkspaceDetail {
   @ApiProperty({ type: PlatformWorkspaceRoleDto, isArray: true }) readonly roles!: PlatformWorkspaceRoleDto[];
   @ApiProperty({ type: PlatformWorkspaceMemberDto, isArray: true }) readonly members!: PlatformWorkspaceMemberDto[];
+}
+
+/* ---------------------------------------------------------------- phase 2: moderation */
+
+/** Surrounding spaces do not count towards a reason's length. */
+const trimmed = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+
+export class SuspendUserDto implements SuspendUserBody {
+  @ApiProperty({ minLength: 3, maxLength: 500, description: 'Why, for the audit log' }) @Transform(trimmed) @IsString() @Length(3, 500) readonly reason!: string;
+}
+
+export class UnsuspendUserDto implements UnsuspendUserBody {
+  @ApiPropertyOptional({ maxLength: 500 }) @IsOptional() @Transform(trimmed) @IsString() @MaxLength(500) readonly reason?: string;
+}
+
+export class PasswordResetRequiredDto implements PasswordResetRequiredBody {
+  @ApiProperty({ description: '`true`: the password stops working until it is reset' }) @IsBoolean() readonly required!: boolean;
+  @ApiPropertyOptional({ description: 'End every session too (default `true` when requiring a reset)' }) @IsOptional() @IsBoolean() readonly signOut?: boolean;
+  @ApiPropertyOptional({ maxLength: 500 }) @IsOptional() @Transform(trimmed) @IsString() @MaxLength(500) readonly reason?: string;
+}
+
+export class PlatformModerationResultDto implements PlatformModerationResult {
+  @ApiProperty({ type: PlatformUserSummaryDto }) readonly user!: PlatformUserSummaryDto;
+  @ApiProperty() readonly sessionsRevoked!: number;
+  @ApiProperty({ description: '`false` when the account was already in the requested state' }) readonly changed!: boolean;
 }

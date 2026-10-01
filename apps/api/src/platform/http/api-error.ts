@@ -64,6 +64,9 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   PLATFORM_ADMIN_UNAVAILABLE: { status: 503, title: 'Platform administration is not configured here' },
   CREDENTIALS_INVALID: { status: 401, title: 'The phone number or password is not right' },
   SMS_CONFIRMATION_REQUIRED: { status: 401, title: 'Confirm this session with an SMS code first' },
+  ACCOUNT_SUSPENDED: { status: 403, title: 'This account is suspended' },
+  ADMIN_SELF_ACTION: { status: 403, title: 'Platform admins cannot moderate their own account' },
+  ADMIN_TARGET_PROTECTED: { status: 409, title: 'Another platform admin cannot be suspended here' },
 };
 
 /**

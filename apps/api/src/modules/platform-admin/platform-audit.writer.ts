@@ -45,6 +45,7 @@ export class PlatformAuditWriter {
       ip: this.context.ip ?? null,
       userAgent: this.context.userAgent?.slice(0, 512) ?? null,
       requestId: this.context.requestId ?? null,
+      traceId: this.context.traceId ?? null,
       metadata: entry.metadata ? { ...entry.metadata } : null,
     });
     await this.audit.write(unit.tx, {

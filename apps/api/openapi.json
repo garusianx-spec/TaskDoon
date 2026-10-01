@@ -6183,6 +6183,144 @@
         ]
       }
     },
+    "/api/v1/admin/users/{userId}/suspend": {
+      "post": {
+        "operationId": "PlatformAdmin_suspend",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformModerationResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Suspend an account: it stops working at once, every session ends (not for platform admins or oneself)",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{userId}/unsuspend": {
+      "post": {
+        "operationId": "PlatformAdmin_unsuspend",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsuspendUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformModerationResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lift a suspension: the person may sign in again",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{userId}/password-reset-required": {
+      "put": {
+        "operationId": "PlatformAdmin_setPasswordResetRequired",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetRequiredDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformModerationResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Require (or stop requiring) a new password; requiring it signs every session out by default",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
     "/api/v1/admin/users/{userId}/conversations": {
       "get": {
         "operationId": "PlatformAdmin_userConversations",
@@ -11726,6 +11864,34 @@
           "projects"
         ]
       },
+      "PlatformSuspensionDto": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "adminId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "adminName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "at",
+          "reason",
+          "adminId",
+          "adminName"
+        ]
+      },
       "PlatformUserDetailDto": {
         "type": "object",
         "properties": {
@@ -11786,6 +11952,16 @@
             "items": {
               "$ref": "#/components/schemas/PlatformMembershipDto"
             }
+          },
+          "suspension": {
+            "nullable": true,
+            "description": "While suspended: when, why and by whom",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformSuspensionDto"
+              }
+            ]
           }
         },
         "required": [
@@ -11965,6 +12141,69 @@
           "sentTo",
           "code",
           "link"
+        ]
+      },
+      "SuspendUserDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500,
+            "description": "Why, for the audit log"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "PlatformModerationResultDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/PlatformUserSummaryDto"
+          },
+          "sessionsRevoked": {
+            "type": "number"
+          },
+          "changed": {
+            "type": "boolean",
+            "description": "`false` when the account was already in the requested state"
+          }
+        },
+        "required": [
+          "user",
+          "sessionsRevoked",
+          "changed"
+        ]
+      },
+      "UnsuspendUserDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "PasswordResetRequiredDto": {
+        "type": "object",
+        "properties": {
+          "required": {
+            "type": "boolean",
+            "description": "`true`: the password stops working until it is reset"
+          },
+          "signOut": {
+            "type": "boolean",
+            "description": "End every session too (default `true` when requiring a reset)"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "required"
         ]
       },
       "PlatformConversationViewDto": {
@@ -12465,6 +12704,10 @@
             "nullable": true
           },
           "requestId": {
+            "type": "string",
+            "nullable": true
+          },
+          "traceId": {
             "type": "string",
             "nullable": true
           },

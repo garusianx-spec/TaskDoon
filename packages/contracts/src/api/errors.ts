@@ -74,7 +74,11 @@ export type ApiErrorCode =
   /** Sign-in with a password: the number, the password, or both are not right (one answer for all). */
   | 'CREDENTIALS_INVALID'
   /** The admin panel needs this session confirmed with an SMS code first. */
-  | 'SMS_CONFIRMATION_REQUIRED';
+  | 'SMS_CONFIRMATION_REQUIRED'
+  // Platform admin, phase 2: moderation
+  | 'ACCOUNT_SUSPENDED'
+  | 'ADMIN_SELF_ACTION'
+  | 'ADMIN_TARGET_PROTECTED';
 
 export interface FieldError {
   /** Dotted path of the offending field, e.g. `recipients.2.address`. */

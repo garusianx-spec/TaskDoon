@@ -7,6 +7,7 @@ import { NoStoreInterceptor, PasswordResetController, PlatformAdminController, P
 import { PlatformAdminGuard, PlatformAdminSmsGuard } from './platform-admin.guard.js';
 import { PlatformAuditWriter } from './platform-audit.writer.js';
 import { PlatformConversationsService } from './platform-conversations.service.js';
+import { PlatformModerationService } from './platform-moderation.service.js';
 import { PlatformUsersService } from './platform-users.service.js';
 import { PlatformWorkspacesService } from './platform-workspaces.service.js';
 
@@ -27,6 +28,7 @@ import { PlatformWorkspacesService } from './platform-workspaces.service.js';
     PlatformUsersService,
     PlatformConversationsService,
     PlatformWorkspacesService,
+    PlatformModerationService,
     PasswordResetService,
     NoStoreInterceptor,
   ],
