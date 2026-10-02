@@ -281,15 +281,19 @@ export class LiveStore {
       if (token !== this.loadToken) return;
       session.updateUser(me.user);
       this.patch({ user: me.user });
-      if (me.workspaces.length === 0) {
+      // Workspaces the platform's administrators suspended are listed (and marked) but never opened.
+      const usable = me.workspaces.filter((entry) => !entry.suspended);
+      if (usable.length < me.workspaces.length && (usable.length === 0 || me.workspaces.some((entry) => entry.suspended && entry.id === preferred))) {
+        this.notify(codeMessage('WORKSPACE_SUSPENDED') ?? 'این فضای کاری معلق شده است.');
+      }
+      if (usable.length === 0) {
         this.realtime.disconnect();
         this.apply({ type: 'sync/merge', patch: { ...LIVE_EMPTY_STATE, meId: me.user.id, users: [meToUser(me.user)] } });
         this.patch({ phase: 'no-workspace' });
         return;
       }
       const remembered = readRemembered();
-      const target =
-        me.workspaces.find((entry) => entry.id === preferred) ?? me.workspaces.find((entry) => entry.id === remembered) ?? me.workspaces[0];
+      const target = usable.find((entry) => entry.id === preferred) ?? usable.find((entry) => entry.id === remembered) ?? usable[0];
       if (!target) return;
       if (target.id !== this.workspaceId) this.reset();
       this.workspaceId = target.id;
@@ -799,6 +803,10 @@ export class LiveStore {
         this.run(() => api.sessions.revokeOthers(), () => this.refreshSessions());
         return;
       case 'switch-workspace':
+        if (this.getState().workspaces.find((entry) => entry.id === action.workspaceId)?.suspended) {
+          this.notify(codeMessage('WORKSPACE_SUSPENDED') ?? 'این فضای کاری معلق شده است.');
+          return;
+        }
         void this.load(action.workspaceId);
         return;
       case 'create-workspace':
@@ -1554,7 +1562,11 @@ export class LiveStore {
         await Promise.all([this.refreshProjects(), this.refreshRoles(), this.refreshWorkflow(true)]);
         return;
       case 'workspace:removed':
-        this.notify('دسترسی شما به این فضای کاری برداشته شد.');
+        this.notify(
+          event('workspace:removed')?.reason === 'suspended'
+            ? (codeMessage('WORKSPACE_SUSPENDED') ?? 'این فضای کاری معلق شده است.')
+            : 'دسترسی شما به این فضای کاری برداشته شد.',
+        );
         await this.load();
         return;
       case 'session:revoked':

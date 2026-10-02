@@ -114,6 +114,7 @@ export function workspaceFromMe(entry: MeWorkspace, meId: string): Workspace {
     memberCount: 0,
     // Only whether the caller owns it is known from the switcher entry.
     ownerId: entry.isOwner ? meId : '',
+    ...(entry.suspended ? { suspended: true } : {}),
   };
 }
 

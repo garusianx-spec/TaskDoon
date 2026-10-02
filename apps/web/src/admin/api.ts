@@ -16,7 +16,10 @@ import type {
   PlatformUserPage,
   PlatformUserStatus,
   PlatformWorkspaceDetail,
+  PlatformWorkspaceModerationResult,
   PlatformWorkspacePage,
+  PlatformWorkspaceStatus,
+  WorkspaceLimitsBody,
 } from '@taskin/contracts';
 import { http, query } from '@/api/http';
 
@@ -68,8 +71,19 @@ export const adminApi = {
   attachmentLink: (attachmentId: string, targetUserId?: string | null) =>
     http.get<PlatformAttachmentLink>(`/admin/attachments/${attachmentId}/link${query({ targetUserId })}`),
 
-  workspaces: (q: string, cursor?: string | null) => http.get<PlatformWorkspacePage>(`/admin/workspaces${query({ q, cursor, limit: 50 })}`),
+  workspaces: (q: string, cursor?: string | null, status?: PlatformWorkspaceStatus | '') =>
+    http.get<PlatformWorkspacePage>(`/admin/workspaces${query({ q, cursor, status, limit: 50 })}`),
   workspace: (workspaceId: string) => http.get<PlatformWorkspaceDetail>(`/admin/workspaces/${workspaceId}`),
+
+  /** Workspace moderation (phase 3): each takes effect at once and is recorded with its reason. */
+  suspendWorkspace: (workspaceId: string, reason: string) =>
+    http.post<PlatformWorkspaceModerationResult>(`/admin/workspaces/${workspaceId}/suspend`, { reason }),
+  unsuspendWorkspace: (workspaceId: string, reason?: string) =>
+    http.post<PlatformWorkspaceModerationResult>(`/admin/workspaces/${workspaceId}/unsuspend`, reason ? { reason } : {}),
+  transferWorkspaceOwnership: (workspaceId: string, userId: string, reason: string) =>
+    http.post<PlatformWorkspaceModerationResult>(`/admin/workspaces/${workspaceId}/transfer-ownership`, { userId, reason }),
+  setWorkspaceLimits: (workspaceId: string, body: WorkspaceLimitsBody) =>
+    http.put<PlatformWorkspaceModerationResult>(`/admin/workspaces/${workspaceId}/limits`, body),
 
   audit: (filters: { readonly targetUserId?: string; readonly action?: string; readonly cursor?: string | null }) =>
     http.get<PlatformAuditPage>(`/admin/audit${query({ ...filters, limit: 50 })}`),

@@ -25,6 +25,7 @@
     "test:e2e:live:admin": "npm run test:e2e:live:admin -w @taskin/web",
     "test:e2e:live:password": "npm run test:e2e:live:password -w @taskin/web",
     "test:e2e:live:moderation": "npm run test:e2e:live:moderation -w @taskin/web",
+    "test:e2e:live:workspace-moderation": "npm run test:e2e:live:workspace-moderation -w @taskin/web",
     "check:contrast": "npm run check:contrast -w @taskin/web",
     "test:int": "npm run test:int -w @taskin/api",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d --wait postgres pgbouncer redis-core redis-rt s3 s3-init mailpit",

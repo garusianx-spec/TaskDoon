@@ -39,6 +39,7 @@ export function WorkspaceMenu({ close }: WorkspaceMenuProps) {
           <MenuItem
             key={workspace.id}
             selected={active}
+            disabled={workspace.suspended === true}
             onSelect={run(() => {
               if (!active) dispatch({ type: 'switch-workspace', workspaceId: workspace.id });
             })}
@@ -49,9 +50,13 @@ export function WorkspaceMenu({ close }: WorkspaceMenuProps) {
                 {workspace.name}
                 {active && <span className="sr-only"> (فعال)</span>}
               </span>
-              <span className="numeric text-micro font-normal text-fg-tertiary">
-                {`${formatCount(workspace.memberCount)} عضو، طرح ${workspace.plan}`}
-              </span>
+              {workspace.suspended ? (
+                <span className="text-micro font-normal text-status-blocked">معلق؛ فعلاً در دسترس نیست</span>
+              ) : (
+                <span className="numeric text-micro font-normal text-fg-tertiary">
+                  {`${formatCount(workspace.memberCount)} عضو، طرح ${workspace.plan}`}
+                </span>
+              )}
             </span>
           </MenuItem>
         );

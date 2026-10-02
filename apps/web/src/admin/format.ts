@@ -1,4 +1,5 @@
-import type { ConversationKind, PlatformSessionStatus, PlatformUserStatus, ProjectRole } from '@taskin/contracts';
+import type { ConversationKind, PlatformSessionStatus, PlatformUserStatus, PlatformWorkspaceStatus, ProjectRole } from '@taskin/contracts';
+import { toPersianDigits } from '@taskin/jalali';
 import { formatJalali, formatTime } from '@taskin/jalali';
 import { formatMobile } from '@taskin/text';
 import type { BadgeTone } from '@/components/ui';
@@ -18,6 +19,24 @@ export const USER_STATUS: Readonly<Record<PlatformUserStatus, { readonly label: 
   suspended: { label: 'معلق / مسدود', tone: 'warning' },
   deleted: { label: 'حذف‌شده', tone: 'error' },
 };
+
+/** Phase 3: a workspace's state, as the admin list and detail show it. */
+export const WORKSPACE_STATUS: Readonly<Record<PlatformWorkspaceStatus, { readonly label: string; readonly tone: BadgeTone }>> = {
+  active: { label: 'فعال', tone: 'success' },
+  suspended: { label: 'معلق / مسدود', tone: 'warning' },
+  deleted: { label: 'حذف‌شده', tone: 'error' },
+};
+
+const GIB = 1024 ** 3;
+const MIB = 1024 ** 2;
+
+/** `5368709120` → `۵ گیگابایت`; under a gigabyte in megabytes, under a megabyte in kilobytes. */
+export function bytesLabel(bytes: number): string {
+  const round = (value: number) => toPersianDigits(Number(value.toFixed(value >= 10 ? 0 : 1)));
+  if (bytes >= GIB) return `${round(bytes / GIB)} گیگابایت`;
+  if (bytes >= MIB) return `${round(bytes / MIB)} مگابایت`;
+  return `${round(bytes / 1024)} کیلوبایت`;
+}
 
 export const MEMBER_STATUS: Readonly<Record<'active' | 'suspended' | 'left', { readonly label: string; readonly tone: BadgeTone }>> = {
   active: { label: 'عضو فعال', tone: 'success' },
@@ -59,6 +78,10 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   'admin.user.suspend': 'تعلیق کاربر',
   'admin.user.unsuspend': 'رفع تعلیق',
   'admin.user.password_reset_required': 'اجبار به تغییر رمز عبور',
+  'admin.workspace.suspend': 'تعلیق فضای کاری',
+  'admin.workspace.unsuspend': 'رفع تعلیق فضای کاری',
+  'admin.workspace.transfer_ownership': 'انتقال مالکیت',
+  'admin.workspace.limits': 'تغییر پلن و سهمیه‌ها',
   'admin.conversations.list': 'فهرست گفتگوها',
   'admin.conversation.view': 'مشاهده گفتگو',
   'admin.messages.read': 'خواندن پیام‌ها',
