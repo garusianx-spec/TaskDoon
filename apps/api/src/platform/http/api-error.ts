@@ -67,6 +67,9 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   ACCOUNT_SUSPENDED: { status: 403, title: 'This account is suspended' },
   ADMIN_SELF_ACTION: { status: 403, title: 'Platform admins cannot moderate their own account' },
   ADMIN_TARGET_PROTECTED: { status: 409, title: 'Another platform admin cannot be suspended here' },
+  WORKSPACE_SUSPENDED: { status: 403, title: 'This workspace is suspended' },
+  OWNERSHIP_TARGET_INVALID: { status: 409, title: 'The new owner must be an active member with an active account' },
+  ALREADY_OWNER: { status: 409, title: 'This member already owns the workspace' },
 };
 
 /**

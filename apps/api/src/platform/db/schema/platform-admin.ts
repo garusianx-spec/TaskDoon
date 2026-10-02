@@ -27,6 +27,12 @@ export const platformAuditLogs = pgTable(
     requestId: text(),
     /** The request's trace id (Phase 2), as on the matching `audit_logs` row. */
     traceId: text(),
+    /**
+     * The workspace an action concerns (Phase 3: suspension, ownership, limits), like
+     * `target_user_id` for a person. No foreign key: the record outlives a purged workspace. (Not
+     * named `workspace_id`: this log is platform-wide, not a tenant table.)
+     */
+    targetWorkspaceId: uuid(),
     /** Filters and counts of the inspection (never message content or secrets). */
     metadata: jsonb().$type<Record<string, unknown>>(),
     createdAt: createdAt(),
@@ -34,5 +40,6 @@ export const platformAuditLogs = pgTable(
   (t) => [
     index('platform_audit_logs_target_idx').on(t.targetUserId, t.createdAt.desc()).where(sql`${t.targetUserId} is not null`),
     index('platform_audit_logs_admin_idx').on(t.adminId, t.createdAt.desc()),
+    index('platform_audit_logs_workspace_idx').on(t.targetWorkspaceId, t.id.desc()).where(sql`${t.targetWorkspaceId} is not null`),
   ],
 );

@@ -22,7 +22,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Resolves `:workspaceId` to the caller's membership. A non-member, a suspended member, or a
- * deleted workspace all answer 404, so guessing workspace ids reveals nothing.
+ * deleted workspace all answer 404, so guessing workspace ids reveals nothing. An active member of
+ * a workspace a platform admin suspended is told so (403 `WORKSPACE_SUSPENDED`).
  */
 @Injectable()
 export class WorkspaceMemberGuard implements CanActivate {
@@ -38,7 +39,10 @@ export class WorkspaceMemberGuard implements CanActivate {
     if (!request.auth) throw new ApiError('UNAUTHENTICATED');
     if (!workspaceId || !UUID.test(workspaceId)) throw ApiError.notFound('The workspace');
     const member = await this.memberships.load(workspaceId.toLowerCase(), request.auth.userId);
-    if (!member) throw ApiError.notFound('The workspace');
+    if (!member) {
+      if (await this.memberships.suspendedFor(workspaceId.toLowerCase(), request.auth.userId)) throw new ApiError('WORKSPACE_SUSPENDED');
+      throw ApiError.notFound('The workspace');
+    }
     request.member = member;
     this.context.set('workspaceId', member.workspaceId);
     return true;

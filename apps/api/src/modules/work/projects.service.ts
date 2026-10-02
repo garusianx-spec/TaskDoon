@@ -13,6 +13,7 @@ import type {
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import type { Tx } from '../../platform/db/database.js';
 import { isUniqueViolation, PG, pgError } from '../../platform/db/pg-errors.js';
+import { EFFECTIVE_LIMITS } from '../../platform/db/plan-limits.js';
 import { iso, num } from '../../platform/db/rows.js';
 import { calendarEvents, plans, projectMembers, projects, projectStars, tasks, workflows, workspaces } from '../../platform/db/schema/all.js';
 import { type Unit, UnitOfWork } from '../../platform/db/unit-of-work.js';
@@ -103,7 +104,7 @@ export class ProjectsService {
       const tx = unit.tx;
       // The workspace row serialises project creation, so two creates cannot both slip under the plan limit.
       const [workspace] = await tx
-        .select({ maxProjects: sql<number | null>`(${plans.limits} ->> 'maxProjects')::int` })
+        .select({ maxProjects: sql<number | null>`(${EFFECTIVE_LIMITS} ->> 'maxProjects')::int` })
         .from(workspaces)
         .innerJoin(plans, eq(plans.id, workspaces.planId))
         .where(eq(workspaces.id, member.workspaceId))
@@ -266,7 +267,7 @@ export class ProjectsService {
       const tx = unit.tx;
       // The workspace row first (canonical lock order): it serialises the plan's project count.
       const [workspace] = await tx
-        .select({ maxProjects: sql<number | null>`(${plans.limits} ->> 'maxProjects')::int` })
+        .select({ maxProjects: sql<number | null>`(${EFFECTIVE_LIMITS} ->> 'maxProjects')::int` })
         .from(workspaces)
         .innerJoin(plans, eq(plans.id, workspaces.planId))
         .where(eq(workspaces.id, member.workspaceId))

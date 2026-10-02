@@ -7,6 +7,7 @@ import { monogram } from '@taskin/text';
 import { AppConfig } from '../../config/app-config.js';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import type { Tx } from '../../platform/db/database.js';
+import { mergeLimits } from '../../platform/db/plan-limits.js';
 import { plans, roles, users, workspaceMembers, workspaces } from '../../platform/db/schema/all.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
@@ -84,7 +85,7 @@ export class WorkspacesService {
       });
       return workspace;
     });
-    return this.view(row, await this.limits(row.planId));
+    return this.view(row, mergeLimits(await this.limits(row.planId), row.limitOverrides));
   }
 
   async get(member: MembershipContext): Promise<WorkspaceView> {
@@ -97,7 +98,7 @@ export class WorkspacesService {
       if (!joined) throw ApiError.notFound('The workspace');
       return joined;
     });
-    return this.view(row, limits);
+    return this.view(row, mergeLimits(limits, row.limitOverrides));
   }
 
   async update(member: MembershipContext, body: UpdateWorkspaceBody): Promise<WorkspaceView> {
@@ -145,7 +146,7 @@ export class WorkspacesService {
     if (iconKey !== undefined && before.iconKey && before.iconKey !== after.iconKey) {
       await this.storage.delete(before.iconKey).catch(() => undefined);
     }
-    return this.view(after, await this.limits(after.planId));
+    return this.view(after, mergeLimits(await this.limits(after.planId), after.limitOverrides));
   }
 
   /**

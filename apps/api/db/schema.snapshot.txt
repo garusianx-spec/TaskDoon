@@ -268,6 +268,7 @@ platform_audit_logs.request_id text
 platform_audit_logs.resource_id text
 platform_audit_logs.resource_type text
 platform_audit_logs.target_user_id uuid
+platform_audit_logs.target_workspace_id uuid
 platform_audit_logs.trace_id text
 platform_audit_logs.user_agent text
 project_members.added_at timestamp with time zone not null default now()
@@ -449,6 +450,7 @@ workspaces.description text not null default ''::text
 workspaces.icon_key text
 workspaces.id uuid not null default app.uuidv7()
 workspaces.initials text not null
+workspaces.limit_overrides jsonb
 workspaces.member_count integer not null default 1
 workspaces.name text not null
 workspaces.owner_user_id uuid not null
@@ -459,6 +461,7 @@ workspaces.settings jsonb not null default '{"weekend": ["friday"], "timeZone": 
 workspaces.slug citext not null
 workspaces.storage_reserved_bytes bigint not null default 0
 workspaces.storage_used_bytes bigint not null default 0
+workspaces.suspended_at timestamp with time zone
 workspaces.tone avatar_tone not null
 workspaces.updated_at timestamp with time zone not null default now()
 
@@ -1107,6 +1110,7 @@ password_reset_tokens CREATE UNIQUE INDEX password_reset_tokens_pkey ON public.p
 plans CREATE UNIQUE INDEX plans_pkey ON public.plans USING btree (id)
 platform_audit_logs CREATE INDEX platform_audit_logs_admin_idx ON public.platform_audit_logs USING btree (admin_id, created_at DESC NULLS LAST)
 platform_audit_logs CREATE INDEX platform_audit_logs_target_idx ON public.platform_audit_logs USING btree (target_user_id, created_at DESC NULLS LAST) WHERE (target_user_id IS NOT NULL)
+platform_audit_logs CREATE INDEX platform_audit_logs_workspace_idx ON public.platform_audit_logs USING btree (target_workspace_id, id DESC NULLS LAST) WHERE (target_workspace_id IS NOT NULL)
 platform_audit_logs CREATE UNIQUE INDEX platform_audit_logs_pkey ON public.platform_audit_logs USING btree (id)
 project_members CREATE INDEX project_members_user_idx ON public.project_members USING btree (workspace_id, user_id)
 project_members CREATE UNIQUE INDEX project_members_pk ON public.project_members USING btree (project_id, user_id)

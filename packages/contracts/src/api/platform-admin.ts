@@ -1,6 +1,7 @@
 import type { ConversationKind, RoleId } from '../domain.js';
 import type { MembershipMode, MessageView } from './chat.js';
 import type { ProjectRole } from './work.js';
+import type { PlanLimits } from './workspaces.js';
 
 /**
  * Platform super admin (phase 1): the operators of TaskDoon itself, across every workspace. Only
@@ -183,6 +184,8 @@ export interface PlatformAuditEntry {
   readonly requestId: string | null;
   /** The request's trace id; `null` for entries written before it was recorded. */
   readonly traceId?: string | null;
+  /** Phase 3: the workspace an action concerned, when there is one. */
+  readonly workspaceId?: string | null;
   readonly metadata: Readonly<Record<string, unknown>> | null;
   readonly createdAt: string;
 }
@@ -202,7 +205,12 @@ export interface PlatformWorkspaceSummary {
   readonly memberCount: number;
   readonly createdAt: string;
   readonly deletedAt: string | null;
+  /** Phase 3: `deleted` wins over `suspended`. */
+  readonly status?: PlatformWorkspaceStatus;
+  readonly suspendedAt?: string | null;
 }
+
+export type PlatformWorkspaceStatus = 'active' | 'suspended' | 'deleted';
 
 export interface PlatformWorkspacePage {
   readonly items: readonly PlatformWorkspaceSummary[];
@@ -229,7 +237,16 @@ export interface PlatformWorkspaceDetail extends PlatformWorkspaceSummary {
     readonly isOwner: boolean;
     readonly joinedAt: string;
     readonly leftAt: string | null;
+    /** Phase 3: the person's account, apart from their membership here. */
+    readonly accountStatus?: PlatformUserStatus;
+    /** Phase 3: whether they have a password (a new owner without one is warned about). */
+    readonly hasPassword?: boolean;
   }[];
+  /** Phase 3: while suspended, when, why and by whom (from the platform audit log). */
+  readonly suspension?: PlatformSuspension | null;
+  readonly quota?: PlatformWorkspaceQuota;
+  /** Phase 3: the plans a workspace can be moved to. */
+  readonly planOptions?: readonly PlatformPlanOption[];
 }
 
 /* ---------------------------------------------------------------- phase 2: moderation */
@@ -260,5 +277,67 @@ export interface PlatformModerationResult {
   /** Sessions ended by this action. */
   readonly sessionsRevoked: number;
   /** `false` when the account was already in the requested state. */
+  readonly changed: boolean;
+}
+
+/* ---------------------------------------------------------------- phase 3: workspaces */
+
+export interface PlatformPlanOption {
+  readonly id: string;
+  readonly name: string;
+  readonly limits: PlanLimits;
+}
+
+/** A workspace's plan, the admin's overrides of it, what applies, and what is in use. */
+export interface PlatformWorkspaceQuota {
+  readonly planId: string;
+  readonly planName: string;
+  /** Only the limits an admin set; each one replaces the plan's. */
+  readonly overrides: WorkspaceLimitOverrides | null;
+  /** The plan's limits with the overrides applied: what the workspace is held to. */
+  readonly effective: PlanLimits;
+  readonly usage: {
+    /** Seats in use (active and suspended members). */
+    readonly members: number;
+    readonly storageUsedBytes: number;
+    /** Projects not in the trash. */
+    readonly projects: number;
+  };
+}
+
+/** Any subset of the plan's limits; `null` means unlimited where the plan allows that. */
+export type WorkspaceLimitOverrides = { -readonly [K in keyof PlanLimits]?: PlanLimits[K] };
+
+/** `POST /admin/workspaces/:workspaceId/suspend`: its members are refused until it is lifted. */
+export interface SuspendWorkspaceBody {
+  /** Why, for the audit log (3 to 500 characters). */
+  readonly reason: string;
+}
+
+/** `POST /admin/workspaces/:workspaceId/unsuspend`. */
+export interface UnsuspendWorkspaceBody {
+  readonly reason?: string;
+}
+
+/** `POST /admin/workspaces/:workspaceId/transfer-ownership`: an emergency override. */
+export interface TransferWorkspaceOwnershipBody {
+  /** An active member whose account is active. */
+  readonly userId: string;
+  readonly reason: string;
+}
+
+/** `PUT /admin/workspaces/:workspaceId/limits`. */
+export interface WorkspaceLimitsBody {
+  /** Move the workspace to this plan. */
+  readonly planId?: string;
+  /** Replaces the overrides; `null` clears them; omitted leaves them as they are. */
+  readonly overrides?: WorkspaceLimitOverrides | null;
+  readonly reason: string;
+}
+
+/** What a workspace action left behind. */
+export interface PlatformWorkspaceModerationResult {
+  readonly workspace: PlatformWorkspaceSummary;
+  /** `false` when the workspace was already in the requested state. */
   readonly changed: boolean;
 }

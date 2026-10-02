@@ -1,5 +1,6 @@
 import { type SQL, sql } from 'drizzle-orm';
 import type { AttachmentView, MessageKind, MessageMeta, MessageView, ReactionView } from '@taskin/contracts';
+import { effectiveLimits } from '../../platform/db/plan-limits.js';
 import { iso, isoOrNull } from '../../platform/db/rows.js';
 
 export interface MessageRow extends Record<string, unknown> {
@@ -28,7 +29,7 @@ export interface MessageRow extends Record<string, unknown> {
 export function withinHistory(workspaceId: string, alias = 'm'): SQL {
   const m = sql.raw(alias);
   return sql`${m}.created_at >= coalesce(
-    now() - make_interval(days => (select (pl.limits ->> 'messageHistoryDays')::int
+    now() - make_interval(days => (select (${effectiveLimits('w', 'pl')} ->> 'messageHistoryDays')::int
                                    from workspaces w join plans pl on pl.id = w.plan_id where w.id = ${workspaceId})),
     '-infinity'::timestamptz)`;
 }

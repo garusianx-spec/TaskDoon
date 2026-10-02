@@ -60,6 +60,7 @@ export class UsersService {
           iconKey: workspaces.iconKey,
           ownerUserId: workspaces.ownerUserId,
           roleKey: roles.key,
+          suspendedAt: workspaces.suspendedAt,
         })
         .from(workspaceMembers)
         .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
@@ -78,6 +79,8 @@ export class UsersService {
         iconUrl: membership.iconKey ? await this.storage.presignGet(membership.iconKey, ICON_URL_TTL_SECONDS) : null,
         role: membership.roleKey as RoleId,
         isOwner: membership.ownerUserId === userId,
+        // Suspended by a platform admin: still listed (the app says why), never opened.
+        ...(membership.suspendedAt ? { suspended: true } : {}),
       })),
     );
     return { user: toMeUser(user), workspaces: list };

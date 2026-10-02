@@ -78,6 +78,10 @@ export const workspaces = pgTable(
     updatedAt: updatedAt(),
     deletedAt: instant(),
     purgeAfter: instant(),
+    /** Suspended by a platform admin (phase 3): its members are refused until it is lifted. */
+    suspendedAt: instant(),
+    /** A platform admin's overrides of the plan's limits (phase 3), merged over them; `null`: none. */
+    limitOverrides: jsonb().$type<Partial<PlanLimits>>(),
   },
   (t) => [
     check('workspaces_name_len', sql`char_length(${t.name}) between 1 and 40`),

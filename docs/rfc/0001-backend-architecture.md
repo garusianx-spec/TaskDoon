@@ -1403,3 +1403,40 @@ Phase 1 let operators look; phase 2 lets them act on an account. Nothing in phas
 - **Audit.** `admin.user.suspend`, `admin.user.unsuspend` and `admin.user.password_reset_required` are platform audit rows, each with its `audit_logs` twin in the same transaction (an action that cannot be recorded does not happen). Their metadata holds the reason, the previous state, the sessions ended and `changed`. `platform_audit_logs` gained a nullable `trace_id` (migration `0017`, additive; older rows read `null`), next to `request_id`, and the audit list returns it as `traceId`.
 - **Web.** The directory has an «اقدام‌ها» column. Its ⋯ menu offers «مشاهده نشست‌های فعال» (the session inspector in a side panel), «تعلیق کاربر» / «رفع تعلیق» and «اجبار به تغییر رمز عبور» / «لغو اجبار تغییر رمز». Each opens a confirmation dialog: a suspension needs its reason, and a forced password change offers «خروج از همه نشست‌ها» (on by default). The menu sits fixed to the viewport so the table's scroll cannot clip it. Items for one's own row are disabled, and suspension is disabled for platform admins. The status badge reads «فعال» or «معلق / مسدود». The profile has the same actions in its header, plus the suspension's date, reason and author. The audit log shows each action's reason and trace id.
 - **Tests.** `platform-moderation.integration.spec.ts` covers access, validation, the self/admin/deleted refusals, the immediate effects (tokens, refresh, OTP, password, sockets), the audit rows with request id, trace id and IP, repeats, lifting, and the forced password change with its SMS recovery. The observability walk covers the three new routes. `e2e/live/moderation.mjs` drives the menu, dialogs and side panel against the live stack, with the suspended person's open browser signed out at once.
+
+## Addendum K. Platform super admin, phase 3: workspaces
+
+Phase 3 lets operators act on a workspace, as phase 2 did on a person. The guard, the read-only `taskin_platform_admin` pool for reads, and the ordinary unit of work for writes are unchanged. Writes are scoped to the workspace, since its tenant policies only check that setting.
+
+- **Schema** (migration `0018`, additive, all nullable):
+  - `workspaces.suspended_at`
+  - `workspaces.limit_overrides`, a partial `PlanLimits`
+  - `platform_audit_logs.target_workspace_id`, with a partial index. It is named like `target_user_id` and is not called `workspace_id`, because this log is platform-wide, not a tenant table.
+- **Suspension.**
+  - `POST /admin/workspaces/:id/suspend {reason}` sets `suspended_at`, raises `rbac_version` (no cached membership survives) and emits `rbac.changed` for every member. Open sockets are checked again and get `workspace:removed` with the new reason `'suspended'`.
+  - `MembershipService.load()` treats a suspended workspace as no membership, so every caller is protected: the REST guard, socket subscriptions, permission re-checks and the scheduled-message worker. Callers that need to tell the two cases apart ask the uncached `suspendedFor()`.
+  - An active member then gets `403 WORKSPACE_SUSPENDED` («این فضای کاری توسط مدیریت تسک‌دون معلق شده است…»). Anyone else still gets `404`.
+  - Invitations into a suspended workspace are refused with the same code and work again once the suspension is lifted. A scheduled message that falls due while suspended fails with `failureCode: WORKSPACE_SUSPENDED`.
+  - The member's other workspaces, profile and sessions are untouched. `/me` lists the workspace with `suspended: true`.
+  - `POST …/unsuspend {reason?}` lifts it. Repeating either action answers `changed: false`. A deleted workspace answers `404`.
+- **Emergency ownership transfer.**
+  - `POST …/transfer-ownership {userId, reason}` makes an active member whose account is active the owner (`409 OWNERSHIP_TARGET_INVALID` otherwise; `409 ALREADY_OWNER` for the owner).
+  - It does what the owner's own transfer does: the new owner gets the owner role, the previous owner becomes an admin, the permission version moves, and `rbac.changed` goes out for both.
+  - Unlike the owner's own transfer, it needs no password from the new owner; the audit row records whether they have one.
+- **Quotas and plan.**
+  - `PUT …/limits {planId?, overrides?, reason}` moves the workspace to another plan and/or replaces the overrides. `null` clears them, and omitting `overrides` keeps them.
+  - The limits a workspace is held to are `plans.limits || coalesce(workspaces.limit_overrides, '{}')` (`platform/db/plan-limits.ts`). The six places that read limits use it: the workspace view, the invitation seat check, upload size and storage, the message history window, and project creation and restore. With no overrides this is exactly the plan's limits, as before.
+  - Lowering a limit below what is in use takes nothing away; it only stops the next member, project or upload.
+- **Reads.**
+  - The workspace list gains `status` (`active`/`suspended`/`deleted`), `suspendedAt` and a `?status=` filter.
+  - The detail gains the suspension (when, why, by whom), the quota (plan, overrides, effective limits, usage) and the plan options. Each member also carries their account status and whether they have a password.
+  - The audit list gains a `?workspaceId=` filter, which also finds the looks recorded before the column existed, and `workspaceId` on each entry.
+- **Audit.** `admin.workspace.suspend`, `.unsuspend`, `.transfer_ownership` and `.limits`. Each is written with its `audit_logs` twin, which carries the workspace's id, so the workspace's own trail shows it. Each carries the reason, the IP, the request id and the trace id. The limits row also holds the before and after.
+- **Web.**
+  - The admin workspace list adds a status column («فعال» / «معلق / مسدود» / «حذف‌شده»), a status filter and a ⋯ menu: «مشاهده جزئیات و اعضا», «انتقال مالکیت» (a member picker that only offers valid owners and warns about a missing password) and «تعلیق فضای کاری» / «رفع تعلیق» (a reason is required).
+  - The detail page has the same actions, the suspension's facts, and «سهمیه‌ها و پلن»: usage, plan, per-limit «مقدار سفارشی» / «نامحدود», and a reason.
+  - In the workspace app, a suspended workspace is listed in the switcher as «معلق؛ فعلاً در دسترس نیست» and never opened. A member inside it when it is suspended is told so and moved to another of their workspaces.
+- **Tests.**
+  - `platform-workspace-moderation.integration.spec.ts`: access, validation, every enforcement point, audit rows, every transfer refusal, and each overridden limit.
+  - The observability walk over the four new routes.
+  - `e2e/live/workspace-moderation.mjs`.

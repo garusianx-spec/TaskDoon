@@ -14,6 +14,7 @@ import { AppConfig } from '../../config/app-config.js';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import { randomToken, SecretBox, sha256 } from '../../platform/crypto/crypto.js';
 import type { Tx } from '../../platform/db/database.js';
+import { effectiveLimits } from '../../platform/db/plan-limits.js';
 import { departments, invitations, roles, users, workspaceMembers, workspaces } from '../../platform/db/schema/all.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
@@ -211,6 +212,7 @@ export class InvitationsService {
           roleKey: roles.key,
           expired: sql<boolean>`${invitations.expiresAt} <= now()`,
           deleted: sql<boolean>`${workspaces.deletedAt} is not null`,
+          suspended: sql<boolean>`${workspaces.suspendedAt} is not null`,
         })
         .from(invitations)
         .innerJoin(roles, and(eq(roles.workspaceId, invitations.workspaceId), eq(roles.id, invitations.roleId)))
@@ -218,6 +220,8 @@ export class InvitationsService {
         .where(eq(invitations.id, location.invitation_id))
         .for('update', { of: invitations });
       if (!row || row.invitation.status !== 'pending' || row.expired || row.deleted) throw new ApiError('INVITATION_INVALID');
+      // Suspended by a platform admin: the invitation stays, and works again once it is lifted.
+      if (row.suspended) throw new ApiError('WORKSPACE_SUSPENDED');
       const { invitation } = row;
 
       const [user] = await tx.select().from(users).where(and(eq(users.id, principal.userId), isNull(users.deletedAt)));
@@ -234,7 +238,7 @@ export class InvitationsService {
         update workspaces w set member_count = w.member_count + 1
         from plans p
         where w.id = ${invitation.workspaceId} and p.id = w.plan_id
-          and w.member_count < (p.limits ->> 'maxMembers')::int
+          and w.member_count < (${effectiveLimits('w', 'p')} ->> 'maxMembers')::int
         returning w.member_count`);
       if (seat.rows.length === 0) throw new ApiError('PLAN_LIMIT_REACHED', 'The workspace has no free seats.');
 

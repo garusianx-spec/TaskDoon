@@ -266,6 +266,18 @@ describe('M1 checklist: audit trail and correlation', () => {
     );
     await traced('post', '/api/v1/admin/users/{userId}/suspend', `/api/v1/admin/users/${target.userId}/suspend`, (r) => r.set(bearer(operator)).send({ reason: 'نقض قوانین' }));
     await traced('post', '/api/v1/admin/users/{userId}/unsuspend', `/api/v1/admin/users/${target.userId}/unsuspend`, (r) => r.set(bearer(operator)).send({}));
+    // Phase 3: a workspace of its own, suspended and back, its limits, and its owner replaced.
+    const { owner: tenant, workspace: moderated } = await ownerWithWorkspace(t, 'فضای نظارت');
+    const heir = await addMember(t, tenant, moderated.id, 'member');
+    const wa = `/api/v1/admin/workspaces/${moderated.id}`;
+    await traced('post', '/api/v1/admin/workspaces/{workspaceId}/suspend', `${wa}/suspend`, (r) => r.set(bearer(operator)).send({ reason: 'گزارش تخلف' }));
+    await traced('post', '/api/v1/admin/workspaces/{workspaceId}/unsuspend', `${wa}/unsuspend`, (r) => r.set(bearer(operator)).send({}));
+    await traced('put', '/api/v1/admin/workspaces/{workspaceId}/limits', `${wa}/limits`, (r) =>
+      r.set(bearer(operator)).send({ planId: 'team', overrides: { maxProjects: 3 }, reason: 'قرارداد سازمانی' }),
+    );
+    await traced('post', '/api/v1/admin/workspaces/{workspaceId}/transfer-ownership', `${wa}/transfer-ownership`, (r) =>
+      r.set(bearer(operator)).send({ userId: heir.userId, reason: 'مالک در دسترس نیست' }),
+    );
 
     // Phone and password: sign-in, confirming that session with an SMS code, and recovery.
     const keyholder = await withAdminPassword(t, await signIn(t, randomPhone(), 'دارنده رمز'));

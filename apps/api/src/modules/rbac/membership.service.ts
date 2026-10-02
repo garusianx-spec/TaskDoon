@@ -29,6 +29,8 @@ interface MembershipRow extends Record<string, unknown> {
   owner_user_id: string;
   rbac_version: number;
   deleted: boolean;
+  /** Suspended by a platform admin (phase 3): no member gets in. */
+  suspended: boolean;
   grants: string[];
 }
 
@@ -46,7 +48,10 @@ export class MembershipService {
     private readonly redis: RedisClients,
   ) {}
 
-  /** The caller's active membership, or `null` (not a member, suspended, left, or workspace deleted). */
+  /**
+   * The caller's active membership, or `null` (not a member, suspended, left, or the workspace
+   * deleted or suspended by a platform admin).
+   */
   async load(workspaceId: string, userId: string): Promise<MembershipContext | null> {
     const versionKey = this.versionKey(workspaceId);
     const memberKey = this.redis.key('cache', 'member', workspaceId, userId);
@@ -61,7 +66,7 @@ export class MembershipService {
     }
 
     const row = await this.uow.run({ workspaceId, userId }, ({ tx }) => this.query(tx, workspaceId, userId));
-    const member = row && row.status === 'active' && !row.deleted ? this.toContext(workspaceId, userId, row) : null;
+    const member = row && row.status === 'active' && !row.deleted && !row.suspended ? this.toContext(workspaceId, userId, row) : null;
     const version = row?.rbac_version;
     if (version !== undefined) {
       try {
@@ -77,7 +82,23 @@ export class MembershipService {
   /** Same, inside a unit that already holds the tenant (no cache: the caller is mid-change). */
   async loadIn(tx: Tx, workspaceId: string, userId: string): Promise<MembershipContext | null> {
     const row = await this.query(tx, workspaceId, userId);
-    return row && row.status === 'active' && !row.deleted ? this.toContext(workspaceId, userId, row) : null;
+    return row && row.status === 'active' && !row.deleted && !row.suspended ? this.toContext(workspaceId, userId, row) : null;
+  }
+
+  /**
+   * Whether this user is an active member of a workspace a platform admin suspended: the one case
+   * where `load()` answers `null` to a member, and the caller says so (`WORKSPACE_SUSPENDED`)
+   * instead of "not found". Uncached, and asked only after `load()` found nothing.
+   */
+  async suspendedFor(workspaceId: string, userId: string): Promise<boolean> {
+    const result = await this.uow.run({ workspaceId, userId }, ({ tx }) =>
+      tx.execute<{ suspended: boolean }>(sql`
+        select true as suspended
+        from workspace_members m join workspaces w on w.id = m.workspace_id
+        where m.workspace_id = ${workspaceId} and m.user_id = ${userId} and m.status = 'active'
+          and w.deleted_at is null and w.suspended_at is not null`),
+    );
+    return result.rows.length > 0;
   }
 
   /**
@@ -102,14 +123,14 @@ export class MembershipService {
   private async query(tx: Tx, workspaceId: string, userId: string): Promise<MembershipRow | undefined> {
     const result = await tx.execute<MembershipRow>(sql`
       select m.status, m.role_id, r.key as role_key, r.rank, w.owner_user_id, w.rbac_version,
-             w.deleted_at is not null as deleted,
+             w.deleted_at is not null as deleted, w.suspended_at is not null as suspended,
              coalesce(array_agg(rp.module::text || ':' || rp.action::text) filter (where rp.module is not null), '{}') as grants
       from workspace_members m
       join workspaces w on w.id = m.workspace_id
       join roles r on r.workspace_id = m.workspace_id and r.id = m.role_id
       left join role_permissions rp on rp.workspace_id = r.workspace_id and rp.role_id = r.id
       where m.workspace_id = ${workspaceId} and m.user_id = ${userId}
-      group by m.status, m.role_id, r.key, r.rank, w.owner_user_id, w.rbac_version, w.deleted_at`);
+      group by m.status, m.role_id, r.key, r.rank, w.owner_user_id, w.rbac_version, w.deleted_at, w.suspended_at`);
     return result.rows[0];
   }
 

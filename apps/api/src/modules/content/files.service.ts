@@ -4,6 +4,7 @@ import { v7 as uuidv7 } from 'uuid';
 import type { AttachmentView, CompleteUploadBody, CreateUploadBody, FileLink, UploadPlan, UploadView } from '@taskin/contracts';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import type { Tx } from '../../platform/db/database.js';
+import { EFFECTIVE_LIMITS } from '../../platform/db/plan-limits.js';
 import { attachments, plans, workspaces } from '../../platform/db/schema/all.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
@@ -71,7 +72,7 @@ export class FilesService {
 
     const row = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const [plan] = await tx
-        .select({ maxFileBytes: sql<number>`(${plans.limits} ->> 'maxFileBytes')::bigint`, storageBytes: sql<number>`(${plans.limits} ->> 'storageBytes')::bigint` })
+        .select({ maxFileBytes: sql<number>`(${EFFECTIVE_LIMITS} ->> 'maxFileBytes')::bigint`, storageBytes: sql<number>`(${EFFECTIVE_LIMITS} ->> 'storageBytes')::bigint` })
         .from(workspaces)
         .innerJoin(plans, eq(plans.id, workspaces.planId))
         .where(eq(workspaces.id, member.workspaceId));

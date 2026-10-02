@@ -61,6 +61,8 @@ export interface Workspace {
   readonly memberCount: number;
   /** The Owner — the only member who may delete the workspace. */
   readonly ownerId: string;
+  /** Suspended by the platform's administrators: listed, but it cannot be opened. */
+  readonly suspended?: boolean;
 }
 
 export interface WorkspaceDraft {

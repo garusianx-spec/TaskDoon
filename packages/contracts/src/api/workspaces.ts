@@ -13,6 +13,8 @@ export interface MeWorkspace {
   readonly iconUrl: string | null;
   readonly role: RoleId;
   readonly isOwner: boolean;
+  /** Suspended by a platform admin: listed, but nothing in it opens until the suspension is lifted. */
+  readonly suspended?: boolean;
 }
 
 export interface MeResponse {

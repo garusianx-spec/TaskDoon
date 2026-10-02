@@ -226,7 +226,9 @@ export class ScheduledMessagesService {
       if (!row) return 'skipped';
       const member = await this.membership.load(workspaceId, authorId);
       if (!member) {
-        await this.announce(workspaceId, await this.finish(scope, row, { failure: 'FORBIDDEN' }));
+        // A workspace a platform admin suspended sends nothing; the schedule says why.
+        const failure = (await this.membership.suspendedFor(workspaceId, authorId)) ? 'WORKSPACE_SUSPENDED' : 'FORBIDDEN';
+        await this.announce(workspaceId, await this.finish(scope, row, { failure }));
         return 'failed';
       }
       const { refusal } = await this.deliver(member, row);

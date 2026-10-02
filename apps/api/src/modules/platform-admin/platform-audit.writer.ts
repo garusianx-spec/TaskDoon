@@ -12,6 +12,11 @@ export interface PlatformAuditEntry {
   readonly targetUserId?: string | null;
   readonly resourceType?: string;
   readonly resourceId?: string;
+  /**
+   * The workspace an action concerns (phase 3). It is also written on the `audit_logs` twin, so
+   * the workspace's own trail has it; the unit must then be the workspace's.
+   */
+  readonly workspaceId?: string | null;
   /** Filters and counts; never message content, codes or passwords. */
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
@@ -32,7 +37,7 @@ export class PlatformAuditWriter {
 
   async record(admin: PlatformAdmin, entry: PlatformAuditEntry, unit?: Unit): Promise<void> {
     if (unit) return this.write(unit, admin, entry);
-    await this.uow.run({ workspaceId: null, userId: admin.userId }, (own) => this.write(own, admin, entry));
+    await this.uow.run({ workspaceId: entry.workspaceId ?? null, userId: admin.userId }, (own) => this.write(own, admin, entry));
   }
 
   private async write(unit: Unit, admin: PlatformAdmin, entry: PlatformAuditEntry): Promise<void> {
@@ -46,11 +51,12 @@ export class PlatformAuditWriter {
       userAgent: this.context.userAgent?.slice(0, 512) ?? null,
       requestId: this.context.requestId ?? null,
       traceId: this.context.traceId ?? null,
+      targetWorkspaceId: entry.workspaceId ?? null,
       metadata: entry.metadata ? { ...entry.metadata } : null,
     });
     await this.audit.write(unit.tx, {
       action: `platform.${entry.action}`,
-      workspaceId: null,
+      workspaceId: entry.workspaceId ?? null,
       actorUserId: admin.userId,
       ...(entry.resourceType ? { resourceType: entry.resourceType } : {}),
       ...(entry.resourceId ? { resourceId: entry.resourceId } : {}),

@@ -127,6 +127,13 @@
       "when": 1790894482550,
       "tag": "0017_platform_audit_trace",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790929451028,
+      "tag": "0018_workspace_moderation",
+      "breakpoints": true
     }
   ]
 }

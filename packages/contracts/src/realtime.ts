@@ -85,7 +85,7 @@ export interface RealtimeEventMap {
   /** Refetch `GET /me/permissions` and the project list; your rooms were already re-evaluated. */
   'permissions:updated': { readonly reason: string };
   /** You are no longer a member (or the workspace was deleted); its rooms were left. */
-  'workspace:removed': { readonly workspaceId: string; readonly reason: 'removed' | 'deleted' };
+  'workspace:removed': { readonly workspaceId: string; readonly reason: 'removed' | 'deleted' | 'suspended' };
   /** This session was signed out; the socket disconnects next. */
   'session:revoked': { readonly reason: string };
   /** The access token expired more than a minute ago without `auth:refresh`; the socket disconnects next. */

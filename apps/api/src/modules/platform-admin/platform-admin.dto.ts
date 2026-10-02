@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Length, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Length, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import type {
   CompletePasswordResetBody,
   ConversationKind,
@@ -28,15 +28,28 @@ import type {
   PlatformUserPage,
   PlatformUserStatus,
   PlatformUserSummary,
+  PlanLimits,
+  PlatformPlanOption,
   PlatformWorkspaceDetail,
+  PlatformWorkspaceModerationResult,
   PlatformWorkspacePage,
+  PlatformWorkspaceQuota,
+  PlatformWorkspaceStatus,
   PlatformWorkspaceSummary,
   ProjectRole,
   SuspendUserBody,
+  SuspendWorkspaceBody,
+  TransferWorkspaceOwnershipBody,
   UnsuspendUserBody,
+  UnsuspendWorkspaceBody,
+  WorkspaceLimitOverrides,
+  WorkspaceLimitsBody,
 } from '@taskin/contracts';
 import { LatinDigits } from '../../platform/http/dto.js';
 import { CONVERSATION_KINDS, MessageViewDto } from '../chat/chat.dto.js';
+import { PlanLimitsDto } from '../workspaces/workspaces.dto.js';
+
+const WORKSPACE_STATUSES: readonly PlatformWorkspaceStatus[] = ['active', 'suspended', 'deleted'];
 
 export const PLATFORM_USER_STATUSES: readonly PlatformUserStatus[] = ['active', 'suspended', 'deleted'];
 export const PLATFORM_SESSION_STATUSES: readonly PlatformSessionStatus[] = ['active', 'revoked', 'expired'];
@@ -102,12 +115,14 @@ export class PlatformAuditQueryDto {
   @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID() readonly adminId?: string;
   @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID() readonly targetUserId?: string;
   @ApiPropertyOptional({ description: 'Action, or its prefix (`admin.messages`)' }) @IsOptional() @Matches(/^[a-z_.]{1,64}$/) readonly action?: string;
+  @ApiPropertyOptional({ format: 'uuid', description: 'Actions on, or looks at, this workspace' }) @IsOptional() @IsUUID() readonly workspaceId?: string;
   @ApiPropertyOptional() @IsOptional() @Matches(CURSOR) readonly cursor?: string;
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 50 }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) readonly limit?: number;
 }
 
 export class PlatformWorkspaceQueryDto {
   @ApiPropertyOptional({ description: 'Name or slug contains' }) @IsOptional() @IsString() @MaxLength(80) readonly q?: string;
+  @ApiPropertyOptional({ enum: WORKSPACE_STATUSES }) @IsOptional() @IsIn(WORKSPACE_STATUSES) readonly status?: PlatformWorkspaceStatus;
   @ApiPropertyOptional() @IsOptional() @Matches(CURSOR) readonly cursor?: string;
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 50 }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) readonly limit?: number;
 }
@@ -276,6 +291,7 @@ export class PlatformAuditEntryDto implements PlatformAuditEntry {
   @ApiProperty({ type: String, nullable: true }) readonly userAgent!: string | null;
   @ApiProperty({ type: String, nullable: true }) readonly requestId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) readonly traceId?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) readonly workspaceId?: string | null;
   @ApiProperty({ type: 'object', additionalProperties: true, nullable: true }) readonly metadata!: Record<string, unknown> | null;
   @ApiProperty({ format: 'date-time' }) readonly createdAt!: string;
 }
@@ -295,6 +311,8 @@ export class PlatformWorkspaceSummaryDto implements PlatformWorkspaceSummary {
   @ApiProperty() readonly memberCount!: number;
   @ApiProperty({ format: 'date-time' }) readonly createdAt!: string;
   @ApiProperty({ type: String, nullable: true, format: 'date-time' }) readonly deletedAt!: string | null;
+  @ApiPropertyOptional({ enum: WORKSPACE_STATUSES }) readonly status?: PlatformWorkspaceStatus;
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'date-time' }) readonly suspendedAt?: string | null;
 }
 
 export class PlatformWorkspacePageDto implements PlatformWorkspacePage {
@@ -321,11 +339,45 @@ export class PlatformWorkspaceMemberDto {
   @ApiProperty() readonly isOwner!: boolean;
   @ApiProperty({ format: 'date-time' }) readonly joinedAt!: string;
   @ApiProperty({ type: String, nullable: true, format: 'date-time' }) readonly leftAt!: string | null;
+  @ApiPropertyOptional({ enum: PLATFORM_USER_STATUSES }) readonly accountStatus?: PlatformUserStatus;
+  @ApiPropertyOptional() readonly hasPassword?: boolean;
+}
+
+export class PlatformPlanOptionDto implements PlatformPlanOption {
+  @ApiProperty() readonly id!: string;
+  @ApiProperty() readonly name!: string;
+  @ApiProperty({ type: PlanLimitsDto }) readonly limits!: PlanLimits;
+}
+
+/** Any subset of the plan's limits, each replacing the plan's; `null` is unlimited where allowed. */
+export class WorkspaceLimitOverridesDto implements WorkspaceLimitOverrides {
+  @ApiPropertyOptional({ minimum: 1, maximum: 100_000 }) @ValidateIf((_, value) => value !== undefined) @IsInt() @Min(1) @Max(100_000) maxMembers?: number;
+  @ApiPropertyOptional({ minimum: 1, description: 'Bytes' }) @ValidateIf((_, value) => value !== undefined) @IsInt() @Min(1) @Max(Number.MAX_SAFE_INTEGER) storageBytes?: number;
+  @ApiPropertyOptional({ minimum: 1, description: 'Bytes' }) @ValidateIf((_, value) => value !== undefined) @IsInt() @Min(1) @Max(Number.MAX_SAFE_INTEGER) maxFileBytes?: number;
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, description: '`null`: unlimited' }) @IsOptional() @IsInt() @Min(1) @Max(36_500) messageHistoryDays?: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, description: '`null`: unlimited' }) @IsOptional() @IsInt() @Min(1) @Max(100_000) maxProjects?: number | null;
+}
+
+export class PlatformWorkspaceUsageDto {
+  @ApiProperty() readonly members!: number;
+  @ApiProperty() readonly storageUsedBytes!: number;
+  @ApiProperty() readonly projects!: number;
+}
+
+export class PlatformWorkspaceQuotaDto implements PlatformWorkspaceQuota {
+  @ApiProperty() readonly planId!: string;
+  @ApiProperty() readonly planName!: string;
+  @ApiProperty({ type: WorkspaceLimitOverridesDto, nullable: true }) readonly overrides!: WorkspaceLimitOverrides | null;
+  @ApiProperty({ type: PlanLimitsDto }) readonly effective!: PlanLimits;
+  @ApiProperty({ type: PlatformWorkspaceUsageDto }) readonly usage!: PlatformWorkspaceUsageDto;
 }
 
 export class PlatformWorkspaceDetailDto extends PlatformWorkspaceSummaryDto implements PlatformWorkspaceDetail {
   @ApiProperty({ type: PlatformWorkspaceRoleDto, isArray: true }) readonly roles!: PlatformWorkspaceRoleDto[];
   @ApiProperty({ type: PlatformWorkspaceMemberDto, isArray: true }) readonly members!: PlatformWorkspaceMemberDto[];
+  @ApiPropertyOptional({ type: PlatformSuspensionDto, nullable: true }) readonly suspension?: PlatformSuspensionDto | null;
+  @ApiPropertyOptional({ type: PlatformWorkspaceQuotaDto }) readonly quota?: PlatformWorkspaceQuotaDto;
+  @ApiPropertyOptional({ type: PlatformPlanOptionDto, isArray: true }) readonly planOptions?: PlatformPlanOptionDto[];
 }
 
 /* ---------------------------------------------------------------- phase 2: moderation */
@@ -351,4 +403,34 @@ export class PlatformModerationResultDto implements PlatformModerationResult {
   @ApiProperty({ type: PlatformUserSummaryDto }) readonly user!: PlatformUserSummaryDto;
   @ApiProperty() readonly sessionsRevoked!: number;
   @ApiProperty({ description: '`false` when the account was already in the requested state' }) readonly changed!: boolean;
+}
+
+/* ---------------------------------------------------------------- phase 3: workspaces */
+
+export class SuspendWorkspaceDto implements SuspendWorkspaceBody {
+  @ApiProperty({ minLength: 3, maxLength: 500, description: 'Why, for the audit log' }) @Transform(trimmed) @IsString() @Length(3, 500) readonly reason!: string;
+}
+
+export class UnsuspendWorkspaceDto implements UnsuspendWorkspaceBody {
+  @ApiPropertyOptional({ maxLength: 500 }) @IsOptional() @Transform(trimmed) @IsString() @MaxLength(500) readonly reason?: string;
+}
+
+export class TransferWorkspaceOwnershipDto implements TransferWorkspaceOwnershipBody {
+  @ApiProperty({ format: 'uuid', description: 'An active member whose account is active' }) @IsUUID() readonly userId!: string;
+  @ApiProperty({ minLength: 3, maxLength: 500 }) @Transform(trimmed) @IsString() @Length(3, 500) readonly reason!: string;
+}
+
+export class WorkspaceLimitsDto implements WorkspaceLimitsBody {
+  @ApiPropertyOptional({ example: 'team' }) @IsOptional() @IsString() @Matches(/^[a-z0-9_-]{1,32}$/) readonly planId?: string;
+  @ApiPropertyOptional({ type: WorkspaceLimitOverridesDto, nullable: true, description: 'Replaces the overrides; `null` clears them' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WorkspaceLimitOverridesDto)
+  readonly overrides?: WorkspaceLimitOverridesDto | null;
+  @ApiProperty({ minLength: 3, maxLength: 500 }) @Transform(trimmed) @IsString() @Length(3, 500) readonly reason!: string;
+}
+
+export class PlatformWorkspaceModerationResultDto implements PlatformWorkspaceModerationResult {
+  @ApiProperty({ type: PlatformWorkspaceSummaryDto }) readonly workspace!: PlatformWorkspaceSummaryDto;
+  @ApiProperty({ description: '`false` when the workspace was already in the requested state' }) readonly changed!: boolean;
 }

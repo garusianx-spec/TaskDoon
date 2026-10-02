@@ -8,6 +8,7 @@ import { PlatformAdminGuard, PlatformAdminSmsGuard } from './platform-admin.guar
 import { PlatformAuditWriter } from './platform-audit.writer.js';
 import { PlatformConversationsService } from './platform-conversations.service.js';
 import { PlatformModerationService } from './platform-moderation.service.js';
+import { PlatformWorkspaceModerationService } from './platform-workspace-moderation.service.js';
 import { PlatformUsersService } from './platform-users.service.js';
 import { PlatformWorkspacesService } from './platform-workspaces.service.js';
 
@@ -29,6 +30,7 @@ import { PlatformWorkspacesService } from './platform-workspaces.service.js';
     PlatformConversationsService,
     PlatformWorkspacesService,
     PlatformModerationService,
+    PlatformWorkspaceModerationService,
     PasswordResetService,
     NoStoreInterceptor,
   ],

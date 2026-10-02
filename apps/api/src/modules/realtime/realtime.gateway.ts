@@ -402,7 +402,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   /** Makes `workspaceId` the socket's live workspace: leaves the old rooms, joins the new. */
   private async enter(socket: RtSocket, workspaceId: string): Promise<string[]> {
     const member = await this.memberships.load(workspaceId, socket.data.userId);
-    if (!member) throw ApiError.notFound('The workspace');
+    if (!member) {
+      if (await this.memberships.suspendedFor(workspaceId, socket.data.userId)) throw new ApiError('WORKSPACE_SUSPENDED');
+      throw ApiError.notFound('The workspace');
+    }
     const scope = await this.scope.of(member);
     const stale = [...socket.rooms].filter((room) => isWorkspaceRoom(room));
     for (const room of stale) await socket.leave(room);
@@ -469,8 +472,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     for (const [userId, own] of byUser) {
       const member = await this.memberships.load(workspaceId, userId);
       if (!member) {
+        const why = (await this.memberships.suspendedFor(workspaceId, userId)) ? 'suspended' : 'removed';
         for (const socket of own) {
-          socket.emit('workspace:removed', this.envelope('workspace:removed', workspaceId, { workspaceId, reason: 'removed' }));
+          socket.emit('workspace:removed', this.envelope('workspace:removed', workspaceId, { workspaceId, reason: why }));
           await this.leaveWorkspace(socket);
         }
         continue;

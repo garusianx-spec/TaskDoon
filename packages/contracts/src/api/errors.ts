@@ -78,7 +78,11 @@ export type ApiErrorCode =
   // Platform admin, phase 2: moderation
   | 'ACCOUNT_SUSPENDED'
   | 'ADMIN_SELF_ACTION'
-  | 'ADMIN_TARGET_PROTECTED';
+  | 'ADMIN_TARGET_PROTECTED'
+  // Platform admin, phase 3: workspaces
+  | 'WORKSPACE_SUSPENDED'
+  | 'OWNERSHIP_TARGET_INVALID'
+  | 'ALREADY_OWNER';
 
 export interface FieldError {
   /** Dotted path of the offending field, e.g. `recipients.2.address`. */

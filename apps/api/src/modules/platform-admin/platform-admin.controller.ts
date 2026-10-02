@@ -28,6 +28,7 @@ import type {
   PlatformConversationView,
   PlatformMessagePage,
   PlatformModerationResult,
+  PlatformWorkspaceModerationResult,
   PlatformSessionsRevoked,
   PlatformSessionView,
   PlatformUserDetail,
@@ -64,14 +65,20 @@ import {
   PlatformWorkspaceDetailDto,
   PlatformWorkspacePageDto,
   PlatformWorkspaceQueryDto,
+  PlatformWorkspaceModerationResultDto,
   SuspendUserDto,
+  SuspendWorkspaceDto,
+  TransferWorkspaceOwnershipDto,
   UnsuspendUserDto,
+  UnsuspendWorkspaceDto,
+  WorkspaceLimitsDto,
 } from './platform-admin.dto.js';
 import { CurrentPlatformAdmin, type PlatformAdmin, PlatformAdminOnly, PlatformAdminProbe } from './platform-admin.guard.js';
 import { PlatformAdminUnitOfWork } from './admin-unit-of-work.js';
 import { PlatformConversationsService } from './platform-conversations.service.js';
 import { PlatformModerationService } from './platform-moderation.service.js';
 import { PlatformUsersService } from './platform-users.service.js';
+import { PlatformWorkspaceModerationService } from './platform-workspace-moderation.service.js';
 import { PlatformWorkspacesService } from './platform-workspaces.service.js';
 
 /** What the admin screens show is never kept by a browser or proxy cache. */
@@ -123,6 +130,7 @@ export class PlatformAdminController {
     private readonly conversations: PlatformConversationsService,
     private readonly workspaces: PlatformWorkspacesService,
     private readonly moderation: PlatformModerationService,
+    private readonly workspaceModeration: PlatformWorkspaceModerationService,
   ) {}
 
   /* ---------------------------------------------------------------- users and sessions */
@@ -272,6 +280,55 @@ export class PlatformAdminController {
   @ApiOkResponse({ type: PlatformWorkspaceDetailDto })
   workspace(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('workspaceId', ParseUUIDPipe) workspaceId: string): Promise<PlatformWorkspaceDetail> {
     return this.workspaces.detail(admin, workspaceId);
+  }
+
+  /* ---------------------------------------------------------------- workspace moderation (phase 3) */
+
+  @Post('workspaces/:workspaceId/suspend')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Suspend a workspace: every member is refused (WORKSPACE_SUSPENDED) until it is lifted' })
+  @ApiOkResponse({ type: PlatformWorkspaceModerationResultDto })
+  suspendWorkspace(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Body() body: SuspendWorkspaceDto,
+  ): Promise<PlatformWorkspaceModerationResult> {
+    return this.workspaceModeration.suspend(admin, workspaceId, body.reason);
+  }
+
+  @Post('workspaces/:workspaceId/unsuspend')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Lift a workspace suspension' })
+  @ApiOkResponse({ type: PlatformWorkspaceModerationResultDto })
+  unsuspendWorkspace(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Body() body: UnsuspendWorkspaceDto,
+  ): Promise<PlatformWorkspaceModerationResult> {
+    return this.workspaceModeration.unsuspend(admin, workspaceId, body.reason);
+  }
+
+  @Post('workspaces/:workspaceId/transfer-ownership')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Emergency override: make an active member the owner (the previous owner becomes an admin)' })
+  @ApiOkResponse({ type: PlatformWorkspaceModerationResultDto })
+  transferWorkspaceOwnership(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Body() body: TransferWorkspaceOwnershipDto,
+  ): Promise<PlatformWorkspaceModerationResult> {
+    return this.workspaceModeration.transferOwnership(admin, workspaceId, body.userId, body.reason);
+  }
+
+  @Put('workspaces/:workspaceId/limits')
+  @ApiOperation({ summary: "Move a workspace to another plan and/or override its plan's limits" })
+  @ApiOkResponse({ type: PlatformWorkspaceModerationResultDto })
+  setWorkspaceLimits(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Body() body: WorkspaceLimitsDto,
+  ): Promise<PlatformWorkspaceModerationResult> {
+    return this.workspaceModeration.setLimits(admin, workspaceId, body);
   }
 
   @Get('audit')

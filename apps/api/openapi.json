@@ -6576,6 +6576,19 @@
             }
           },
           {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "suspended",
+                "deleted"
+              ]
+            }
+          },
+          {
             "name": "cursor",
             "required": false,
             "in": "query",
@@ -6654,6 +6667,190 @@
         ]
       }
     },
+    "/api/v1/admin/workspaces/{workspaceId}/suspend": {
+      "post": {
+        "operationId": "PlatformAdmin_suspendWorkspace",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendWorkspaceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformWorkspaceModerationResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Suspend a workspace: every member is refused (WORKSPACE_SUSPENDED) until it is lifted",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/api/v1/admin/workspaces/{workspaceId}/unsuspend": {
+      "post": {
+        "operationId": "PlatformAdmin_unsuspendWorkspace",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsuspendWorkspaceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformWorkspaceModerationResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lift a workspace suspension",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/api/v1/admin/workspaces/{workspaceId}/transfer-ownership": {
+      "post": {
+        "operationId": "PlatformAdmin_transferWorkspaceOwnership",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferWorkspaceOwnershipDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformWorkspaceModerationResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emergency override: make an active member the owner (the previous owner becomes an admin)",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/api/v1/admin/workspaces/{workspaceId}/limits": {
+      "put": {
+        "operationId": "PlatformAdmin_setWorkspaceLimits",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceLimitsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformWorkspaceModerationResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Move a workspace to another plan and/or override its plan's limits",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
     "/api/v1/admin/audit": {
       "get": {
         "operationId": "PlatformAdmin_audit",
@@ -6682,6 +6879,16 @@
             "in": "query",
             "description": "Action, or its prefix (`admin.messages`)",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": false,
+            "in": "query",
+            "description": "Actions on, or looks at, this workspace",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -12476,6 +12683,19 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "deleted"
+            ]
+          },
+          "suspendedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
           }
         },
         "required": [
@@ -12586,6 +12806,17 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "accountStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "deleted"
+            ]
+          },
+          "hasPassword": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -12598,6 +12829,109 @@
           "isOwner",
           "joinedAt",
           "leftAt"
+        ]
+      },
+      "WorkspaceLimitOverridesDto": {
+        "type": "object",
+        "properties": {
+          "maxMembers": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "storageBytes": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Bytes"
+          },
+          "maxFileBytes": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Bytes"
+          },
+          "messageHistoryDays": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "description": "`null`: unlimited"
+          },
+          "maxProjects": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "description": "`null`: unlimited"
+          }
+        }
+      },
+      "PlatformWorkspaceUsageDto": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "number"
+          },
+          "storageUsedBytes": {
+            "type": "number"
+          },
+          "projects": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "members",
+          "storageUsedBytes",
+          "projects"
+        ]
+      },
+      "PlatformWorkspaceQuotaDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string"
+          },
+          "planName": {
+            "type": "string"
+          },
+          "overrides": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WorkspaceLimitOverridesDto"
+              }
+            ]
+          },
+          "effective": {
+            "$ref": "#/components/schemas/PlanLimitsDto"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/PlatformWorkspaceUsageDto"
+          }
+        },
+        "required": [
+          "planId",
+          "planName",
+          "overrides",
+          "effective",
+          "usage"
+        ]
+      },
+      "PlatformPlanOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PlanLimitsDto"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "limits"
         ]
       },
       "PlatformWorkspaceDetailDto": {
@@ -12635,6 +12969,19 @@
             "nullable": true,
             "format": "date-time"
           },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "deleted"
+            ]
+          },
+          "suspendedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
           "roles": {
             "type": "array",
             "items": {
@@ -12645,6 +12992,24 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PlatformWorkspaceMemberDto"
+            }
+          },
+          "suspension": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformSuspensionDto"
+              }
+            ]
+          },
+          "quota": {
+            "$ref": "#/components/schemas/PlatformWorkspaceQuotaDto"
+          },
+          "planOptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformPlanOptionDto"
             }
           }
         },
@@ -12660,6 +13025,91 @@
           "deletedAt",
           "roles",
           "members"
+        ]
+      },
+      "SuspendWorkspaceDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500,
+            "description": "Why, for the audit log"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "PlatformWorkspaceModerationResultDto": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "$ref": "#/components/schemas/PlatformWorkspaceSummaryDto"
+          },
+          "changed": {
+            "type": "boolean",
+            "description": "`false` when the workspace was already in the requested state"
+          }
+        },
+        "required": [
+          "workspace",
+          "changed"
+        ]
+      },
+      "UnsuspendWorkspaceDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "TransferWorkspaceOwnershipDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "An active member whose account is active"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "userId",
+          "reason"
+        ]
+      },
+      "WorkspaceLimitsDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "example": "team"
+          },
+          "overrides": {
+            "nullable": true,
+            "description": "Replaces the overrides; `null` clears them",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WorkspaceLimitOverridesDto"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "PlatformAuditEntryDto": {
@@ -12710,6 +13160,11 @@
           "traceId": {
             "type": "string",
             "nullable": true
+          },
+          "workspaceId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
           },
           "metadata": {
             "type": "object",
