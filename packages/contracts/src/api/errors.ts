@@ -54,6 +54,9 @@ export type ApiErrorCode =
   | 'BOARD_CHANGED'
   | 'SUBTASKS_CHANGED'
   | 'ASSIGNEE_NO_ACCESS'
+  | 'DEPENDENCY_CYCLE'
+  | 'DEPENDENCY_EXISTS'
+  | 'DEPENDENCY_CROSS_PROJECT'
   // Notes
   | 'NOTE_CATEGORY_IN_USE'
   // Chat and realtime

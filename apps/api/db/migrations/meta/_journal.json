@@ -134,6 +134,20 @@
       "when": 1790929451028,
       "tag": "0018_workspace_moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790938953408,
+      "tag": "0019_agile_tracking",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790938963572,
+      "tag": "0020_agile_tracking_security",
+      "breakpoints": true
     }
   ]
 }

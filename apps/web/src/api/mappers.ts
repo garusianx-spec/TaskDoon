@@ -38,13 +38,17 @@ import type {
   Task,
   TaskCard,
   TaskCommentView,
+  TaskDependencyView,
   TaskDetail,
+  TaskLink,
   TaskStatus,
   TrashedProjectView,
   User,
   WorkflowView,
   Workspace,
   WorkspaceView,
+  Worklog,
+  WorklogView,
 } from '@taskin/contracts';
 import { formatMobile, monogram } from '@taskin/text';
 import { DEPARTMENTS } from '@/data/reference';
@@ -219,6 +223,12 @@ export function taskFromCard(card: TaskCard, columns: readonly BoardColumn[], pr
     sourceMessageId: card.sourceMessageId,
     boardColumnId: boardColumnIdFor(columns, card.columnId),
     reopenTo: previous?.reopenTo ?? null,
+    type: card.type,
+    severity: card.severity,
+    estimatedMinutes: card.estimatedMinutes,
+    spentMinutes: card.spentMinutes,
+    isBacklog: card.isBacklog,
+    blockedByIds: card.blockedByIds,
     ...(detailed
       ? {}
       : {
@@ -230,6 +240,14 @@ export function taskFromCard(card: TaskCard, columns: readonly BoardColumn[], pr
           },
         }),
   };
+}
+
+export function worklogFromView(view: WorklogView): Worklog {
+  return { id: view.id, userId: view.userId, minutes: view.durationMinutes, note: view.description, loggedAt: view.loggedAt };
+}
+
+export function linkFromView(view: TaskDependencyView): TaskLink {
+  return { id: view.id, kind: view.type, taskId: view.task.id, code: view.task.code, title: view.task.title, status: view.task.status };
 }
 
 export function subtaskFromView(view: SubtaskView): Subtask {

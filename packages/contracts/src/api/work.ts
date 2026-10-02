@@ -1,9 +1,12 @@
 import type {
   AttachmentKind,
   AvatarTone,
+  IssueSeverity,
+  IssueType,
   PermissionActionId,
   SmartViewId,
   TagTone,
+  TaskDependencyType,
   TaskPriority,
   TaskStatus,
 } from '../domain.js';
@@ -177,6 +180,20 @@ export interface TaskCard {
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+  /** Agile tracking: `task` for everything created before it. */
+  readonly type: IssueType;
+  /** Bugs only; `null` otherwise. */
+  readonly severity: IssueSeverity | null;
+  readonly estimatedMinutes: number | null;
+  /** The sum of the task's worklogs. */
+  readonly spentMinutes: number;
+  /** Backlog items are left off the board until moved back (`isBacklog: false`). */
+  readonly isBacklog: boolean;
+  /**
+   * Live, unarchived tasks that block this one, whatever their status: the task is blocked while
+   * any of them is not done (clients compare with the statuses they hold).
+   */
+  readonly blockedByIds: readonly string[];
 }
 
 export interface SubtaskView {
@@ -297,6 +314,13 @@ export interface CreateTaskBody {
   readonly subtasks?: readonly string[];
   /** Ready files the caller uploaded, linked to the new task. */
   readonly attachmentIds?: readonly string[];
+  /** Defaults to `task`. */
+  readonly type?: IssueType;
+  /** Bugs only. */
+  readonly severity?: IssueSeverity | null;
+  readonly estimatedMinutes?: number | null;
+  /** Create straight into the backlog (default `false`). */
+  readonly isBacklog?: boolean;
 }
 
 export interface UpdateTaskBody {
@@ -309,6 +333,12 @@ export interface UpdateTaskBody {
   readonly reviewerId?: string | null;
   readonly assigneeIds?: readonly string[];
   readonly labelIds?: readonly string[];
+  /** Changing away from `bug` clears the severity. */
+  readonly type?: IssueType;
+  readonly severity?: IssueSeverity | null;
+  readonly estimatedMinutes?: number | null;
+  /** Moves the task to (`true`) or back from (`false`) the backlog; needs `assign`, like a move. */
+  readonly isBacklog?: boolean;
 }
 
 export interface MoveTaskBody {
@@ -380,4 +410,56 @@ export interface TaskPreview {
   readonly title: string | null;
   readonly status: TaskStatus | null;
   readonly projectId: string | null;
+}
+
+/* ============================== Agile tracking ============================== */
+
+/** One stretch of logged work. */
+export interface WorklogView {
+  readonly id: string;
+  readonly taskId: string;
+  readonly userId: string;
+  readonly durationMinutes: number;
+  readonly description: string;
+  readonly loggedAt: string;
+  readonly createdAt: string;
+}
+
+export interface WorklogList {
+  /** Newest first (by `loggedAt`), at most 500. */
+  readonly items: readonly WorklogView[];
+  /** Every worklog of the task, not only the listed ones. */
+  readonly totalMinutes: number;
+  readonly estimatedMinutes: number | null;
+}
+
+export interface CreateWorklogBody {
+  /** 1 to 1440 (one day). */
+  readonly durationMinutes: number;
+  readonly description?: string;
+  /** When the work happened; defaults to now. */
+  readonly loggedAt?: string;
+}
+
+/** The other end of a link, as far as the caller may see it. */
+export interface LinkedTaskView {
+  readonly id: string;
+  readonly code: string;
+  readonly title: string;
+  readonly status: TaskStatus;
+}
+
+export interface TaskDependencyView {
+  readonly id: string;
+  /** From the requested task's side: `blocks` means it blocks `task`. */
+  readonly type: TaskDependencyType;
+  readonly task: LinkedTaskView;
+  readonly createdAt: string;
+}
+
+export interface CreateDependencyBody {
+  /** Another task of the same project. */
+  readonly targetTaskId: string;
+  /** How the task in the path relates to the target: `blocks` means it blocks the target. */
+  readonly type: TaskDependencyType;
 }

@@ -1,3 +1,4 @@
+import { applyDecorators } from '@nestjs/common';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -6,6 +7,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsISO8601,
   IsOptional,
   IsString,
   IsUUID,
@@ -30,13 +32,18 @@ import {
   type TaskSourceMessage,
   type CreateColumnBody,
   type CreateCommentBody,
+  type CreateDependencyBody,
+  type CreateWorklogBody,
   type CreateLabelBody,
   type CreateProjectBody,
   type CreateSubtaskBody,
   type CreateTaskBody,
   type DeleteColumnBody,
   type FileKind,
+  type IssueSeverity,
+  type IssueType,
   type LabelView,
+  type LinkedTaskView,
   type MoveTaskBody,
   PERMISSION_ACTION_IDS,
   type PermissionActionId,
@@ -51,6 +58,8 @@ import {
   type TagTone,
   type TaskCard,
   type TaskCommentView,
+  type TaskDependencyType,
+  type TaskDependencyView,
   type TaskDetail,
   type TaskEventView,
   type TaskPage,
@@ -63,6 +72,8 @@ import {
   type UpdateSubtaskBody,
   type UpdateTaskBody,
   type WorkflowView,
+  type WorklogList,
+  type WorklogView,
 } from '@taskin/contracts';
 import { IsCalendarDate, LatinDigits, OptionalNullableDate, OptionalNullableUuid } from '../../platform/http/dto.js';
 import { AVATAR_TONES } from '../users/me.controller.js';
@@ -70,6 +81,11 @@ import { AVATAR_TONES } from '../users/me.controller.js';
 export const TAG_TONES: readonly TagTone[] = ['gray', 'blue', 'teal', 'green', 'amber', 'red', 'pink', 'violet'];
 export const TASK_STATUSES: readonly TaskStatus[] = ['todo', 'in-progress', 'review', 'done'];
 export const TASK_PRIORITIES: readonly TaskPriority[] = ['urgent', 'high', 'medium', 'low'];
+export const ISSUE_TYPES: readonly IssueType[] = ['task', 'bug', 'feature'];
+export const ISSUE_SEVERITIES: readonly IssueSeverity[] = ['critical', 'high', 'medium', 'low'];
+export const TASK_DEPENDENCY_TYPES: readonly TaskDependencyType[] = ['blocks', 'blocked_by', 'relates_to'];
+/** Estimates run from one minute to a thousand hours (`tasks_estimate_range`). */
+export const MAX_ESTIMATE_MINUTES = 60000;
 export const PROJECT_ROLES: readonly ProjectRole[] = ['lead', 'contributor', 'viewer'];
 export const VISIBILITIES: readonly ProjectVisibility[] = ['workspace', 'private'];
 export const SMART_VIEWS: readonly SmartView[] = ['all', 'my-tasks', 'starred', 'due-soon'];
@@ -77,6 +93,20 @@ export const FILE_KINDS: readonly FileKind[] = ['image', 'video', 'document', 's
 export const ATTACHMENT_STATUSES: readonly AttachmentStatus[] = ['pending', 'scanning', 'ready', 'rejected', 'deleted'];
 
 const trueish = ({ value }: { value: unknown }) => value === true || value === 'true' || value === '1';
+
+/** `true`/`false` from a query string, both ways (anything else is left for `IsBoolean` to refuse). */
+const booleanish = ({ value }: { value: unknown }) =>
+  value === true || value === 'true' || value === '1' ? true : value === false || value === 'false' || value === '0' ? false : value;
+
+/** An optional integer that may also be `null` (to clear it). */
+const OptionalNullableMinutes = (max: number) =>
+  applyDecorators(
+    IsOptional(),
+    ValidateIf((_, value) => value !== null),
+    IsInt(),
+    Min(1),
+    Max(max),
+  );
 
 /* ============================== Projects ============================== */
 
@@ -228,6 +258,13 @@ export class TaskCardDto implements TaskCard {
   @ApiProperty() readonly version!: number;
   @ApiProperty({ format: 'date-time' }) readonly createdAt!: string;
   @ApiProperty({ format: 'date-time' }) readonly updatedAt!: string;
+  @ApiProperty({ enum: ISSUE_TYPES }) readonly type!: IssueType;
+  @ApiProperty({ type: String, nullable: true, enum: ISSUE_SEVERITIES, description: 'Bugs only' }) readonly severity!: IssueSeverity | null;
+  @ApiProperty({ type: Number, nullable: true }) readonly estimatedMinutes!: number | null;
+  @ApiProperty({ description: 'The sum of the task\'s worklogs, in minutes' }) readonly spentMinutes!: number;
+  @ApiProperty({ description: 'Backlog items are not on the board' }) readonly isBacklog!: boolean;
+  @ApiProperty({ type: String, isArray: true, format: 'uuid', description: 'Live, unarchived tasks that block this one, whatever their status' })
+  readonly blockedByIds!: string[];
 }
 
 export class SubtaskViewDto implements SubtaskView {
@@ -335,6 +372,11 @@ export class TaskListQueryDto {
   @MaxLength(100)
   readonly q?: string;
   @ApiPropertyOptional({ type: Boolean }) @IsOptional() @Transform(trueish) @IsBoolean() readonly includeArchived?: boolean;
+  @ApiPropertyOptional({ type: Boolean, description: 'Only backlog items (`true`) or only board items (`false`); omitted, both' })
+  @IsOptional()
+  @Transform(booleanish)
+  @IsBoolean()
+  readonly backlog?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) readonly cursor?: string;
   @ApiPropertyOptional({ minimum: 1, maximum: 200, default: 50 }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(200) readonly limit?: number;
 }
@@ -359,6 +401,16 @@ export class CreateTaskDto implements CreateTaskBody {
   @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' }) @IsOptional() @IsArray() @ArrayMaxSize(20) @IsUUID('all', { each: true }) readonly labelIds?: string[];
   @ApiPropertyOptional({ type: String, isArray: true }) @IsOptional() @IsArray() @ArrayMaxSize(100) @IsString({ each: true }) @Length(1, 200, { each: true }) readonly subtasks?: string[];
   @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' }) @IsOptional() @IsArray() @ArrayMaxSize(20) @IsUUID('all', { each: true }) readonly attachmentIds?: string[];
+  @ApiPropertyOptional({ enum: ISSUE_TYPES, default: 'task' }) @IsOptional() @IsIn(ISSUE_TYPES) readonly type?: IssueType;
+  @ApiPropertyOptional({ type: String, nullable: true, enum: ISSUE_SEVERITIES, description: 'Bugs only' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsIn(ISSUE_SEVERITIES)
+  readonly severity?: IssueSeverity | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: MAX_ESTIMATE_MINUTES })
+  @OptionalNullableMinutes(MAX_ESTIMATE_MINUTES)
+  readonly estimatedMinutes?: number | null;
+  @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() readonly isBacklog?: boolean;
 }
 
 export class UpdateTaskDto implements UpdateTaskBody {
@@ -370,6 +422,16 @@ export class UpdateTaskDto implements UpdateTaskBody {
   @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly reviewerId?: string | null;
   @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' }) @IsOptional() @IsArray() @ArrayMaxSize(20) @IsUUID('all', { each: true }) readonly assigneeIds?: string[];
   @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' }) @IsOptional() @IsArray() @ArrayMaxSize(20) @IsUUID('all', { each: true }) readonly labelIds?: string[];
+  @ApiPropertyOptional({ enum: ISSUE_TYPES, description: 'Changing away from `bug` clears the severity' }) @IsOptional() @IsIn(ISSUE_TYPES) readonly type?: IssueType;
+  @ApiPropertyOptional({ type: String, nullable: true, enum: ISSUE_SEVERITIES, description: 'Bugs only' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsIn(ISSUE_SEVERITIES)
+  readonly severity?: IssueSeverity | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: MAX_ESTIMATE_MINUTES })
+  @OptionalNullableMinutes(MAX_ESTIMATE_MINUTES)
+  readonly estimatedMinutes?: number | null;
+  @ApiPropertyOptional({ description: 'To (`true`) or back from (`false`) the backlog; needs the assign permission' }) @IsOptional() @IsBoolean() readonly isBacklog?: boolean;
 }
 
 export class MoveTaskDto implements MoveTaskBody {
@@ -428,3 +490,55 @@ export class CreateLabelDto implements CreateLabelBody {
   @ApiPropertyOptional({ enum: TAG_TONES }) @IsOptional() @IsIn(TAG_TONES) readonly tone?: TagTone;
 }
 
+
+/* ============================== Agile tracking ============================== */
+
+/** One logged stretch is at most a day. */
+export const MAX_WORKLOG_MINUTES = 1440;
+
+export class WorklogViewDto implements WorklogView {
+  @ApiProperty({ format: 'uuid' }) readonly id!: string;
+  @ApiProperty({ format: 'uuid' }) readonly taskId!: string;
+  @ApiProperty({ format: 'uuid' }) readonly userId!: string;
+  @ApiProperty({ minimum: 1, maximum: MAX_WORKLOG_MINUTES }) readonly durationMinutes!: number;
+  @ApiProperty({ maxLength: 500 }) readonly description!: string;
+  @ApiProperty({ format: 'date-time' }) readonly loggedAt!: string;
+  @ApiProperty({ format: 'date-time' }) readonly createdAt!: string;
+}
+
+export class WorklogListDto implements WorklogList {
+  @ApiProperty({ type: WorklogViewDto, isArray: true, description: 'Newest first, at most 500' }) readonly items!: WorklogViewDto[];
+  @ApiProperty({ description: 'Every worklog of the task' }) readonly totalMinutes!: number;
+  @ApiProperty({ type: Number, nullable: true }) readonly estimatedMinutes!: number | null;
+}
+
+export class CreateWorklogDto implements CreateWorklogBody {
+  @ApiProperty({ minimum: 1, maximum: MAX_WORKLOG_MINUTES }) @IsInt() @Min(1) @Max(MAX_WORKLOG_MINUTES) readonly durationMinutes!: number;
+  @ApiPropertyOptional({ maxLength: 500 }) @IsOptional() @IsString() @MaxLength(500) readonly description?: string;
+  @ApiPropertyOptional({ format: 'date-time', description: 'When the work happened; defaults to now' })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  readonly loggedAt?: string;
+}
+
+export class LinkedTaskViewDto implements LinkedTaskView {
+  @ApiProperty({ format: 'uuid' }) readonly id!: string;
+  @ApiProperty({ example: 'CRM-104' }) readonly code!: string;
+  @ApiProperty() readonly title!: string;
+  @ApiProperty({ enum: TASK_STATUSES }) readonly status!: TaskStatus;
+}
+
+export class TaskDependencyViewDto implements TaskDependencyView {
+  @ApiProperty({ format: 'uuid' }) readonly id!: string;
+  @ApiProperty({ enum: TASK_DEPENDENCY_TYPES, description: 'From the requested task\'s side: `blocks` means it blocks `task`' })
+  readonly type!: TaskDependencyType;
+  @ApiProperty({ type: LinkedTaskViewDto }) readonly task!: LinkedTaskViewDto;
+  @ApiProperty({ format: 'date-time' }) readonly createdAt!: string;
+}
+
+export class CreateDependencyDto implements CreateDependencyBody {
+  @ApiProperty({ format: 'uuid', description: 'Another task of the same project' }) @IsUUID() readonly targetTaskId!: string;
+  @ApiProperty({ enum: TASK_DEPENDENCY_TYPES, description: 'How the task in the path relates to the target' })
+  @IsIn(TASK_DEPENDENCY_TYPES)
+  readonly type!: TaskDependencyType;
+}

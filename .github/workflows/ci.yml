@@ -190,6 +190,8 @@ jobs:
           API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 \
           GRANT_PLATFORM_ADMIN="docker compose -f $GITHUB_WORKSPACE/infra/docker-compose.yml --profile app exec -T api node dist/cli/platform-admin.js grant" \
           npm run test:e2e:live:workspace-moderation
+      - name: Agile tracking (issue types, worklogs, dependencies, backlog)
+        run: API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live:agile
       - name: Logs
         if: failure()
         run: |

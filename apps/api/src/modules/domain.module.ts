@@ -27,6 +27,7 @@ import { FilesService } from './content/files.service.js';
 import { NotesService } from './content/notes.service.js';
 import { ReportsService } from './content/reports.service.js';
 import { AccessService } from './work/access.js';
+import { AgileService } from './work/agile.service.js';
 import { BoardService } from './work/board.service.js';
 import { LabelsService } from './work/labels.service.js';
 import { ProjectsService } from './work/projects.service.js';
@@ -63,6 +64,7 @@ const services = [
   BoardService,
   TasksService,
   LabelsService,
+  AgileService,
   // content: files, notes, calendar, feed, reports
   FilesService,
   NotesService,

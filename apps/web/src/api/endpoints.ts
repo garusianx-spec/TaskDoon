@@ -58,6 +58,11 @@ import type {
   WorkflowView,
   WorkspaceView,
   TrashedProjectView,
+  CreateDependencyBody,
+  CreateWorklogBody,
+  TaskDependencyView,
+  WorklogList,
+  WorklogView,
 } from '@taskin/contracts';
 import { http, query } from './http';
 
@@ -67,6 +72,7 @@ import { http, query } from './http';
  */
 
 const ws = (workspaceId: string) => `/workspaces/${workspaceId}`;
+const agileBase = (workspaceId: string, projectId: string, taskId: string) => `${ws(workspaceId)}/projects/${projectId}/tasks/${taskId}`;
 
 /** Follows `nextCursor` until the end (lists the app keeps whole, such as the tasks). */
 async function everyPage<T>(fetchPage: (cursor: string | null) => Promise<{ readonly items: readonly T[]; readonly nextCursor: string | null }>, max = 50): Promise<T[]> {
@@ -172,6 +178,21 @@ export const api = {
       http.delete<void>(`${ws(workspaceId)}/tasks/${taskId}/subtasks/${subtaskId}`),
     comment: (workspaceId: string, taskId: string, body: string, replyToId: string | null) =>
       http.post<TaskCommentView>(`${ws(workspaceId)}/tasks/${taskId}/comments`, { body, replyToId }),
+  },
+
+  /** Agile tracking on one task, addressed through its project. */
+  agile: {
+    worklogs: (workspaceId: string, projectId: string, taskId: string) => http.get<WorklogList>(`${agileBase(workspaceId, projectId, taskId)}/worklogs`),
+    logWork: (workspaceId: string, projectId: string, taskId: string, body: CreateWorklogBody) =>
+      http.post<WorklogView>(`${agileBase(workspaceId, projectId, taskId)}/worklogs`, body, { idempotent: true }),
+    removeWorklog: (workspaceId: string, projectId: string, taskId: string, worklogId: string) =>
+      http.delete<void>(`${agileBase(workspaceId, projectId, taskId)}/worklogs/${worklogId}`),
+    dependencies: (workspaceId: string, projectId: string, taskId: string) =>
+      http.get<TaskDependencyView[]>(`${agileBase(workspaceId, projectId, taskId)}/dependencies`),
+    link: (workspaceId: string, projectId: string, taskId: string, body: CreateDependencyBody) =>
+      http.post<TaskDependencyView>(`${agileBase(workspaceId, projectId, taskId)}/dependencies`, body),
+    unlink: (workspaceId: string, projectId: string, taskId: string, dependencyId: string) =>
+      http.delete<void>(`${agileBase(workspaceId, projectId, taskId)}/dependencies/${dependencyId}`),
   },
 
   conversations: {

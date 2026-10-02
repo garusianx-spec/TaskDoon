@@ -19,7 +19,8 @@
     "test:e2e:live:admin": "node e2e/live/admin.mjs",
     "test:e2e:live:password": "node e2e/live/password.mjs",
     "test:e2e:live:moderation": "node e2e/live/moderation.mjs",
-    "test:e2e:live:workspace-moderation": "node e2e/live/workspace-moderation.mjs"
+    "test:e2e:live:workspace-moderation": "node e2e/live/workspace-moderation.mjs",
+    "test:e2e:live:agile": "node e2e/live/agile.mjs"
   },
   "dependencies": {
     "@taskin/contracts": "0.1.0",

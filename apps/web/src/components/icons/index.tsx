@@ -474,3 +474,20 @@ export const FolderAddIcon = createIcon('FolderAddIcon', {
   primary: ['M3.5 7a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.5.7l1.1 1.3h7.2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7Z'],
   secondary: ['M12 11v5.5M9.25 13.75h5.5'],
 });
+
+/* ---------------------------------------------------------------- Agile tracking */
+
+export const BugIcon = createIcon('BugIcon', {
+  primary: ['M8 11a4 4 0 0 1 8 0v3.5a4 4 0 0 1-8 0V11Z', 'M9.5 7.6 8 5.5', 'M14.5 7.6 16 5.5'],
+  secondary: ['M4 12.5h4', 'M16 12.5h4', 'M5 18l3-1.6', 'M19 18l-3-1.6', 'M5 7.5l3 1.6', 'M19 7.5l-3 1.6', 'M12 11v7'],
+});
+
+export const FeatureIcon = createIcon('FeatureIcon', {
+  primary: ['M11 3.5l1.9 4.6 4.6 1.9-4.6 1.9L11 16.5l-1.9-4.6L4.5 10l4.6-1.9L11 3.5Z'],
+  secondary: ['M18 14.5l.8 1.7 1.7.8-1.7.8L18 19.5l-.8-1.7-1.7-.8 1.7-.8.8-1.7Z'],
+});
+
+export const BacklogIcon = createIcon('BacklogIcon', {
+  primary: ['M4 6h10', 'M4 12h10', 'M4 18h7'],
+  secondary: ['M18 5v11', 'M15.5 13.5 18 16l2.5-2.5'],
+});

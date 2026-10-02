@@ -194,6 +194,23 @@ describe('M1 checklist: audit trail and correlation', () => {
     await traced('delete', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/comments/{commentId}', `${tk}/comments/${comment.id}`, (r) => r.set(bearer(user)));
     await traced('post', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/attachments', `${tk}/attachments`, (r) => r.set(bearer(user)).send({ attachmentId: planned.attachment.id }));
     await traced('delete', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/attachments/{attachmentId}', `${tk}/attachments/${planned.attachment.id}`, (r) => r.set(bearer(user)));
+    // Agile tracking: worklogs and dependencies, addressed through the task's project.
+    const ag = `${pj}/tasks/${task.id}`;
+    const worklog = (
+      await traced('post', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/worklogs', `${ag}/worklogs`, (r) => idem(r).send({ durationMinutes: 45 }))
+    ).body;
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/worklogs/{worklogId}', `${ag}/worklogs/${worklog.id}`, (r) =>
+      r.set(bearer(user)),
+    );
+    const blocker = (await idem(t.http().post(`${ws}/tasks`)).send({ projectId: project.id, title: 'پیش‌نیاز' })).body as TaskDetail;
+    const dependency = (
+      await traced('post', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/dependencies', `${ag}/dependencies`, (r) =>
+        r.set(bearer(user)).send({ targetTaskId: blocker.id, type: 'blocked_by' }),
+      )
+    ).body;
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/dependencies/{dependencyId}', `${ag}/dependencies/${dependency.id}`, (r) =>
+      r.set(bearer(user)),
+    );
     await traced('delete', '/api/v1/workspaces/{workspaceId}/workflow/columns/{columnId}', col, (r) => r.set(bearer(user)).send({}));
     await traced('delete', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}', tk, (r) => r.set(bearer(user)));
     await traced('delete', '/api/v1/workspaces/{workspaceId}/labels/{labelId}', `${ws}/labels/${label.id}`, (r) => r.set(bearer(user)));

@@ -16,7 +16,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { createdAt, instant, position, updatedAt, uuidPk } from './columns.js';
-import { avatarTone, projectRole, projectVisibility, tagTone, taskPriority, taskStatus } from './enums.js';
+import { avatarTone, issueSeverity, issueType, projectRole, projectVisibility, tagTone, taskDependencyType, taskPriority, taskStatus } from './enums.js';
 import { workspaceMembers, workspaces } from './tenancy.js';
 
 /**
@@ -203,6 +203,12 @@ export const tasks = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     deletedAt: instant(),
+    /** Agile tracking (0019): every task that predates it is a plain `task` on the board. */
+    type: issueType().notNull().default('task'),
+    severity: issueSeverity(),
+    estimatedMinutes: integer(),
+    /** Backlog items keep their column and position; the board simply leaves them out. */
+    isBacklog: boolean().notNull().default(false),
   },
   (t) => [
     unique('tasks_ws_id_uq').on(t.workspaceId, t.id),
@@ -228,6 +234,8 @@ export const tasks = pgTable(
     check('tasks_title_len', sql`char_length(${t.title}) between 1 and 200`),
     check('tasks_description_len', sql`char_length(${t.description}) <= 20000`),
     check('tasks_dates', sql`${t.dueDate} is null or ${t.dueDate} >= ${t.startDate}`),
+    check('tasks_severity_bug_only', sql`${t.severity} is null or ${t.type} = 'bug'`),
+    check('tasks_estimate_range', sql`${t.estimatedMinutes} is null or ${t.estimatedMinutes} between 1 and 60000`),
   ],
 );
 
@@ -356,5 +364,65 @@ export const taskEvents = pgTable(
   (t) => [
     foreignKey({ name: 'task_events_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
     index('task_events_task_idx').on(t.taskId, t.createdAt),
+  ],
+);
+
+/** Time spent on a task (Agile tracking): one row per logged stretch of work. */
+export const taskWorklogs = pgTable(
+  'task_worklogs',
+  {
+    id: uuidPk(),
+    workspaceId: tenant(),
+    taskId: uuid().notNull(),
+    userId: uuid().notNull(),
+    durationMinutes: integer().notNull(),
+    description: text().notNull().default(''),
+    /** When the work happened; defaults to when it was logged. */
+    loggedAt: instant().notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('task_worklogs_ws_id_uq').on(t.workspaceId, t.id),
+    foreignKey({ name: 'task_worklogs_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
+    member('task_worklogs_user_fk', [t.workspaceId, t.userId]),
+    index('task_worklogs_task_idx').on(t.taskId, t.loggedAt),
+    check('task_worklogs_duration', sql`${t.durationMinutes} between 1 and 1440`),
+    check('task_worklogs_description_len', sql`char_length(${t.description}) <= 500`),
+  ],
+);
+
+/**
+ * Links between two tasks of one project. Rows are stored as created: `A blocked_by B` is the
+ * same edge as `B blocks A`, and a pair of tasks has at most one link whichever way it points.
+ * Blocking edges never form a cycle (checked under a per-project lock when a link is added).
+ */
+export const taskDependencies = pgTable(
+  'task_dependencies',
+  {
+    id: uuidPk(),
+    workspaceId: tenant(),
+    projectId: uuid().notNull(),
+    sourceTaskId: uuid().notNull(),
+    targetTaskId: uuid().notNull(),
+    type: taskDependencyType().notNull(),
+    createdBy: uuid().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('task_dependencies_ws_id_uq').on(t.workspaceId, t.id),
+    foreignKey({ name: 'task_dependencies_project_fk', columns: [t.workspaceId, t.projectId], foreignColumns: [projects.workspaceId, projects.id] }).onDelete(
+      'cascade',
+    ),
+    foreignKey({ name: 'task_dependencies_source_fk', columns: [t.workspaceId, t.sourceTaskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete(
+      'cascade',
+    ),
+    foreignKey({ name: 'task_dependencies_target_fk', columns: [t.workspaceId, t.targetTaskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete(
+      'cascade',
+    ),
+    member('task_dependencies_created_by_fk', [t.workspaceId, t.createdBy]),
+    uniqueIndex('task_dependencies_pair_uq').on(sql`least(${t.sourceTaskId}, ${t.targetTaskId})`, sql`greatest(${t.sourceTaskId}, ${t.targetTaskId})`),
+    index('task_dependencies_source_idx').on(t.sourceTaskId),
+    index('task_dependencies_target_idx').on(t.targetTaskId),
+    check('task_dependencies_not_self', sql`${t.sourceTaskId} <> ${t.targetTaskId}`),
   ],
 );

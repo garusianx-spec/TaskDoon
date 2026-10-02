@@ -12,6 +12,7 @@ import { columnForPlacement, projectColumns } from '@/store/selectors';
 import { Avatar, Badge, Button, Checkbox, IconButton, Input, Modal, Select, Textarea } from '@/components/ui';
 import { JalaliDatePicker } from './JalaliDatePicker';
 import { ColumnDot } from './ColumnDot';
+import { IssueTypeSelect, SeveritySelect } from './agile/IssueFields';
 import {
   CloseIcon,
   ConvertToTaskIcon,
@@ -196,6 +197,31 @@ export function CreateTaskModal({ open, draft, columns, onClose, onSubmit, onCre
             />
           </div>
         </div>
+
+        {/* Agile tracking: a plain task on the board unless chosen otherwise. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <IssueTypeSelect
+            label="نوع"
+            hideLabel={false}
+            size="md"
+            value={form.type ?? 'task'}
+            onChange={(type) => setForm((current) => ({ ...current, type, ...(type === 'bug' ? {} : { severity: null }) }))}
+          />
+          {form.type === 'bug' && (
+            <SeveritySelect
+              label="شدت"
+              hideLabel={false}
+              size="md"
+              value={form.severity ?? null}
+              onChange={(severity) => setForm((current) => ({ ...current, severity }))}
+            />
+          )}
+        </div>
+        <Checkbox
+          checked={form.isBacklog === true}
+          onCheckedChange={(isBacklog) => setForm((current) => ({ ...current, isBacklog }))}
+          label="افزودن به بک‌لاگ (فعلاً روی بورد نمی‌آید)"
+        />
 
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-body-sm font-medium text-fg-secondary">مسئولان</legend>

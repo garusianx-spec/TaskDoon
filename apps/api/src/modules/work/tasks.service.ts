@@ -177,6 +177,7 @@ export class TasksService {
     const title = body.title.trim();
     const description = body.description?.trim() ?? '';
     const done = column.status === 'done';
+    if (body.severity && (body.type ?? 'task') !== 'bug') throw ApiError.validation([{ field: 'severity', message: 'is for bugs only' }]);
 
     const [task] = await tx
       .insert(tasks)
@@ -198,6 +199,11 @@ export class TasksService {
         sourceMessageId: origin.sourceMessageId ?? null,
         createdBy: member.userId,
         searchText: normaliseForSearch(`${code} ${title} ${description}`),
+        // Agile tracking: only what the body names; the columns' defaults cover the rest.
+        ...(body.type !== undefined ? { type: body.type } : {}),
+        ...(body.severity !== undefined ? { severity: body.severity } : {}),
+        ...(body.estimatedMinutes !== undefined ? { estimatedMinutes: body.estimatedMinutes } : {}),
+        ...(body.isBacklog !== undefined ? { isBacklog: body.isBacklog } : {}),
       })
       .returning();
     if (!task) throw new Error('task insert returned nothing');
@@ -249,10 +255,18 @@ export class TasksService {
       if (task.version !== ifMatch) throw ApiError.stale(await this.card(tx, member, taskId));
       const edits = (['title', 'description', 'priority', 'startDate', 'dueDate', 'labelIds'] as const).filter((field) => body[field] !== undefined);
       const assigns = (['assigneeIds', 'reviewerId'] as const).filter((field) => body[field] !== undefined);
-      if (edits.length > 0) assertAction(access.actions, 'edit');
+      // Agile tracking: type, severity and estimate are edits; the backlog is placement, like a move.
+      const tracking = (['type', 'severity', 'estimatedMinutes'] as const).filter((field) => body[field] !== undefined);
+      const placing = (['isBacklog'] as const).filter((field) => body[field] !== undefined);
+      if (edits.length > 0 || tracking.length > 0) assertAction(access.actions, 'edit');
       if (assigns.length > 0) assertAction(access.actions, 'assign', 'Assigning people needs the assign permission.');
-      const fields = [...edits, ...assigns];
+      if (placing.length > 0) assertAction(access.actions, 'assign', 'Moving a task to or from the backlog needs the assign permission.');
+      const fields = [...edits, ...assigns, ...tracking, ...placing];
       if (fields.length === 0) return;
+      const type = body.type ?? task.type;
+      // Leaving `bug` drops the severity unless the body sets one (which is then refused).
+      const severity = body.severity !== undefined ? body.severity : type === 'bug' ? task.severity : null;
+      if (severity && type !== 'bug') throw ApiError.validation([{ field: 'severity', message: 'is for bugs only' }]);
 
       const startDate = body.startDate ?? task.startDate;
       const dueDate = body.dueDate === undefined ? task.dueDate : body.dueDate;
@@ -272,6 +286,10 @@ export class TasksService {
           startDate,
           dueDate,
           ...(body.reviewerId !== undefined ? { reviewerId: body.reviewerId } : {}),
+          ...(body.type !== undefined ? { type: body.type } : {}),
+          ...(severity !== task.severity ? { severity } : {}),
+          ...(body.estimatedMinutes !== undefined ? { estimatedMinutes: body.estimatedMinutes } : {}),
+          ...(body.isBacklog !== undefined ? { isBacklog: body.isBacklog } : {}),
           searchText: normaliseForSearch(`${code} ${title} ${description}`),
           version: sql`${tasks.version} + 1`,
         })
@@ -297,7 +315,17 @@ export class TasksService {
         workspaceId: member.workspaceId,
         resourceType: 'task',
         resourceId: taskId,
-        changes: { before: { title: task.title, priority: task.priority, dueDate: task.dueDate, reviewerId: task.reviewerId }, after: body },
+        changes: {
+          before: {
+            title: task.title,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            reviewerId: task.reviewerId,
+            ...(tracking.length > 0 ? { type: task.type, severity: task.severity, estimatedMinutes: task.estimatedMinutes } : {}),
+            ...(placing.length > 0 ? { isBacklog: task.isBacklog } : {}),
+          },
+          after: body,
+        },
       });
       await this.outbox.add(tx, {
         type: 'task.updated',

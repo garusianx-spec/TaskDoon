@@ -2,6 +2,8 @@ import { type SQL, sql } from 'drizzle-orm';
 import type {
   AttachmentView,
   ColumnView,
+  IssueSeverity,
+  IssueType,
   SmartView,
   SubtaskView,
   TaskCard,
@@ -53,6 +55,26 @@ export interface CardRow extends Record<string, unknown> {
   updated_at: string;
   /** Exact `created_at` text, for keyset cursors (ISO would lose the microseconds). */
   sort_created?: string;
+  type: IssueType;
+  severity: IssueSeverity | null;
+  estimated_minutes: number | null;
+  is_backlog: boolean;
+  spent_minutes: number | string;
+  blocked_by_ids: string[];
+}
+
+/**
+ * The tasks blocking `task`, as `blocker_id` rows: `X blocks task` and `task blocked_by X` are
+ * the same edge. Only live, unarchived blockers count; the pair index keeps each one unique.
+ */
+function blockersOf(task: SQL): SQL {
+  return sql`
+    select e.blocker_id from (
+      select d.source_task_id as blocker_id from task_dependencies d where d.target_task_id = ${task} and d.type = 'blocks'
+      union all
+      select d.target_task_id from task_dependencies d where d.source_task_id = ${task} and d.type = 'blocked_by'
+    ) e
+    join tasks bt on bt.id = e.blocker_id and bt.deleted_at is null and bt.archived_at is null`;
 }
 
 /**
@@ -71,7 +93,10 @@ export function cardColumns(userId: string): SQL {
     (select count(*) from task_comments c where c.task_id = t.id and c.deleted_at is null) as comment_count,
     (select count(*) from task_attachments ta where ta.task_id = t.id) as attachment_count,
     t.completed_at, t.archived_at is not null as archived, t.source_message_id, t.source_note_id, t.version,
-    t.created_at, t.updated_at`;
+    t.created_at, t.updated_at,
+    t.type, t.severity, t.estimated_minutes, t.is_backlog,
+    coalesce((select sum(w.duration_minutes) from task_worklogs w where w.task_id = t.id), 0) as spent_minutes,
+    coalesce((select array_agg(b.blocker_id order by b.blocker_id) from (${blockersOf(sql`t.id`)}) b), '{}') as blocked_by_ids`;
 }
 
 /**
@@ -93,13 +118,24 @@ export function cardsFrom(userId: string, base: SQL, order: SQL): SQL {
           where x.task_id = any(array(select id from t)) and x.deleted_at is null group by x.task_id),
     f as (select x.task_id, count(*) as n from task_attachments x
           where x.task_id = any(array(select id from t)) group by x.task_id),
-    r as (select x.task_id from task_stars x where x.user_id = ${userId} and x.task_id = any(array(select id from t)))
+    r as (select x.task_id from task_stars x where x.user_id = ${userId} and x.task_id = any(array(select id from t))),
+    w as (select x.task_id, sum(x.duration_minutes) as n from task_worklogs x
+          where x.task_id = any(array(select id from t)) group by x.task_id),
+    b as (select e.blocked_id as task_id, array_agg(e.blocker_id order by e.blocker_id) as ids
+          from (select x.target_task_id as blocked_id, x.source_task_id as blocker_id from task_dependencies x
+                where x.type = 'blocks' and x.target_task_id = any(array(select id from t))
+                union all
+                select x.source_task_id, x.target_task_id from task_dependencies x
+                where x.type = 'blocked_by' and x.source_task_id = any(array(select id from t))) e
+          join tasks bt on bt.id = e.blocker_id and bt.deleted_at is null and bt.archived_at is null
+          group by e.blocked_id)
     select t.id, t.project_key || '-' || t.number as code, t.project_id, t.title, t.status, t.priority, t.column_id, t.position,
       coalesce(a.ids, '{}') as assignee_ids, t.reviewer_id, t.start_date, t.due_date, coalesce(l.ids, '{}') as label_ids,
       r.task_id is not null as starred, coalesce(s.n, 0) as subtask_count, coalesce(s.d, 0) as subtask_done_count,
       coalesce(c.n, 0) as comment_count, coalesce(f.n, 0) as attachment_count,
       t.completed_at, t.archived_at is not null as archived, t.source_message_id, t.source_note_id, t.version,
-      t.created_at, t.updated_at, t.created_at::text as sort_created
+      t.created_at, t.updated_at, t.created_at::text as sort_created,
+      t.type, t.severity, t.estimated_minutes, t.is_backlog, coalesce(w.n, 0) as spent_minutes, coalesce(b.ids, '{}') as blocked_by_ids
     from t
     left join a on a.task_id = t.id
     left join l on l.task_id = t.id
@@ -107,6 +143,8 @@ export function cardsFrom(userId: string, base: SQL, order: SQL): SQL {
     left join c on c.task_id = t.id
     left join f on f.task_id = t.id
     left join r on r.task_id = t.id
+    left join w on w.task_id = t.id
+    left join b on b.task_id = t.id
     order by ${order}`;
 }
 
@@ -137,6 +175,12 @@ export function toCard(row: CardRow): TaskCard {
     version: row.version,
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
+    type: row.type,
+    severity: row.severity,
+    estimatedMinutes: row.estimated_minutes,
+    spentMinutes: num(row.spent_minutes),
+    isBacklog: row.is_backlog,
+    blockedByIds: row.blocked_by_ids,
   };
 }
 
@@ -171,7 +215,8 @@ export function toColumns(rows: BoardHeaderRow['columns']): ColumnView[] {
 
 /**
  * Every live, unarchived card of a project and its sub-projects that the member can see, in
- * board order. Sub-projects are included as the web board shows them.
+ * board order. Sub-projects are included as the web board shows them. Backlog items are not on
+ * the board.
  */
 export function boardTasksQuery(member: MembershipContext, projectId: string): SQL {
   return cardsFrom(
@@ -182,7 +227,7 @@ export function boardTasksQuery(member: MembershipContext, projectId: string): S
       join projects p on p.workspace_id = t.workspace_id and p.id = t.project_id
       where t.workspace_id = ${member.workspaceId}
         and t.project_id in (select id from projects where workspace_id = ${member.workspaceId} and (id = ${projectId} or parent_id = ${projectId}))
-        and t.deleted_at is null and t.archived_at is null
+        and t.deleted_at is null and t.archived_at is null and not t.is_backlog
         and ${projectVisibleSql(member)}`,
     sql`t.column_id, t.position, t.id`,
   );
@@ -197,6 +242,8 @@ export interface ListFilter {
   readonly assigneeId?: string;
   readonly q?: string;
   readonly includeArchived?: boolean;
+  /** Only backlog items (`true`) or only board items (`false`); omitted, both. */
+  readonly backlog?: boolean;
   /** "Now", for "due soon": today is its date in the workspace's time zone. */
   readonly now: Date;
   /** Opaque cursor from the previous page. */
@@ -251,6 +298,7 @@ export function listQuery(member: MembershipContext, filter: ListFilter): SQL {
     conditions.push(sql`t.project_id in (select id from projects where workspace_id = ${member.workspaceId} and (id = ${filter.projectId} or parent_id = ${filter.projectId}))`);
   }
   if (filter.status) conditions.push(sql`t.status = ${filter.status}`);
+  if (filter.backlog !== undefined) conditions.push(sql`t.is_backlog = ${filter.backlog}`);
   if (filter.assigneeId) conditions.push(sql`exists (select 1 from task_assignees x where x.task_id = t.id and x.user_id = ${filter.assigneeId})`);
   const pattern = filter.q ? searchPattern(filter.q) : null;
   // Matches come from the trigram index (see app.search_task_ids: under row-level security LIKE
