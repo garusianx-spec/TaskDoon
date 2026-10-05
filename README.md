@@ -62,6 +62,11 @@ in columns.
 `.latin-inline` isolates Latin fragments (emails, file names, task codes) inside RTL copy
 with `direction: ltr; unicode-bidi: isolate`.
 
+A native `<input type="number">` cannot render Persian numerals, so numeric fields use
+`NumberField`: a text input with `inputMode="numeric"` (which still raises the numeric keypad),
+Persian digits on display, `parseLocalisedNumber` accepting Persian/Arabic-Indic/ASCII input,
+and steppers replacing the lost native spinner.
+
 ---
 
 ## Theme engine
@@ -168,13 +173,15 @@ src/
 │   ├── ui/                 # Headless-ish primitives: Button, Switch, Modal, Drawer, …
 │   ├── icons/              # ~60 hand-authored Iconsax-style glyphs
 │   ├── layout/             # AppShell, NavRail, TopAppBar, BottomNav, GlobalSearch
-│   ├── chat/               # ChatView, MessageBubble, VoicePlayer, composer, action sheet
-│   ├── tasks/              # Kanban, List, Gantt, Inspector, Jalali date picker, swipe rows
+│   ├── account/            # Profile editor, security dialog, signed-out view
+│   ├── calendar/           # Month-year picker, interactive day cells, day index
+│   ├── chat/               # ChatView, MessageBubble, VoicePlayer, pinned banner, forwarding
+│   ├── tasks/              # Kanban, columns, List, Gantt, Inspector, reminders, recurrence
 │   ├── rbac/               # Permission matrix + advanced editing modal
 │   └── theme/              # ThemeProvider, ThemePicker
 ├── data/                   # Typed reference data + seed workspace fixture
 ├── hooks/                  # focus trap, scroll lock, roving focus, media query, clock
-├── lib/                    # jalali, formatting, cn, theme bootstrap
+├── lib/                    # jalali, recurrence, reminder, permissions, formatting, theme
 ├── store/                  # Pure reducer + selectors + container provider
 ├── styles/                 # fonts.css, tokens.css
 └── types/                  # The whole domain model
@@ -198,6 +205,95 @@ inspector — because each can be opened from more than one module, and publishe
 as `1.5 × 24 / size`, so a 16px icon and a 24px icon render at an identical 1.5 CSS px —
 uniform optical weight across every toolbar. Variants: `linear`, `twotone` (secondary
 geometry at 40%) and `bold` (secondary geometry filled, used for active nav states).
+
+---
+
+## Scheduling: reminders and recurrence
+
+Reminders are stored as an **offset**, not as a materialised instant, so moving a task's
+deadline moves its reminder with it. Only "زمان دلخواه شمسی" pins an absolute time. Presets
+count back from 18:00 on the due date, since due dates are date-only.
+
+The recurrence engine (`src/lib/recurrence.ts`) steps the series in the **Jalali** calendar,
+not the Gregorian one. "هر ماه" starting on ۳۱ فروردین therefore lands on ۳۱ اردیبهشت rather
+than drifting across a Gregorian month boundary, and a day that does not exist in the target
+month (۳۱ in a 30-day month, or ۳۰ اسفند in a common year) clamps to that month's last day —
+the rule the Iranian civil calendar uses for anniversaries. Expansion is bounded, so a
+`never`-ending series cannot spin.
+
+Recurring tasks are expanded into the calendar's visible window, so a fortnightly review
+appears on every occurrence in the month rather than only on its original due date. The first
+occurrence is the task's own due date and is counted once.
+
+---
+
+## Board columns
+
+Columns are data, so a workspace can add its own — but `TaskStatus` stays a closed union.
+A `BoardColumn` carries a title, a badge tone and a `mapsTo` workflow status; a card keeps
+both `columnId` (where it sits) and `status` (what it means). Reports, the Gantt, smart views
+and the calendar all read `status`, so they keep switching over an exhaustive union no matter
+how many custom columns exist. Deleting a custom column falls its cards back to the built-in
+column for their status rather than stranding them.
+
+Project members render in the board header when the board is scoped to one project. The
+avatars are filter toggles, not decoration, so they are pressable siblings rather than an
+overlapping stack — an overlapped avatar is a poor click target and cannot show a pressed
+state.
+
+---
+
+## Gantt navigation
+
+The timeline renders at a fixed 44px per day across a 120-day span and scrolls, rather than
+compressing a window into the available width. The task column is `position: sticky` on the
+inline-start edge of the scroller — the right-hand side in RTL — so it stays put while the
+days slide underneath.
+
+Three ways to pan: drag from empty timeline space (bars and buttons keep their own
+behaviour), Shift + wheel, and the week buttons. The wheel listener is registered manually
+with `{ passive: false }`: React attaches wheel handlers passively, so `preventDefault` is
+refused there and the page would scroll vertically while the timeline panned.
+
+---
+
+## Project ↔ chat linkage
+
+Creating a project spawns a channel named after it, seeded with a system message, and adding
+someone to the project adds them to that channel. Both directions are navigable: "بورد وظایف
+پروژه" in the chat header and inspector jumps to the board with the project filter applied,
+and "ورود به گفتگوی پروژه" in the board header opens the channel.
+
+The directory's "ارسال پیام" reuses an existing two-person thread or starts one, then lands
+on it with the composer focused — requested through a `focusComposer` flag the composer
+acknowledges, rather than an autofocus that would fight the route transition.
+
+---
+
+## Chat: pinning and forwarding
+
+Pinned messages surface in a sticky banner above the thread. With several pinned it cycles
+behind a segment rail rather than stacking and eating the viewport. "پرش به پیام" scrolls the
+target into view and plays a highlight pulse — the jump first clears the in-chat search,
+because the target may be filtered out of the rendered thread and would otherwise have no node
+to scroll to. Auto-scroll-to-newest is suppressed while a pulse is in flight.
+
+Unpin controls are permission-aware: they read `messages.edit` from the live RBAC matrix
+(`src/lib/permissions.ts`), so revoking the right on the settings screen hides them
+immediately. Every role can still read the banner and jump.
+
+The shared-media drawer splits a thread into four tabs — رسانه‌ها (grid gallery with a
+lightbox), اسناد و فایل‌ها, صوت‌ها (an inline player per note) and پیوندها. Each tab shows its
+own count in the segmented control, so an empty tab is visible before it is opened. Links are
+extracted from message text at read time and given derived metadata (host plus the last
+meaningful path segment); with no backend to fetch page titles or favicons from, the row
+shows the host's initial as a letter-mark rather than firing a request that cannot succeed.
+
+Forwarding offers direct messages, team channels **and project boards** in one searchable
+multi-select list. Selecting a board is not a mis-click: the reducer turns a board target into
+a task carrying the message text and attachment, and the modal says so. Forward provenance
+survives re-forwarding — the origin is kept rather than re-pointed at the relayer — and
+renders as an "ارسال شده از [نام فرستنده اصلی]" header.
 
 ---
 
@@ -258,6 +354,20 @@ the message text and any attachment. Verified: zero horizontal overflow on every
 
 ---
 
+## Account and session
+
+The profile popover opens real UI: a profile editor (name, job title, badge tone, presence),
+a security dialog (password change gated on a confirm match and a strength heuristic, plus
+revocable device sessions), and sign-out. Profile edits are layered over the seed record in
+the provider, so every avatar and byline reflects them without duplicating the user list.
+
+Signing out short-circuits the whole shell to a signed-out view — the workspace, its data and
+all navigation chrome go away, which is the part that actually matters. There is no auth
+backend here, so it offers one way back in rather than a credential form that could not
+verify anything.
+
+---
+
 ## What is mocked
 
 This is a complete front end against an in-memory fixture (`src/data/workspace.ts`); there is
@@ -269,7 +379,9 @@ no backend. Two consequences worth stating plainly:
   `requestAnimationFrame` clock over the known duration so scrubbing and progress still work.
   The seed data uses the second path.
 - **Avatars are generated initials**, not uploaded images, so no binary assets ship in the
-  repository. `AvatarTone` selects from the neutral and status ramps rather than the brand
+  repository. The profile editor previews a chosen file via an object URL and says plainly
+  that the preview is local, rather than implying a photo was stored. Shared-media tiles use
+  a gradient keyed off the attachment id — deterministic per file, stable across renders. `AvatarTone` selects from the neutral and status ramps rather than the brand
   ramp, so members stay distinguishable when the workspace accent changes.
 
 State changes (moving cards, editing permissions, sending messages, creating tasks) are real

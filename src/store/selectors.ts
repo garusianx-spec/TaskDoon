@@ -1,6 +1,7 @@
 import type {
   ChatFilterId,
   Conversation,
+  LinkPreview,
   Message,
   Project,
   SmartViewId,
@@ -8,7 +9,7 @@ import type {
   TaskStatus,
   User,
 } from '@/types';
-import { CONVERSATIONS, PROJECTS, USERS } from '@/data/workspace';
+import { USERS } from '@/data/workspace';
 import { daysBetween, parseISODate, toISODate } from '@/lib/jalali';
 
 /* ------------------------------ People & projects ------------------------------ */
@@ -18,11 +19,32 @@ export const userById = (id: string): User | undefined => USERS.find((user) => u
 export const usersByIds = (ids: readonly string[]): User[] =>
   ids.map(userById).filter((user): user is User => user !== undefined);
 
-export const projectById = (id: string): Project | undefined =>
-  PROJECTS.find((project) => project.id === id);
+/*
+ * Projects and conversations are mutable workspace state (a project can be created at
+ * runtime, and creating one spawns a channel), so these lookups take the live collection
+ * rather than closing over the seed fixture.
+ */
+export const projectById = (projects: readonly Project[], id: string): Project | undefined =>
+  projects.find((project) => project.id === id);
 
-export const conversationById = (id: string): Conversation | undefined =>
-  CONVERSATIONS.find((conversation) => conversation.id === id);
+export const conversationById = (
+  conversations: readonly Conversation[],
+  id: string,
+): Conversation | undefined => conversations.find((conversation) => conversation.id === id);
+
+/** The direct conversation between exactly these two people, if one exists. */
+export const directConversationBetween = (
+  conversations: readonly Conversation[],
+  a: string,
+  b: string,
+): Conversation | undefined =>
+  conversations.find(
+    (conversation) =>
+      conversation.kind === 'direct' &&
+      conversation.memberIds.length === 2 &&
+      conversation.memberIds.includes(a) &&
+      conversation.memberIds.includes(b),
+  );
 
 /** Root projects with their children attached, for the sidebar tree. */
 export interface ProjectNode {
@@ -30,16 +52,21 @@ export interface ProjectNode {
   readonly children: readonly Project[];
 }
 
-export function buildProjectTree(): readonly ProjectNode[] {
-  return PROJECTS.filter((project) => project.parentId === null).map((project) => ({
-    project,
-    children: PROJECTS.filter((child) => child.parentId === project.id),
-  }));
+export function buildProjectTree(projects: readonly Project[]): readonly ProjectNode[] {
+  return projects
+    .filter((project) => project.parentId === null)
+    .map((project) => ({
+      project,
+      children: projects.filter((child) => child.parentId === project.id),
+    }));
 }
 
 /** A project id plus every descendant id — used when filtering the board by a parent. */
-export function projectWithDescendants(projectId: string): readonly string[] {
-  const children = PROJECTS.filter((project) => project.parentId === projectId).map((p) => p.id);
+export function projectWithDescendants(
+  projects: readonly Project[],
+  projectId: string,
+): readonly string[] {
+  const children = projects.filter((project) => project.parentId === projectId).map((p) => p.id);
   return [projectId, ...children];
 }
 
@@ -50,15 +77,21 @@ export interface TaskFilter {
   readonly projectId: string | null;
   readonly search: string;
   readonly currentUserId: string;
+  readonly projects: readonly Project[];
+  /** Board header avatar filter: only cards assigned to this member. */
+  readonly assigneeId?: string | null;
 }
 
 export function filterTasks(tasks: readonly Task[], filter: TaskFilter): readonly Task[] {
   const query = filter.search.trim().toLowerCase();
-  const scope = filter.projectId ? projectWithDescendants(filter.projectId) : null;
+  const scope = filter.projectId
+    ? projectWithDescendants(filter.projects, filter.projectId)
+    : null;
   const today = new Date();
 
   return tasks.filter((task) => {
     if (scope && !scope.includes(task.projectId)) return false;
+    if (filter.assigneeId && !task.assigneeIds.includes(filter.assigneeId)) return false;
 
     switch (filter.smartView) {
       case 'my-tasks':
@@ -89,6 +122,19 @@ export function filterTasks(tasks: readonly Task[], filter: TaskFilter): readonl
 
 export const tasksByStatus = (tasks: readonly Task[], status: TaskStatus): readonly Task[] =>
   tasks.filter((task) => task.status === status);
+
+/**
+ * Cards belonging to a board column. A card whose `columnId` no longer resolves (its custom
+ * column was deleted in another tab) falls back to the built-in column for its status.
+ */
+export const tasksByColumn = (
+  tasks: readonly Task[],
+  columnId: string,
+  knownColumnIds: readonly string[],
+): readonly Task[] =>
+  tasks.filter((task) =>
+    knownColumnIds.includes(task.columnId) ? task.columnId === columnId : task.status === columnId,
+  );
 
 export const taskById = (tasks: readonly Task[], id: string): Task | undefined =>
   tasks.find((task) => task.id === id);
@@ -191,6 +237,47 @@ export function filterConversations(
     if (!aTime || !bTime) return 0;
     return parseISODate(bTime).getTime() - parseISODate(aTime).getTime();
   });
+}
+
+const URL_PATTERN = /https?:\/\/[^\s<>\u0600-\u06FF]+/g;
+
+/**
+ * Extracts links shared in a conversation. The title is derived from the URL's last
+ * meaningful path segment because there is no backend to fetch page metadata from; the
+ * component renders a letter-mark rather than a real favicon for the same reason.
+ */
+export function conversationLinks(
+  messages: readonly Message[],
+  conversationId: string,
+): readonly LinkPreview[] {
+  const out: LinkPreview[] = [];
+  for (const message of conversationMessages(messages, conversationId)) {
+    if (message.body.kind !== 'text') continue;
+    const matches = message.body.text.match(URL_PATTERN);
+    if (!matches) continue;
+    for (const raw of matches) {
+      const url = raw.replace(/[.,;:!؟)]+$/, '');
+      let host = url;
+      let title = url;
+      try {
+        const parsed = new URL(url);
+        host = parsed.hostname.replace(/^www\./, '');
+        const segment = parsed.pathname.split('/').filter(Boolean).pop();
+        title = segment ? decodeURIComponent(segment).replace(/[-_]+/g, ' ') : host;
+      } catch {
+        // A malformed URL still gets listed, just without derived metadata.
+      }
+      out.push({
+        url,
+        host,
+        title,
+        messageId: message.id,
+        sharedAt: message.sentAt,
+        sharedById: message.authorId,
+      });
+    }
+  }
+  return out.reverse();
 }
 
 /** Groups a thread into day buckets so the view can insert Jalali date dividers. */

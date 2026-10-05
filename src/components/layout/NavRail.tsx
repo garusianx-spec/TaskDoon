@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ModuleId } from '@/types';
+import type { AvatarTone, ModuleId, PresenceState } from '@/types';
 import { MODULES } from '@/data/reference';
 import { WORKSPACE, WORKSPACES } from '@/data/workspace';
 import { cn } from '@/lib/cn';
 import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
+import { useShellActions } from './AppShell';
 import { Avatar, Button, CountPill, IconButton, Popover, PopoverDivider, Tooltip } from '@/components/ui';
 import { MenuItem, MenuList } from '@/components/ui/Menu';
 import { ThemePicker } from '@/components/theme/ThemePicker';
@@ -121,6 +122,8 @@ export function NavRail() {
           fullName={currentUser.fullName}
           initials={currentUser.initials}
           jobTitle={currentUser.jobTitle}
+          tone={currentUser.avatarTone}
+          presence={currentUser.presence}
         />
       </div>
     </nav>
@@ -266,9 +269,14 @@ interface ProfileMenuProps {
   readonly fullName: string;
   readonly initials: string;
   readonly jobTitle: string;
+  readonly tone: AvatarTone;
+  readonly presence: PresenceState;
 }
 
-function ProfileMenu({ fullName, initials, jobTitle }: ProfileMenuProps) {
+function ProfileMenu({ fullName, initials, jobTitle, tone, presence }: ProfileMenuProps) {
+  const { dispatch } = useWorkspace();
+  const { openProfile, openSecurity } = useShellActions();
+
   return (
     <Popover
       label="حساب کاربری"
@@ -277,7 +285,7 @@ function ProfileMenu({ fullName, initials, jobTitle }: ProfileMenuProps) {
       panelClassName="min-w-64"
       trigger={
         <button type="button" className="mt-1 rounded-full">
-          <Avatar name={fullName} initials={initials} tone="brand" size="md" presence="online" />
+          <Avatar name={fullName} initials={initials} tone={tone} size="md" presence={presence} />
           <span className="sr-only">{`حساب کاربری — ${fullName}`}</span>
         </button>
       }
@@ -285,7 +293,7 @@ function ProfileMenu({ fullName, initials, jobTitle }: ProfileMenuProps) {
       {(close) => (
         <>
           <div className="flex items-center gap-3 px-2.5 py-2">
-            <Avatar name={fullName} initials={initials} tone="brand" size="md" decorative />
+            <Avatar name={fullName} initials={initials} tone={tone} size="md" decorative />
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-body-sm font-semibold text-fg-primary">{fullName}</span>
               <span className="truncate text-micro text-fg-tertiary">{jobTitle}</span>
@@ -293,14 +301,33 @@ function ProfileMenu({ fullName, initials, jobTitle }: ProfileMenuProps) {
           </div>
           <PopoverDivider />
           <MenuList>
-            <MenuItem onSelect={close} icon={<UserIcon size={18} />}>
+            <MenuItem
+              icon={<UserIcon size={18} />}
+              onSelect={() => {
+                close();
+                openProfile();
+              }}
+            >
               پروفایل من
             </MenuItem>
-            <MenuItem onSelect={close} icon={<ShieldIcon size={18} />}>
+            <MenuItem
+              icon={<ShieldIcon size={18} />}
+              onSelect={() => {
+                close();
+                openSecurity();
+              }}
+            >
               امنیت و ورود
             </MenuItem>
             <PopoverDivider />
-            <MenuItem onSelect={close} icon={<LogoutIcon size={18} />} tone="danger">
+            <MenuItem
+              icon={<LogoutIcon size={18} />}
+              tone="danger"
+              onSelect={() => {
+                close();
+                dispatch({ type: 'sign-out' });
+              }}
+            >
               خروج از حساب
             </MenuItem>
           </MenuList>

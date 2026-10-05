@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import {
   JALALI_WEEKDAYS,
-  JALALI_WEEKDAYS_SHORT,
+  JALALI_WEEKDAYS_MEDIUM,
   buildMonthGrid,
   formatJalali,
   gregorianToJalali,
@@ -94,7 +94,7 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
           </div>
 
           <div role="grid" aria-label={label} className="grid grid-cols-7 gap-0.5">
-            {JALALI_WEEKDAYS_SHORT.map((day, index) => (
+            {JALALI_WEEKDAYS_MEDIUM.map((day, index) => (
               <div
                 key={day}
                 role="columnheader"

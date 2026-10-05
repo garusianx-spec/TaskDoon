@@ -8,6 +8,7 @@ import { formatFraction } from '@/lib/format';
 import { priorityLabel, priorityTone } from '@/data/reference';
 import { subtaskProgress, usersByIds } from '@/store/selectors';
 import { AvatarStack, Badge, IconButton } from '@/components/ui';
+import { TaskMetaBadges } from './TaskMetaBadges';
 import { CalendarIcon, CheckIcon, ClockIcon, MoreVerticalIcon } from '@/components/icons';
 
 export interface SwipeableTaskRowProps {
@@ -117,6 +118,7 @@ export function SwipeableTaskRow({ task, onOpen, onComplete, onPostpone }: Swipe
             <Badge tone={priorityTone(task.priority)} size="sm">
               {priorityLabel(task.priority)}
             </Badge>
+            <TaskMetaBadges task={task} compact />
             <span className="numeric latin-inline ms-auto text-micro text-fg-quaternary">{task.code}</span>
           </span>
 

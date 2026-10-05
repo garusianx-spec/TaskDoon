@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Task, TaskPriority, TaskStatus, User } from '@/types';
+import type { Project, Task, TaskPriority, TaskStatus, User } from '@/types';
 import { cn } from '@/lib/cn';
 import { formatJalali } from '@/lib/jalali';
 import { formatCount, formatFileSize } from '@/lib/format';
@@ -22,6 +22,8 @@ import {
 import { MenuItem, MenuList } from '@/components/ui/Menu';
 import { SubtaskList } from './SubtaskList';
 import { JalaliDatePicker } from './JalaliDatePicker';
+import { ReminderPicker } from './ReminderPicker';
+import { RecurrenceEditor } from './RecurrenceEditor';
 import type { TaskPatch } from '@/store/workspace-reducer';
 import {
   ArchiveIcon,
@@ -51,6 +53,7 @@ const ATTACHMENT_ICONS = {
 
 export interface TaskInspectorProps {
   readonly task: Task;
+  readonly projects: readonly Project[];
   readonly currentUser: User;
   readonly onClose: () => void;
   readonly onPatch: (patch: TaskPatch) => void;
@@ -60,6 +63,8 @@ export interface TaskInspectorProps {
   readonly onRemoveSubtask: (subtaskId: string) => void;
   readonly onMoveSubtask: (subtaskId: string, delta: number) => void;
   readonly onAddComment: (body: string, replyToId: string | null) => void;
+  readonly onReminderChange: (reminder: Task['reminder']) => void;
+  readonly onRecurrenceChange: (recurrence: Task['recurrence']) => void;
 }
 
 /**
@@ -68,6 +73,7 @@ export interface TaskInspectorProps {
  */
 export function TaskInspector({
   task,
+  projects,
   currentUser,
   onClose,
   onPatch,
@@ -77,10 +83,12 @@ export function TaskInspector({
   onRemoveSubtask,
   onMoveSubtask,
   onAddComment,
+  onReminderChange,
+  onRecurrenceChange,
 }: TaskInspectorProps) {
   const [comment, setComment] = useState('');
   const [replyToId, setReplyToId] = useState<string | null>(null);
-  const project = projectById(task.projectId);
+  const project = projectById(projects, task.projectId);
   const reviewer = task.reviewerId ? userById(task.reviewerId) : undefined;
 
   const submitComment = () => {
@@ -190,6 +198,19 @@ export function TaskInspector({
               />
             </Field>
           </div>
+        </section>
+
+        <section aria-label="یادآوری و تکرار" className="flex flex-col gap-3">
+          <ReminderPicker
+            value={task.reminder}
+            dueDate={task.dueDate}
+            onChange={onReminderChange}
+          />
+          <RecurrenceEditor
+            value={task.recurrence}
+            startDate={task.dueDate}
+            onChange={onRecurrenceChange}
+          />
         </section>
 
         <section aria-label="توضیحات وظیفه">

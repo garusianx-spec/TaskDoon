@@ -44,6 +44,20 @@ export const JALALI_WEEKDAYS: readonly string[] = [
 
 export const JALALI_WEEKDAYS_SHORT: readonly string[] = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
 
+/**
+ * Two-letter forms for headers that have room for more than an initial but not a full name
+ * (the Jalali date picker's 7-column grid inside a 288px popover).
+ */
+export const JALALI_WEEKDAYS_MEDIUM: readonly string[] = [
+  'شن',
+  'یک',
+  'دو',
+  'سه',
+  'چه',
+  'پن',
+  'جم',
+];
+
 const PERSIAN_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'] as const;
 
 const div = (a: number, b: number): number => Math.trunc(a / b);

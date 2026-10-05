@@ -1,29 +1,35 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import type { Task, TaskStatus } from '@/types';
-import { TASK_STATUSES, statusLabel } from '@/data/reference';
+import type { BoardColumn, Project, SemanticTone, Task, TaskStatus } from '@/types';
 import { cn } from '@/lib/cn';
 import { formatCount } from '@/lib/format';
-import { tasksByStatus } from '@/store/selectors';
+import { tasksByColumn } from '@/store/selectors';
 import { Badge, EmptyState, IconButton, Tooltip } from '@/components/ui';
 import { TaskCard } from './TaskCard';
-import { AddIcon, TaskSquareIcon } from '@/components/icons';
+import { AddIcon, TaskSquareIcon, TrashIcon } from '@/components/icons';
+import { AddColumnModal } from './AddColumnModal';
 
 export interface KanbanBoardProps {
   readonly tasks: readonly Task[];
+  readonly projects: readonly Project[];
+  readonly columns: readonly BoardColumn[];
   readonly onOpenTask: (taskId: string) => void;
-  readonly onMoveTask: (taskId: string, status: TaskStatus) => void;
+  /** Moves a card into a column; the column decides its canonical status. */
+  readonly onMoveTask: (taskId: string, columnId: string) => void;
   readonly onCreateTask: (status: TaskStatus) => void;
+  readonly onAddColumn: (title: string, tone: SemanticTone, mapsTo: TaskStatus) => void;
+  readonly onRemoveColumn: (columnId: string) => void;
   readonly selectedTaskId: string | null;
   readonly onAnnounce: (message: string) => void;
 }
 
-const COLUMN_TONE: Readonly<Record<TaskStatus, string>> = {
+const COLUMN_TONE: Readonly<Record<SemanticTone, string>> = {
   todo: 'bg-status-todo',
-  'in-progress': 'bg-status-progress',
+  progress: 'bg-status-progress',
   review: 'bg-status-review',
   done: 'bg-status-done',
+  blocked: 'bg-status-blocked',
 };
 
 /**
@@ -36,41 +42,52 @@ const COLUMN_TONE: Readonly<Record<TaskStatus, string>> = {
  */
 export function KanbanBoard({
   tasks,
+  projects,
+  columns,
   onOpenTask,
   onMoveTask,
   onCreateTask,
+  onAddColumn,
+  onRemoveColumn,
   selectedTaskId,
   onAnnounce,
 }: KanbanBoardProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<TaskStatus | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [grabbedId, setGrabbedId] = useState<string | null>(null);
+  const [addColumnOpen, setAddColumnOpen] = useState(false);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
 
+  const columnIds = columns.map((column) => column.id);
+
   const commitMove = useCallback(
-    (taskId: string, status: TaskStatus, viaKeyboard: boolean) => {
-      onMoveTask(taskId, status);
+    (taskId: string, columnId: string, viaKeyboard: boolean) => {
+      onMoveTask(taskId, columnId);
       const task = tasks.find((entry) => entry.id === taskId);
-      if (task) {
-        onAnnounce(`وظیفه «${task.title}» به ستون ${statusLabel(status)} منتقل شد.`);
+      const column = columns.find((entry) => entry.id === columnId);
+      if (task && column) {
+        onAnnounce(`وظیفه «${task.title}» به ستون ${column.title} منتقل شد.`);
       }
       if (viaKeyboard) {
         // Focus follows the card across the DOM move.
         requestAnimationFrame(() => cardRefs.current.get(taskId)?.focus());
       }
     },
-    [onMoveTask, onAnnounce, tasks],
+    [onMoveTask, onAnnounce, tasks, columns],
   );
 
   const handleCardKeyDown = useCallback(
     (task: Task) => (event: React.KeyboardEvent<HTMLElement>) => {
-      const columnIndex = TASK_STATUSES.findIndex((entry) => entry.id === task.status);
+      const columnIndex = columns.findIndex((entry) =>
+        columnIds.includes(task.columnId) ? entry.id === task.columnId : entry.id === task.status,
+      );
 
       if (event.key === ' ') {
         event.preventDefault();
         if (grabbedId === task.id) {
           setGrabbedId(null);
-          onAnnounce(`وظیفه «${task.title}» در ستون ${statusLabel(task.status)} رها شد.`);
+          const current = columns[columnIndex];
+          onAnnounce(`وظیفه «${task.title}» در ستون ${current?.title ?? ''} رها شد.`);
         } else {
           setGrabbedId(task.id);
           onAnnounce(
@@ -95,14 +112,14 @@ export function KanbanBoard({
 
       event.preventDefault();
       const nextIndex = columnIndex + delta;
-      const nextColumn = TASK_STATUSES[nextIndex];
+      const nextColumn = columns[nextIndex];
       if (!nextColumn) {
         onAnnounce('انتهای بورد است.');
         return;
       }
       commitMove(task.id, nextColumn.id, true);
     },
-    [grabbedId, commitMove, onAnnounce],
+    [grabbedId, commitMove, onAnnounce, columns, columnIds],
   );
 
   return (
@@ -111,14 +128,14 @@ export function KanbanBoard({
       role="application"
       aria-label="بورد کانبان وظایف"
     >
-      {TASK_STATUSES.map((column) => {
-        const columnTasks = tasksByStatus(tasks, column.id);
+      {columns.map((column) => {
+        const columnTasks = tasksByColumn(tasks, column.id, columnIds);
         const isDropTarget = dropTarget === column.id;
 
         return (
           <section
             key={column.id}
-            aria-label={`ستون ${column.label}`}
+            aria-label={`ستون ${column.title}`}
             onDragOver={(event) => {
               event.preventDefault();
               setDropTarget(column.id);
@@ -139,20 +156,32 @@ export function KanbanBoard({
             )}
           >
             <header className="flex items-center gap-2 px-3 py-3">
-              <span className={cn('size-2 shrink-0 rounded-full', COLUMN_TONE[column.id])} aria-hidden="true" />
-              <h3 className="text-title-sm font-semibold text-fg-primary">{column.label}</h3>
+              <span className={cn('size-2 shrink-0 rounded-full', COLUMN_TONE[column.tone])} aria-hidden="true" />
+              <h3 className="min-w-0 truncate text-title-sm font-semibold text-fg-primary">{column.title}</h3>
               <Badge tone="neutral" size="sm" numeric>
                 {formatCount(columnTasks.length)}
               </Badge>
-              <Tooltip content={`افزودن وظیفه به ${column.label}`}>
-                <IconButton
-                  label={`افزودن وظیفه به ${column.label}`}
-                  icon={<AddIcon size={16} />}
-                  size="xs"
-                  className="ms-auto"
-                  onClick={() => onCreateTask(column.id)}
-                />
-              </Tooltip>
+              <span className="ms-auto flex items-center">
+                {column.custom && (
+                  <Tooltip content={`حذف ستون ${column.title}`}>
+                    <IconButton
+                      label={`حذف ستون ${column.title}`}
+                      icon={<TrashIcon size={15} />}
+                      size="xs"
+                      onClick={() => onRemoveColumn(column.id)}
+                      className="hover:text-status-blocked"
+                    />
+                  </Tooltip>
+                )}
+                <Tooltip content={`افزودن وظیفه به ${column.title}`}>
+                  <IconButton
+                    label={`افزودن وظیفه به ${column.title}`}
+                    icon={<AddIcon size={16} />}
+                    size="xs"
+                    onClick={() => onCreateTask(column.mapsTo)}
+                  />
+                </Tooltip>
+              </span>
             </header>
 
             <div className="scrollbar-thin flex min-h-24 flex-1 flex-col gap-2.5 overflow-y-auto px-2.5 pb-3">
@@ -179,6 +208,7 @@ export function KanbanBoard({
                   >
                     <TaskCard
                       task={task}
+                      projects={projects}
                       onOpen={onOpenTask}
                       selected={selectedTaskId === task.id}
                       grabbed={grabbedId === task.id}
@@ -202,6 +232,32 @@ export function KanbanBoard({
           </section>
         );
       })}
+
+      {/* Trailing affordance, matching the column rhythm rather than floating over it. */}
+      <div className="flex w-56 shrink-0 flex-col">
+        <button
+          type="button"
+          onClick={() => setAddColumnOpen(true)}
+          className={cn(
+            'flex h-full min-h-32 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary',
+            'text-fg-tertiary transition-colors hover:border-brand hover:bg-brand-subtle hover:text-fg-brand',
+          )}
+        >
+          <span className="flex size-9 items-center justify-center rounded-full bg-sunken">
+            <AddIcon size={20} />
+          </span>
+          <span className="text-body-sm font-semibold">ستون جدید</span>
+          <span className="px-4 text-center text-micro leading-5 text-fg-quaternary">
+            یک مرحله تازه به گردش کار این بورد اضافه کنید
+          </span>
+        </button>
+      </div>
+
+      <AddColumnModal
+        open={addColumnOpen}
+        onClose={() => setAddColumnOpen(false)}
+        onCreate={onAddColumn}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type {
+  BoardColumn,
   ChatFilterId,
   Department,
   ModuleDescriptor,
@@ -45,6 +46,27 @@ export const TASK_STATUSES: ReadonlyArray<{
   { id: 'in-progress', label: 'در حال انجام', tone: 'progress' },
   { id: 'review', label: 'منتظر تایید', tone: 'review' },
   { id: 'done', label: 'انجام شد', tone: 'done' },
+];
+
+/**
+ * The four built-in columns. Their ids match the canonical statuses, so a task with no
+ * explicit column lands in the right place and custom columns simply add to this list.
+ */
+export const DEFAULT_BOARD_COLUMNS: readonly BoardColumn[] = TASK_STATUSES.map((status) => ({
+  id: status.id,
+  title: status.label,
+  tone: status.tone,
+  mapsTo: status.id,
+  custom: false,
+}));
+
+/** Badge colours a custom column can take, named for the picker. */
+export const COLUMN_TONES: ReadonlyArray<{ readonly id: SemanticTone; readonly label: string }> = [
+  { id: 'todo', label: 'خاکستری' },
+  { id: 'progress', label: 'کهربایی' },
+  { id: 'review', label: 'بنفش' },
+  { id: 'done', label: 'سبز' },
+  { id: 'blocked', label: 'قرمز' },
 ];
 
 export const TASK_PRIORITIES: ReadonlyArray<{

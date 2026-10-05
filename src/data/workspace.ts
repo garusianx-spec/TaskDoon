@@ -163,6 +163,32 @@ export const requireUser = (id: string): User => {
 
 export const CURRENT_USER: User = requireUser(CURRENT_USER_ID);
 
+/* ------------------------------ Sessions ------------------------------ */
+
+export const ACTIVE_SESSIONS = [
+  {
+    id: 'sess-current',
+    device: 'کروم روی ویندوز ۱۱',
+    location: 'تهران، ایران',
+    lastActiveAt: at(0, 9, 5),
+    current: true,
+  },
+  {
+    id: 'sess-mobile',
+    device: 'اپلیکیشن اندروید — پیکسل ۸',
+    location: 'تهران، ایران',
+    lastActiveAt: at(-1, 21, 40),
+    current: false,
+  },
+  {
+    id: 'sess-macbook',
+    device: 'سافاری روی مک‌بوک پرو',
+    location: 'اصفهان، ایران',
+    lastActiveAt: at(-4, 14, 12),
+    current: false,
+  },
+] as const;
+
 /* ------------------------------ Projects ------------------------------ */
 
 export const PROJECTS: readonly Project[] = [
@@ -174,6 +200,7 @@ export const PROJECTS: readonly Project[] = [
     starred: true,
     parentId: null,
     memberIds: ['u-sahar', 'u-arash', 'u-nasim', 'u-payam'],
+    conversationId: 'conv-product',
   },
   {
     id: 'p-core-web',
@@ -183,6 +210,7 @@ export const PROJECTS: readonly Project[] = [
     starred: true,
     parentId: 'p-core',
     memberIds: ['u-arash', 'u-payam'],
+    conversationId: 'conv-release',
   },
   {
     id: 'p-core-mobile',
@@ -192,6 +220,7 @@ export const PROJECTS: readonly Project[] = [
     starred: false,
     parentId: 'p-core',
     memberIds: ['u-arash', 'u-nasim'],
+    conversationId: null,
   },
   {
     id: 'p-campaign',
@@ -201,6 +230,7 @@ export const PROJECTS: readonly Project[] = [
     starred: false,
     parentId: null,
     memberIds: ['u-mahtab', 'u-sahar'],
+    conversationId: 'conv-marketing',
   },
   {
     id: 'p-finance',
@@ -210,6 +240,7 @@ export const PROJECTS: readonly Project[] = [
     starred: false,
     parentId: null,
     memberIds: ['u-leila', 'u-kamran'],
+    conversationId: null,
   },
 ];
 
@@ -270,6 +301,7 @@ export const TASKS: readonly Task[] = [
     description:
       'جریان ورود فعلی سه مرحله دارد و نرخ رها کردن آن ۳۴٪ است. جریان جدید باید ورود با شماره موبایل، رمز یک‌بارمصرف و بازیابی رمز را در حداکثر دو مرحله پوشش دهد.',
     status: 'in-progress',
+    columnId: 'in-progress',
     priority: 'urgent',
     projectId: 'p-core-web',
     assigneeIds: ['u-nasim', 'u-payam'],
@@ -304,6 +336,8 @@ export const TASKS: readonly Task[] = [
     labels: ['احراز هویت', 'ریزش کاربر'],
     starred: true,
     sourceMessageId: null,
+    reminder: { offset: '1d', customAt: null },
+    recurrence: null,
   },
   {
     id: 't-102',
@@ -312,6 +346,7 @@ export const TASKS: readonly Task[] = [
     description:
       'در مرورگر سافاری ستون‌های جدول گزارش عملکرد از سمت چپ رندر می‌شوند و سرستون‌ها با بدنه جدول هم‌تراز نیستند.',
     status: 'review',
+    columnId: 'review',
     priority: 'high',
     projectId: 'p-core-web',
     assigneeIds: ['u-payam', 'u-sahar'],
@@ -337,6 +372,8 @@ export const TASKS: readonly Task[] = [
     labels: ['RTL', 'رفع اشکال'],
     starred: false,
     sourceMessageId: 'm-14',
+    reminder: { offset: '1h', customAt: null },
+    recurrence: null,
   },
   {
     id: 't-103',
@@ -345,6 +382,7 @@ export const TASKS: readonly Task[] = [
     description:
       'اپلیکیشن موبایل باید در نبود اینترنت وظایف را ذخیره و پس از اتصال همگام کند. سند باید استراتژی حل تعارض را مشخص کند.',
     status: 'todo',
+    columnId: 'todo',
     priority: 'medium',
     projectId: 'p-core-mobile',
     assigneeIds: ['u-arash', 'u-sahar'],
@@ -361,6 +399,8 @@ export const TASKS: readonly Task[] = [
     labels: ['معماری', 'موبایل'],
     starred: false,
     sourceMessageId: null,
+    reminder: null,
+    recurrence: null,
   },
   {
     id: 't-104',
@@ -369,6 +409,7 @@ export const TASKS: readonly Task[] = [
     description:
       'هر فضای کاری باید بتواند پالت برند خود را از میان چهار پالت تعریف‌شده انتخاب کند و انتخاب کاربر بین دستگاه‌ها حفظ شود.',
     status: 'done',
+    columnId: 'done',
     priority: 'high',
     projectId: 'p-core-web',
     assigneeIds: ['u-payam', 'u-nasim', 'u-sahar'],
@@ -386,6 +427,8 @@ export const TASKS: readonly Task[] = [
     labels: ['دیزاین سیستم'],
     starred: true,
     sourceMessageId: null,
+    reminder: null,
+    recurrence: null,
   },
   {
     id: 't-105',
@@ -394,6 +437,7 @@ export const TASKS: readonly Task[] = [
     description:
       'تقویم انتشار برای سه شبکه اجتماعی از پانزدهم اسفند تا پانزدهم فروردین، شامل متن، تصویر و زمان انتشار.',
     status: 'in-progress',
+    columnId: 'in-progress',
     priority: 'medium',
     projectId: 'p-campaign',
     assigneeIds: ['u-mahtab'],
@@ -420,6 +464,8 @@ export const TASKS: readonly Task[] = [
     labels: ['نوروز', 'محتوا'],
     starred: false,
     sourceMessageId: null,
+    reminder: { offset: '1d', customAt: null },
+    recurrence: { frequency: 'weekly', interval: 2, end: { kind: 'after-count', count: 6 } },
   },
   {
     id: 't-106',
@@ -428,6 +474,7 @@ export const TASKS: readonly Task[] = [
     description:
       'گزارش پیمانکار امنیت سه مورد با شدت متوسط و یک مورد بحرانی در لایه احراز هویت شناسایی کرده است.',
     status: 'todo',
+    columnId: 'todo',
     priority: 'urgent',
     projectId: 'p-core-web',
     assigneeIds: ['u-arash', 'u-payam', 'u-sahar'],
@@ -445,6 +492,8 @@ export const TASKS: readonly Task[] = [
     labels: ['امنیت', 'بحرانی'],
     starred: false,
     sourceMessageId: null,
+    reminder: { offset: '15m', customAt: null },
+    recurrence: null,
   },
   {
     id: 't-107',
@@ -452,6 +501,7 @@ export const TASKS: readonly Task[] = [
     title: 'تهیه صورت‌های مالی سه‌ماهه چهارم',
     description: 'جمع‌بندی درآمد و هزینه سه‌ماهه و آماده‌سازی گزارش برای هیئت‌مدیره.',
     status: 'review',
+    columnId: 'review',
     priority: 'high',
     projectId: 'p-finance',
     assigneeIds: ['u-leila'],
@@ -468,6 +518,8 @@ export const TASKS: readonly Task[] = [
     labels: ['گزارش مالی'],
     starred: false,
     sourceMessageId: null,
+    reminder: { offset: '1d', customAt: null },
+    recurrence: { frequency: 'monthly', interval: 3, end: { kind: 'never' } },
   },
   {
     id: 't-108',
@@ -475,6 +527,7 @@ export const TASKS: readonly Task[] = [
     title: 'افزودن نمای گانت شمسی به بورد پروژه',
     description: 'نمای گانت باید بر پایه تقویم هجری شمسی رسم شود و تعطیلات رسمی را متمایز کند.',
     status: 'todo',
+    columnId: 'todo',
     priority: 'low',
     projectId: 'p-core-web',
     assigneeIds: ['u-payam'],
@@ -488,6 +541,8 @@ export const TASKS: readonly Task[] = [
     labels: ['تقویم شمسی'],
     starred: false,
     sourceMessageId: null,
+    reminder: null,
+    recurrence: null,
   },
   {
     id: 't-109',
@@ -495,6 +550,7 @@ export const TASKS: readonly Task[] = [
     title: 'یکپارچه‌سازی اعلان‌های درون‌برنامه‌ای با پیامک',
     description: 'اعلان وظایف فوری باید علاوه بر اعلان درون‌برنامه، پیامک هم ارسال کند.',
     status: 'in-progress',
+    columnId: 'in-progress',
     priority: 'medium',
     projectId: 'p-core-mobile',
     assigneeIds: ['u-arash', 'u-sahar'],
@@ -511,6 +567,8 @@ export const TASKS: readonly Task[] = [
     labels: ['اعلان'],
     starred: false,
     sourceMessageId: null,
+    reminder: { offset: '30m', customAt: null },
+    recurrence: { frequency: 'weekly', interval: 1, end: { kind: 'on-date', date: dateOnly(45) } },
   },
   {
     id: 't-110',
@@ -518,6 +576,7 @@ export const TASKS: readonly Task[] = [
     title: 'بهینه‌سازی زمان بارگذاری اولیه داشبورد',
     description: 'زمان تا اولین رندر معنادار روی اتصال ۳G باید زیر دو و نیم ثانیه برسد.',
     status: 'done',
+    columnId: 'done',
     priority: 'medium',
     projectId: 'p-core-web',
     assigneeIds: ['u-payam'],
@@ -534,6 +593,8 @@ export const TASKS: readonly Task[] = [
     labels: ['کارایی'],
     starred: false,
     sourceMessageId: null,
+    reminder: null,
+    recurrence: null,
   },
 ];
 
@@ -550,6 +611,7 @@ export const CONVERSATIONS: readonly Conversation[] = [
     unreadCount: 4,
     tone: 'brand',
     topic: 'هماهنگی روزانه تیم محصول و طراحی',
+    projectId: 'p-core',
   },
   {
     id: 'conv-arash',
@@ -561,6 +623,7 @@ export const CONVERSATIONS: readonly Conversation[] = [
     unreadCount: 2,
     tone: 'violet',
     topic: 'گفتگوی مستقیم',
+    projectId: null,
   },
   {
     id: 'conv-release',
@@ -572,6 +635,7 @@ export const CONVERSATIONS: readonly Conversation[] = [
     unreadCount: 7,
     tone: 'amber',
     topic: 'چک‌لیست انتشار و رفع اشکال‌های بحرانی',
+    projectId: 'p-core-web',
   },
   {
     id: 'conv-nasim',
@@ -583,6 +647,7 @@ export const CONVERSATIONS: readonly Conversation[] = [
     unreadCount: 0,
     tone: 'teal',
     topic: 'گفتگوی مستقیم',
+    projectId: null,
   },
   {
     id: 'conv-marketing',
@@ -594,6 +659,7 @@ export const CONVERSATIONS: readonly Conversation[] = [
     unreadCount: 0,
     tone: 'rose',
     topic: 'برنامه‌ریزی محتوا و بودجه کمپین',
+    projectId: 'p-campaign',
   },
   {
     id: 'conv-announcements',
@@ -605,6 +671,7 @@ export const CONVERSATIONS: readonly Conversation[] = [
     unreadCount: 1,
     tone: 'slate',
     topic: 'اعلان‌های رسمی مدیریت',
+    projectId: null,
   },
 ];
 
@@ -628,6 +695,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-nasim', 'u-arash', 'u-mahtab'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-02',
@@ -640,6 +709,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-sahar', 'u-arash'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-03',
@@ -652,6 +723,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-sahar'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-04',
@@ -664,6 +737,47 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-sahar', 'u-nasim'],
+    pinned: false,
+    forwardedFrom: null,
+  },
+  {
+    id: 'm-04b',
+    conversationId: 'conv-product',
+    authorId: 'u-nasim',
+    sentAt: at(-1, 12, 30),
+    body: { kind: 'voice', durationSec: 34, waveform: waveform(11), src: null },
+    replyToId: null,
+    reactions: [],
+    edited: false,
+    linkedTaskId: null,
+    readByIds: ['u-sahar'],
+    pinned: false,
+    forwardedFrom: null,
+  },
+  {
+    id: 'm-04c',
+    conversationId: 'conv-product',
+    authorId: 'u-nasim',
+    sentAt: at(-1, 13, 10),
+    body: {
+      kind: 'file',
+      attachment: {
+        id: 'att-mockup',
+        name: 'ماکاپ-صفحه-ورود.png',
+        kind: 'image',
+        size: 3_407_872,
+        uploadedAt: at(-1, 13, 10),
+        uploadedById: 'u-nasim',
+      },
+      caption: 'ماکاپ نهایی صفحه ورود',
+    },
+    replyToId: null,
+    reactions: [],
+    edited: false,
+    linkedTaskId: null,
+    readByIds: ['u-sahar'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-05',
@@ -679,6 +793,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: [],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-06',
@@ -691,6 +807,8 @@ export const MESSAGES: readonly Message[] = [
     edited: true,
     linkedTaskId: null,
     readByIds: ['u-mahtab'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-07',
@@ -706,6 +824,42 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: 't-101',
     readByIds: ['u-sahar'],
+    pinned: true,
+    forwardedFrom: null,
+  },
+  {
+    id: 'm-08',
+    conversationId: 'conv-product',
+    authorId: 'u-nasim',
+    sentAt: at(-1, 12, 5),
+    body: {
+      kind: 'text',
+      text: 'راهنمای دسترسی‌پذیری فرم‌ها را اینجا گذاشتم: https://www.w3.org/WAI/tutorials/forms/ و نمونه الگوی ورود دومرحله‌ای: https://design.rahnama.ir/patterns/two-factor-login',
+    },
+    replyToId: null,
+    reactions: [],
+    edited: false,
+    linkedTaskId: null,
+    readByIds: ['u-sahar'],
+    pinned: false,
+    forwardedFrom: null,
+  },
+  {
+    id: 'm-09',
+    conversationId: 'conv-product',
+    authorId: 'u-mahtab',
+    sentAt: at(0, 9, 30),
+    body: {
+      kind: 'text',
+      text: 'گزارش تحلیل رقبا برای کمپین نوروزی: https://reports.rahnama.ir/market/nowruz-1405-competitive-analysis',
+    },
+    replyToId: null,
+    reactions: [],
+    edited: false,
+    linkedTaskId: null,
+    readByIds: [],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-10',
@@ -718,6 +872,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-sahar'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-11',
@@ -730,6 +886,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: 't-106',
     readByIds: ['u-sahar'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-12',
@@ -742,6 +900,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-arash'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-13',
@@ -754,6 +914,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: [],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-14',
@@ -769,6 +931,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: 't-102',
     readByIds: ['u-arash', 'u-sahar'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-15',
@@ -781,6 +945,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-payam'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-16',
@@ -793,6 +959,30 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-arash'],
+    pinned: false,
+    forwardedFrom: null,
+  },
+  {
+    id: 'm-16b',
+    conversationId: 'conv-release',
+    authorId: 'u-sahar',
+    sentAt: at(-1, 17, 52),
+    body: {
+      kind: 'text',
+      text: 'گزارش تست نفوذ رسید. یک مورد بحرانی در لایه احراز هویت دارد.',
+    },
+    replyToId: null,
+    reactions: [],
+    edited: false,
+    linkedTaskId: 't-106',
+    readByIds: ['u-arash'],
+    pinned: false,
+    forwardedFrom: {
+      authorId: 'u-arash',
+      conversationId: 'conv-arash',
+      originalMessageId: 'm-10',
+      sentAt: at(-1, 16, 20),
+    },
   },
   {
     id: 'm-17',
@@ -805,6 +995,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: [],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-18',
@@ -817,6 +1009,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: [],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-20',
@@ -829,6 +1023,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-sahar'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-21',
@@ -841,6 +1037,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-nasim'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-22',
@@ -853,6 +1051,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: 't-105',
     readByIds: ['u-sahar', 'u-leila'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-23',
@@ -865,6 +1065,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: ['u-mahtab'],
+    pinned: false,
+    forwardedFrom: null,
   },
   {
     id: 'm-24',
@@ -880,6 +1082,8 @@ export const MESSAGES: readonly Message[] = [
     edited: false,
     linkedTaskId: null,
     readByIds: [],
+    pinned: true,
+    forwardedFrom: null,
   },
 ];
 

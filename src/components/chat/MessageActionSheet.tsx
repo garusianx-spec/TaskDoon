@@ -15,6 +15,10 @@ export interface MessageActionSheetProps {
   readonly onReply: (messageId: string) => void;
   readonly onConvertToTask: (message: Message) => void;
   readonly onToggleReaction: (messageId: string, emoji: string) => void;
+  readonly onTogglePin: (messageId: string) => void;
+  readonly onForward: (message: Message) => void;
+  readonly canPin: boolean;
+  readonly canForward: boolean;
 }
 
 /**
@@ -27,6 +31,10 @@ export function MessageActionSheet({
   onReply,
   onConvertToTask,
   onToggleReaction,
+  onTogglePin,
+  onForward,
+  canPin,
+  canForward,
 }: MessageActionSheetProps) {
   if (!message) return null;
 
@@ -72,9 +80,27 @@ export function MessageActionSheet({
         >
           کپی متن پیام
         </MenuItem>
-        <MenuItem icon={<PinIcon size={20} />} onSelect={onClose} className="py-3">
-          سنجاق کردن در گفتگو
-        </MenuItem>
+        {canForward && (
+          <MenuItem
+            icon={<ReplyIcon size={20} className="-scale-x-100" />}
+            onSelect={() => onForward(message)}
+            className="py-3"
+          >
+            فوروارد به…
+          </MenuItem>
+        )}
+        {canPin && (
+          <MenuItem
+            icon={<PinIcon size={20} />}
+            onSelect={() => {
+              onTogglePin(message.id);
+              onClose();
+            }}
+            className="py-3"
+          >
+            {message.pinned ? 'برداشتن پین پیام' : 'پین کردن پیام در گفتگو'}
+          </MenuItem>
+        )}
       </MenuList>
     </BottomSheet>
   );

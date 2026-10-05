@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { DepartmentId, SmartViewId, Task } from '@/types';
+import type { DepartmentId, Project, SmartViewId, Task } from '@/types';
 import { cn } from '@/lib/cn';
 import { formatCount } from '@/lib/format';
 import { DEPARTMENTS } from '@/data/reference';
@@ -21,6 +21,7 @@ import {
 
 export interface TaskSidebarProps {
   readonly tasks: readonly Task[];
+  readonly projects: readonly Project[];
   readonly smartView: SmartViewId;
   readonly projectFilterId: string | null;
   readonly search: string;
@@ -29,6 +30,7 @@ export interface TaskSidebarProps {
   readonly onProjectChange: (projectId: string | null) => void;
   readonly onSearchChange: (query: string) => void;
   readonly onCreateTask: () => void;
+  readonly onCreateProject: () => void;
 }
 
 const SMART_VIEWS: ReadonlyArray<{
@@ -45,6 +47,7 @@ const SMART_VIEWS: ReadonlyArray<{
 /** Task-context column: smart views, the project tree and department filters. */
 export function TaskSidebar({
   tasks,
+  projects,
   smartView,
   projectFilterId,
   search,
@@ -53,9 +56,12 @@ export function TaskSidebar({
   onProjectChange,
   onSearchChange,
   onCreateTask,
+  onCreateProject,
 }: TaskSidebarProps) {
-  const tree = buildProjectTree();
-  const [expanded, setExpanded] = useState<readonly string[]>(tree.map((node) => node.project.id));
+  const tree = buildProjectTree(projects);
+  // Newly created projects arrive after mount, so treat "not explicitly collapsed" as open
+  // rather than seeding a fixed list that would leave later projects stuck closed.
+  const [collapsed, setCollapsed] = useState<readonly string[]>([]);
   const [departmentFilter, setDepartmentFilter] = useState<DepartmentId | null>(null);
 
   const countFor = (view: SmartViewId): number => {
@@ -77,7 +83,7 @@ export function TaskSidebar({
   };
 
   const projectCount = (projectId: string): number => {
-    const scope = projectWithDescendants(projectId);
+    const scope = projectWithDescendants(projects, projectId);
     return tasks.filter((task) => scope.includes(task.projectId)).length;
   };
 
@@ -97,6 +103,14 @@ export function TaskSidebar({
         </div>
         <Button fullWidth iconStart={<AddIcon size={18} />} onClick={onCreateTask}>
           تعریف وظیفه جدید
+        </Button>
+        <Button
+          fullWidth
+          variant="secondary"
+          iconStart={<FolderIcon size={18} />}
+          onClick={onCreateProject}
+        >
+          پروژه جدید
         </Button>
         <Input
           label="جستجوی وظیفه"
@@ -147,7 +161,7 @@ export function TaskSidebar({
           </h3>
 
           {visibleTree.map(({ project, children }) => {
-            const isExpanded = expanded.includes(project.id);
+            const isExpanded = !collapsed.includes(project.id);
             const active = projectFilterId === project.id;
 
             return (
@@ -164,7 +178,7 @@ export function TaskSidebar({
                       aria-expanded={isExpanded}
                       aria-label={isExpanded ? `بستن ${project.name}` : `باز کردن ${project.name}`}
                       onClick={() =>
-                        setExpanded((current) =>
+                        setCollapsed((current) =>
                           current.includes(project.id)
                             ? current.filter((id) => id !== project.id)
                             : [...current, project.id],
