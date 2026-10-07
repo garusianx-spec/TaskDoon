@@ -1,4 +1,5 @@
 import type {
+  ActiveBroadcastView,
   AppNotification,
   AttachmentView,
   BoardColumn,
@@ -56,6 +57,7 @@ import { session } from '@/api/session';
 import { DEFAULT_PERMISSION_MATRIX, DEPARTMENTS } from '@/data/reference';
 import { LIVE_EMPTY_STATE } from '../initial-state';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
+import { broadcastJitter, broadcastTimerDelay } from '@/lib/broadcasts';
 import type { ConversationDraft, PickedFile, TaskPatch, VoiceRecording, WorkspaceAction, WorkspaceState } from '../workspace-reducer';
 
 export type LivePhase = 'restoring' | 'signed-out' | 'loading' | 'no-workspace' | 'ready';
@@ -71,6 +73,8 @@ export interface LiveStatus {
   /** The signed-in account (also before it belongs to any workspace). */
   readonly user: MeUser | null;
   readonly toast: LiveToast | null;
+  /** Platform announcements are independent of the selected tenant workspace. */
+  readonly broadcasts: readonly ActiveBroadcastView[];
 }
 
 type Apply = (action: WorkspaceAction) => void;
@@ -98,13 +102,20 @@ const byPosition = (a: { readonly position: string }, b: { readonly position: st
  *   that arrive while the workspace is still loading wait, and are applied after it.
  */
 export class LiveStore {
-  private status: LiveStatus = { phase: 'restoring', connection: 'offline', user: null, toast: null };
+  private status: LiveStatus = { phase: 'restoring', connection: 'offline', user: null, toast: null, broadcasts: [] };
   private readonly listeners = new Set<Listener>();
   private readonly realtime: RealtimeClient;
   private started = false;
   private workspaceId = '';
   private loadToken = 0;
   private toastId = 0;
+  private broadcastWatchers = 0;
+  private broadcastGeneration = 0;
+  private broadcastSessionId: string | null = null;
+  private broadcastTimer: ReturnType<typeof setTimeout> | undefined;
+  private broadcastDueAt = Infinity;
+  private broadcastFlight: Promise<void> | null = null;
+  private broadcastRefetchPending = false;
 
   /** Server versions: tasks (`If-Match`, `expectedVersion`) and notes. */
   private readonly versions = new Map<string, number>();
@@ -148,7 +159,11 @@ export class LiveStore {
     this.realtime = new RealtimeClient({
       token: () => session.current?.accessToken ?? null,
       onEvent: (envelope) => this.receive(envelope),
-      onStatus: (connection) => this.patch({ connection }),
+      onStatus: (connection) => {
+        const reconnected = connection === 'online' && this.status.connection !== 'online';
+        this.patch({ connection });
+        if (reconnected) this.scheduleBroadcasts(broadcastJitter());
+      },
       resumeFrom: () => ({ workspaceId: this.workspaceId, conversations: Object.fromEntries(this.lastSeq), lastEventId: this.lastEventId }),
       onResumed: (result) => {
         for (const [conversationId, resumed] of Object.entries(result.conversations)) {
@@ -165,8 +180,16 @@ export class LiveStore {
     });
     setFileResolver((attachmentId, disposition) => this.fileLink(attachmentId, disposition));
     session.subscribe((current) => {
-      if (current) this.realtime.refreshToken(current.accessToken);
-      else if (this.status.phase === 'ready' || this.status.phase === 'loading' || this.status.phase === 'no-workspace') this.ended();
+      if (current) {
+        this.realtime.refreshToken(current.accessToken);
+        const adopted = current.sessionId !== this.broadcastSessionId;
+        this.broadcastSessionId = current.sessionId;
+        if (adopted && this.broadcastWatchers > 0) void this.refreshBroadcasts();
+      }
+      else {
+        this.broadcastSessionId = null;
+        if (this.status.phase === 'ready' || this.status.phase === 'loading' || this.status.phase === 'no-workspace') this.ended();
+      }
     });
   }
 
@@ -199,6 +222,72 @@ export class LiveStore {
 
   dismissToast(id: number): void {
     if (this.status.toast?.id === id) this.patch({ toast: null });
+  }
+
+  /** Mounted by the live banner. Releasing the last watcher cancels all scheduled work. */
+  watchBroadcasts(): () => void {
+    this.broadcastWatchers += 1;
+    if (this.broadcastWatchers === 1) void this.refreshBroadcasts();
+    return () => {
+      this.broadcastWatchers = Math.max(0, this.broadcastWatchers - 1);
+      if (this.broadcastWatchers === 0) {
+        this.stopBroadcasts();
+        this.patch({ broadcasts: [] });
+      }
+    };
+  }
+
+  private stopBroadcasts(): void {
+    this.broadcastGeneration += 1;
+    clearTimeout(this.broadcastTimer);
+    this.broadcastTimer = undefined;
+    this.broadcastDueAt = Infinity;
+    this.broadcastRefetchPending = false;
+    this.broadcastFlight = null;
+  }
+
+  private scheduleBroadcasts(delay: number): void {
+    if (this.broadcastWatchers === 0 || !session.current) return;
+    const dueAt = Date.now() + delay;
+    // A socket burst coalesces into one request, and cannot postpone an earlier boundary.
+    if (this.broadcastTimer !== undefined && this.broadcastDueAt <= dueAt) return;
+    clearTimeout(this.broadcastTimer);
+    this.broadcastDueAt = dueAt;
+    this.broadcastTimer = setTimeout(() => {
+      this.broadcastTimer = undefined;
+      this.broadcastDueAt = Infinity;
+      void this.refreshBroadcasts();
+    }, delay);
+  }
+
+  private async refreshBroadcasts(): Promise<void> {
+    if (this.broadcastWatchers === 0 || !session.current) return;
+    if (this.broadcastFlight) {
+      this.broadcastRefetchPending = true;
+      return this.broadcastFlight;
+    }
+    const generation = this.broadcastGeneration;
+    const request = (async () => {
+      try {
+        const result = await api.broadcasts.active();
+        if (generation !== this.broadcastGeneration || this.broadcastWatchers === 0 || !session.current) return;
+        this.patch({ broadcasts: result.items });
+        this.scheduleBroadcasts(broadcastTimerDelay(result.nextChangeAt, result.serverNow));
+      } catch {
+        // Notices must not block the workspace during an outage; retry on reconnect or timer.
+        if (generation === this.broadcastGeneration) this.scheduleBroadcasts(30_000 + broadcastJitter());
+      } finally {
+        if (generation === this.broadcastGeneration) {
+          this.broadcastFlight = null;
+          if (this.broadcastRefetchPending) {
+            this.broadcastRefetchPending = false;
+            this.scheduleBroadcasts(broadcastJitter());
+          }
+        }
+      }
+    })();
+    this.broadcastFlight = request;
+    await request;
   }
 
   /* ================================================================ session */
@@ -243,8 +332,9 @@ export class LiveStore {
     this.loadToken += 1;
     this.realtime.disconnect();
     this.reset();
+    this.stopBroadcasts();
     this.apply({ type: 'sync/merge', patch: { ...LIVE_EMPTY_STATE, session: 'signed-out' } });
-    this.patch({ phase: 'signed-out', user: null, connection: 'offline' });
+    this.patch({ phase: 'signed-out', user: null, connection: 'offline', broadcasts: [] });
   }
 
   private reset(): void {
@@ -290,6 +380,7 @@ export class LiveStore {
       }
       if (usable.length === 0) {
         this.realtime.disconnect();
+        this.realtime.connect(null);
         this.apply({ type: 'sync/merge', patch: { ...LIVE_EMPTY_STATE, meId: me.user.id, users: [meToUser(me.user)] } });
         this.patch({ phase: 'no-workspace' });
         return;
@@ -1526,6 +1617,11 @@ export class LiveStore {
   /* ================================================================ realtime */
 
   private receive(envelope: RealtimeEnvelope): void {
+    // Global events do not belong to workspace buffers, cursors, or replay history.
+    if (envelope.type === 'system:broadcast') {
+      this.scheduleBroadcasts(broadcastJitter());
+      return;
+    }
     if (this.buffered) {
       this.buffered.push(envelope);
       return;

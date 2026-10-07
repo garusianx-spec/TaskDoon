@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { LiveStatus, LiveStore } from '@/store/live/live-store';
 import { IconButton } from '@/components/ui';
 import { CloseIcon, WarningIcon } from '@/components/icons';
+import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 import { AuthCard } from './AuthCard';
 import { FirstWorkspace } from './FirstWorkspace';
 import { SignInScreen } from './SignInScreen';
@@ -34,7 +35,7 @@ export function LiveGate({ status, store, ready, children }: { readonly status: 
 
   let body: ReactNode;
   if (phase === 'signed-out') body = <SignInScreen store={store} />;
-  else if (phase === 'no-workspace') body = <FirstWorkspace store={store} user={status.user} />;
+  else if (phase === 'no-workspace') body = <><SystemBroadcastBanner /><FirstWorkspace store={store} user={status.user} /></>;
   else if (phase === 'restoring' || !ready) body = <Loading />;
   else body = children;
 

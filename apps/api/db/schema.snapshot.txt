@@ -347,6 +347,17 @@ subtasks.task_id uuid not null
 subtasks.title text not null
 subtasks.updated_at timestamp with time zone not null default now()
 subtasks.workspace_id uuid not null
+system_broadcasts.archived_at timestamp with time zone
+system_broadcasts.created_at timestamp with time zone not null default now()
+system_broadcasts.created_by uuid not null
+system_broadcasts.expires_at timestamp with time zone
+system_broadcasts.id uuid not null default app.uuidv7()
+system_broadcasts.is_active boolean not null default true
+system_broadcasts.level broadcast_level not null
+system_broadcasts.message text not null
+system_broadcasts.starts_at timestamp with time zone not null default now()
+system_broadcasts.updated_at timestamp with time zone not null default now()
+system_broadcasts.updated_by uuid not null
 task_assignees.assigned_at timestamp with time zone not null default now()
 task_assignees.assigned_by uuid
 task_assignees.task_id uuid not null
@@ -898,6 +909,20 @@ subtasks subtasks_updated_at_not_null: NOT NULL updated_at
 subtasks subtasks_workspace_id_not_null: NOT NULL workspace_id
 subtasks subtasks_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 subtasks subtasks_ws_id_uq: UNIQUE (workspace_id, id)
+system_broadcasts system_broadcasts_created_at_not_null: NOT NULL created_at
+system_broadcasts system_broadcasts_created_by_not_null: NOT NULL created_by
+system_broadcasts system_broadcasts_created_by_users_id_fk: FOREIGN KEY (created_by) REFERENCES users(id)
+system_broadcasts system_broadcasts_id_not_null: NOT NULL id
+system_broadcasts system_broadcasts_is_active_not_null: NOT NULL is_active
+system_broadcasts system_broadcasts_level_not_null: NOT NULL level
+system_broadcasts system_broadcasts_message_length: CHECK (((char_length(btrim(message)) >= 1) AND (char_length(btrim(message)) <= 500)))
+system_broadcasts system_broadcasts_message_not_null: NOT NULL message
+system_broadcasts system_broadcasts_pkey: PRIMARY KEY (id)
+system_broadcasts system_broadcasts_starts_at_not_null: NOT NULL starts_at
+system_broadcasts system_broadcasts_time_window: CHECK (((expires_at IS NULL) OR (expires_at > starts_at)))
+system_broadcasts system_broadcasts_updated_at_not_null: NOT NULL updated_at
+system_broadcasts system_broadcasts_updated_by_not_null: NOT NULL updated_by
+system_broadcasts system_broadcasts_updated_by_users_id_fk: FOREIGN KEY (updated_by) REFERENCES users(id)
 task_assignees task_assignees_assigned_at_not_null: NOT NULL assigned_at
 task_assignees task_assignees_pk: PRIMARY KEY (task_id, user_id)
 task_assignees task_assignees_task_fk: FOREIGN KEY (workspace_id, task_id) REFERENCES tasks(workspace_id, id) ON DELETE CASCADE
@@ -1191,6 +1216,11 @@ scheduled_messages CREATE UNIQUE INDEX scheduled_messages_ws_id_uq ON public.sch
 subtasks CREATE INDEX subtasks_task_position_idx ON public.subtasks USING btree (task_id, "position")
 subtasks CREATE UNIQUE INDEX subtasks_pkey ON public.subtasks USING btree (id)
 subtasks CREATE UNIQUE INDEX subtasks_ws_id_uq ON public.subtasks USING btree (workspace_id, id)
+system_broadcasts CREATE INDEX system_broadcasts_active_starts_idx ON public.system_broadcasts USING btree (starts_at) WHERE ((archived_at IS NULL) AND (is_active = true))
+system_broadcasts CREATE INDEX system_broadcasts_created_by_idx ON public.system_broadcasts USING btree (created_by)
+system_broadcasts CREATE INDEX system_broadcasts_created_idx ON public.system_broadcasts USING btree (created_at DESC NULLS LAST, id DESC NULLS LAST)
+system_broadcasts CREATE INDEX system_broadcasts_updated_by_idx ON public.system_broadcasts USING btree (updated_by)
+system_broadcasts CREATE UNIQUE INDEX system_broadcasts_pkey ON public.system_broadcasts USING btree (id)
 task_assignees CREATE INDEX task_assignees_user_idx ON public.task_assignees USING btree (workspace_id, user_id)
 task_assignees CREATE UNIQUE INDEX task_assignees_pk ON public.task_assignees USING btree (task_id, user_id)
 task_attachments CREATE INDEX task_attachments_attachment_idx ON public.task_attachments USING btree (attachment_id)
@@ -1268,6 +1298,7 @@ role_permissions enabled=true forced=true
 roles enabled=true forced=true
 scheduled_messages enabled=true forced=true
 subtasks enabled=true forced=true
+system_broadcasts enabled=false forced=false
 task_assignees enabled=true forced=true
 task_attachments enabled=true forced=true
 task_comments enabled=true forced=true
@@ -1349,6 +1380,7 @@ roles roles_protect_locked -> protect_locked_roles
 roles roles_touch -> touch_updated_at
 scheduled_messages scheduled_messages_touch -> touch_updated_at
 subtasks subtasks_touch -> touch_updated_at
+system_broadcasts system_broadcasts_touch_updated_at -> touch_updated_at
 tasks tasks_sync_status -> sync_task_status
 tasks tasks_touch -> touch_updated_at
 users users_touch -> touch_updated_at
@@ -1416,6 +1448,7 @@ role_permissions DELETE,INSERT,SELECT,UPDATE
 roles DELETE,INSERT,SELECT,UPDATE
 scheduled_messages DELETE,INSERT,SELECT,UPDATE
 subtasks DELETE,INSERT,SELECT,UPDATE
+system_broadcasts INSERT,SELECT,UPDATE
 task_assignees DELETE,INSERT,SELECT,UPDATE
 task_attachments DELETE,INSERT,SELECT,UPDATE
 task_comments DELETE,INSERT,SELECT,UPDATE

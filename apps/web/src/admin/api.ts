@@ -1,4 +1,11 @@
 import type {
+  CreateBroadcastBody,
+  UpdateBroadcastBody,
+  SystemBroadcastPage,
+  SystemBroadcastView,
+  PlatformMetrics,
+  PlatformHealth,
+  PlatformOutboxHealth,
   PasswordResetChannel,
   PasswordResetIssued,
   PasswordResetRequiredBody,
@@ -48,6 +55,15 @@ export interface MessageFilters {
  */
 export const adminApi = {
   me: () => http.get<PlatformAdminMe>('/admin/me'),
+
+  broadcasts: (filters: { readonly cursor?: string | null; readonly includeArchived?: boolean } = {}) =>
+    http.get<SystemBroadcastPage>(`/admin/broadcasts${query({ ...filters, limit: 50 })}`),
+  createBroadcast: (body: CreateBroadcastBody) => http.post<SystemBroadcastView>('/admin/broadcasts', body),
+  updateBroadcast: (id: string, body: UpdateBroadcastBody) => http.patch<SystemBroadcastView>(`/admin/broadcasts/${id}`, body),
+  archiveBroadcast: (id: string) => http.delete<void>(`/admin/broadcasts/${id}`),
+  metrics: () => http.get<PlatformMetrics>('/admin/metrics'),
+  health: () => http.get<PlatformHealth>('/admin/health'),
+  outboxHealth: () => http.get<PlatformOutboxHealth>('/admin/health/outbox'),
 
   users: (filters: UserFilters) => http.get<PlatformUserPage>(`/admin/users${query({ ...filters, limit: 50 })}`),
   user: (userId: string) => http.get<PlatformUserDetail>(`/admin/users/${userId}`),

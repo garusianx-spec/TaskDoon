@@ -296,6 +296,17 @@ describe('M1 checklist: audit trail and correlation', () => {
       r.set(bearer(operator)).send({ userId: heir.userId, reason: 'مالک در دسترس نیست' }),
     );
 
+    // Phase 4: create, edit and soft-archive a global platform announcement.
+    const broadcast = (
+      await traced('post', '/api/v1/admin/broadcasts', '/api/v1/admin/broadcasts', (r) =>
+        r.set(bearer(operator)).set('Idempotency-Key', idempotencyKey()).send({ message: 'اطلاعیه ردیابی', level: 'info' }),
+      )
+    ).body as { id: string };
+    await traced('patch', '/api/v1/admin/broadcasts/{broadcastId}', `/api/v1/admin/broadcasts/${broadcast.id}`, (r) =>
+      r.set(bearer(operator)).send({ message: 'اطلاعیه اصلاح‌شده' }),
+    );
+    await traced('delete', '/api/v1/admin/broadcasts/{broadcastId}', `/api/v1/admin/broadcasts/${broadcast.id}`, (r) => r.set(bearer(operator)));
+
     // Phone and password: sign-in, confirming that session with an SMS code, and recovery.
     const keyholder = await withAdminPassword(t, await signIn(t, randomPhone(), 'دارنده رمز'));
     const passwordSession = (

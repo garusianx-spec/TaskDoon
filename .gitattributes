@@ -1,0 +1,4 @@
+
+# Generated artifacts are compared byte for byte on every platform.
+/apps/api/openapi.json text eol=lf
+/apps/api/db/schema.snapshot.txt text eol=lf

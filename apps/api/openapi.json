@@ -1,6 +1,28 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/broadcasts/active": {
+      "get": {
+        "operationId": "Broadcasts_active",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveBroadcastsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Current platform announcements for every authenticated user",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
     "/api/v1/auth/otp/request": {
       "post": {
         "operationId": "Auth_request",
@@ -6233,6 +6255,256 @@
         ]
       }
     },
+    "/api/v1/admin/broadcasts": {
+      "get": {
+        "operationId": "PlatformAdmin_listBroadcasts",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "current",
+              "type": "string",
+              "enum": [
+                "current",
+                "archived",
+                "all"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemBroadcastPageDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Platform broadcasts, including inactive and optionally archived entries",
+        "tags": [
+          "platform-admin"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformAdmin_createBroadcast",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBroadcastDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemBroadcastViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a platform announcement (audited and delivered through the outbox)",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/api/v1/admin/broadcasts/{broadcastId}": {
+      "patch": {
+        "operationId": "PlatformAdmin_updateBroadcast",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBroadcastDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemBroadcastViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit or activate a platform announcement",
+        "tags": [
+          "platform-admin"
+        ]
+      },
+      "delete": {
+        "operationId": "PlatformAdmin_archiveBroadcast",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soft archive a platform announcement",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/api/v1/admin/metrics": {
+      "get": {
+        "operationId": "PlatformAdmin_metrics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformMetricsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Platform counts and storage usage, cached for 60 seconds",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/api/v1/admin/health": {
+      "get": {
+        "operationId": "PlatformAdmin_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformHealthDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Parallel readiness probes and passive SMS provider status",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/api/v1/admin/health/outbox": {
+      "get": {
+        "operationId": "PlatformAdmin_outboxHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformOutboxHealthDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Outbox backlog, queue counts and sanitized failure summaries",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
     "/api/v1/admin/users": {
       "get": {
         "operationId": "PlatformAdmin_listUsers",
@@ -7328,6 +7600,74 @@
       }
     },
     "schemas": {
+      "ActiveBroadcastViewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "message",
+          "level",
+          "startsAt",
+          "expiresAt",
+          "updatedAt"
+        ]
+      },
+      "ActiveBroadcastsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActiveBroadcastViewDto"
+            }
+          },
+          "nextChangeAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "serverNow": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "items",
+          "nextChangeAt",
+          "serverNow"
+        ]
+      },
       "MeUserDto": {
         "type": "object",
         "properties": {
@@ -12558,6 +12898,531 @@
           "smsConfirmationRequired",
           "stepUpRequired",
           "available"
+        ]
+      },
+      "SystemBroadcastViewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdByName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "message",
+          "level",
+          "startsAt",
+          "expiresAt",
+          "updatedAt",
+          "isActive",
+          "createdAt",
+          "archivedAt",
+          "createdByName"
+        ]
+      },
+      "SystemBroadcastPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemBroadcastViewDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "CreateBroadcastDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "message",
+          "level"
+        ]
+      },
+      "UpdateBroadcastDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PlatformUserMetricsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "minimum": 0,
+            "description": "All retained users, including deleted accounts"
+          },
+          "active": {
+            "type": "number",
+            "minimum": 0
+          },
+          "suspended": {
+            "type": "number",
+            "minimum": 0
+          },
+          "newLast7Days": {
+            "type": "number",
+            "minimum": 0
+          },
+          "newLast30Days": {
+            "type": "number",
+            "minimum": 0
+          },
+          "activeLast7Days": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Distinct active users with session activity during the last seven days"
+          }
+        },
+        "required": [
+          "total",
+          "active",
+          "suspended",
+          "newLast7Days",
+          "newLast30Days",
+          "activeLast7Days"
+        ]
+      },
+      "PlatformWorkspaceMetricsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "minimum": 0,
+            "description": "All retained workspaces, including trash"
+          },
+          "active": {
+            "type": "number",
+            "minimum": 0
+          },
+          "suspended": {
+            "type": "number",
+            "minimum": 0
+          },
+          "deleted": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "total",
+          "active",
+          "suspended",
+          "deleted"
+        ]
+      },
+      "PlatformContentMetricsDto": {
+        "type": "object",
+        "properties": {
+          "readyFiles": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Ready files not deleted, in workspaces not deleted"
+          },
+          "storageUsedBytes": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Storage usage recorded for workspaces not deleted"
+          },
+          "tasks": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Tasks not deleted, in workspaces not deleted"
+          },
+          "messages": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Messages not deleted, in workspaces not deleted"
+          },
+          "messagesLast7Days": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "readyFiles",
+          "storageUsedBytes",
+          "tasks",
+          "messages",
+          "messagesLast7Days"
+        ]
+      },
+      "PlatformMetricsDto": {
+        "type": "object",
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cached": {
+            "type": "boolean",
+            "description": "This response was served from the 60-second metrics cache"
+          },
+          "users": {
+            "$ref": "#/components/schemas/PlatformUserMetricsDto"
+          },
+          "workspaces": {
+            "$ref": "#/components/schemas/PlatformWorkspaceMetricsDto"
+          },
+          "content": {
+            "$ref": "#/components/schemas/PlatformContentMetricsDto"
+          }
+        },
+        "required": [
+          "generatedAt",
+          "cached",
+          "users",
+          "workspaces",
+          "content"
+        ]
+      },
+      "PlatformProbeDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "latencyMs": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Dependency readiness probe duration in milliseconds"
+          },
+          "error": {
+            "type": "string",
+            "description": "Generic timeout or unavailable status, without connection details"
+          }
+        },
+        "required": [
+          "ok",
+          "latencyMs"
+        ]
+      },
+      "PlatformServiceHealthDto": {
+        "type": "object",
+        "properties": {
+          "database": {
+            "$ref": "#/components/schemas/PlatformProbeDto"
+          },
+          "adminPool": {
+            "$ref": "#/components/schemas/PlatformProbeDto"
+          },
+          "redisCore": {
+            "$ref": "#/components/schemas/PlatformProbeDto"
+          },
+          "redisRt": {
+            "$ref": "#/components/schemas/PlatformProbeDto"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/PlatformProbeDto"
+          }
+        },
+        "required": [
+          "database",
+          "adminPool",
+          "redisCore",
+          "redisRt",
+          "storage"
+        ]
+      },
+      "PlatformSmsProviderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "failures": {
+            "type": "number",
+            "minimum": 0
+          },
+          "openUntil": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Breaker reopening time, or null when the circuit is closed"
+          }
+        },
+        "required": [
+          "name",
+          "failures",
+          "openUntil"
+        ]
+      },
+      "PlatformSmsHealthDto": {
+        "type": "object",
+        "properties": {
+          "providers": {
+            "description": "Passive state of configured providers; no SMS is sent by this check",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformSmsProviderDto"
+            }
+          },
+          "failedJobs": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true,
+            "description": "Failed notification queue jobs, including SMS/email; null if the queue cannot be read"
+          }
+        },
+        "required": [
+          "providers",
+          "failedJobs"
+        ]
+      },
+      "PlatformHealthDto": {
+        "type": "object",
+        "properties": {
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "services": {
+            "$ref": "#/components/schemas/PlatformServiceHealthDto"
+          },
+          "sms": {
+            "$ref": "#/components/schemas/PlatformSmsHealthDto"
+          }
+        },
+        "required": [
+          "checkedAt",
+          "services",
+          "sms"
+        ]
+      },
+      "PlatformOutboxPendingDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "minimum": 0
+          },
+          "oldestAgeSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Age of the oldest unpublished event in seconds, or zero when empty"
+          }
+        },
+        "required": [
+          "count",
+          "oldestAgeSeconds"
+        ]
+      },
+      "PlatformQueueCountsDto": {
+        "type": "object",
+        "properties": {
+          "waiting": {
+            "type": "number",
+            "minimum": 0
+          },
+          "active": {
+            "type": "number",
+            "minimum": 0
+          },
+          "delayed": {
+            "type": "number",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "number",
+            "minimum": 0
+          },
+          "paused": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "waiting",
+          "active",
+          "delayed",
+          "failed",
+          "paused"
+        ]
+      },
+      "PlatformQueueFailureDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "attempts": {
+            "type": "number",
+            "minimum": 0
+          },
+          "failedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Sanitized failure summary, without job data or stack trace"
+          }
+        },
+        "required": [
+          "name",
+          "attempts",
+          "failedAt",
+          "reason"
+        ]
+      },
+      "PlatformQueueHealthDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "notifications",
+              "work",
+              "maintenance"
+            ]
+          },
+          "counts": {
+            "$ref": "#/components/schemas/PlatformQueueCountsDto"
+          },
+          "recentFailures": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformQueueFailureDto"
+            }
+          },
+          "error": {
+            "type": "string",
+            "description": "Queue unavailable or timed out; counts cannot be trusted while this field is present"
+          }
+        },
+        "required": [
+          "name",
+          "counts",
+          "recentFailures"
+        ]
+      },
+      "PlatformOutboxHealthDto": {
+        "type": "object",
+        "properties": {
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "pending": {
+            "$ref": "#/components/schemas/PlatformOutboxPendingDto"
+          },
+          "queues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformQueueHealthDto"
+            }
+          }
+        },
+        "required": [
+          "checkedAt",
+          "pending",
+          "queues"
         ]
       },
       "PlatformUserSummaryDto": {

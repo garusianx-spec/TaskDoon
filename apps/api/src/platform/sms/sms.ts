@@ -167,6 +167,13 @@ interface Breaker {
   openUntil: number;
 }
 
+/** Passive provider/breaker state; no credentials, sends or gateway requests. */
+export interface SmsProviderStatus {
+  readonly name: string;
+  readonly failures: number;
+  readonly openUntil: string | null;
+}
+
 /**
  * Sends through the configured providers in order, failing over on error. Three consecutive
  * failures open a provider's breaker for 30 seconds so a dead gateway costs nothing per request.
@@ -207,6 +214,18 @@ export class SmsService {
   /** The in-memory console driver, when configured (development and tests). */
   get console(): ConsoleSmsProvider | undefined {
     return this.providers.find((provider): provider is ConsoleSmsProvider => provider instanceof ConsoleSmsProvider);
+  }
+
+  status(): readonly SmsProviderStatus[] {
+    const now = Date.now();
+    return this.providers.map(({ name }) => {
+      const breaker = this.breakers.get(name);
+      return {
+        name,
+        failures: breaker?.failures ?? 0,
+        openUntil: breaker && breaker.openUntil > now ? new Date(breaker.openUntil).toISOString() : null,
+      };
+    });
   }
 
   async send(message: SmsMessage): Promise<SmsReceipt> {

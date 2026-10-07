@@ -1,3 +1,4 @@
+import type { SystemBroadcastEvent } from '@taskin/contracts';
 import { Injectable } from '@nestjs/common';
 import { RequestContext } from '../context/request-context.js';
 import type { Tx } from '../db/database.js';
@@ -5,6 +6,7 @@ import { outboxEvents } from '../db/schema/all.js';
 
 /** Every event type the outbox carries, with its payload. Consumers switch on `type`. */
 export interface OutboxEventMap {
+  'system.broadcast': SystemBroadcastEvent;
   /** An SMS the worker must send (invitation link, security alert). */
   'notification.sms': {
     readonly to: string;

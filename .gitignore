@@ -19,3 +19,5 @@ apps/web/e2e/out
 
 # local environment (apps/api/.env.example is the template)
 .env
+
+TaskDoon-backup.git/

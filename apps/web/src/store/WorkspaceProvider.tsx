@@ -179,9 +179,9 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
-const DEMO_STATUS: LiveStatus = { phase: 'ready', connection: 'online', user: null, toast: null };
+const DEMO_STATUS: LiveStatus = { phase: 'ready', connection: 'online', user: null, toast: null, broadcasts: [] };
 /** What the server renders: the live app always starts by restoring the session in the browser. */
-const SERVER_STATUS: LiveStatus = { phase: 'restoring', connection: 'offline', user: null, toast: null };
+const SERVER_STATUS: LiveStatus = { phase: 'restoring', connection: 'offline', user: null, toast: null, broadcasts: [] };
 
 export function useWorkspace(): WorkspaceContextValue {
   const context = useContext(WorkspaceContext);
