@@ -58,6 +58,8 @@ export interface Workspace {
   readonly plan: string;
   /** How many projects the plan allows; `null` (or absent) when it sets no limit. */
   readonly projectLimit?: number | null;
+  /** IANA zone for the workspace's calendar dates; absent in device-local demo fixtures. */
+  readonly timeZone?: string;
   readonly memberCount: number;
   /** The Owner — the only member who may delete the workspace. */
   readonly ownerId: string;

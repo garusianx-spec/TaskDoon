@@ -5,7 +5,7 @@ import type { BoardColumn, TaskDraft, TaskPriority } from '@taskin/contracts';
 import { TASK_PRIORITIES } from '@/data/reference';
 import { directory } from '@/store/directory';
 import { formatFileSize } from '@/lib/format';
-import { formatJalali, toISODate } from '@taskin/jalali';
+import { formatJalali, fromISODate, toISODate } from '@taskin/jalali';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { taskDraft } from '@/store/drafts';
 import { columnForPlacement, projectColumns } from '@/store/selectors';
@@ -28,20 +28,21 @@ export interface CreateTaskModalProps {
   readonly draft: TaskDraft | null;
   /** Every project's board columns, custom ones included; the chosen project's are offered. */
   readonly columns: readonly BoardColumn[];
+  /** Calendar dates follow this workspace zone; omitted for device-local demo data. */
+  readonly timeZone?: string;
   readonly onClose: () => void;
   readonly onSubmit: (draft: TaskDraft) => void;
   /** Offered when there is no project yet: every task belongs to one. */
   readonly onCreateProject?: () => void;
 }
 
-const today = (): string => toISODate(new Date());
-
 /**
  * Task composer. Opened blank from the rail, sidebar or board; pre-dated from a calendar
  * cell; or pre-filled from a chat message ("تبدیل به وظیفه") or a note ("تبدیل یادداشت به
  * وظیفه") — in which case the source, attachments and checklist items ride along.
  */
-export function CreateTaskModal({ open, draft, columns, onClose, onSubmit, onCreateProject }: CreateTaskModalProps) {
+export function CreateTaskModal({ open, draft, columns, timeZone, onClose, onSubmit, onCreateProject }: CreateTaskModalProps) {
+  const today = (): string => toISODate(new Date(), timeZone);
   const [form, setForm] = useState<TaskDraft>(() => taskDraft());
   const [touched, setTouched] = useState(false);
 
@@ -84,7 +85,7 @@ export function CreateTaskModal({ open, draft, columns, onClose, onSubmit, onCre
           : fromNote
             ? 'عنوان و متن یادداشت در فرم قرار گرفت و موارد چک‌لیست به زیروظیفه تبدیل می‌شوند.'
             : presetDate && form.dueDate
-              ? `مهلت انجام روی ${formatJalali(form.dueDate, 'long')} تنظیم شده است.`
+              ? `مهلت انجام روی ${formatJalali(fromISODate(form.dueDate), 'long')} تنظیم شده است.`
               : 'وظیفه را در یکی از پروژه‌های سازمان ثبت کنید.'
       }
       icon={
@@ -193,6 +194,7 @@ export function CreateTaskModal({ open, draft, columns, onClose, onSubmit, onCre
             <JalaliDatePicker
               label="انتخاب مهلت انجام"
               value={form.dueDate ?? today()}
+              timeZone={timeZone}
               onChange={(dueDate) => setForm((current) => ({ ...current, dueDate }))}
             />
           </div>

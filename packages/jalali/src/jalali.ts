@@ -337,8 +337,20 @@ export function buildMonthGrid(jy: number, jm: number, today: Date = new Date())
   return cells;
 }
 
-/** Local-timezone-safe `YYYY-MM-DD` (never shifts a day the way `toISOString` can). */
-export function toISODate(date: Date): string {
+/** `YYYY-MM-DD` on the given zone's calendar, or the device's calendar when omitted. */
+export function toISODate(date: Date, timeZone?: string): string {
+  if (timeZone !== undefined) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      calendar: 'gregory',
+      numberingSystem: 'latn',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+    const part = (type: Intl.DateTimeFormatPartTypes): string => parts.find((entry) => entry.type === type)?.value ?? '';
+    return `${part('year')}-${part('month')}-${part('day')}`;
+  }
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
