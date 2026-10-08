@@ -56,7 +56,7 @@ async function smsAfter(from, pattern, what) {
     if (match?.[1]) return match[1];
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  throw new Error(`No ${what} in ${apiLog} within 20 s.`);
+  throw new Error(`No ${what} in${apiLog} within 20 s.`);
 }
 
 /** Phone → code → (new accounts) name. */
@@ -83,6 +83,18 @@ const guestContext = await browser.newContext({ viewport, locale: 'fa-IR' });
 const guest = await guestContext.newPage();
 watchConsole(owner);
 watchConsole(guest);
+
+for (const [name, page] of [['owner', owner], ['guest', guest]]) {
+  page.on('response', async (response) => {
+    if (response.status() !== 400) return;
+    console.log(
+      'HTTP400', new Date().toISOString(), name,
+      response.request().method(), new URL(response.url()).pathname,
+      await response.text().catch(() => '[unreadable]'),
+    );
+  });
+}
+
 const railOf = (page) => page.getByRole('navigation', { name: 'ناوبری اصلی' });
 const quickCreate = async (page, item) => {
   await railOf(page).getByRole('button', { name: 'ایجاد سریع' }).click();
@@ -457,172 +469,4 @@ try {
       await scheduler.getByLabel('ساعت ارسال').fill(`${String(soon.getHours()).padStart(2, '0')}:${String(soon.getMinutes()).padStart(2, '0')}`);
     });
   }
-  const now1 = `ارسال فوری ${runId}`;
-  const dropped = `لغوشده ${runId}`;
-  await scheduleIn(now1, (scheduler) => scheduler.getByRole('button', { name: /^فردا ساعت/ }).click());
-  await scheduleIn(dropped, (scheduler) => scheduler.getByRole('button', { name: /^فردا ساعت/ }).click());
-  const waitingBar = ownerThread.getByRole('button', { name: /پیام‌های زمان‌بندی‌شده/ });
-  check(await visible(waitingBar), 'the owner’s scheduled messages wait above the composer');
-  check((await ownerThread.getByText(now1).count()) === 0, '…and are not in the thread');
-  await owner.reload();
-  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click({ timeout: 20_000 });
-  check(await visible(waitingBar, 20_000), 'they are stored on the server: still waiting after a reload');
-  await railOf(guest).getByRole('link', { name: 'گفتگوها' }).click();
-  await guest.waitForURL('**/chats');
-  await guest.getByRole('button', { name: new RegExp(ownerName) }).first().click();
-  check(await visible(guestThread, 10_000), 'the guest has the direct chat open');
-  check((await guestThread.getByText(now1).count()) === 0, 'the guest does not see them before they are sent');
-
-  await waitingBar.click();
-  const waitingList = owner.getByRole('dialog', { name: 'پیام‌های زمان‌بندی‌شده' });
-  const waitingItems = waitingList.getByRole('listitem');
-  check(await eventually(async () => (await waitingItems.count()) === (timedToday ? 3 : 2), 10_000), 'the list holds each of them');
-  await waitingItems.filter({ hasText: now1 }).getByRole('button', { name: 'ارسال فوری' }).click();
-  check(await visible(guestThread.getByText(now1), 15_000), '«ارسال فوری»: the guest receives it live');
-  check(await visible(ownerThread.getByText(now1), 10_000), '…and it is in the owner’s thread');
-  await waitingItems.filter({ hasText: dropped }).getByRole('button', { name: 'لغو / حذف' }).click();
-  check(await eventually(async () => (await waitingItems.filter({ hasText: dropped }).count()) === 0, 10_000), '«لغو / حذف» takes it off the list');
-  await owner.keyboard.press('Escape');
-  if (timedToday) {
-    check(await visible(guestThread.getByText(timed), 180_000), 'at its time the worker sends it: the guest receives it live');
-    check(await eventually(async () => (await waitingBar.count()) === 0, 15_000), '…and the owner’s list is empty');
-  }
-  check((await guestThread.getByText(dropped).count()) === 0 && (await ownerThread.getByText(dropped).count()) === 0, 'the cancelled one is never sent');
-  check((await autoReplies.count()) === 1, 'scheduled messages to the away guest do not set off another answer the same day');
-  await owner.screenshot({ path: `${out}/live_scheduled.png` });
-
-  /* ------------------------------------------------ profile menu: sign out clears the session */
-
-  await railOf(guest).getByRole('button', { name: /حساب کاربری/ }).click();
-  await guest.getByRole('menuitem', { name: 'پروفایل من' }).click();
-  check(await visible(guest.getByRole('dialog', { name: 'پروفایل من' })), 'the profile menu opens «پروفایل من»');
-  await guest.keyboard.press('Escape');
-  await railOf(guest).getByRole('button', { name: /حساب کاربری/ }).click();
-  await guest.getByRole('menuitem', { name: 'خروج از حساب' }).click();
-  await guest.getByRole('dialog', { name: 'خروج از حساب کاربری' }).getByRole('button', { name: 'خروج از حساب' }).click();
-  check(await visible(guest.getByRole('heading', { name: 'ورود به تسک‌دون' }), 15_000), 'signing out shows the sign-in screen');
-  const cookies = await guestContext.cookies();
-  check(!cookies.some((cookie) => /taskin_rt$/.test(cookie.name) && cookie.value), 'the refresh cookie is cleared');
-  await guest.reload();
-  check(await visible(guest.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000), 'the session stays gone after a reload');
-
-  /* ------------------------------------------------ Phase 2: a note is stored with its first words */
-
-  const notePosts = [];
-  const countNotePost = (request) => {
-    if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/notes')) notePosts.push(request.url());
-  };
-  owner.on('request', countNotePost);
-  await railOf(owner).getByRole('link', { name: 'یادداشت‌ها' }).click();
-  await owner.waitForURL('**/notes');
-  const notebook = owner.getByRole('complementary', { name: 'ستون زمینه' });
-  const noteList = owner.getByRole('region', { name: 'فهرست همه یادداشت‌ها' }).getByRole('listitem');
-  await notebook.getByRole('button', { name: 'یادداشت جدید' }).waitFor({ timeout: 15_000 });
-  const notesBefore = await noteList.count();
-  await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
-  await owner.waitForTimeout(1_500); // past the autosave delay
-  check(notePosts.length === 0, 'a new, blank note is not sent to the server');
-  const noteTitle = owner.getByRole('textbox', { name: /عنوان/ }).first();
-  await noteTitle.pressSequentially('جلسه هفتگی', { delay: 60 });
-  check(await eventually(() => notePosts.length === 1, 10_000), 'its first words create it: one POST /notes');
-  await owner.waitForTimeout(1_500);
-  check(notePosts.length === 1, '…and only one, however many keystrokes follow');
-  check(
-    (await noteTitle.inputValue()) === 'جلسه هفتگی' && (await noteTitle.evaluate((element) => element === document.activeElement)),
-    'the editor keeps its text and focus while the note is stored',
-  );
-  await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
-  await owner.waitForTimeout(1_000);
-  await noteList.filter({ hasText: 'جلسه هفتگی' }).getByRole('button').click();
-  check(await eventually(async () => (await noteList.count()) === notesBefore + 1), 'switching away drops a blank draft');
-  check(notePosts.length === 1, '…which never reached the server');
-  owner.off('request', countNotePost);
-  await owner.waitForTimeout(1_000);
-  await owner.reload();
-  check(
-    await eventually(async () => (await noteList.count()) === notesBefore + 1 && (await noteList.filter({ hasText: 'جلسه هفتگی' }).count()) === 1, 20_000),
-    'after a reload: the note with words, and no blank one',
-  );
-
-  /* ------------------------------------------------ Phase 2: the plan's project limit */
-
-  // The free plan allows five projects; the workspace has one.
-  for (let index = 2; index <= 5; index += 1) {
-    await quickCreate(owner, 'پروژه جدید');
-    dialog = owner.getByRole('dialog', { name: 'پروژه جدید' });
-    await dialog.getByLabel('نام پروژه').fill(`پروژه ${index}`);
-    await dialog.getByRole('button', { name: 'ایجاد پروژه' }).click();
-    await dialog.waitFor({ state: 'detached' });
-  }
-  check(await eventually(async () => (await tree.getByRole('button', { name: /^پروژه (5|۵)/ }).count()) === 1, 15_000), 'five projects: the free plan is full');
-  await quickCreate(owner, 'پروژه جدید');
-  const limitAlert = owner.getByRole('alertdialog', { name: 'سقف پروژه‌های این فضای کاری پر شده است' });
-  check(await visible(limitAlert), 'at the limit «پروژه جدید» shows an alert instead of the form');
-  check((await owner.getByRole('dialog', { name: 'پروژه جدید' }).count()) === 0, '…and the form never opens');
-  check(await visible(limitAlert.getByText(/«رایگان» حداکثر ۵ پروژه/)), 'the alert names the plan and its limit');
-  await owner.screenshot({ path: `${out}/live_project_limit.png` });
-  await limitAlert.getByRole('button', { name: 'متوجه شدم' }).click();
-  check(await eventually(async () => (await limitAlert.count()) === 0), 'the alert closes');
-
-  /* ------------------------------------------------ Phase 3.1: the owner's project trash */
-
-  const lastProject = tree.getByRole('button', { name: /^پروژه (5|۵)/ });
-  await lastProject.hover();
-  await tree.getByRole('button', { name: /^حذف پروژه پروژه (5|۵)$/ }).click();
-  dialog = owner.getByRole('dialog', { name: /^حذف پروژه «پروژه (5|۵)»$/ });
-  await dialog.getByRole('button', { name: 'انتقال به سطل زباله' }).click();
-  check(await eventually(async () => (await lastProject.count()) === 0, 10_000), 'the owner moves a project to the trash: it leaves the tree');
-  await owner.getByRole('button', { name: 'آرشیو / سطل زباله' }).click();
-  dialog = owner.getByRole('dialog', { name: 'آرشیو / سطل زباله' });
-  const trashed = dialog.getByRole('listitem').filter({ hasText: /پروژه (5|۵)/ });
-  check(await visible(trashed, 10_000), 'the trash lists it, from the server');
-  check(await visible(trashed.getByText('۴۰ روز تا پاک‌سازی')), '…restorable for 40 days');
-  await owner.reload();
-  await owner.getByRole('button', { name: 'آرشیو / سطل زباله' }).click();
-  check(await visible(dialog.getByRole('listitem').filter({ hasText: /پروژه (5|۵)/ }), 15_000), 'the deletion is stored: still in the trash after a reload');
-  await dialog.getByRole('button', { name: /^بازیابی پروژه (5|۵)$/ }).click();
-  check(await eventually(async () => (await lastProject.count()) === 1, 15_000), '«بازیابی» brings it back into the tree');
-  check(await visible(dialog.getByText('سطل زباله خالی است')), 'the trash is empty again');
-  await owner.keyboard.press('Escape');
-
-  /* ------------------------------------------------ Phase 3.1: a removed member keeps their history */
-
-  await railOf(owner).getByRole('link', { name: 'اعضای سازمان' }).click();
-  await owner.waitForURL('**/directory');
-  await owner.getByRole('button', { name: `حذف ${guestName} از فضای کاری` }).click();
-  dialog = owner.getByRole('dialog', { name: `حذف ${guestName} از فضای کاری` });
-  await dialog.getByLabel('رمز مدیر').fill('Taskin-2026!');
-  await dialog.getByRole('button', { name: 'حذف از فضای کاری' }).click();
-  check(await eventually(async () => (await owner.getByRole('listitem').filter({ hasText: guestName }).count()) === 0, 15_000), 'the owner removes the guest from the workspace (with the admin password)');
-  await railOf(owner).getByRole('link', { name: 'گفتگوها' }).click();
-  await owner.waitForURL('**/chats');
-  await owner.reload();
-  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click({ timeout: 20_000 });
-  const formerThread = owner.getByRole('region', { name: `گفتگوی ${guestName}` });
-  const formerBubble = formerThread.locator('div.group\\/message').filter({ hasText: 'دیدم، ممنون!' }).last();
-  check(await visible(formerBubble, 15_000), 'their messages stay in the direct chat, still titled with their name');
-  check(await visible(formerBubble.getByText('عضو سابق')), '…marked «عضو سابق», after a reload too');
-  await owner.screenshot({ path: `${out}/live_former_member.png` });
-
-  /* ------------------------------------------------ M4: a workspace icon, uploaded */
-
-  await railOf(owner).getByRole('button', { name: /^فضای کاری فعال/ }).click();
-  await owner.getByRole('menuitem', { name: 'ایجاد فضای کاری جدید' }).click();
-  dialog = owner.getByRole('dialog', { name: 'ایجاد فضای کاری جدید' });
-  await dialog.getByRole('textbox', { name: 'نام فضای کاری' }).fill(`فضای نشان‌دار ${runId}`);
-  await dialog.locator('input[type=file]').setInputFiles({ name: 'icon.png', mimeType: 'image/png', buffer: PNG });
-  await dialog.getByRole('button', { name: 'ایجاد و ورود' }).click();
-  check(await eventually(async () => ((await railOf(owner).getByRole('button', { name: /^فضای کاری فعال/ }).textContent()) ?? '').includes('فضای نشان‌دار'), 20_000), 'the new workspace opens');
-  const icon = railOf(owner).getByRole('button', { name: /^فضای کاری فعال/ }).locator('img');
-  check(
-    await eventually(async () => ((await icon.getAttribute('src').catch(() => null)) ?? '').startsWith('http') && (await icon.evaluate((image) => image.complete && image.naturalWidth > 0)), 20_000),
-    'its icon is the uploaded picture, served from storage',
-  );
-} catch (error) {
-  // A step that cannot run is a failure too; the console problems below usually say why.
-  check(false, `the flow stopped: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`);
-  await owner.screenshot({ path: `${out}/live_failure_owner.png` }).catch(() => undefined);
-  await guest.screenshot({ path: `${out}/live_failure_guest.png` }).catch(() => undefined);
-}
-
-await finish(browser);
+  const now1 = `ارسال فوری ${
