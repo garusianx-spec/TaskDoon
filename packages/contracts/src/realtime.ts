@@ -1,3 +1,4 @@
+import type { SystemBroadcastEvent } from './api/broadcasts.js';
 import type { ManualPresence } from './api/workspaces.js';
 import type { ApiErrorCode } from './api/errors.js';
 import type { MessageView, ReactionView, ScheduledMessageView, SendMessageBody, SentMessage } from './api/chat.js';
@@ -30,6 +31,7 @@ export type ResyncScope = 'all' | 'board' | 'projects' | 'conversations' | 'noti
 
 /** Payloads of the server events. */
 export interface RealtimeEventMap {
+  'system:broadcast': SystemBroadcastEvent;
   'message:new': MessageView;
   'message:updated': MessageView;
   'message:deleted': { readonly conversationId: string; readonly messageId: string; readonly seq: number };

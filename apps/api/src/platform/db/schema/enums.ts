@@ -1,7 +1,9 @@
 import { pgEnum } from 'drizzle-orm/pg-core';
-import { PERMISSION_ACTION_IDS, PERMISSION_MODULE_IDS } from '@taskin/contracts';
+import { BROADCAST_LEVELS, PERMISSION_ACTION_IDS, PERMISSION_MODULE_IDS } from '@taskin/contracts';
 
 /** Enum literals match `@taskin/contracts` exactly, so rows map to API types without translation. */
+
+export const broadcastLevel = pgEnum('broadcast_level', BROADCAST_LEVELS);
 
 export const userStatus = pgEnum('user_status', ['active', 'suspended', 'deleted']);
 

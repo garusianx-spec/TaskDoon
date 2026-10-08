@@ -77,7 +77,7 @@ services:
     # Durable: BullMQ, rate limits, idempotency, revocations. BullMQ requires noeviction.
     command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
     volumes: [redisdata:/data]
-    ports: ["6379:6379"]
+    ports: ["16379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s
@@ -88,7 +88,7 @@ services:
     image: redis:7.4-alpine
     # Disposable: Socket.IO fan-out, presence, typing.
     command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
-    ports: ["6380:6379"]
+    ports: ["16380:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s

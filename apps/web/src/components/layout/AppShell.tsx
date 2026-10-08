@@ -7,6 +7,7 @@ import { conversationById, messagePreview, projectColumns, taskById, userById } 
 import { nextLocalId } from '@/store/ids';
 import { NavRail } from './NavRail';
 import { TopAppBar } from './TopAppBar';
+import { SystemBroadcastBanner } from './SystemBroadcastBanner';
 import { BottomNav } from './BottomNav';
 import { Drawer } from '@/components/ui';
 import { TaskInspector, type TaskSourceView } from '@/components/tasks/TaskInspector';
@@ -86,6 +87,7 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
 
       <div className="flex min-w-0 flex-1 lg:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <SystemBroadcastBanner />
           <TopAppBar />
 
           <div className="flex min-h-0 flex-1">

@@ -148,6 +148,20 @@
       "when": 1790938963572,
       "tag": "0020_agile_tracking_security",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791407593921,
+      "tag": "0021_system_broadcasts",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791407711378,
+      "tag": "0022_system_broadcasts_security",
+      "breakpoints": true
     }
   ]
 }

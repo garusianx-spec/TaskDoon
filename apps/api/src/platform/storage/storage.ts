@@ -183,8 +183,8 @@ export class StorageService implements OnModuleDestroy {
     return deleted;
   }
 
-  async ping(): Promise<void> {
-    await this.internal.send(new HeadBucketCommand({ Bucket: this.bucket }));
+  async ping(signal?: AbortSignal): Promise<void> {
+    await this.internal.send(new HeadBucketCommand({ Bucket: this.bucket }), { abortSignal: signal });
   }
 
   onModuleDestroy(): void {

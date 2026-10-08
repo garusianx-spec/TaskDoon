@@ -7,8 +7,9 @@ import {
   JALALI_WEEKDAYS_SHORT,
   buildMonthGrid,
   formatJalali,
+  fromISODate,
   gregorianToJalali,
-  parseISODate,
+  toISODate,
   shiftJalaliMonth,
   toPersianDigits,
 } from '@taskin/jalali';
@@ -19,6 +20,8 @@ export interface JalaliDatePickerProps {
   readonly value: string;
   readonly onChange: (iso: string) => void;
   readonly label: string;
+  /** The workspace's calendar zone; omitted, use the device's day. */
+  readonly timeZone?: string;
   readonly disabled?: boolean;
 }
 
@@ -29,18 +32,19 @@ export interface JalaliDatePickerProps {
  * day / one week, PageUp/PageDown by one month, and the month header announces the change.
  * "هفته قبل" navigation in RTL means ArrowRight moves to the previous day.
  */
-export function JalaliDatePicker({ value, onChange, label, disabled = false }: JalaliDatePickerProps) {
-  const selected = useMemo(() => gregorianToJalali(parseISODate(value)), [value]);
+export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = false }: JalaliDatePickerProps) {
+  const selected = useMemo(() => gregorianToJalali(fromISODate(value)), [value]);
   const [cursor, setCursor] = useState({ year: selected.year, month: selected.month });
 
+  const todayIso = toISODate(new Date(), timeZone);
   const cells = useMemo(
-    () => buildMonthGrid(cursor.year, cursor.month, new Date()),
-    [cursor.year, cursor.month],
+    () => buildMonthGrid(cursor.year, cursor.month, fromISODate(todayIso)),
+    [cursor.year, cursor.month, todayIso],
   );
 
   const monthLabel = useMemo(() => {
     const first = cells.find((cell) => cell.inCurrentMonth);
-    return first ? formatJalali(first.iso, 'month-year') : '';
+    return first ? formatJalali(fromISODate(first.iso), 'month-year') : '';
   }, [cells]);
 
   const step = (delta: number) => {
@@ -64,7 +68,7 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
         >
           <CalendarIcon size={18} className="shrink-0 text-fg-quaternary" />
           <span className="numeric flex-1 truncate font-medium text-fg-primary">
-            {formatJalali(value, 'medium')}
+            {formatJalali(fromISODate(value), 'medium')}
           </span>
         </button>
       }
@@ -116,7 +120,7 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
                   role="gridcell"
                   aria-selected={isSelected}
                   aria-current={cell.isToday ? 'date' : undefined}
-                  aria-label={formatJalali(cell.iso, 'long')}
+                  aria-label={formatJalali(fromISODate(cell.iso), 'long')}
                   tabIndex={isSelected ? 0 : -1}
                   onKeyDown={(event) => {
                     const deltas: Readonly<Record<string, number>> = {
@@ -133,7 +137,7 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
                       if (target) {
                         onChange(target.iso);
                         if (!target.inCurrentMonth) {
-                          const next = gregorianToJalali(parseISODate(target.iso));
+                          const next = gregorianToJalali(fromISODate(target.iso));
                           setCursor({ year: next.year, month: next.month });
                         }
                       }
@@ -172,8 +176,8 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
               variant="secondary"
               fullWidth
               onClick={() => {
-                const today = new Date();
-                const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                const iso = toISODate(new Date(), timeZone);
+                const today = fromISODate(iso);
                 onChange(iso);
                 const jalali = gregorianToJalali(today);
                 setCursor({ year: jalali.year, month: jalali.month });

@@ -1,4 +1,5 @@
 import type {
+  ActiveBroadcasts,
   ScheduledMessageView,
   ScheduleMessageBody,
   UpdateWorkingHoursBody,
@@ -88,6 +89,10 @@ async function everyPage<T>(fetchPage: (cursor: string | null) => Promise<{ read
 }
 
 export const api = {
+  broadcasts: {
+    active: () => http.get<ActiveBroadcasts>('/broadcasts/active'),
+  },
+
   me: {
     get: () => http.get<MeResponse>('/me'),
     notifications: (params: { readonly workspaceId?: string; readonly filter?: NotificationFilter; readonly limit?: number }) =>

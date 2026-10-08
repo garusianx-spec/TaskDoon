@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BroadcastsService } from './broadcasts/broadcasts.service.js';
 import { AuthService } from './auth/auth.service.js';
 import { CsrfGuard, JwtAuthGuard, StepUpGuard } from './auth/guards.js';
 import { OtpService } from './auth/otp.service.js';
@@ -34,6 +35,7 @@ import { ProjectsService } from './work/projects.service.js';
 import { TasksService } from './work/tasks.service.js';
 
 const services = [
+  BroadcastsService,
   // auth
   TokenService,
   RevocationService,

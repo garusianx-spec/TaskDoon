@@ -25,3 +25,13 @@ GRANT SELECT ON users, auth_sessions, workspaces, workspace_members, roles, role
   attachments, platform_audit_logs
 TO taskin_platform_admin;
 GRANT SELECT (id, workspace_id, source_message_id, deleted_at) ON tasks TO taskin_platform_admin;
+
+-- Phase 4: broadcasts and operational bookkeeping, never outbox payloads or headers.
+DO $$
+BEGIN
+  IF to_regclass('public.system_broadcasts') IS NOT NULL THEN
+    GRANT SELECT ON system_broadcasts TO taskin_platform_admin;
+  END IF;
+END
+$$;
+GRANT SELECT (id, event_type, aggregate_type, workspace_id, created_at, published_at) ON outbox_events TO taskin_platform_admin;

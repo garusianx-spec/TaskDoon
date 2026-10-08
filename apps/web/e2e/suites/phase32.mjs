@@ -45,6 +45,9 @@ check(await visible(dialog), 'right-clicking «ارسال پیام» opens the s
 const now = await page.evaluate(() => Date.now());
 const past = new Date(now - 30 * 60_000);
 if (past.getDate() === new Date(now).getDate()) {
+  // The one-hour default can land on tomorrow; test the past time on today's date.
+  await dialog.locator('button[aria-haspopup="dialog"]').click();
+  await dialog.getByRole('dialog', { name: 'انتخاب تاریخ ارسال', exact: true }).getByRole('button', { name: 'امروز', exact: true }).click();
   await dialog.getByLabel('ساعت ارسال').fill(`${String(past.getHours()).padStart(2, '0')}:${String(past.getMinutes()).padStart(2, '0')}`);
   await dialog.getByRole('button', { name: 'زمان‌بندی ارسال' }).click();
   check(await visible(dialog.getByRole('alert').filter({ hasText: 'دست‌کم یک دقیقه بعد' })), 'a time in the past is refused');
