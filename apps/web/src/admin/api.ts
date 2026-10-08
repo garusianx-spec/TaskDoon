@@ -57,7 +57,7 @@ export const adminApi = {
   me: () => http.get<PlatformAdminMe>('/admin/me'),
 
   broadcasts: (filters: { readonly cursor?: string | null; readonly includeArchived?: boolean } = {}) =>
-    http.get<SystemBroadcastPage>(`/admin/broadcasts${query({ ...filters, limit: 50 })}`),
+    http.get<SystemBroadcastPage>(`/admin/broadcasts${query({ cursor: filters.cursor, status: filters.includeArchived ? 'all' : 'current', limit: 50 })}`),
   createBroadcast: (body: CreateBroadcastBody) => http.post<SystemBroadcastView>('/admin/broadcasts', body),
   updateBroadcast: (id: string, body: UpdateBroadcastBody) => http.patch<SystemBroadcastView>(`/admin/broadcasts/${id}`, body),
   archiveBroadcast: (id: string) => http.delete<void>(`/admin/broadcasts/${id}`),

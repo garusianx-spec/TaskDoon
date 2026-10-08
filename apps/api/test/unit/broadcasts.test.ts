@@ -57,7 +57,7 @@ describe('system.broadcast outbox mapping', () => {
       payload: { broadcastId: 'broadcast', action }, headers: { actorId: 'operator', requestId: 'request' }, createdAt: NOW, publishedAt: null,
     };
     expect(realtimeFor(row)).toMatchObject([{
-      emit: { type: 'system:broadcast', workspaceId: null, rooms: [rooms.platform], actorId: 'operator', requestId: 'request', occurredAt: at(0), data: { broadcastId: 'broadcast', action } },
+      emit: { type: 'system:broadcast', workspaceId: null, rooms: [rooms.platform], actorId: null, requestId: null, occurredAt: at(0), data: { broadcastId: 'broadcast', action } },
     }]);
   });
 });

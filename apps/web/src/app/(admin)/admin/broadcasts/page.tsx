@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { SystemBroadcastView } from '@taskin/contracts';
+import type { SystemBroadcastPage, SystemBroadcastView } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
 import { adminApi } from '@/admin/api';
 import { useAdmin } from '@/admin/AdminSession';
@@ -15,21 +15,30 @@ import { Badge, Button, Input, Modal } from '@/components/ui';
 import { AddIcon, RefreshIcon, SearchIcon } from '@/components/icons';
 
 const LEVEL_TONE = { info: 'brand', warning: 'warning', critical: 'error' } as const;
+interface BroadcastPage extends SystemBroadcastPage {
+  readonly includeArchived: boolean;
+  readonly pagingGeneration: number;
+  readonly adminGeneration: number;
+}
 
 /** Pattern: List / Index. All broadcast mutations remain behind the admin step-up. */
 export default function AdminBroadcastsPage() {
-  const { call } = useAdmin();
+  const { call, generation: adminGeneration } = useAdmin();
   const [includeArchived, setIncludeArchived] = useState(false);
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
   const pagingGeneration = useRef(0);
   const [dialog, setDialog] = useState<{ readonly broadcast: SystemBroadcastView | null } | null>(null);
   const [archiving, setArchiving] = useState<SystemBroadcastView | null>(null);
-  const [more, setMore] = useState<{ readonly items: readonly SystemBroadcastView[]; readonly cursor: string | null } | null>(null);
+  const [more, setMore] = useState<{ readonly firstPage: BroadcastPage; readonly items: readonly SystemBroadcastView[]; readonly cursor: string | null } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const page = useAdminLoad(`broadcasts:${includeArchived}`, () => adminApi.broadcasts({ includeArchived }));
+  const page = useAdminLoad<BroadcastPage>(`broadcasts:${includeArchived}`, async () => {
+    const generation = pagingGeneration.current;
+    const result = await adminApi.broadcasts({ includeArchived });
+    return { ...result, includeArchived, pagingGeneration: generation, adminGeneration };
+  });
 
   useEffect(() => {
     const slash = (event: KeyboardEvent) => {
@@ -70,17 +79,23 @@ export default function AdminBroadcastsPage() {
     } catch (error) { setFailure(problemMessage(error)); }
     finally { setBusy(null); }
   };
-  const cursor = more ? more.cursor : page.data?.nextCursor;
+  // The old first page remains visible during a reload, but its cursor cannot cross requests.
+  const paginationReady = !page.loading && page.data?.includeArchived === includeArchived
+    && page.data.pagingGeneration === pagingGeneration.current && page.data.adminGeneration === adminGeneration;
+  const currentMore = more?.firstPage === page.data ? more : null;
+  const cursor = paginationReady ? currentMore ? currentMore.cursor : page.data?.nextCursor : null;
   const loadMore = async () => {
-    if (!cursor || busy) return;
+    const firstPage = page.data;
+    // Also check the ref at click time: refresh/filter handlers invalidate it before React renders.
+    if (!cursor || busy || !paginationReady || firstPage?.pagingGeneration !== pagingGeneration.current) return;
     const generation = pagingGeneration.current;
     setBusy('more');
     setFailure(null);
     try {
       const result = await call(() => adminApi.broadcasts({ cursor, includeArchived }));
       if (generation !== pagingGeneration.current) return;
-      setMore((current) => ({ items: [...(current?.items ?? []), ...result.items], cursor: result.nextCursor }));
-    } catch (error) { setFailure(problemMessage(error)); }
+      setMore((current) => ({ firstPage, items: [...(current?.firstPage === firstPage ? current.items : []), ...result.items], cursor: result.nextCursor }));
+    } catch (error) { if (generation === pagingGeneration.current) setFailure(problemMessage(error)); }
     finally { setBusy(null); }
   };
 
@@ -111,7 +126,7 @@ export default function AdminBroadcastsPage() {
         {failure && !archiving && <p role="alert" className="mb-3 text-sm text-status-blocked">{failure}</p>}
         <Loaded load={page}>
           {(data) => {
-            const items = [...data.items, ...(more?.items ?? [])].filter((item) => item.message.toLocaleLowerCase('fa').includes(search.trim().toLocaleLowerCase('fa')));
+            const items = [...data.items, ...(currentMore?.items ?? [])].filter((item) => item.message.toLocaleLowerCase('fa').includes(search.trim().toLocaleLowerCase('fa')));
             return (
               <>
                 <TableFrame label="فهرست اطلاعیه‌ها">
@@ -156,8 +171,8 @@ export default function AdminBroadcastsPage() {
                   </table>
                 </TableFrame>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs text-fg-tertiary">{toPersianDigits(data.items.length + (more?.items.length ?? 0))} اطلاعیه بارگذاری شده؛ ترتیب: تازه‌ترین</p>
-                  <Button variant="secondary" className="min-h-11 text-sm" disabled={!cursor} loading={busy === 'more'} onClick={() => void loadMore()}>{cursor ? 'نمایش بیشتر' : 'همه اطلاعیه‌ها نمایش داده شد'}</Button>
+                  <p className="text-xs text-fg-tertiary">{toPersianDigits(data.items.length + (currentMore?.items.length ?? 0))} اطلاعیه بارگذاری شده؛ ترتیب: تازه‌ترین</p>
+                  <Button variant="secondary" className="min-h-11 text-sm" disabled={!paginationReady || !cursor || busy !== null} loading={busy === 'more'} onClick={() => void loadMore()}>{!paginationReady ? 'در حال بازخوانی…' : cursor ? 'نمایش بیشتر' : 'همه اطلاعیه‌ها نمایش داده شد'}</Button>
                 </div>
               </>
             );

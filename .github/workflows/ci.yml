@@ -28,6 +28,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - run: npm run test:broadcasts
       - run: npm run check:contrast
       - run: npm run build
 
@@ -192,6 +193,11 @@ jobs:
           npm run test:e2e:live:workspace-moderation
       - name: Agile tracking (issue types, worklogs, dependencies, backlog)
         run: API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live:agile
+      - name: Platform super admin, phase 4 (broadcasts, overview and global delivery)
+        run: |
+          API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 \
+          GRANT_PLATFORM_ADMIN="docker compose -f $GITHUB_WORKSPACE/infra/docker-compose.yml --profile app exec -T api node dist/cli/platform-admin.js grant" \
+          npm run test:e2e:live:broadcasts
       - name: Logs
         if: failure()
         run: |

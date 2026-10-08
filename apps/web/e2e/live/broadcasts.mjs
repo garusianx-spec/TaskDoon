@@ -107,11 +107,17 @@ try {
 
   await page.getByRole('button', { name: 'ساخت اطلاعیه', exact: true }).click();
   let dialog = page.getByRole('dialog', { name: 'ساخت اطلاعیه' });
+  await dialog.getByRole('button', { name: 'ساخت اطلاعیه', exact: true }).click();
+  check(await visible(dialog.getByText('متن اطلاعیه را بین ۱ تا ۵۰۰ نویسه بنویسید.', { exact: true })), 'invalid save keeps the inline message visible and focuses its field');
   await dialog.getByLabel('متن اطلاعیه').fill(message);
+  check(!(await visible(dialog.getByText('متن اطلاعیه را بین ۱ تا ۵۰۰ نویسه بنویسید.', { exact: true }), 500)), 'corrective typing clears the validation message');
   check(await visible(dialog.getByRole('region', { name: 'پیش‌نمایش اطلاعیه' }).getByText(message, { exact: false })), 'dialog previews the actual banner strip');
   const response = page.waitForResponse((res) => res.url().endsWith('/admin/broadcasts') && res.request().method() === 'POST');
   await dialog.getByRole('button', { name: 'ساخت اطلاعیه', exact: true }).click();
-  const saved = await (await response).json();
+  const createResponse = await response;
+  if (createResponse.status() !== 201) throw new Error('Broadcast creation returned ' + createResponse.status() + ': ' + await createResponse.text());
+  const saved = await createResponse.json();
+  await dialog.waitFor({ state: 'hidden' });
   created.add(saved.id);
   check(await visible(banner.getByText(message, { exact: false }), 15_000), 'platform websocket updates the member banner without navigation');
   const welcomePage = await operatorContext.newPage();
@@ -121,7 +127,7 @@ try {
   await welcomePage.close();
   await viewportCheck(memberPage, 375, 'broadcast_banner');
   await viewportCheck(memberPage, 1280, 'broadcast_banner');
-  await banner.getByRole('button', { name: 'بستن اطلاعیه' }).click();
+  await banner.getByRole('status').filter({ hasText: message }).getByRole('button', { name: 'بستن اطلاعیه' }).click();
   check(await eventually(async () => !(await visible(banner.getByText(message, { exact: false }), 200))), 'member dismisses the info notice');
   check(await memberPage.evaluate(({ id, updatedAt }) => localStorage.getItem(`${id}:${updatedAt}`) === '1', saved), 'info dismissal uses the version key in localStorage');
   const reloadRead = memberPage.waitForResponse((res) => res.url().endsWith('/broadcasts/active'));
@@ -135,11 +141,17 @@ try {
   await dialog.getByLabel('متن اطلاعیه').fill(`${message} — نسخه جدید`);
   await dialog.getByRole('combobox', { name: 'اهمیت اطلاعیه' }).click();
   await page.getByRole('option', { name: 'فوری', exact: true }).click();
+  const updateResponse = page.waitForResponse((res) => res.url().endsWith('/admin/broadcasts/' + saved.id) && res.request().method() === 'PATCH');
   await dialog.getByRole('button', { name: 'ذخیره تغییرات' }).click();
+  const editedResponse = await updateResponse;
+  if (editedResponse.status() !== 200) throw new Error('Broadcast update returned ' + editedResponse.status() + ': ' + await editedResponse.text());
+  await dialog.waitFor({ state: 'hidden' });
   check(await visible(banner.getByRole('alert').filter({ hasText: 'نسخه جدید' }), 15_000), 'updated version reappears as a critical alert');
   const critical = await api('GET', '/broadcasts/active', { token: member.accessToken });
+  if (critical.status !== 200) throw new Error('Active broadcasts returned ' + critical.status);
   const updated = critical.body.items.find((item) => item.id === saved.id);
-  await banner.getByRole('button', { name: 'بستن اطلاعیه' }).click();
+  if (!updated) throw new Error('The edited notice was not present in active results');
+  await banner.getByRole('alert').filter({ hasText: 'نسخه جدید' }).getByRole('button', { name: 'بستن اطلاعیه' }).click();
   check(await memberPage.evaluate(({ id, updatedAt }) => sessionStorage.getItem(`${id}:${updatedAt}`) === '1' && localStorage.getItem(`${id}:${updatedAt}`) === null, updated), 'critical dismissal is session-only');
 
   const newSessionContext = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'fa-IR' });
@@ -153,19 +165,26 @@ try {
   const scheduled = await api('POST', '/admin/broadcasts', { token: adminToken, body: { message: message + ' زمان‌بندی', level: 'warning', startsAt: new Date(scheduleStart).toISOString(), expiresAt: new Date(scheduleStart + 14_000).toISOString() } });
   if (scheduled.body?.id) created.add(scheduled.body.id);
   check(scheduled.status === 201, 'admin schedules a future notice');
+  if (scheduled.status !== 201) throw new Error('Scheduled notice returned ' + scheduled.status + ': ' + JSON.stringify(scheduled.body));
   check(!(await api('GET', '/broadcasts/active', { token: member.accessToken })).body.items.some((item) => item.id === scheduled.body.id), 'future notice starts hidden');
   check(await visible(banner.getByText(message + ' زمان‌بندی', { exact: false }), 20_000), 'server-relative timer reveals the scheduled notice');
   check(await eventually(async () => !(await visible(banner.getByText(message + ' زمان‌بندی', { exact: false }), 200)), 20_000), 'expiry timer removes the scheduled notice');
 
   row = page.getByRole('row').filter({ hasText: message }).filter({ hasText: 'نسخه جدید' });
+  const toggleResponse = page.waitForResponse((res) => res.url().endsWith('/admin/broadcasts/' + saved.id) && res.request().method() === 'PATCH');
   await row.getByRole('switch').click();
+  if ((await toggleResponse).status() !== 200) throw new Error('Broadcast activation update failed');
+  check(await eventually(async () => await row.getByRole('switch').getAttribute('aria-checked') === 'false'), 'activation toggle reflects the persisted inactive state');
   check(await eventually(async () => !(await api('GET', '/broadcasts/active', { token: member.accessToken })).body.items.some((item) => item.id === saved.id)), 'activation toggle removes the announcement from public results');
   await viewportCheck(page, 375, 'admin_broadcasts');
   await viewportCheck(page, 1280, 'admin_broadcasts');
   await row.getByRole('button', { name: 'بایگانی', exact: true }).click();
   const confirmation = page.getByRole('alertdialog', { name: 'بایگانی اطلاعیه' });
   check(await visible(confirmation.getByText(`${message} — نسخه جدید`, { exact: true })), 'archive confirmation names the actual notice');
+  const archiveResponse = page.waitForResponse((res) => res.url().endsWith('/admin/broadcasts/' + saved.id) && res.request().method() === 'DELETE');
   await confirmation.getByRole('button', { name: 'بایگانی اطلاعیه', exact: true }).click();
+  if ((await archiveResponse).status() !== 204) throw new Error('Broadcast archive failed');
+  await confirmation.waitFor({ state: 'hidden' });
   check(await eventually(async () => (await page.getByRole('row').filter({ hasText: message }).filter({ hasText: 'نسخه جدید' }).count()) === 0), 'archived announcement leaves the active management list');
 
   await page.getByRole('link', { name: 'نمای کلی پلتفرم', exact: true }).click();
@@ -180,4 +199,3 @@ try {
   if (workspace.status === 201) await api('DELETE', `/workspaces/${workspace.body.id}`, { token: member.accessToken, body: { confirmName: workspaceName } }).catch(() => undefined);
   await finish(browser);
 }
-

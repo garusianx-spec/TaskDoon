@@ -53,11 +53,12 @@ export function BroadcastDialog({ broadcast, onClose, onDone }: {
     event.preventDefault();
     if (busy) return;
     const next = validation();
-    setErrors(next);
     if (next.message || next.startsAt || next.expiresAt) {
       (next.message ? messageRef : next.startsAt ? startRef : expiryRef).current?.focus();
+      setErrors(next);
       return;
     }
+    setErrors(next);
     setBusy(true);
     setFailure(null);
     try {
