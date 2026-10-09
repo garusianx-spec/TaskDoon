@@ -2,205 +2,329 @@ name: CI
 
 on:
   pull_request:
-  push:
     branches: [main]
-  workflow_dispatch:
+  push:
+    branches: ['feat/*']
+  workflow_call:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  CI: 'true'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  checks:
-    name: Typecheck, lint, unit tests, contrast, build
-    runs-on: ubuntu-latest
+  lint-and-typecheck:
+    name: Lint, typecheck, shared unit tests and contrast
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
           cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm test
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run -ws lint
+      - run: npm run -ws typecheck
+      - run: npm run test --workspace @taskin/jalali --workspace @taskin/text
       - run: npm run check:contrast
-      - run: npm run build
+      - name: Deployment webhook safety checks
+        run: node --test infra/ci/trigger-coolify.test.mjs
 
-  api:
-    name: API integration (PostgreSQL 18, Redis 7.4, S3)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+  test-api:
+    name: API unit and integration (PostgreSQL 18, Redis 7, S3)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      TEST_DATABASE_ADMIN_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      TEST_REDIS_URL: redis://127.0.0.1:6379
+      TEST_S3_ENDPOINT: http://127.0.0.1:8333
     services:
+      # The existing integration template uses native uuidv7(); production PG16 is
+      # independently bootstrapped by infra/prod/postgres-init.sql.
       postgres:
-        image: postgres:18-alpine
+        image: postgres:18.6-alpine3.24@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-        ports: ['5432:5432']
+          POSTGRES_DB: postgres
+        ports: ['127.0.0.1:5432:5432']
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres -d postgres"
           --health-interval 3s --health-timeout 3s --health-retries 30
+          --memory 1g --cpus 2 --pids-limit 256
       redis:
-        image: redis:7.4-alpine
-        ports: ['6379:6379']
+        image: redis:7.4.11-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+        ports: ['127.0.0.1:6379:6379']
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 3s --health-timeout 3s --health-retries 30
+          --memory 384m --cpus 1 --pids-limit 128
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
           cache: npm
-      - run: npm ci
-      # Service containers cannot take a command, so the S3 gateway starts here.
-      - name: Start S3 (SeaweedFS) and create the bucket
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build:packages
+      - name: API unit tests
+        run: npm run test --workspace @taskin/api
+      # Service containers cannot take a command. Storage tests need real S3;
+      # mail uses the harness's in-memory transport, so no SMTP container is needed.
+      - name: Start S3 and create the isolated test bucket
         run: |
-          docker run -d --name s3 -p 8333:8333 \
+          docker run -d --name taskdoon-ci-s3 -p 127.0.0.1:8333:8333 \
+            --memory 512m --cpus 1 --pids-limit 128 \
+            --log-driver json-file --log-opt max-size=20m --log-opt max-file=3 \
             -v "$PWD/infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro" \
-            chrislusf/seaweedfs:4.47 server -dir=/data -volume.max=0 -master.volumeSizeLimitMB=256 \
+            chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882 \
+            server -dir=/data -volume.max=0 -master.volumeSizeLimitMB=256 \
             -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
           for attempt in $(seq 1 60); do
-            docker exec s3 wget -q -O /dev/null http://127.0.0.1:8333/status && break
+            if curl --fail --silent --max-time 2 http://127.0.0.1:8333/status > /dev/null; then break; fi
             sleep 1
           done
-          docker exec s3 sh -c "echo 's3.bucket.create -name taskin-files' | weed shell -master=127.0.0.1:9333"
-      - name: Migrations are consistent, and the schema has no ungenerated changes
+          curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8333/status > /dev/null
+          printf '%s\n' 's3.bucket.create -name taskin-files' | docker exec -i taskdoon-ci-s3 weed shell -master=127.0.0.1:9333
+          printf '%s\n' 's3.bucket.list' | docker exec -i taskdoon-ci-s3 weed shell -master=127.0.0.1:9333 | grep -q taskin-files
+      - name: Migration journal and generated schema stay consistent
         run: |
-          # drizzle-kit loads the schema, which imports the workspace packages: build them first.
-          npm run build -w @taskin/contracts -w @taskin/jalali -w @taskin/text
-          npm run db:check -w @taskin/api
-          # drizzle-kit exits 0 even when it cannot load the schema, so an error in its output fails the step.
-          npm run db:generate -w @taskin/api 2>&1 | tee "$RUNNER_TEMP/db-generate.log"
+          npm run db:check --workspace @taskin/api
+          npm run db:generate --workspace @taskin/api 2>&1 | tee "$RUNNER_TEMP/db-generate.log"
+          # drizzle-kit can exit zero after a schema-import error.
           if grep -qi 'error' "$RUNNER_TEMP/db-generate.log"; then exit 1; fi
           test -z "$(git status --porcelain apps/api/db)" || { git status --porcelain apps/api/db; exit 1; }
-      - name: Integration suite (migrates a fresh database from zero)
+      - name: All integration tests against a database migrated from zero
         run: npm run test:int
-      - name: S3 logs
+      - name: Storage diagnostics
         if: failure()
-        run: docker logs s3 | tail -100
+        run: docker logs --tail 100 taskdoon-ci-s3
+      - name: Stop the isolated storage container
+        if: always()
+        run: docker rm -f taskdoon-ci-s3 >/dev/null 2>&1 || true
 
-  compose:
-    name: Compose stack (infra:up, API image, migrate, health)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build the API image and start every service
-        run: docker compose -f infra/docker-compose.yml --profile app up -d --build --wait --wait-timeout 300
-      - name: The API answers through PgBouncer
-        run: |
-          curl -fsS http://localhost:4000/health/ready
-          curl -fsS -X POST http://localhost:4000/api/v1/auth/otp/request \
-            -H 'content-type: application/json' -d '{"phone":"09121112233"}'
-      - name: Service logs
-        if: failure()
-        run: docker compose -f infra/docker-compose.yml --profile app logs --tail 100
-
-  scale:
-    name: Scaled stack (REST node, two WebSocket nodes, worker, nginx)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --workspace @taskin/api --include-workspace-root
-      - name: Build the API image and start the scaled topology
-        run: docker compose -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale up -d --build --wait --wait-timeout 300
-      - name: Cross-node delivery, edge routing and relay-driven room changes
-        run: node apps/api/scripts/scale-smoke.mjs
-      - name: Service logs
-        if: failure()
-        run: docker compose -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale logs --tail 100
-
-  e2e:
-    name: Playwright suites (production build)
-    runs-on: ubuntu-latest
+  test-web:
+    name: Next.js production build and all demo Playwright suites
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
           cache: npm
-      - run: npm ci
-      - name: Install Chromium for playwright-core
-        run: npx playwright-core install --with-deps chromium
-      # These suites drive the demo fixtures; the live app has its own job below.
-      - run: npm run build
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Install the locked Playwright Chromium revision
+        run: npx --no-install playwright-core install --with-deps chromium
+      - name: Validate the demo production build
+        run: npm run build --workspace @taskin/web
         env:
           NEXT_PUBLIC_DATA_SOURCE: demo
-      - run: npm run test:e2e
-      - name: Upload screenshots
+      - name: Demo smoke and regression suites
+        run: npm run test:e2e
+      - name: Upload failure screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: e2e-screenshots
+          name: demo-e2e-screenshots
           path: apps/web/e2e/out
+          if-no-files-found: ignore
           retention-days: 7
+
+  docker-build-dryrun:
+    name: Docker dry run (${{ matrix.image }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            dockerfile: apps/api/Dockerfile
+            target: runner
+          - image: web
+            dockerfile: apps/web/Dockerfile
+            target: runner
+          - image: migrator
+            dockerfile: apps/api/Dockerfile
+            target: migrator
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the production target without registry credentials or publishing
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          push: false
+          load: false
+          build-args: |
+            NEXT_PUBLIC_DATA_SOURCE=api
+            NEXT_PUBLIC_RT_URL=
+            TASKIN_API_ORIGIN=http://api:4000
+          cache-from: type=gha,version=2,scope=taskdoon-${{ matrix.image }}
+          cache-to: type=gha,version=2,mode=max,scope=taskdoon-${{ matrix.image }}
+
+  compose:
+    name: Compose stack (API image, migrator, PgBouncer, health)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      COMPOSE_FILE: infra/docker-compose.yml:infra/ci/compose.yml
+      COMPOSE_PROJECT_NAME: taskdoon-ci-compose
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the API and start every development test service
+        run: docker compose --profile app up -d --build --wait --wait-timeout 300
+      - name: API readiness and sign-in through PgBouncer
+        run: |
+          curl --fail --silent --show-error --max-time 5 http://localhost:4000/health/ready
+          curl --fail --silent --show-error --max-time 5 -X POST http://localhost:4000/api/v1/auth/otp/request \
+            -H 'content-type: application/json' -d '{"phone":"09121112233"}'
+      - name: Service diagnostics
+        if: failure()
+        run: docker compose --profile app logs --tail 100
+      - name: Remove the job's isolated stack and volumes
+        if: always()
+        run: docker compose --profile app down --volumes
+
+  scale:
+    name: Scaled realtime (REST, two WebSocket nodes, worker, nginx)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      COMPOSE_FILE: infra/docker-compose.yml:infra/compose.scale.yml:infra/ci/compose.yml:infra/ci/compose.scale.yml
+      COMPOSE_PROJECT_NAME: taskdoon-ci-scale
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci --workspace @taskin/api --include-workspace-root --no-audit --no-fund
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build and start the scaled topology
+        run: docker compose --profile scale up -d --build --wait --wait-timeout 300
+      - name: Cross-node delivery, edge routing and relay-driven room changes
+        run: node apps/api/scripts/scale-smoke.mjs
+      - name: Service diagnostics
+        if: failure()
+        run: docker compose --profile scale logs --tail 100
+      - name: Remove the job's isolated stack and volumes
+        if: always()
+        run: docker compose --profile scale down --volumes
 
   e2e-live:
     name: Live app end to end (web on the Compose API)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      COMPOSE_FILE: infra/docker-compose.yml:infra/ci/compose.yml
+      COMPOSE_PROJECT_NAME: taskdoon-ci-live
+      BASE_URL: http://localhost:3000
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
           cache: npm
-      - run: npm ci
-      - name: Install Chromium for playwright-core
-        run: npx playwright-core install --with-deps chromium
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Install the locked Playwright Chromium revision
+        run: npx --no-install playwright-core install --with-deps chromium
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Start the API and its services
-        run: docker compose -f infra/docker-compose.yml --profile app up -d --build --wait --wait-timeout 300
-      - name: Build the live web app and serve it on :3000 (proxying /api/v1 and /rt to :4000)
+        run: docker compose --profile app up -d --build --wait --wait-timeout 300
+      - name: Build the API operator CLI and the live web app
         run: |
-          npm run build -w @taskin/web
-          nohup npm run start -w @taskin/web -- -p 3000 > "$RUNNER_TEMP/web.log" 2>&1 &
-          for attempt in $(seq 1 60); do curl -fsS -o /dev/null http://localhost:3000/feed && break; sleep 1; done
+          npm run build --workspace @taskin/api
+          npm run build --workspace @taskin/web
+      - name: Serve the live web app and follow the test SMS log
+        run: |
+          nohup npm run start --workspace @taskin/web -- -p 3000 > "$RUNNER_TEMP/web.log" 2>&1 &
+          printf '%s\n' "$!" > "$RUNNER_TEMP/web.pid"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --max-time 2 -o /dev/null http://localhost:3000/health/ready; then break; fi
+            sleep 1
+          done
+          curl --fail --silent --show-error --max-time 3 -o /dev/null http://localhost:3000/health/ready
+          docker compose --profile app logs -f --no-log-prefix api > "$RUNNER_TEMP/api.log" 2>&1 &
+          printf '%s\n' "$!" > "$RUNNER_TEMP/api-log.pid"
+          printf 'API_LOG=%s/api.log\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Two people, one workspace (sign-in, invitation, tasks, chat, notifications, sign-out)
-        run: |
-          # The console SMS driver logs sign-in codes and invitation links; the suite reads them here.
-          docker compose -f infra/docker-compose.yml --profile app logs -f --no-log-prefix api > "$RUNNER_TEMP/api.log" 2>&1 &
-          API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live
-      - name: Platform super admin (sign-in, step-up, directory, sessions, messages, reset code, audit)
-        run: |
-          # No API route can flag a platform admin: the suite runs the CLI inside the API container.
-          API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 \
-          GRANT_PLATFORM_ADMIN="docker compose -f $GITHUB_WORKSPACE/infra/docker-compose.yml --profile app exec -T api node dist/cli/platform-admin.js grant" \
-          npm run test:e2e:live:admin
-      - name: Phone and password (sign-in, a wrong password, recovery with an SMS code)
-        run: API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live:password
-      - name: Platform super admin, phase 2 (suspend, sessions, forced password change, audit)
-        run: |
-          API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 \
-          GRANT_PLATFORM_ADMIN="docker compose -f $GITHUB_WORKSPACE/infra/docker-compose.yml --profile app exec -T api node dist/cli/platform-admin.js grant" \
-          npm run test:e2e:live:moderation
-      - name: Platform super admin, phase 3 (workspace suspension, quotas, ownership transfer, audit)
-        run: |
-          API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 \
-          GRANT_PLATFORM_ADMIN="docker compose -f $GITHUB_WORKSPACE/infra/docker-compose.yml --profile app exec -T api node dist/cli/platform-admin.js grant" \
-          npm run test:e2e:live:workspace-moderation
+        run: npm run test:e2e:live
+      # The hardened daemon excludes operator CLIs and owner credentials. The unchanged
+      # suites default to the separately built host CLI, with test-only owner credentials.
+      - name: Platform super admin (directory, sessions, messages, reset code, audit)
+        run: npm run test:e2e:live:admin
+        env:
+          DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
+      - name: Phone and password (wrong password and SMS recovery)
+        run: npm run test:e2e:live:password
+      - name: Platform moderation (suspend, sessions, forced password change, audit)
+        run: npm run test:e2e:live:moderation
+        env:
+          DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
+      - name: Workspace moderation (suspension, quotas, transfer, audit)
+        run: npm run test:e2e:live:workspace-moderation
+        env:
+          DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
       - name: Agile tracking (issue types, worklogs, dependencies, backlog)
-        run: API_LOG="$RUNNER_TEMP/api.log" BASE_URL=http://localhost:3000 npm run test:e2e:live:agile
-      - name: Logs
+        run: npm run test:e2e:live:agile
+      - name: Failure diagnostics
         if: failure()
         run: |
-          tail -100 "$RUNNER_TEMP/web.log"
-          docker compose -f infra/docker-compose.yml --profile app logs --tail 100 api
-      - name: Upload screenshots
+          if test -f "$RUNNER_TEMP/web.log"; then tail -100 "$RUNNER_TEMP/web.log"; fi
+          docker compose --profile app logs --tail 100 api
+      - name: Upload failure screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: e2e-live-screenshots
+          name: live-e2e-screenshots
           path: apps/web/e2e/out
+          if-no-files-found: ignore
           retention-days: 7
+      - name: Stop host processes and remove the job's stack
+        if: always()
+        run: |
+          for file in "$RUNNER_TEMP/web.pid" "$RUNNER_TEMP/api-log.pid"; do
+            if test -f "$file"; then kill "$(cat "$file")" 2>/dev/null || true; fi
+          done
+          docker compose --profile app down --volumes

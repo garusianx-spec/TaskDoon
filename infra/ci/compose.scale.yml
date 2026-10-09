@@ -1,0 +1,75 @@
+# Apply after infra/compose.scale.yml and infra/ci/compose.yml.
+# Replace the complete daemon environment after extends resolution. A per-key !reset
+# happens before extends and would restore the development owner's URL from its parent.
+# These are ephemeral test credentials; JWT_PRIVATE_JWKS still comes from scale/dev.env.
+x-ci-daemon-env: &ci-daemon-env
+  NODE_ENV: development
+  DATABASE_URL: postgres://taskin_app:taskin_app@pgbouncer:6432/taskin
+  DATABASE_DIRECT_URL: postgres://taskin_app:taskin_app@postgres:5432/taskin
+  DATABASE_PLATFORM_ADMIN_URL: postgres://taskin_platform_admin:taskin_platform_admin@postgres:5432/taskin
+  REDIS_CORE_URL: redis://redis-core:6379
+  REDIS_RT_URL: redis://redis-rt:6379
+  S3_ENDPOINT: http://s3:8333
+  S3_PUBLIC_ENDPOINT: http://localhost:8333
+  S3_BUCKET: taskin-files
+  S3_ACCESS_KEY: taskin
+  S3_SECRET_KEY: taskin-dev-secret
+  SMTP_URL: smtp://mailpit:1025
+  PUBLIC_WEB_ORIGIN: http://localhost:3000
+  COOKIE_SECURE: "false"
+  OTP_PEPPER: development-only-pepper-change-me-please
+  APP_ENCRYPTION_KEY: ZGV2ZWxvcG1lbnQtb25seS1rZXktY2hhbmdlLW1lISE=
+  SMS_PROVIDERS: console
+  LOG_PRETTY: "false"
+  PORT: "4000"
+
+x-api-health: &api-health
+  test:
+    - CMD
+    - /usr/local/bin/node
+    - --input-type=module
+    - -e
+    - "try { const r = await fetch('http://127.0.0.1:4000/health/ready', { signal: AbortSignal.timeout(2500) }); process.exit(r.ok ? 0 : 1); } catch { process.exit(1); }"
+  interval: 5s
+  timeout: 3s
+  start_period: 20s
+  retries: 30
+
+services:
+  api-http:
+    build:
+      target: runner
+    environment: !override
+      <<: *ci-daemon-env
+      APP_ROLE: http
+      TRUST_PROXY: "1"
+      THROTTLE_IP_PER_MINUTE: ${THROTTLE_IP_PER_MINUTE:-300}
+    healthcheck: *api-health
+  api-ws-1:
+    build:
+      target: runner
+    environment: !override
+      <<: *ci-daemon-env
+      APP_ROLE: ws
+      WS_NODE_ID: ws-1
+    healthcheck: *api-health
+    ports: !override ['127.0.0.1:4101:4000']
+  api-ws-2:
+    build:
+      target: runner
+    environment: !override
+      <<: *ci-daemon-env
+      APP_ROLE: ws
+      WS_NODE_ID: ws-2
+    healthcheck: *api-health
+    ports: !override ['127.0.0.1:4102:4000']
+  api-worker:
+    build:
+      target: runner
+    environment: !override
+      <<: *ci-daemon-env
+      APP_ROLE: worker
+    healthcheck: *api-health
+  nginx:
+    image: nginxinc/nginx-unprivileged:1.30.5-alpine@sha256:15c994d10d6d78658721c3bcafff14cb281fba2a4bdf9d5ba92c416a472516e3
+    ports: !override ['127.0.0.1:8080:8080']
