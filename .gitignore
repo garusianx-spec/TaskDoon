@@ -19,3 +19,8 @@ apps/web/e2e/out
 
 # local environment (apps/api/.env.example is the template)
 .env
+
+# Production verification credentials and local diagnostics
+.local/
+.devops-tools/
+.env.prod.local

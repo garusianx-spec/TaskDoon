@@ -138,7 +138,7 @@ services:
 
   migrate:
     profiles: [app]
-    build: { context: .., dockerfile: apps/api/Dockerfile }
+    build: { context: .., dockerfile: apps/api/Dockerfile, target: migrator }
     environment: *api-env
     command: ["node", "--enable-source-maps", "dist/cli/migrate.js"]
     depends_on:
