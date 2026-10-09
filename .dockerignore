@@ -1,6 +1,25 @@
+# Source and manifests only; exclude local credentials and generated artifacts.
+.git
+.github
 **/node_modules
 **/dist
 **/.next
+**/out
+**/coverage
 **/*.tsbuildinfo
-apps/web/e2e/out
-.git
+**/next-env.d.ts
+**/.env
+**/.env.*
+!**/.env.example
+**/.npmrc
+**/*.pem
+**/*.key
+**/*.crt
+**/*.log
+**/.DS_Store
+.local
+.devops-tools
+docs
+apps/api/test
+apps/web/e2e
+packages/*/test
