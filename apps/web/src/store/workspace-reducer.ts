@@ -1134,7 +1134,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case 'create-project': {
       const name = action.draft.name.trim();
-      if (!name) return state;
+      if (!name || state.projects.some((project) => project.id === action.projectId)) return state;
       const project: Project = {
         id: action.projectId,
         name,
@@ -1603,7 +1603,14 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
       };
 
     case 'sync/upsert-conversation': {
-      const { conversation, replaceId } = action;
+      const { conversation } = action;
+      // A project's companion starts with a local id. Match that stand-in by the reconciled
+      // project id, never by its title (unrelated groups may have exactly the same name).
+      const replaceId = action.replaceId ?? (
+        conversation.kind === 'channel' && conversation.projectId && !conversation.id.includes('-local-')
+          ? state.conversations.find((entry) => entry.kind === 'channel' && entry.projectId === conversation.projectId && entry.id.includes('-local-'))?.id
+          : undefined
+      );
       const swap = (id: string): string => (replaceId !== undefined && id === replaceId ? conversation.id : id);
       const unread = { ...state.unreadByConversation };
       if (replaceId !== undefined && replaceId in unread) delete unread[replaceId];
@@ -1711,12 +1718,17 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
     case 'sync/upsert-project': {
       const { project, replaceId } = action;
       if (replaceId === undefined) return { ...state, projects: upsert(state.projects, project, undefined, true) };
-      return {
+      const next = {
         ...state,
         projects: upsert(state.projects, project, replaceId, true),
         tasks: state.tasks.map((task) => (task.projectId === replaceId ? { ...task, projectId: project.id } : task)),
+        conversations: state.conversations.map((conversation) => conversation.projectId === replaceId ? { ...conversation, projectId: project.id } : conversation),
         projectFilterId: state.projectFilterId === replaceId ? project.id : state.projectFilterId,
       };
+      // Realtime can beat the POST response. Once both project ids agree, reconcile the
+      // existing server channel through the same path, including selection and message refs.
+      const channel = next.conversations.find((conversation) => conversation.kind === 'channel' && conversation.projectId === project.id && !conversation.id.includes('-local-'));
+      return channel ? syncReducer(next, { type: 'sync/upsert-conversation', conversation: channel }) : next;
     }
 
     case 'sync/upsert-note-category': {
