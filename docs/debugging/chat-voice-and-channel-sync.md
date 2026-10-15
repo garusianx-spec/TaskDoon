@@ -67,3 +67,12 @@ Raw logs and baseline reproductions are kept under ignored `.local/prod/`. No pr
 - [WebKit MediaRecorder API](https://webkit.org/blog/11353/mediarecorder-api/)
 - [WebKit features in Safari 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/)
 - [MediaStream Recording specification](https://www.w3.org/TR/mediastream-recording/)
+
+## PR CI follow-up
+
+The first PR run, [38791038145](https://github.com/garusianx-spec/TaskDoon/actions/runs/38791038145), exposed two verification issues:
+
+- The demo job ran Web unit tests before shared packages had been compiled. The recorder suite passed (24 cases), but the two store suites could not resolve `@taskin/contracts`, whose package exports point to `dist/`. Existing local build artifacts had concealed this prerequisite. Web now runs its existing `build:deps` command through `pretest`, matching its dev, build and typecheck lifecycle hooks. CI continues to run the same tests without aliases, mocks or skipped suites.
+- The live flow passed voice, task and channel synchronization, but its former-member check raced the removal request. At 19:10:11.381 the optimistic directory row had disappeared; step-up completed at 19:10:11.406 and the page reload requested session refresh at 19:10:11.464. No member DELETE request reached the API in that interval. The test now registers a successful member-removal response wait before clicking, and awaits HTTP 204 before navigation/reload. All existing assertions, including the former-member badge after reload, are retained. No timeout increase, sleep, auth change or production membership change was added.
+
+Final verification runs the complete fresh-checkout Linux PR workflow, including every demo suite and all six live suites. Local WSL execution and Windows npm workspace-link creation were unavailable under this session's permissions; the Actions results are the authoritative full-suite check for this follow-up.

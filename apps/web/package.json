@@ -21,6 +21,7 @@
     "test:e2e:live:moderation": "node e2e/live/moderation.mjs",
     "test:e2e:live:workspace-moderation": "node e2e/live/workspace-moderation.mjs",
     "test:e2e:live:agile": "node e2e/live/agile.mjs",
+    "pretest": "npm run build:deps",
     "test": "vitest run --config vitest.config.mts"
   },
   "dependencies": {
