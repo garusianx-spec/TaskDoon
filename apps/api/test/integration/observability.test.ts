@@ -296,6 +296,34 @@ describe('M1 checklist: audit trail and correlation', () => {
       r.set(bearer(operator)).send({ userId: heir.userId, reason: 'مالک در دسترس نیست' }),
     );
 
+    // Platform CMS: every new mutation keeps the same request/trace audit contract.
+    const siteAuth = (r: Test) => r.set(bearer(operator)).set('Cookie', operator.cookies).set('X-CSRF-Token', operator.csrf).set('Origin', ORIGIN);
+    const site = '/api/v1/admin/site';
+    const editorial = { title: 'صفحه ردیابی', description: 'بررسی تاریخچه و انتشار محتوای سایت', sections: [], seo: {}, data: {} };
+    const sitePage = (await traced('post', `${site}/documents`, `${site}/documents`, (r) => siteAuth(r).send({ kind: 'page', slug: 'trace-editorial', draft: editorial }))).body as { id: string };
+    const sitePath = `${site}/documents/${sitePage.id}`;
+    await traced('put', `${site}/documents/{id}`, sitePath, (r) => siteAuth(r).send({ kind: 'page', slug: 'trace-editorial', draft: { ...editorial, title: 'ویرایش ردیابی' } }));
+    await traced('post', `${site}/documents/{id}/publish`, `${sitePath}/publish`, siteAuth);
+    const revisionResponse = await t.http().get(`${sitePath}/revisions`).set(bearer(operator));
+    const revision = (revisionResponse.body as { id: string }[])[0];
+    if (!revision) throw new Error('CMS revision missing');
+    await traced('post', `${site}/documents/{id}/restore`, `${sitePath}/restore`, (r) => siteAuth(r).send({ revisionId: revision.id }));
+    await traced('post', `${site}/documents/{id}/unpublish`, `${sitePath}/unpublish`, siteAuth);
+    await traced('post', `${site}/documents/{id}/archive`, `${sitePath}/archive`, siteAuth);
+    const lead = (await traced('post', '/api/v1/public/site/submissions', '/api/v1/public/site/submissions', (r) => r.set('Origin', ORIGIN).send({ kind: 'contact', fullName: 'فرستنده آزمون', email: 'trace@example.com', message: 'درخواست ردیابی ثبت پیام عمومی', consent: true, website: '' }))).body as { id: string };
+    await traced('patch', `${site}/submissions/{id}`, `${site}/submissions/${lead.id}`, (r) => siteAuth(r).send({ status: 'in-progress', notes: 'در حال بررسی' }));
+    const redirect = (await traced('post', `${site}/redirects`, `${site}/redirects`, (r) => siteAuth(r).send({ fromPath: '/old-trace-page', toPath: '/features' }))).body as { id: string };
+    await traced('delete', `${site}/redirects/{id}`, `${site}/redirects/${redirect.id}`, siteAuth);
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF1cAAAAASUVORK5CYII=', 'base64');
+    const mediaPlan = (await traced('post', `${site}/media`, `${site}/media`, (r) => siteAuth(r).send({ filename: 'trace-image.png', contentType: 'image/png', size: png.length, alt: 'تصویر بررسی ثبت رویداد' }))).body as { media: { id: string }; upload: { url: string; fields: Record<string, string> } };
+    const mediaForm = new FormData();
+    for (const [name, value] of Object.entries(mediaPlan.upload.fields)) mediaForm.append(name, value);
+    mediaForm.append('Content-Type', 'image/png');
+    mediaForm.append('file', new Blob([png], { type: 'image/png' }), 'trace-image.png');
+    expect((await fetch(mediaPlan.upload.url, { method: 'POST', body: mediaForm })).status).toBeLessThan(300);
+    await traced('post', `${site}/media/{id}/complete`, `${site}/media/${mediaPlan.media.id}/complete`, siteAuth);
+    await traced('patch', `${site}/media/{id}`, `${site}/media/${mediaPlan.media.id}`, (r) => siteAuth(r).send({ alt: 'متن جایگزین ویرایش‌شده', archive: true }));
+
     // Phone and password: sign-in, confirming that session with an SMS code, and recovery.
     const keyholder = await withAdminPassword(t, await signIn(t, randomPhone(), 'دارنده رمز'));
     const passwordSession = (

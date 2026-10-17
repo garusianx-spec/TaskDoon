@@ -16,7 +16,7 @@ Node.js 22.12 or newer. Every command runs from the repository root:
 
 ```bash
 npm install
-npm run dev             # builds the shared packages, then http://localhost:3000 (the live app: needs the API on :4000)
+npm run dev             # marketing at /, workspace at /feed; needs the API on :4000
 NEXT_PUBLIC_DATA_SOURCE=demo npm run dev   # the same app on the in-memory demo workspace, no backend needed
 npm run build           # packages, apps/api and the production build of apps/web
 npm run typecheck       # every workspace (strict, noUncheckedIndexedAccess)
@@ -34,6 +34,22 @@ npm run infra:down
 # The scaled topology: REST node, two WebSocket nodes, worker, nginx on :8080
 docker compose -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale up -d --build --wait
 ```
+
+The public website and its CMS use the existing API and PostgreSQL database. Run migrations
+before starting the API: `npm run db:migrate -w @taskin/api` (with the API environment loaded).
+Migrations seed published product content and unpublished legal drafts without overwriting
+editorial changes. Website management lives at `/admin/site`, behind the existing platform
+administrator login, SMS verification, and password step-up. Workspace administrators do not
+automatically have access.
+
+The CMS supports independent drafts, protected previews, publication, revision restoration,
+section editing and ordering, pricing presentation, media, and form inboxes. Set the web
+runtime's `TASKIN_API_ORIGIN` to the API origin and `SITE_URL` to the public canonical origin
+in deployment. Paid-plan buttons request contact or a demo; this does not add billing.
+See [marketing operations](docs/marketing-operations.md) for publishing, SEO, business review,
+and validation. The live CMS acceptance suite is
+`API_LOG=<api-log> npm run test:e2e:site`; it also needs the local operator CLI's
+`DATABASE_MIGRATOR_URL` and Chromium, as the existing live administrator tests do.
 
 See [apps/api/README.md](apps/api/README.md) for running the API outside Docker, its
 configuration, its test layout, and the scale-out smoke test and chat load results.

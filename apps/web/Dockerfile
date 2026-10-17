@@ -83,8 +83,11 @@ RUN rm -rf apps/web/.next/standalone/apps/web/scripts/container-build-id.mjs \
 # Copy only Node's runtime libraries and the traced Next server. No npm, apk,
 # compiler, source tree, or build dependencies enter any final image layer.
 FROM scratch AS runner
+# Marketing Server Components fetch the API at runtime as well as through browser rewrites.
+ARG TASKIN_API_ORIGIN=http://api:4000
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
+    TASKIN_API_ORIGIN=${TASKIN_API_ORIGIN} \
     HOSTNAME=0.0.0.0 \
     PORT=3000
 COPY --from=runtime-binaries /runtime-root/ /

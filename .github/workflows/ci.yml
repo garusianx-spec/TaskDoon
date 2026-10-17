@@ -290,6 +290,10 @@ jobs:
           printf 'API_LOG=%s/api.log\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Two people, one workspace (sign-in, invitation, tasks, chat, notifications, sign-out)
         run: npm run test:e2e:live
+      - name: Marketing publishing, SEO, forms and protected CMS
+        run: npm run test:e2e:site
+        env:
+          DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
       # The hardened daemon excludes operator CLIs and owner credentials. The unchanged
       # suites default to the separately built host CLI, with test-only owner credentials.
       - name: Platform super admin (directory, sessions, messages, reset code, audit)

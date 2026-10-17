@@ -247,7 +247,12 @@ services:
         TASKIN_API_ORIGIN: http://api:4000
     user: node
     read_only: true
-    environment: {NODE_ENV: production, PORT: "3000", HOSTNAME: 0.0.0.0}
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      TASKIN_API_ORIGIN: http://api:4000
+      SITE_URL: ${PUBLIC_WEB_ORIGIN:-https://localhost:8443}
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m,uid=1000,gid=1000
       - /app/apps/web/.next/cache:rw,noexec,nosuid,size=64m,uid=1000,gid=1000

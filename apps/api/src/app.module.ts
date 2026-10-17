@@ -11,6 +11,7 @@ import { AuthController } from './modules/auth/auth.controller.js';
 import { JwtAuthGuard } from './modules/auth/guards.js';
 import { ChatController } from './modules/chat/chat.controller.js';
 import { SchedulingController } from './modules/chat/scheduling.controller.js';
+import { SiteModule } from './modules/site/site.module.js';
 import { DomainModule } from './modules/domain.module.js';
 import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { MeController } from './modules/users/me.controller.js';
@@ -55,6 +56,7 @@ class HttpApiModule {
       imports: [
         DomainModule,
         PlatformAdminModule,
+        SiteModule,
         ThrottlerModule.forRootAsync({
           inject: [RedisClients, AppConfig],
           useFactory: (redis: RedisClients, config: AppConfig) => ({

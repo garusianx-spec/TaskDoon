@@ -337,6 +337,55 @@ scheduled_messages.sent_at timestamp with time zone
 scheduled_messages.status scheduled_message_status not null default 'pending'::scheduled_message_status
 scheduled_messages.updated_at timestamp with time zone not null default now()
 scheduled_messages.workspace_id uuid not null
+site_audit_log.action text not null
+site_audit_log.actor_id uuid
+site_audit_log.created_at timestamp with time zone not null default now()
+site_audit_log.document_id uuid
+site_audit_log.id uuid not null default app.uuidv7()
+site_documents.created_at timestamp with time zone not null default now()
+site_documents.created_by uuid
+site_documents.draft jsonb not null
+site_documents.id uuid not null default app.uuidv7()
+site_documents.kind text not null
+site_documents.published jsonb
+site_documents.published_at timestamp with time zone
+site_documents.published_slug text
+site_documents.published_updated_at timestamp with time zone
+site_documents.published_version integer
+site_documents.slug text not null
+site_documents.status text not null default 'draft'::text
+site_documents.updated_at timestamp with time zone not null default now()
+site_documents.updated_by uuid
+site_documents.version integer not null default 1
+site_media.alt text not null
+site_media.archived_at timestamp with time zone
+site_media.completed_at timestamp with time zone
+site_media.content_type text not null
+site_media.created_at timestamp with time zone not null default now()
+site_media.created_by uuid
+site_media.filename text not null
+site_media.id uuid not null default app.uuidv7()
+site_media.size integer not null
+site_media.storage_key text not null
+site_redirects.created_at timestamp with time zone not null default now()
+site_redirects.from_path text not null
+site_redirects.id uuid not null default app.uuidv7()
+site_redirects.to_path text not null
+site_revisions.action text not null
+site_revisions.actor_id uuid
+site_revisions.content jsonb not null
+site_revisions.created_at timestamp with time zone not null default now()
+site_revisions.document_id uuid not null
+site_revisions.id uuid not null default app.uuidv7()
+site_revisions.slug text not null
+site_revisions.version integer not null
+site_submissions.created_at timestamp with time zone not null default now()
+site_submissions.id uuid not null default app.uuidv7()
+site_submissions.kind text not null
+site_submissions.notes text not null default ''::text
+site_submissions.payload jsonb not null
+site_submissions.status text not null default 'new'::text
+site_submissions.updated_at timestamp with time zone not null default now()
 subtasks.assignee_id uuid
 subtasks.completed_at timestamp with time zone
 subtasks.created_at timestamp with time zone not null default now()
@@ -884,6 +933,64 @@ scheduled_messages scheduled_messages_updated_at_not_null: NOT NULL updated_at
 scheduled_messages scheduled_messages_workspace_id_not_null: NOT NULL workspace_id
 scheduled_messages scheduled_messages_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 scheduled_messages scheduled_messages_ws_id_uq: UNIQUE (workspace_id, id)
+site_audit_log site_audit_log_action_not_null: NOT NULL action
+site_audit_log site_audit_log_actor_id_fkey: FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL
+site_audit_log site_audit_log_created_at_not_null: NOT NULL created_at
+site_audit_log site_audit_log_document_id_fkey: FOREIGN KEY (document_id) REFERENCES site_documents(id) ON DELETE RESTRICT
+site_audit_log site_audit_log_id_not_null: NOT NULL id
+site_audit_log site_audit_log_pkey: PRIMARY KEY (id)
+site_documents site_documents_created_at_not_null: NOT NULL created_at
+site_documents site_documents_created_by_fkey: FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+site_documents site_documents_draft_not_null: NOT NULL draft
+site_documents site_documents_id_not_null: NOT NULL id
+site_documents site_documents_kind_check: CHECK ((kind = ANY (ARRAY['page'::text, 'feature'::text, 'article'::text, 'help'::text, 'faq'::text, 'pricing'::text, 'job'::text, 'settings'::text, 'navigation'::text, 'reusable'::text])))
+site_documents site_documents_kind_not_null: NOT NULL kind
+site_documents site_documents_pkey: PRIMARY KEY (id)
+site_documents site_documents_public_snapshot_check: CHECK (((published IS NULL) = (published_slug IS NULL)))
+site_documents site_documents_published_check: CHECK (((status <> 'published'::text) OR (published IS NOT NULL)))
+site_documents site_documents_slug_not_null: NOT NULL slug
+site_documents site_documents_status_check: CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])))
+site_documents site_documents_status_not_null: NOT NULL status
+site_documents site_documents_updated_at_not_null: NOT NULL updated_at
+site_documents site_documents_updated_by_fkey: FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+site_documents site_documents_version_check: CHECK ((version > 0))
+site_documents site_documents_version_not_null: NOT NULL version
+site_media site_media_alt_not_null: NOT NULL alt
+site_media site_media_content_type_not_null: NOT NULL content_type
+site_media site_media_created_at_not_null: NOT NULL created_at
+site_media site_media_created_by_fkey: FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+site_media site_media_filename_not_null: NOT NULL filename
+site_media site_media_id_not_null: NOT NULL id
+site_media site_media_pkey: PRIMARY KEY (id)
+site_media site_media_size_check: CHECK (((size > 0) AND (size <= 10485760)))
+site_media site_media_size_not_null: NOT NULL size
+site_media site_media_storage_key_not_null: NOT NULL storage_key
+site_redirects site_redirects_check: CHECK ((from_path <> to_path))
+site_redirects site_redirects_created_at_not_null: NOT NULL created_at
+site_redirects site_redirects_from_path_not_null: NOT NULL from_path
+site_redirects site_redirects_id_not_null: NOT NULL id
+site_redirects site_redirects_pkey: PRIMARY KEY (id)
+site_redirects site_redirects_to_path_not_null: NOT NULL to_path
+site_revisions site_revisions_action_not_null: NOT NULL action
+site_revisions site_revisions_actor_id_fkey: FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL
+site_revisions site_revisions_content_not_null: NOT NULL content
+site_revisions site_revisions_created_at_not_null: NOT NULL created_at
+site_revisions site_revisions_document_id_fkey: FOREIGN KEY (document_id) REFERENCES site_documents(id) ON DELETE RESTRICT
+site_revisions site_revisions_document_id_not_null: NOT NULL document_id
+site_revisions site_revisions_id_not_null: NOT NULL id
+site_revisions site_revisions_pkey: PRIMARY KEY (id)
+site_revisions site_revisions_slug_not_null: NOT NULL slug
+site_revisions site_revisions_version_not_null: NOT NULL version
+site_submissions site_submissions_created_at_not_null: NOT NULL created_at
+site_submissions site_submissions_id_not_null: NOT NULL id
+site_submissions site_submissions_kind_check: CHECK ((kind = ANY (ARRAY['contact'::text, 'collaboration'::text, 'demo'::text, 'application'::text])))
+site_submissions site_submissions_kind_not_null: NOT NULL kind
+site_submissions site_submissions_notes_not_null: NOT NULL notes
+site_submissions site_submissions_payload_not_null: NOT NULL payload
+site_submissions site_submissions_pkey: PRIMARY KEY (id)
+site_submissions site_submissions_status_check: CHECK ((status = ANY (ARRAY['new'::text, 'in-progress'::text, 'closed'::text, 'archived'::text])))
+site_submissions site_submissions_status_not_null: NOT NULL status
+site_submissions site_submissions_updated_at_not_null: NOT NULL updated_at
 subtasks subtasks_assignee_fk: FOREIGN KEY (workspace_id, assignee_id) REFERENCES workspace_members(workspace_id, user_id)
 subtasks subtasks_created_at_not_null: NOT NULL created_at
 subtasks subtasks_done_not_null: NOT NULL done
@@ -1188,6 +1295,19 @@ scheduled_messages CREATE INDEX scheduled_messages_due_idx ON public.scheduled_m
 scheduled_messages CREATE UNIQUE INDEX scheduled_messages_client_msg_uq ON public.scheduled_messages USING btree (conversation_id, author_id, client_msg_id)
 scheduled_messages CREATE UNIQUE INDEX scheduled_messages_pkey ON public.scheduled_messages USING btree (id)
 scheduled_messages CREATE UNIQUE INDEX scheduled_messages_ws_id_uq ON public.scheduled_messages USING btree (workspace_id, id)
+site_audit_log CREATE INDEX site_audit_created_idx ON public.site_audit_log USING btree (created_at DESC)
+site_audit_log CREATE UNIQUE INDEX site_audit_log_pkey ON public.site_audit_log USING btree (id)
+site_documents CREATE INDEX site_documents_status_kind_idx ON public.site_documents USING btree (status, kind)
+site_documents CREATE UNIQUE INDEX site_documents_kind_slug_uq ON public.site_documents USING btree (kind, slug)
+site_documents CREATE UNIQUE INDEX site_documents_pkey ON public.site_documents USING btree (id)
+site_documents CREATE UNIQUE INDEX site_documents_public_slug_uq ON public.site_documents USING btree (kind, published_slug)
+site_media CREATE UNIQUE INDEX site_media_pkey ON public.site_media USING btree (id)
+site_redirects CREATE UNIQUE INDEX site_redirects_path_uq ON public.site_redirects USING btree (from_path)
+site_redirects CREATE UNIQUE INDEX site_redirects_pkey ON public.site_redirects USING btree (id)
+site_revisions CREATE INDEX site_revisions_document_idx ON public.site_revisions USING btree (document_id, created_at DESC)
+site_revisions CREATE UNIQUE INDEX site_revisions_pkey ON public.site_revisions USING btree (id)
+site_submissions CREATE INDEX site_submissions_inbox_idx ON public.site_submissions USING btree (kind, status, created_at DESC)
+site_submissions CREATE UNIQUE INDEX site_submissions_pkey ON public.site_submissions USING btree (id)
 subtasks CREATE INDEX subtasks_task_position_idx ON public.subtasks USING btree (task_id, "position")
 subtasks CREATE UNIQUE INDEX subtasks_pkey ON public.subtasks USING btree (id)
 subtasks CREATE UNIQUE INDEX subtasks_ws_id_uq ON public.subtasks USING btree (workspace_id, id)
@@ -1267,6 +1387,12 @@ refresh_tokens enabled=false forced=false
 role_permissions enabled=true forced=true
 roles enabled=true forced=true
 scheduled_messages enabled=true forced=true
+site_audit_log enabled=true forced=false
+site_documents enabled=true forced=false
+site_media enabled=true forced=false
+site_redirects enabled=true forced=false
+site_revisions enabled=true forced=false
+site_submissions enabled=true forced=false
 subtasks enabled=true forced=true
 task_assignees enabled=true forced=true
 task_attachments enabled=true forced=true
@@ -1315,6 +1441,18 @@ roles roles_member_read SELECT using((EXISTS ( SELECT 1
   WHERE ((m.workspace_id = roles.workspace_id) AND (m.user_id = ( SELECT app.current_user_id() AS current_user_id)) AND (m.status = 'active'::member_status))))) check()
 roles roles_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 scheduled_messages scheduled_messages_author ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (author_id = ( SELECT app.current_user_id() AS current_user_id)))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (author_id = ( SELECT app.current_user_id() AS current_user_id))))
+site_audit_log site_audit_admin SELECT using(app.is_site_admin()) check()
+site_audit_log site_audit_insert INSERT using() check((app.is_site_admin() AND (actor_id = app.current_user_id())))
+site_documents site_documents_read SELECT using(app.is_site_admin()) check()
+site_documents site_documents_write ALL using(app.is_site_admin()) check(app.is_site_admin())
+site_media site_media_read SELECT using((((completed_at IS NOT NULL) AND (archived_at IS NULL)) OR app.is_site_admin())) check()
+site_media site_media_write ALL using(app.is_site_admin()) check(app.is_site_admin())
+site_redirects site_redirects_read SELECT using(true) check()
+site_redirects site_redirects_write ALL using(app.is_site_admin()) check(app.is_site_admin())
+site_revisions site_revisions_insert INSERT using() check(app.is_site_admin())
+site_revisions site_revisions_read SELECT using(app.is_site_admin()) check()
+site_submissions site_submissions_admin ALL using(app.is_site_admin()) check(app.is_site_admin())
+site_submissions site_submissions_public_insert INSERT using() check((((payload ->> 'consent'::text) = 'true'::text) AND (status = 'new'::text) AND (notes = ''::text)))
 subtasks subtasks_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_assignees task_assignees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_attachments task_attachments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
@@ -1368,10 +1506,12 @@ app.drop_expired_audit_partitions(keep_months integer) security definer
 app.ensure_audit_partitions(months_ahead integer) security definer
 app.find_invitation(p_token_hash bytea) security definer
 app.include_deleted() invoker
+app.is_site_admin() security definer
 app.notify_outbox() invoker
 app.projects_due_for_purge(p_days integer, p_limit integer) security definer
 app.protect_locked_role_permissions() invoker
 app.protect_locked_roles() invoker
+app.published_site_documents(p_kind text, p_slug text) security definer
 app.scheduled_messages_due(p_limit integer) security definer
 app.search_note_ids(p_pattern text) security definer
 app.search_task_ids(p_pattern text) security definer
@@ -1415,6 +1555,12 @@ refresh_tokens DELETE,INSERT,SELECT,UPDATE
 role_permissions DELETE,INSERT,SELECT,UPDATE
 roles DELETE,INSERT,SELECT,UPDATE
 scheduled_messages DELETE,INSERT,SELECT,UPDATE
+site_audit_log INSERT,SELECT
+site_documents INSERT,SELECT,UPDATE
+site_media INSERT,SELECT,UPDATE
+site_redirects DELETE,INSERT,SELECT,UPDATE
+site_revisions INSERT,SELECT
+site_submissions INSERT,SELECT,UPDATE
 subtasks DELETE,INSERT,SELECT,UPDATE
 task_assignees DELETE,INSERT,SELECT,UPDATE
 task_attachments DELETE,INSERT,SELECT,UPDATE

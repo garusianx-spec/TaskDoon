@@ -3,6 +3,8 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
 import type { PlanLimits } from '@taskin/contracts';
+import { SITE_SEED_DOCUMENTS } from '../../modules/site/site.seed.js';
+import { validateSiteDocument, validateSitePublish } from '../../modules/site/site.validation.js';
 
 export const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../../db/migrations', import.meta.url));
 
@@ -33,6 +35,25 @@ export async function runMigrations(migratorUrl: string): Promise<void> {
         `insert into plans (id, name, limits) values ($1, $2, $3)
          on conflict (id) do update set name = excluded.name, limits = excluded.limits`,
         [plan.id, plan.name, JSON.stringify(plan.limits)],
+      );
+    }
+    for (const seed of SITE_SEED_DOCUMENTS) {
+      const { kind, slug, published, ...content } = seed;
+      validateSiteDocument({ kind, slug, draft: content });
+      if (published) validateSitePublish(kind, slug, content);
+      await pool.query(
+        `insert into site_documents (kind, slug, status, draft, published, published_slug, published_version, published_at, published_updated_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $8) on conflict (kind, slug) do nothing`,
+        [kind, slug, published ? 'published' : 'draft', JSON.stringify(content), published ? JSON.stringify(content) : null, published ? slug : null, published ? 1 : null, published ? new Date() : null],
+      );
+      // Preserve the original version of freshly seeded content before an administrator edits
+      // it. Existing editorial history and documents changed by users are never overwritten.
+      await pool.query(
+        `insert into site_revisions (document_id, content, slug, version, actor_id, action)
+         select d.id, d.draft, d.slug, d.version, null, 'seed'
+         from site_documents d where d.kind = $1 and d.slug = $2 and d.version = 1
+         and not exists (select 1 from site_revisions r where r.document_id = d.id)`,
+        [kind, slug],
       );
     }
   } finally {

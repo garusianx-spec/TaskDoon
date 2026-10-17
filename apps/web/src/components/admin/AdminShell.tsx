@@ -53,6 +53,12 @@ export function AdminShell({ children }: { readonly children: ReactNode }) {
             );
           })}
         </nav>
+        <nav aria-label="مدیریت وب‌سایت" className="border-t border-secondary pt-3">
+          <p className="mb-2 px-3 text-caption font-semibold text-fg-tertiary">مدیریت وب‌سایت</p>
+          <Link href="/admin/site" aria-current={pathname.startsWith('/admin/site') ? 'page' : undefined} className={cn('flex items-center gap-2 rounded-lg px-3 py-2 text-body-sm font-medium transition-colors', pathname.startsWith('/admin/site') ? 'bg-brand-subtle text-fg-brand' : 'text-fg-secondary hover:bg-hover hover:text-fg-primary')}>
+            <BriefcaseIcon size={18} /> محتوا و انتشار وب‌سایت
+          </Link>
+        </nav>
         <div className="hidden flex-col gap-2 border-t border-secondary pt-4 lg:mt-auto lg:flex">
           <p className="text-body-sm font-semibold text-fg-primary">{admin.fullName}</p>
           <p className="text-caption text-fg-tertiary">هر مشاهده در گزارش بازرسی ثبت می‌شود.</p>
