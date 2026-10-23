@@ -20,7 +20,9 @@
     "test:e2e:live:password": "node e2e/live/password.mjs",
     "test:e2e:live:moderation": "node e2e/live/moderation.mjs",
     "test:e2e:live:workspace-moderation": "node e2e/live/workspace-moderation.mjs",
-    "test:e2e:live:agile": "node e2e/live/agile.mjs"
+    "test:e2e:live:agile": "node e2e/live/agile.mjs",
+    "pretest": "npm run build:deps",
+    "test": "vitest run --config vitest.config.mts"
   },
   "dependencies": {
     "@taskin/contracts": "0.1.0",
@@ -33,7 +35,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
-    "@types/node": "22.10.2",
+    "@types/node": "22.20.4",
     "@types/react": "19.0.2",
     "@types/react-dom": "19.0.2",
     "autoprefixer": "10.4.21",
@@ -42,6 +44,7 @@
     "playwright-core": "1.63.0",
     "postcss": "8.5.6",
     "tailwindcss": "3.4.17",
-    "typescript": "5.7.2"
+    "typescript": "5.7.2",
+    "vitest": "5.0.2"
   }
 }

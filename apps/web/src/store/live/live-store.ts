@@ -654,7 +654,7 @@ export class LiveStore {
         this.markRead(action.conversationId);
         return;
       case 'create-project':
-        if (!next.projects.some((project) => project.id === action.projectId)) return;
+        if (prev.projects.some((project) => project.id === action.projectId) || !next.projects.some((project) => project.id === action.projectId)) return;
         this.track(action.projectId, async () => {
           const departmentName = DEPARTMENTS.find((department) => department.id === action.draft.departmentId)?.name;
           const departmentId = [...this.departments].find(([, name]) => name === departmentName)?.[0];
@@ -666,8 +666,9 @@ export class LiveStore {
             ...(departmentId ? { departmentId } : {}),
           });
           this.apply({ type: 'sync/upsert-project', project: projectFromView(created, (id) => (id ? this.departments.get(id) : undefined)), replaceId: action.projectId });
-          // The server gave the project its own four columns: they replace the local stand-ins.
-          await this.refreshWorkflow();
+          // Resolve its companion even if the socket event was missed. Replays use the same
+          // reducer identity reconciliation as realtime, so neither ordering adds a second row.
+          await Promise.all([this.refreshWorkflow(), this.refreshProjectChannel(created.id)]);
           return created.id;
         });
         return;
@@ -1266,7 +1267,7 @@ export class LiveStore {
     this.deliver(
       localId,
       async () => {
-        const extension = recording.blob.type.includes('ogg') ? 'ogg' : recording.blob.type.includes('mp4') ? 'm4a' : 'webm';
+        const extension = recording.blob.type.includes('ogg') ? 'ogg' : recording.blob.type.includes('mp4') ? 'm4a' : recording.blob.type.includes('aac') ? 'aac' : 'webm';
         const attachment = stored ?? (await this.upload(recording.blob, `voice-${Date.now()}.${extension}`));
         stored = attachment;
         const sent = await this.post(conversationId, { clientMsgId, kind: 'voice', attachmentId: attachment.id, durationSec: recording.durationSec, waveform: recording.waveform });
@@ -1698,6 +1699,12 @@ export class LiveStore {
       window.location.pathname.startsWith('/chats');
     if (watching) this.markRead(view.conversationId);
     else this.apply({ type: 'sync/unread', conversationId: view.conversationId, count: (state.unreadByConversation[view.conversationId] ?? 0) + 1 });
+  }
+
+  private async refreshProjectChannel(projectId: string): Promise<void> {
+    const conversations = await api.conversations.list(this.workspaceId);
+    const channel = conversations.find((conversation) => conversation.projectId === projectId && conversation.membershipMode === 'project_synced' && !conversation.archived);
+    if (channel) this.apply({ type: 'sync/upsert-conversation', conversation: this.conversationFrom(channel) });
   }
 
   private async refreshConversation(conversationId: string): Promise<void> {

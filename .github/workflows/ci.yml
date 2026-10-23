@@ -139,6 +139,8 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Install the locked Playwright Chromium revision
         run: npx --no-install playwright-core install --with-deps chromium
+      - name: Web unit regressions
+        run: npm run test --workspace @taskin/web
       - name: Validate the demo production build
         run: npm run build --workspace @taskin/web
         env:

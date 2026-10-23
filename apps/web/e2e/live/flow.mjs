@@ -592,7 +592,15 @@ try {
   await owner.getByRole('button', { name: `حذف ${guestName} از فضای کاری` }).click();
   dialog = owner.getByRole('dialog', { name: `حذف ${guestName} از فضای کاری` });
   await dialog.getByLabel('رمز مدیر').fill('Taskin-2026!');
+  // The row disappears optimistically. Wait for the durable removal before reloading,
+  // otherwise navigation can interrupt the step-up → DELETE sequence.
+  const memberRemoved = owner.waitForResponse((response) =>
+    response.request().method() === 'DELETE'
+    && /^\/api\/v1\/workspaces\/[^/]+\/members\/[^/]+$/.test(new URL(response.url()).pathname)
+    && response.status() === 204,
+  );
   await dialog.getByRole('button', { name: 'حذف از فضای کاری' }).click();
+  await memberRemoved;
   check(await eventually(async () => (await owner.getByRole('listitem').filter({ hasText: guestName }).count()) === 0, 15_000), 'the owner removes the guest from the workspace (with the admin password)');
   await railOf(owner).getByRole('link', { name: 'گفتگوها' }).click();
   await owner.waitForURL('**/chats');
