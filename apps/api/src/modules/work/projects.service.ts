@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type {
   CreateProjectBody,
   PermissionActionId,
@@ -15,7 +15,7 @@ import type { Tx } from '../../platform/db/database.js';
 import { isUniqueViolation, PG, pgError } from '../../platform/db/pg-errors.js';
 import { EFFECTIVE_LIMITS } from '../../platform/db/plan-limits.js';
 import { iso, num } from '../../platform/db/rows.js';
-import { calendarEvents, plans, projectMembers, projects, projectStars, tasks, workflows, workspaces } from '../../platform/db/schema/all.js';
+import { calendarEvents, departments, plans, projectDepartments, projectMembers, projects, projectStars, tasks, workflows, workspaces } from '../../platform/db/schema/all.js';
 import { type Unit, UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { MembershipContext } from '../../platform/http/request.js';
@@ -25,6 +25,7 @@ import { AbilityFactory, effectiveProjectRole, PROJECT_ROLE_ACTIONS, projectActi
 import { MembershipService } from '../rbac/membership.service.js';
 import { AccessService, assertAction, projectVisibleSql } from './access.js';
 import { createProjectWorkflow } from './board.service.js';
+import { selectedProjectDepartments } from './project-departments.js';
 
 /** Days a deleted project stays in the trash, restorable by the workspace owner, before its purge. */
 export const PROJECT_TRASH_DAYS = 40;
@@ -35,6 +36,7 @@ interface ProjectListRow extends Record<string, unknown> {
   name: string;
   description: string;
   department_id: string | null;
+  department_ids: string[];
   color: ProjectView['color'];
   parent_id: string | null;
   visibility: ProjectVisibility;
@@ -100,6 +102,7 @@ export class ProjectsService {
 
   async create(member: MembershipContext, body: CreateProjectBody): Promise<ProjectView> {
     if (!this.abilities.forMember(member).can('create', 'Project')) throw ApiError.forbidden();
+    const departmentIds = selectedProjectDepartments(body) ?? [];
     const id = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async (unit) => {
       const tx = unit.tx;
       // The workspace row serialises project creation, so two creates cannot both slip under the plan limit.
@@ -117,6 +120,7 @@ export class ProjectsService {
       // Everyone named joins as a contributor (the most a guest may be); they must be active members.
       const others = [...new Set(body.memberIds ?? [])].filter((userId) => userId !== member.userId);
       for (const userId of others) await this.targetMember(tx, member.workspaceId, null, userId);
+      await this.validateDepartments(tx, member.workspaceId, departmentIds);
       // Every project owns its board: its own workflow, starting with the four built-in columns.
       const workflow = { id: await createProjectWorkflow(tx, member.workspaceId, body.key) };
       try {
@@ -127,7 +131,7 @@ export class ProjectsService {
             key: body.key,
             name: body.name.trim(),
             description: body.description?.trim() ?? '',
-            departmentId: body.departmentId ?? null,
+            departmentId: departmentIds[0] ?? null,
             color: body.color ?? 'brand',
             visibility: body.visibility ?? 'workspace',
             workflowId: workflow.id,
@@ -135,6 +139,7 @@ export class ProjectsService {
           })
           .returning({ id: projects.id, key: projects.key, name: projects.name, visibility: projects.visibility });
         if (!created) throw new Error('project insert returned nothing');
+        await this.replaceDepartments(tx, member.workspaceId, created.id, departmentIds);
         // The creator leads the project (a guest creator is capped at contributor by the ability).
         await tx.insert(projectMembers).values([
           { workspaceId: member.workspaceId, projectId: created.id, userId: member.userId, role: 'lead', addedBy: member.userId },
@@ -156,14 +161,14 @@ export class ProjectsService {
           workspaceId: member.workspaceId,
           resourceType: 'project',
           resourceId: created.id,
-          changes: { after: { key: created.key, name: created.name, visibility: created.visibility } },
+          changes: { after: { key: created.key, name: created.name, visibility: created.visibility, departmentIds } },
         });
         await this.outbox.add(tx, { type: 'project.created', aggregateType: 'project', aggregateId: created.id, workspaceId: member.workspaceId, payload: { projectId: created.id } });
         return created.id;
       } catch (error) {
         if (isUniqueViolation(error, 'projects_ws_key_uq')) throw new ApiError('PROJECT_KEY_TAKEN');
         const code = pgError(error)?.code;
-        if (code === PG.foreignKeyViolation) throw ApiError.validation([{ field: 'departmentId', message: 'unknown department' }]);
+        if (code === PG.foreignKeyViolation) throw ApiError.validation([{ field: body.departmentIds !== undefined ? 'departmentIds' : 'departmentId', message: 'unknown department' }]);
         throw error;
       }
     });
@@ -175,6 +180,8 @@ export class ProjectsService {
       const tx = unit.tx;
       const { project, actions } = await this.access.project(tx, member, projectId, { lock: 'update' });
       assertAction(actions, 'edit');
+      const departmentIds = selectedProjectDepartments(body);
+      if (departmentIds !== undefined) await this.validateDepartments(tx, member.workspaceId, departmentIds);
       if (body.visibility !== undefined && body.visibility !== project.visibility) assertAction(actions, 'delete', 'Changing who can see a project needs the delete permission.');
       const fields = Object.entries(body)
         .filter(([, value]) => value !== undefined)
@@ -185,14 +192,15 @@ export class ProjectsService {
           .set({
             ...(body.name !== undefined ? { name: body.name.trim() } : {}),
             ...(body.description !== undefined ? { description: body.description.trim() } : {}),
-            ...(body.departmentId !== undefined ? { departmentId: body.departmentId } : {}),
+            ...(departmentIds !== undefined ? { departmentId: departmentIds[0] ?? null } : {}),
             ...(body.color !== undefined ? { color: body.color } : {}),
             ...(body.visibility !== undefined ? { visibility: body.visibility } : {}),
             ...(body.archived !== undefined ? { archivedAt: body.archived ? (project.archivedAt ?? sql`now()`) : null } : {}),
           })
           .where(and(eq(projects.workspaceId, member.workspaceId), eq(projects.id, projectId)));
+        if (departmentIds !== undefined) await this.replaceDepartments(tx, member.workspaceId, projectId, departmentIds);
       } catch (error) {
-        if (pgError(error)?.code === PG.foreignKeyViolation) throw ApiError.validation([{ field: 'departmentId', message: 'unknown department' }]);
+        if (pgError(error)?.code === PG.foreignKeyViolation) throw ApiError.validation([{ field: body.departmentIds !== undefined ? 'departmentIds' : 'departmentId', message: 'unknown department' }]);
         throw error;
       }
       if (body.visibility !== undefined && body.visibility !== project.visibility) await this.memberships.bump(unit, member.workspaceId);
@@ -412,6 +420,11 @@ export class ProjectsService {
   private listSql(member: MembershipContext, projectId?: string) {
     return sql`
       select p.id, p.key, p.name, p.description, p.department_id, p.color, p.parent_id, p.visibility,
+        array(select assigned.department_id from (
+          select p.department_id where p.department_id is not null
+          union
+          select pd.department_id from project_departments pd where pd.workspace_id = p.workspace_id and pd.project_id = p.id
+        ) assigned order by (assigned.department_id = p.department_id) desc nulls last, assigned.department_id) as department_ids,
         p.archived_at is not null as archived,
         exists (select 1 from project_stars s where s.user_id = ${member.userId} and s.project_id = p.id) as starred,
         (select pm.role from project_members pm where pm.project_id = p.id and pm.user_id = ${member.userId}) as my_role,
@@ -434,6 +447,7 @@ export class ProjectsService {
       name: row.name,
       description: row.description,
       departmentId: row.department_id,
+      departmentIds: row.department_ids,
       color: row.color,
       // Projects are flat (Phase 3.1).
       parentId: null,
@@ -447,6 +461,19 @@ export class ProjectsService {
       openTaskCount: num(row.open_task_count),
       createdAt: iso(row.created_at),
     };
+  }
+
+  private async validateDepartments(tx: Tx, workspaceId: string, ids: readonly string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const rows = await tx.select({ id: departments.id }).from(departments)
+      .where(and(eq(departments.workspaceId, workspaceId), inArray(departments.id, [...ids])))
+      .limit(ids.length);
+    if (rows.length !== ids.length) throw ApiError.validation([{ field: 'departmentIds', message: 'unknown department' }]);
+  }
+
+  private async replaceDepartments(tx: Tx, workspaceId: string, projectId: string, ids: readonly string[]): Promise<void> {
+    await tx.delete(projectDepartments).where(and(eq(projectDepartments.workspaceId, workspaceId), eq(projectDepartments.projectId, projectId)));
+    if (ids.length > 0) await tx.insert(projectDepartments).values(ids.map((departmentId) => ({ workspaceId, projectId, departmentId })));
   }
 
   private async targetMember(tx: Tx, workspaceId: string, projectId: string | null, userId: string): Promise<{ roleKey: string; projectRole: ProjectRole | null }> {

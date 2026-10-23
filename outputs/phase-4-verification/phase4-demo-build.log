@@ -1,0 +1,67 @@
+
+> @taskin/web@0.1.0 prebuild
+> npm run build:deps
+
+
+> @taskin/web@0.1.0 build:deps
+> tsc -b ../../packages/contracts ../../packages/jalali ../../packages/text
+
+
+> @taskin/web@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.25
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 10.5s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/25) ...
+   Generating static pages (6/25) 
+   Generating static pages (12/25) 
+   Generating static pages (18/25) 
+ ✓ Generating static pages (25/25)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                   Size  First Load JS
+┌ ○ /                                        130 B         103 kB
+├ ○ /_not-found                              130 B         103 kB
+├ ○ /admin                                   130 B         103 kB
+├ ○ /admin/audit                           3.98 kB         135 kB
+├ ○ /admin/broadcasts                      6.94 kB         134 kB
+├ ○ /admin/conversations                   3.77 kB         135 kB
+├ ƒ /admin/conversations/[conversationId]     5 kB         136 kB
+├ ○ /admin/overview                        4.65 kB         132 kB
+├ ○ /admin/users                           3.87 kB         140 kB
+├ ƒ /admin/users/[userId]                  4.34 kB         140 kB
+├ ○ /admin/workspaces                      7.25 kB         138 kB
+├ ƒ /admin/workspaces/[workspaceId]        6.02 kB         141 kB
+├ ○ /apple-icon.png                            0 B            0 B
+├ ○ /calendar                              5.38 kB         237 kB
+├ ○ /chats                                 13.3 kB         245 kB
+├ ○ /directory                             2.78 kB         234 kB
+├ ○ /feed                                  2.93 kB         235 kB
+├ ○ /icon.svg                                  0 B            0 B
+├ ○ /invite                                4.13 kB         107 kB
+├ ○ /more                                  2.01 kB         234 kB
+├ ○ /notes                                 10.5 kB         242 kB
+├ ○ /reset-password                        5.56 kB         132 kB
+├ ○ /settings/roles                        4.26 kB         236 kB
+├ ○ /signed-out                            1.04 kB         189 kB
+└ ○ /tasks                                 14.4 kB         246 kB
++ First Load JS shared by all               103 kB
+  ├ chunks/18-a1d203838d2c4da8.js          46.4 kB
+  ├ chunks/87c73c54-24122e7b92478d00.js    54.2 kB
+  └ other shared chunks (total)            1.99 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

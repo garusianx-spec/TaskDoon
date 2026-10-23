@@ -118,6 +118,12 @@ export class CreateProjectDto implements CreateProjectBody {
   @ApiProperty({ minLength: 1, maxLength: 80 }) @IsString() @Length(1, 80) readonly name!: string;
   @ApiPropertyOptional({ maxLength: 2000 }) @IsOptional() @IsString() @MaxLength(2000) readonly description?: string;
   @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly departmentId?: string | null;
+  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid', maxItems: 20, description: 'Complete department selection; first is the legacy primary, empty clears all' })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID('all', { each: true })
+  readonly departmentIds?: string[];
   @ApiPropertyOptional({ enum: AVATAR_TONES }) @IsOptional() @IsIn(AVATAR_TONES) readonly color?: AvatarTone;
   @ApiPropertyOptional({ enum: VISIBILITIES }) @IsOptional() @IsIn(VISIBILITIES) readonly visibility?: ProjectVisibility;
   @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid', maxItems: 100, description: 'Contributors besides the creator; the project channel starts with them' })
@@ -132,6 +138,12 @@ export class UpdateProjectDto implements UpdateProjectBody {
   @ApiPropertyOptional({ minLength: 1, maxLength: 80 }) @IsOptional() @IsString() @Length(1, 80) readonly name?: string;
   @ApiPropertyOptional({ maxLength: 2000 }) @IsOptional() @IsString() @MaxLength(2000) readonly description?: string;
   @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly departmentId?: string | null;
+  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid', maxItems: 20, description: 'Replaces the complete selection; omit to leave unchanged' })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID('all', { each: true })
+  readonly departmentIds?: string[];
   @ApiPropertyOptional({ enum: AVATAR_TONES }) @IsOptional() @IsIn(AVATAR_TONES) readonly color?: AvatarTone;
   @ApiPropertyOptional({ enum: VISIBILITIES }) @IsOptional() @IsIn(VISIBILITIES) readonly visibility?: ProjectVisibility;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() readonly archived?: boolean;
@@ -147,6 +159,7 @@ export class ProjectViewDto implements ProjectView {
   @ApiProperty() readonly name!: string;
   @ApiProperty() readonly description!: string;
   @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly departmentId!: string | null;
+  @ApiProperty({ type: String, isArray: true, format: 'uuid' }) readonly departmentIds!: string[];
   @ApiProperty({ enum: AVATAR_TONES }) readonly color!: AvatarTone;
   @ApiProperty({ type: String, nullable: true, format: 'uuid', description: 'Always null: projects are flat' }) readonly parentId!: string | null;
   @ApiProperty({ enum: VISIBILITIES }) readonly visibility!: ProjectVisibility;

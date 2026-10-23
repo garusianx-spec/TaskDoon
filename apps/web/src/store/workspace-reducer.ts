@@ -8,6 +8,7 @@ import type {
   CalendarEventDraft,
   ChatFilterId,
   Conversation,
+  Department,
   DepartmentId,
   InspectorTarget,
   Invitation,
@@ -66,6 +67,7 @@ export interface WorkspaceState {
   /** Everyone in the active workspace (the directory), and its projects. */
   readonly users: readonly User[];
   readonly projects: readonly Project[];
+  readonly departments: readonly Department[];
   /**
    * People removed from the workspace (Phase 3.1): out of the directory and every picker, yet still
    * named — as former members — on the messages, tasks and activity they left behind.
@@ -365,6 +367,10 @@ export interface ProjectDraft {
   readonly key: string;
   readonly color: AvatarTone;
   readonly departmentId: DepartmentId;
+  readonly departmentIds?: readonly DepartmentId[];
+  /** Not persisted until submit; local IDs are resolved to workspace department UUIDs. */
+  readonly customDepartments?: readonly { readonly id: string; readonly name: string }[];
+  readonly memberIds?: readonly string[];
   readonly description: string;
 }
 
@@ -761,7 +767,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const { draft } = action;
       const id = nextId('t');
       const today = new Date();
-      const startDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const startDate = draft.startDate ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const placement: TaskPlacement = (draft.boardColumnId
         ? placementForColumn(state.boardColumns, draft.boardColumnId)
         : null) ?? { status: draft.status, boardColumnId: null };
@@ -1135,21 +1141,24 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'create-project': {
       const name = action.draft.name.trim();
       if (!name || state.projects.some((project) => project.id === action.projectId)) return state;
+      const departmentIds = [...new Set(action.draft.departmentIds ?? [action.draft.departmentId])];
+      const memberIds = [...new Set([action.ownerId, ...(action.draft.memberIds ?? [])])];
       const project: Project = {
         id: action.projectId,
         name,
-        departmentId: action.draft.departmentId,
+        departmentId: departmentIds[0] ?? '',
+        departmentIds,
         color: action.draft.color,
         starred: false,
         parentId: null,
-        memberIds: [action.ownerId],
+        memberIds,
       };
       // …and its own chat channel, whose members follow the project's (the live app gets it from the API).
       const channel: Conversation = {
         id: nextId('conv'),
         kind: 'channel',
         title: name,
-        memberIds: [action.ownerId],
+        memberIds,
         pinned: false,
         muted: false,
         unreadCount: 0,
@@ -1160,6 +1169,9 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         projects: [...state.projects, project],
+        departments: [...state.departments, ...(action.draft.customDepartments ?? [])
+          .filter((department) => departmentIds.includes(department.id) && !state.departments.some((entry) => entry.id === department.id))
+          .map((department) => ({ ...department, memberCount: 0 }))],
         // Every project starts with a board of its own: its copy of the four built-in columns.
         boardColumns: [...state.boardColumns, ...builtInColumnsFor(project.id)],
         conversations: [...state.conversations, channel],

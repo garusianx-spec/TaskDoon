@@ -1,0 +1,40 @@
+
+> taskin@0.1.0 test:e2e:live:agile
+> npm run test:e2e:live:agile -w @taskin/web
+
+
+> @taskin/web@0.1.0 test:e2e:live:agile
+> node e2e/live/agile.mjs
+
+PASS  account, project and tasks set up through the API
+PASS  signed in
+PASS  a bug from the API shows its glyph and severity
+PASS  a plain task shows none
+PASS  a feature created in the composer is stored as a feature
+PASS  the estimate is saved
+PASS  the worklog is stored with its note
+PASS  the widget shows the remaining quarter hour
+PASS  …and the progress bar at 45 of 60
+PASS  the link is stored, from this task’s side
+PASS  …and listed in the dialog
+PASS  the blocked card shows its pill
+PASS  the other end lists the link too
+PASS  a second link: the service waits on the database
+PASS  the API refuses database ← screen, which would close a cycle
+PASS  completing a blocked task warns
+PASS  …naming the unfinished blocker
+PASS  …and the task is done all the same
+PASS  moved to the backlog
+PASS  it leaves the board
+PASS  the backlog lists it
+PASS  «انتقال به بورد» puts it back
+PASS  after a reload the database task is on the board
+PASS  …the feature keeps its glyph
+PASS  …and the service is still blocked by the database
+
+25 passed, 0 failed, 0 console problems
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

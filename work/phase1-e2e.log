@@ -1,0 +1,541 @@
+
+> taskin@0.1.0 test:e2e
+> npm run test:e2e -w @taskin/web
+
+
+> @taskin/web@0.1.0 test:e2e
+> node e2e/run.mjs
+
+ ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+(node:18856) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+━━ agile
+PASS  no bug or feature glyphs on existing cards
+PASS  no blocked pills on existing cards
+PASS  view switcher offers «بک‌لاگ»
+PASS  severity is offered for bugs only
+PASS  the new task is a bug
+PASS  …with its severity
+PASS  the bug card shows the bug glyph
+PASS  the bug is on the board
+PASS  filter «باگ» leaves the one bug
+PASS  filter «ویژگی» leaves none
+PASS  filter «همه نوع‌ها» restores the board
+PASS  a feature has no severity
+PASS  the card now shows the feature glyph
+PASS  task details have no time tracking section
+PASS  task details have no worklog action
+PASS  the due date remains editable
+PASS  the start date is editable alongside the due date
+PASS  estimate «2h» reads «۲ ساعت»
+PASS  an unreadable estimate duration is refused
+PASS  corrective input clears the estimate error immediately
+PASS  returning to the exact formatted estimate remains valid after blur
+PASS  the corrected original estimate saves and persists on reopening
+PASS  «1h 30m» reads as one hour thirty
+PASS  the estimate persists after Save Changes and reopening
+PASS  CRM-109 is blocked by SEC-301
+PASS  SEC-301 is blocked by CRM-101
+PASS  a link closing CRM-101 → SEC-301 → CRM-109 → CRM-101 is refused
+PASS  blocked pill on CRM-109
+PASS  blocked pill on SEC-301
+PASS  no pill on the unblocked CRM-101
+PASS  the Done warning appears
+PASS  …naming the unfinished blocker
+PASS  the move to Done still happened
+PASS  CRM-109 is unblocked once SEC-301 is done
+PASS  the warning closes
+PASS  the link is removed
+PASS  the dialog offers the way back
+PASS  a backlog item leaves the board
+PASS  it is listed in the backlog
+PASS  the header counts the backlog
+PASS  «انتقال به بورد» empties the backlog
+PASS  the composer starts in the backlog from there
+PASS  created straight into the backlog
+PASS  the moved item is back on the board
+PASS  the new backlog item is not on the board
+PASS  an untouched card renders exactly as before
+
+46 passed, 0 failed, 0 console problems
+
+━━ dialogs
+PASS  quick create → وظیفه جدید opens "تعریف وظیفه جدید"
+PASS    Escape closes "تعریف وظیفه جدید"
+PASS    focus restored to trigger (ایجاد سریع)
+PASS  quick create → گفتگوی جدید opens "گفتگوی جدید"
+PASS    Escape closes "گفتگوی جدید"
+PASS    focus restored to trigger (ایجاد سریع)
+PASS  quick create → رویداد تقویم opens "رویداد تقویم"
+PASS    Escape closes "رویداد تقویم"
+PASS    focus restored to trigger (ایجاد سریع)
+PASS  quick create → دعوت همکار opens "دعوت همکار"
+PASS    Escape closes "دعوت همکار"
+PASS    focus restored to trigger (ایجاد سریع)
+PASS  N opens task composer
+PASS  M opens new chat
+PASS  group validation: name required
+PASS  new group opens in /chats
+PASS  existing direct chat detected
+PASS  existing direct chat reopened
+PASS  milestone appears on calendar
+PASS  valid email became a chip
+PASS  invalid email flagged
+PASS  existing member flagged
+PASS  directory invite button opens dialog
+PASS  پروفایل من opens profile dialog
+PASS  presence saved and reflected on rail avatar
+PASS  امنیت و ورود opens security dialog
+PASS  short password rejected
+PASS  password change succeeds
+PASS  2FA toggled on
+PASS  other sessions revoked
+PASS  popover بستن closes it
+PASS  signed-out screen shown
+
+32 passed, 0 failed, 0 console problems
+
+━━ files-and-bridge
+PASS  the product conversation is open
+PASS  picked files wait in the preview
+PASS  a picked image shows as a picture at once
+PASS  a picked document shows as a file card
+PASS  the message’s file rides along into the task composer
+PASS  the message now carries a linked-task chip
+PASS  the new task names its source message
+PASS  with the conversation it is in
+PASS  «نمایش پیام در گفتگو» highlights the message
+PASS  the highlight fades
+
+10 passed, 0 failed, 0 console problems
+
+━━ gantt-layering
+scroll {"sw":3584,"cw":916,"sl":-1280}
+{
+ "probes": 30,
+ "leaks": [],
+ "header": "sticky/z30/rgb(255, 255, 255)",
+ "name": "sticky/z20/rgb(255, 255, 255)",
+ "bar": "relative/z10/rgb(181, 71, 8)",
+ "line": "relative/z0/rgba(242, 244, 247, 0.7)"
+}
+PASS  no bar paints over the task column (30 probes)
+PASS  at least one bar geometrically slides beneath the sticky column
+
+2 passed, 0 failed, 0 console problems
+
+━━ interactions
+PASS  rail order Home → Tasks → Chats (/feed /tasks /chats /calendar /notes /directory)
+PASS  feed shortcut cards removed
+PASS  requires-action rows have a quick-complete checkbox
+PASS  checkbox completes the task
+PASS  completed title is struck through
+PASS  completed task stays listed for undo
+PASS  unticking reopens it in place
+PASS  conversation opens at the newest message (gap 0px)
+PASS  date dividers are in-flow (relative,relative,relative)
+PASS  header paperclip removed
+PASS  new message scrolls into view (gap 0px)
+PASS  new message appended at the tail
+PASS  7 quick reactions (7)
+PASS  ❤️ adds a pressed counter pill
+PASS  clicking the pill toggles the reaction off
+PASS  👎 reaction works
+PASS  4 shared-media tabs with counts (اسناد۱ | تصویر و ویدیو۳ | صوت۲ | پیوندها۲)
+PASS  files tab lists downloadable documents
+PASS  media grid shows photos & videos (3)
+PASS  media preview dialog opens
+PASS  audio tab has an inline player
+PASS  links tab lists links (2)
+PASS  single primary «وظیفه جدید» button
+PASS  sidebar search removed
+PASS  board scrolled to far (left) end (-588/588)
+PASS  column name input focused
+PASS  custom column created
+PASS  three-dots menu on built-in columns
+PASS  rename column inline
+PASS  empty column deleted without confirmation
+PASS  non-empty column asks to migrate or archive
+PASS  column removed after migrate
+PASS  cards migrated to neighbour (۱ → ۲)
+PASS  column removed after archive
+PASS  header search expands
+PASS  search filters the board («رفع آسیب‌پذیری‌های»: 4 → 1)
+PASS  Escape clears search
+PASS  month controls centred on grid (Δ 0px)
+PASS  legend, controls and «رویداد جدید» share one bar
+PASS  bar order: legend (start) · controls · new event (end)
+PASS  every knob rests at an end: on=left, off/mixed=right in RTL (35 switches, 0 off)
+PASS  mixed switches present: 2
+PASS  profile popover «پروفایل من» opens its dialog
+PASS  profile popover «امنیت و ورود» opens its dialog
+PASS  profile popover «خروج از حساب» opens its dialog
+PASS  popover «بستن» closes it
+PASS  single «یادداشت جدید», beside the notebook title
+PASS  list header keeps search; «افزودن دسته» sits above the categories
+PASS  no category chips; «همه یادداشت‌ها» active by default
+PASS  new category listed and active
+PASS  empty custom category shows delete ✕
+PASS  new note auto-assigned to the active category
+PASS  a category holding a note can still be deleted
+PASS  checklist renders interactive checkboxes (2)
+PASS  checklist item toggles
+PASS  done item is struck through
+PASS  no raw [ ] markup visible
+PASS  editor category switcher moves the note
+PASS  deleting a category asks first
+PASS  empty custom category deleted
+PASS  a built-in category can be deleted; its note is kept
+PASS  switcher lists 3 workspaces + settings + create (5)
+PASS  create-workspace modal opens
+PASS  name is required
+PASS  two-letter monogram generated live
+PASS  new workspace is active
+PASS  fresh workspace has its own (empty) activity
+PASS  fresh workspace starts with the four built-in columns and no tasks
+PASS  fresh workspace has only the built-in note categories
+PASS  switching back restores the parked workspace (its custom note category is back)
+PASS  …and its tasks (10 cards)
+PASS  non-owner cannot delete
+PASS  lock reason names the owner
+PASS  owner reaches the delete confirmation
+PASS  delete disabled until confirmed
+PASS  wrong name flagged
+PASS  still disabled without acknowledgement
+PASS  enabled after name + acknowledgement
+PASS  overlay click does not dismiss
+PASS  workspace deleted
+PASS  falls back to the first workspace
+PASS  uploaded icon replaces the monogram
+PASS  non-image upload rejected
+PASS  spaces inside a phone number do not split it
+PASS  existing member detected by normalised phone
+PASS  mobile normalised into an SMS chip (پیامک: ۰۹۱۲ ۱۱۱ ۲۲۳۳)
+PASS  email chip on the email channel
+PASS  pending invite detected across digit scripts
+PASS  invalid number rejected with a phone-specific message
+PASS  pending queue shows both channels
+PASS  submitted invites join the pending list with their channel
+PASS  mobile tabs follow the rail order (/feed /tasks /chats /calendar /more)
+PASS  mobile top bar has the workspace menu
+PASS  no horizontal overflow on mobile (0)
+
+94 passed, 0 failed, 0 console problems
+
+━━ kanban
+PASS  all tasks: four status columns, no column editing
+PASS  custom column appended
+PASS  duplicate column name rejected
+PASS  the web project’s board does not get the column
+PASS  card dragged into custom column
+PASS  checked card moved to Done column
+PASS  done title styled: line-through / 0.75
+PASS  unchecked card returned to custom column
+PASS  seeded done card unchecked → To Do
+PASS  checkbox did not open inspector
+PASS  keyboard move to next column
+PASS  migrate target defaults to the same-status column
+PASS  custom column removed
+PASS  displaced card now in progress
+PASS  composer opens from column +
+PASS  composer preselects custom column
+PASS  new task lands in custom column
+
+17 passed, 0 failed, 0 console problems
+
+━━ mobile
+PASS  /feed: no horizontal overflow (0px)
+PASS  /tasks: no horizontal overflow (0px)
+PASS  /calendar: no horizontal overflow (0px)
+PASS  /notes: no horizontal overflow (0px)
+PASS  /more: no horizontal overflow (0px)
+PASS  /directory: no horizontal overflow (0px)
+PASS  /chats: no horizontal overflow (0px)
+PASS  mobile: checked task moves to completed section
+PASS  mobile: top-bar quick create works
+PASS  mobile: notification drawer full width (390)
+PASS  mobile: calendar dots open the day summary
+PASS  mobile: note opens editor
+PASS  mobile: back returns to list
+PASS  mobile: the list header keeps a new-note button
+PASS  mobile: categories panel opens
+PASS  mobile: More → security dialog
+
+16 passed, 0 failed, 0 console problems
+
+━━ notifications-calendar-notes
+PASS  bell opens notification drawer
+PASS  all tab lists 9 (9)
+PASS  relative Jalali time «۵ دقیقه پیش» shown
+PASS  «پیام‌های اشاره‌شده» lists the two chat mentions (2)
+PASS  «وظایف ارجاع‌شده امروز» lists today's assignment (1)
+PASS  quick action shows as pressed
+PASS  a tab clears the quick action
+PASS  unread tab lists 5 (5)
+PASS  mentions tab lists 4 (4)
+PASS  single mark-as-read removes it from unread
+PASS  bell badge updates to ۴
+PASS  mark all read empties unread tab
+PASS  badge cleared
+PASS  clicking a card closes the drawer
+FAIL  card opens its task in the inspector
+PASS  mention card navigates to its conversation
+PASS  no cell shows more than 2 badges + overflow chip (max children 3)
+PASS  «+X مورد دیگر» chip present
+PASS  overflow chip opens day summary popover
+PASS  summary → task composer
+PASS  clicking a date cell opens the composer
+PASS  composer pre-selects the clicked Jalali date (۸ آبان ۱۴۰۵)
+PASS  new task deadline appears on that day
+PASS  ArrowLeft moves to the next day, ۹ آبان (شنبه، ۹ آبان ۱۴۰۵، ۱ مورد — ای)
+PASS  PageDown keeps day-of-month in next month, ۹ آذر (دوشنبه، ۹ آذر ۱۴۰۵ — ایجاد وظی)
+PASS  first pinned note opens
+PASS  preview checklist toggles
+PASS  preview toggle carries into the block editor
+PASS  Enter continues an unchecked checklist item
+PASS  colour tag toggles
+PASS  new note created and titled
+PASS  pinned note shows in pinned list
+PASS  convert opens pre-filled composer
+PASS  title carried over
+PASS  open checklist items become subtasks (ticked ones stay in description)
+PASS  note shows linked-task banner
+FAIL  created task has subtasks from checklist
+
+35 passed, 2 failed, 0 console problems
+
+━━ phase2
+PASS  the product conversation is open
+PASS  picked files open the preview instead of sending
+PASS  each picked file is listed
+PASS  with its size
+PASS  a picture shows its thumbnail
+PASS  nothing is sent while the preview is open
+PASS  a file can be taken out of the preview
+PASS  «افزودن فایل» adds more
+PASS  …and the added file joins the queue
+PASS  «ارسال تصویر به صورت فایل» is offered, off by default
+PASS  the preview closes on send
+PASS  the photo is compressed to WebP and scaled down to 2560 px
+PASS  the caption sits under the photo
+PASS  a photo can still be downloaded
+PASS  the document goes as a file card
+PASS  the box can be ticked
+PASS  a picture sent as a file keeps its name, as a download card
+PASS  …with no inline photo
+PASS  a dropped file opens the preview
+PASS  no picture, no «به صورت فایل» box
+PASS  «انصراف» sends nothing
+PASS  a voice note plays at ۱× by default
+PASS  ۱× → ۱٫۵×
+PASS  ۱٫۵× → ۲×
+PASS  at ۲× three seconds play in about one and a half
+PASS  ۲× → back to ۱×
+PASS  the notebook lists its notes
+PASS  a new note opens as a draft
+PASS  switching away drops a blank draft
+PASS  …leaving no untitled note behind
+PASS  spaces alone do not keep a note
+PASS  leaving the notebook drops a blank draft too
+PASS  a note with words in it stays
+
+33 passed, 0 failed, 0 console problems
+
+━━ phase31
+PASS  the project tree lists every project
+PASS  no project nests others: nothing to expand or collapse
+PASS  a project’s board holds its own cards only (not a former sub-project’s)
+PASS  «نسخه وب» is a project of its own, with its cards
+PASS  an admin sees no project delete and no trash
+PASS  the project is created
+PASS  its chat channel appears in the conversation list
+PASS  the channel opens
+PASS  its members are the project’s: no «افزودن عضو» here
+PASS  deleting asks first, naming the 40 days of the trash
+PASS  …the 40 days are spelled out
+PASS  the project leaves the tree at once
+PASS  the trash lists it
+PASS  with the days left before the purge
+PASS  «بازیابی» takes it out of the trash
+PASS  the trash is empty again
+PASS  the project is back in the tree
+PASS  removing explains that their work stays, as a former member
+PASS  they leave the directory
+PASS  their messages stay in the thread, under their name
+PASS  …marked «عضو سابق»
+
+21 passed, 0 failed, 0 console problems
+
+━━ phase32
+PASS  the product conversation is open
+PASS  «زمان‌بندی ارسال» waits for a message to schedule
+PASS  the clock beside «ارسال پیام» opens the scheduler
+PASS  …showing the message being scheduled
+PASS  …with shortcuts
+PASS  the chosen time is spelled out in Jalali
+PASS  scheduling closes the dialog
+PASS  the composer is cleared
+PASS  the message is not in the thread yet
+PASS  the conversation shows «پیام‌های زمان‌بندی‌شده»
+PASS  …with one waiting
+PASS  right-clicking «ارسال پیام» opens the scheduler
+PASS  a time in the past is refused
+PASS  two messages wait now
+PASS  the bar opens the list of scheduled messages
+PASS  …both of them, soonest first
+PASS  …the sooner one on top
+PASS  …each with its time
+PASS  «ارسال فوری» takes it off the list
+PASS  …and sends it into the thread
+PASS  «لغو / حذف» empties the list, which closes
+PASS  no bar once nothing waits
+PASS  the cancelled message is never sent
+PASS  a third one waits
+PASS  …in the bar: the list does not open by itself
+PASS  when its time comes, it is sent by itself
+PASS  …and leaves the bar
+PASS  a direct chat with Leila (on leave) opens
+PASS  her auto-reply answers, marked «پاسخ خودکار»
+PASS  …with her out-of-office text
+PASS  a second message the same day gets no second answer
+PASS  a message in a group she is in is sent
+PASS  groups never get auto-replies
+PASS  the account menu opens «ساعات کاری و پاسخ خودکار»
+PASS  the auto-reply starts off
+PASS  Saturday is a working day by default
+PASS  …Friday is not
+PASS  the same start and end are refused
+PASS  saving closes the settings
+PASS  the auto-reply stays on
+PASS  Thursday is now a working day
+PASS  the new end of the day is kept
+PASS  the new text is kept
+
+43 passed, 0 failed, 0 console problems
+
+━━ sign-out
+PASS  client-side back to /feed bounced to /signed-out (http://localhost:3100/signed-out)
+PASS  session state cleared on sign-out
+
+2 passed, 0 failed, 0 console problems
+
+━━ task-date-picker
+PASS  375px: task form opens
+PASS  375px: انتخاب تاریخ شروع trigger fills its field
+PASS  375px: انتخاب تاریخ شروع fits viewport and modal without horizontal scrolling
+PASS  375px: calendar days remain readable touch targets
+PASS  375px: RTL arrow moves selection and keyboard focus together
+PASS  375px: PageDown changes month while keeping focus on a day
+PASS  375px: Escape closes only calendar and returns focus to its trigger
+PASS  375px: انتخاب مهلت انجام trigger fills its field
+PASS  375px: انتخاب مهلت انجام fits viewport and modal without horizontal scrolling
+PASS  375px: calendar days remain readable touch targets
+PASS  375px: RTL arrow moves selection and keyboard focus together
+PASS  375px: PageDown changes month while keeping focus on a day
+PASS  375px: Escape closes only calendar and returns focus to its trigger
+PASS  1280px: task form opens
+PASS  1280px: انتخاب تاریخ شروع trigger fills its field
+PASS  1280px: انتخاب تاریخ شروع fits viewport and modal without horizontal scrolling
+PASS  1280px: calendar days remain readable touch targets
+PASS  1280px: RTL arrow moves selection and keyboard focus together
+PASS  1280px: PageDown changes month while keeping focus on a day
+PASS  1280px: Escape closes only calendar and returns focus to its trigger
+PASS  1280px: انتخاب مهلت انجام trigger fills its field
+PASS  1280px: انتخاب مهلت انجام fits viewport and modal without horizontal scrolling
+PASS  1280px: calendar days remain readable touch targets
+PASS  1280px: RTL arrow moves selection and keyboard focus together
+PASS  1280px: PageDown changes month while keeping focus on a day
+PASS  1280px: Escape closes only calendar and returns focus to its trigger
+PASS  open calendar repositions after desktop-to-mobile resize
+PASS  selecting today applies a date and keeps task form open
+
+28 passed, 0 failed, 0 console problems
+
+━━ task-forms
+PASS  global task creation retains the project selector
+PASS  empty title shows a recoverable validation error
+PASS  project-scoped creation infers the project without a redundant selector
+PASS  creation offers a start date
+PASS  creation retains its due date alongside start date
+PASS  empty attachment is rejected with actionable feedback
+PASS  creation displays the selected attachment
+PASS  successful creation opens the task details
+PASS  creation shows a success toast
+PASS  the title is directly editable in the details modal
+PASS  the new task belongs to the project being viewed
+PASS  the attachment survives creation
+PASS  the time-tracking section is removed
+PASS  estimated time is retained
+PASS  due date is retained
+PASS  comments and reports share one section
+PASS  Save Changes persists edits and closes the modal
+PASS  saved description remains after reopening
+PASS  saved estimated time remains after reopening
+PASS  Cancel discards unsaved scalar edits
+PASS  the unified comments/reports composer sends its content
+PASS  editing a task supports additional attachments
+PASS  an attachment can be removed without losing other changes
+PASS  Save Changes rejects a blank title and keeps the modal open
+
+24 passed, 0 failed, 0 console problems
+
+━━ theme
+PASS  default accent is indigo
+PASS  picker offers 3 modes + 6 palettes
+PASS  indigo: primary fill rgb(53, 56, 205)
+PASS  teal: primary fill rgb(14, 118, 110)
+PASS  violet: primary fill rgb(105, 65, 198)
+PASS  rose: primary fill rgb(158, 22, 95)
+PASS  amber: primary fill rgb(181, 71, 8)
+PASS  ocean: primary fill rgb(14, 112, 144)
+PASS  persisted {"mode":"system","accent":"ocean"}
+PASS  dark mode applied
+PASS  OLED canvas #0C111D (rgb(12, 17, 29))
+PASS  stored accent applied pre-hydration
+
+12 passed, 0 failed, 0 console problems
+
+━━ voice-recording
+PASS  the conversation opens before recording
+PASS  the real MediaRecorder captures synthetic microphone audio
+PASS  sending adds exactly one voice note
+PASS  repeated send clicks do not show a false short-recording error
+PASS  the finalized voice Blob contains decodable nonempty audio
+PASS  sending releases every microphone track
+PASS  permission denial explains how to enable the microphone
+PASS  permission denial leaves the composer usable
+
+8 passed, 0 failed, 0 console problems
+node:internal/process/per_thread:277
+      throw new ErrnoException(err, 'kill');
+            ^
+
+Error: kill ESRCH
+    at process.kill (node:internal/process/per_thread:277:13)
+    at stopServer (file:///C:/Users/garus/Documents/Codex/2026-10-07/taskdoon/apps/web/e2e/run.mjs:37:42)
+    at file:///C:/Users/garus/Documents/Codex/2026-10-07/taskdoon/apps/web/e2e/run.mjs:75:1
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4040,
+  code: 'ESRCH',
+  syscall: 'kill'
+}
+
+Node.js v26.7.0
+npm error Lifecycle script `test:e2e` failed with error:
+npm error code 1
+npm error path C:\Users\garus\Documents\Codex\2026-10-07\taskdoon\apps\web
+npm error workspace @taskin/web@0.1.0
+npm error location C:\Users\garus\Documents\Codex\2026-10-07\taskdoon\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c node e2e/run.mjs
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

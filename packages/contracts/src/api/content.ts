@@ -96,6 +96,7 @@ export interface ConvertNoteBody {
   readonly columnId?: string | null;
   readonly priority?: TaskPriority;
   readonly assigneeIds?: readonly string[];
+  readonly startDate?: string;
   readonly dueDate?: string | null;
 }
 

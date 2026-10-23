@@ -30,6 +30,8 @@ import type {
   CreateInvitationsResult,
   CreateNoteBody,
   CreateProjectBody,
+  CreateDepartmentBody,
+  DepartmentView,
   CreateTaskBody,
   CreateWorkspaceBody,
   InvitationView,
@@ -131,13 +133,20 @@ export const api = {
 
   projects: {
     list: (workspaceId: string) => http.get<ProjectView[]>(`${ws(workspaceId)}/projects`),
-    create: (workspaceId: string, body: CreateProjectBody) => http.post<ProjectView>(`${ws(workspaceId)}/projects`, body, { idempotent: true }),
+    create: (workspaceId: string, body: CreateProjectBody, idempotencyKey?: string) =>
+      http.post<ProjectView>(`${ws(workspaceId)}/projects`, body, { idempotent: true, ...(idempotencyKey ? { idempotencyKey } : {}) }),
     star: (workspaceId: string, projectId: string, starred: boolean) =>
       starred ? http.put<void>(`${ws(workspaceId)}/projects/${projectId}/star`) : http.delete<void>(`${ws(workspaceId)}/projects/${projectId}/star`),
     /** To the trash (workspace owner): restorable for 40 days. */
     remove: (workspaceId: string, projectId: string) => http.delete<void>(`${ws(workspaceId)}/projects/${projectId}`),
     trash: (workspaceId: string) => http.get<TrashedProjectView[]>(`${ws(workspaceId)}/projects/trash`),
     restore: (workspaceId: string, projectId: string) => http.post<ProjectView>(`${ws(workspaceId)}/projects/${projectId}/restore`),
+  },
+
+  departments: {
+    list: (workspaceId: string) => http.get<DepartmentView[]>(`${ws(workspaceId)}/departments`),
+    create: (workspaceId: string, body: CreateDepartmentBody, idempotencyKey?: string) =>
+      http.post<DepartmentView>(`${ws(workspaceId)}/departments`, body, { ...(idempotencyKey ? { idempotencyKey } : {}) }),
   },
 
   workflow: {
@@ -157,7 +166,8 @@ export const api = {
     all: (workspaceId: string) =>
       everyPage<TaskCard>((cursor) => http.get<TaskPage>(`${ws(workspaceId)}/tasks${query({ limit: 200, cursor })}`)),
     get: (workspaceId: string, taskId: string) => http.get<TaskDetail>(`${ws(workspaceId)}/tasks/${taskId}`),
-    create: (workspaceId: string, body: CreateTaskBody) => http.post<TaskDetail>(`${ws(workspaceId)}/tasks`, body, { idempotent: true }),
+    create: (workspaceId: string, body: CreateTaskBody, idempotencyKey?: string) =>
+      http.post<TaskDetail>(`${ws(workspaceId)}/tasks`, body, { idempotent: true, ...(idempotencyKey ? { idempotencyKey } : {}) }),
     update: (workspaceId: string, taskId: string, version: number, body: UpdateTaskBody) =>
       http.patch<TaskDetail>(`${ws(workspaceId)}/tasks/${taskId}`, body, { ifMatch: version }),
     move: (workspaceId: string, taskId: string, body: { readonly columnId: string; readonly afterId?: string | null; readonly beforeId?: string | null; readonly expectedVersion: number }) =>

@@ -1,0 +1,30 @@
+
+> @taskin/web@0.1.0 pretest
+> npm run build:deps
+
+
+> @taskin/web@0.1.0 build:deps
+> tsc -b ../../packages/contracts ../../packages/jalali ../../packages/text
+
+
+> @taskin/web@0.1.0 test
+> vitest run --config vitest.config.mts
+
+
+ RUN  v5.0.2 C:/Users/garus/Documents/Codex/2026-10-07/taskdoon/apps/web
+
+
+ Test Files  5 passed (5)
+      Tests  58 passed (58)
+   Start at  16:24:30
+   Duration  2.76s (transform 59%, import 23%, tests 17%, worker 1%)
+
+  Transform  transforming modules took 3.01s · 59% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

@@ -1,0 +1,24 @@
+
+> taskin@0.1.0 test:broadcasts
+> npm run test:broadcasts -w @taskin/web
+
+
+> @taskin/web@0.1.0 test:broadcasts
+> node --test e2e/unit/broadcasts.test.mjs
+
+✔ visibility timer uses server-relative time with the complete delay clamped to 5s–1h (3.1544ms)
+✔ refresh jitter stays within 0–5 seconds (0.2291ms)
+✔ info/warning dismissals persist locally; critical dismissals remain in the session (0.5274ms)
+✔ browser storage refusal does not throw or hide an undismissed notice (0.4257ms)
+✔ broadcast list sends current/all status and never sends includeArchived to the strict DTO (98.7984ms)
+✔ broadcast pagination preserves the cursor as one encoded query value (36.8635ms)
+✔ broadcast pagination rejects retained cursors before filter and refresh loading effects (81.2385ms)
+✔ broadcast pagination drops superseded replies and appends only to its original first page (74.5227ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 845.8376

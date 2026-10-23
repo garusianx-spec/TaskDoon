@@ -148,6 +148,20 @@
       "when": 1790938963572,
       "tag": "0020_agile_tracking_security",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792784949241,
+      "tag": "0021_project_departments",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792784949242,
+      "tag": "0022_project_departments_security",
+      "breakpoints": true
     }
   ]
 }

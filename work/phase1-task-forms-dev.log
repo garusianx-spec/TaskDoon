@@ -1,0 +1,26 @@
+PASS  global task creation retains the project selector
+PASS  empty title shows a recoverable validation error
+PASS  project-scoped creation infers the project without a redundant selector
+PASS  creation offers a start date
+PASS  creation retains its due date alongside start date
+PASS  empty attachment is rejected with actionable feedback
+PASS  creation displays the selected attachment
+PASS  successful creation opens the task details
+PASS  creation shows a success toast
+PASS  the title is directly editable in the details modal
+PASS  the new task belongs to the project being viewed
+PASS  the attachment survives creation
+PASS  the time-tracking section is removed
+PASS  estimated time is retained
+PASS  due date is retained
+PASS  comments and reports share one section
+PASS  Save Changes persists edits and closes the modal
+PASS  saved description remains after reopening
+PASS  saved estimated time remains after reopening
+PASS  Cancel discards unsaved scalar edits
+PASS  the unified comments/reports composer sends its content
+PASS  editing a task supports additional attachments
+PASS  an attachment can be removed without losing other changes
+PASS  Save Changes rejects a blank title and keeps the modal open
+
+24 passed, 0 failed, 0 console problems

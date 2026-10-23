@@ -1,0 +1,51 @@
+
+> taskin@0.1.0 test:e2e:live:broadcasts
+> npm run test:e2e:live:broadcasts -w @taskin/web
+
+
+> @taskin/web@0.1.0 test:e2e:live:broadcasts
+> node e2e/live/broadcasts.mjs
+
+PASS  member sets owner password
+PASS  member creates the isolated workspace
+مدیر اطلاعیه 09165 ([test phone]) is now a platform admin
+PASS  invalid save keeps the inline message visible and focuses its field
+PASS  corrective typing clears the validation message
+PASS  dialog previews the actual banner strip
+PASS  platform websocket updates the member banner without navigation
+PASS  authenticated account without a workspace sees the initial notice
+PASS  no page overflow at 375px: broadcast_banner
+PASS  no page overflow at 1280px: broadcast_banner
+PASS  member dismisses the info notice
+PASS  info dismissal uses the version key in localStorage
+PASS  info stays dismissed after a reload
+PASS  updated version reappears as a critical alert
+PASS  critical dismissal is session-only
+PASS  critical notice returns in a new browser session
+PASS  admin schedules a future notice
+PASS  future notice starts hidden
+PASS  server-relative timer reveals the scheduled notice
+PASS  expiry timer removes the scheduled notice
+PASS  activation toggle reflects the persisted inactive state
+PASS  activation toggle removes the announcement from public results
+PASS  no page overflow at 375px: admin_broadcasts
+PASS  no page overflow at 1280px: admin_broadcasts
+PASS  archive confirmation names the actual notice
+PASS  archived announcement leaves the active management list
+PASS  overview shows infrastructure health
+PASS  overview shows queue counts
+PASS  no page overflow at 375px: admin_overview
+PASS  no page overflow at 1280px: admin_overview
+PASS  health remains available after refresh
+
+30 passed, 0 failed, 0 console problems
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

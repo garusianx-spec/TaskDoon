@@ -164,6 +164,7 @@ export function projectFromView(view: ProjectView, departmentName: (id: string |
     id: view.id,
     name: view.name,
     departmentId: departmentIdFor(departmentName(view.departmentId)),
+    departmentIds: view.departmentIds ?? (view.departmentId ? [view.departmentId] : []),
     color: view.color,
     starred: view.starred,
     parentId: view.parentId,

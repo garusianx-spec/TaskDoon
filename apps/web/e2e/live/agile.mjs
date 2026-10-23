@@ -1,5 +1,5 @@
 /**
- * Agile tracking against a running TaskDoon API: issue types, estimates and worklogs,
+ * Agile tracking against a running TaskDoon API: issue types and estimates,
  * dependencies (a cycle refused, the blocked pill, the Done warning) and the backlog.
  *
  *   API_LOG=/path/to/api.log node e2e/live/agile.mjs      # BASE_URL defaults to http://localhost:3000
@@ -91,6 +91,10 @@ const closeDialog = async () => {
   await page.keyboard.press('Escape');
   await eventually(async () => (await dialog.count()) === 0);
 };
+const saveDialog = async () => {
+  await dialog.getByRole('button', { name: 'ذخیره تغییرات', exact: true }).click();
+  await eventually(async () => (await dialog.count()) === 0);
+};
 const pick = async (scope, combobox, option) => {
   await scope.getByRole('combobox', { name: combobox, exact: true }).click();
   await page.getByRole('option', { name: option }).first().click();
@@ -116,29 +120,32 @@ check(
   'a feature created in the composer is stored as a feature',
 );
 
-/* ---------- Estimate and worklog ---------- */
+/* ---------- Estimate retained; time tracking removed from task details ---------- */
 
 await openCard(/پیاده‌سازی سرویس گزارش/);
 const estimate = dialog.getByLabel('برآورد زمان وظیفه');
+check((await dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0, 'task details have no time tracking section');
+check((await dialog.getByRole('button', { name: 'ثبت زمان', exact: true }).count()) === 0, 'task details have no worklog action');
+check(await visible(dialog.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true })), 'the due date remains editable');
+await estimate.fill('2h');
+await estimate.press('Enter');
+check(await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'), 'estimate «2h» reads «۲ ساعت»');
+await estimate.fill('abc');
+await estimate.press('Tab');
+check(await visible(dialog.getByText(/مثلاً «۲ ساعت»/)), 'an unreadable estimate duration is refused');
+await estimate.fill('۲ ساعت');
+check((await estimate.getAttribute('aria-invalid')) !== 'true', 'corrective input clears the estimate error immediately');
+await estimate.press('Tab');
+check((await estimate.getAttribute('aria-invalid')) !== 'true', 'returning to the exact formatted estimate remains valid after blur');
+await saveDialog();
+check(await eventually(async () => (await task(service.id)).estimatedMinutes === 120, 15_000), 'the corrected original estimate is saved');
+await openCard(/پیاده‌سازی سرویس گزارش/);
+check(await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'), 'the corrected estimate persists on reopening');
 await estimate.fill('1h');
 await estimate.press('Enter');
+check((await task(service.id)).estimatedMinutes === 120, 'the changed estimate waits for Save Changes');
+await saveDialog();
 check(await eventually(async () => (await task(service.id)).estimatedMinutes === 60, 15_000), 'the estimate is saved');
-const timing = dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' });
-await timing.getByRole('button', { name: 'ثبت زمان' }).click();
-const worklog = page.getByRole('dialog', { name: 'ثبت زمان کار' });
-await worklog.getByLabel('مدت کار').fill('۴۵');
-await worklog.getByLabel('یادداشت کار').fill('نوشتن پرس‌وجوها');
-await worklog.getByRole('button', { name: 'ثبت', exact: true }).click();
-check(
-  await eventually(async () => {
-    const list = (await api('GET', `${agile(service.id)}/worklogs`)).body;
-    return list.totalMinutes === 45 && list.items[0]?.description === 'نوشتن پرس‌وجوها';
-  }, 15_000),
-  'the worklog is stored with its note',
-);
-check(await eventually(async () => (await timing.textContent()).includes('۱۵ دقیقه'), 15_000), 'the widget shows the remaining quarter hour');
-check((await timing.getByRole('progressbar').getAttribute('aria-valuenow')) === '45', '…and the progress bar at 45 of 60');
-await closeDialog();
 
 /* ---------- Dependencies ---------- */
 
@@ -184,8 +191,9 @@ await notice.getByRole('button', { name: 'بستن هشدار' }).click();
 
 await openCard(/طراحی پایگاه داده/);
 await dialog.getByRole('button', { name: 'انتقال به بک‌لاگ' }).click();
+check((await task(database.id)).isBacklog === false, 'the backlog move waits for Save Changes');
+await saveDialog();
 check(await eventually(async () => (await task(database.id)).isBacklog === true, 15_000), 'moved to the backlog');
-await closeDialog();
 check(await eventually(async () => (await card(/طراحی پایگاه داده/).count()) === 0), 'it leaves the board');
 await page.getByRole('tab', { name: 'بک‌لاگ' }).click();
 const backlog = page.getByRole('region', { name: 'بک‌لاگ' });
@@ -203,5 +211,9 @@ check(await eventually(async () => (await card(/طراحی پایگاه داده
 check((await card(/خروجی PDF گزارش/).getByRole('img', { name: 'ویژگی' }).count()) === 1, '…the feature keeps its glyph');
 check((await card(/پیاده‌سازی سرویس گزارش/).getByText('مسدود', { exact: true }).count()) === 1, '…and the service is still blocked by the database');
 await page.screenshot({ path: `${out}/live_agile_board.png` });
+await openCard(/پیاده‌سازی سرویس گزارش/);
+check(await eventually(async () => (await estimate.inputValue()) === '۱ ساعت'), 'the saved estimate survives a reload');
+check((await dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0, 'time tracking remains absent after reload');
+await closeDialog();
 
 await finish(browser);

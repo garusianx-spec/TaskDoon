@@ -94,7 +94,7 @@ describe('project companion channel identity synchronization', () => {
 describe('project creation without a socket notification', () => {
   it('reconciles the companion from the API instead of leaving a local-only ghost', async () => {
     const created: ProjectView = {
-      ...serverProject, key: draft.key, description: '', departmentId: null,
+      ...serverProject, key: draft.key, description: '', departmentId: null, departmentIds: [],
       visibility: 'workspace', archived: false, myRole: 'lead', myActions: ['view'],
       taskCount: 0, openTaskCount: 0, createdAt: '2026-10-15T00:00:00.000Z',
     };

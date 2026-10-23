@@ -1,0 +1,7 @@
+{
+  "existingTestFilesChecked": 58,
+  "onlyChangedExistingTest": "apps/api/test/integration/observability.test.ts",
+  "change": "additive traced create/patch/archive fixture calls for new routes",
+  "existingAssertionLinesPreserved": 22,
+  "allExistingTestAssertionsUnchanged": true
+}

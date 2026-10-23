@@ -12,9 +12,10 @@ import {
   type Dispatch,
   type ReactNode,
 } from 'react';
-import type { Conversation, User, Workspace } from '@taskin/contracts';
+import type { Conversation, TaskDraft, User, Workspace } from '@taskin/contracts';
 import { IS_LIVE } from '@/lib/data-source';
-import { workspaceReducer, type WorkspaceAction, type WorkspaceState } from './workspace-reducer';
+import { workspaceReducer, type ProjectDraft, type TaskPatch, type WorkspaceAction, type WorkspaceState } from './workspace-reducer';
+import { nextLocalId } from './ids';
 import { INITIAL_WORKSPACE_STATE } from './initial-state';
 import { setDirectory } from './directory';
 import { LiveStore, type LiveStatus } from './live/live-store';
@@ -24,6 +25,9 @@ import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
 interface WorkspaceContextValue {
   readonly state: WorkspaceState;
   readonly dispatch: Dispatch<WorkspaceAction>;
+  readonly createTask: (draft: TaskDraft, files?: readonly File[], commandId?: string) => Promise<string>;
+  readonly saveTask: (taskId: string, patch: TaskPatch, columnId?: string) => Promise<void>;
+  readonly createProject: (draft: ProjectDraft, commandId: string) => Promise<string>;
   readonly currentUser: User;
   readonly activeWorkspace: Workspace;
   /** True when the signed-in member is the active workspace's Owner. */
@@ -85,6 +89,42 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     [apply, live],
   );
 
+  const createTask = useCallback(async (draft: TaskDraft, files: readonly File[] = [], commandId?: string) => {
+    const previousInspector = stateRef.current.inspector;
+    const { prev, next } = apply({ type: 'create-task', draft, authorId: stateRef.current.meId });
+    const localId = next.tasks.find((task) => !prev.tasks.some((entry) => entry.id === task.id))?.id;
+    if (!localId) throw new Error('Task was not created');
+    // The composer owns focus until server confirmation; do not open a second modal underneath it.
+    apply({ type: 'sync/merge', patch: { inspector: previousInspector, announcement: prev.announcement } });
+    const id = live ? await live.createTask(draft, prev, next, files, commandId) : localId;
+    if (!live && files.length) {
+      dispatch({ type: 'attach-task-files', taskId: id, authorId: stateRef.current.meId,
+        files: files.map((file, index) => ({ attachmentId: `${id}-file-${index}`, file, name: file.name, previewUrl: URL.createObjectURL(file) })) });
+    }
+    apply({ type: 'open-task', taskId: id });
+    apply({ type: 'sync/merge', patch: { announcement: `وظیفه «${draft.title}» ایجاد شد.` } });
+    return id;
+  }, [apply, dispatch, live]);
+
+  const saveTask = useCallback(async (taskId: string, patch: TaskPatch, columnId?: string) => {
+    if (live) {
+      if (Object.keys(patch).length) await live.saveTask(taskId, patch);
+      if (columnId !== undefined) await live.saveTaskColumn(taskId, columnId);
+    } else {
+      apply({ type: 'patch-task', taskId, patch });
+      if (columnId !== undefined) apply({ type: 'move-task-to-column', taskId, columnId });
+    }
+  }, [apply, live]);
+
+  const createProject = useCallback(async (draft: ProjectDraft, commandId: string) => {
+    // Await the transaction before closing the form or allowing work on its new board.
+    const id = live ? await live.createProject(draft, commandId) : nextLocalId('project');
+    if (!live) apply({ type: 'create-project', projectId: id, draft, ownerId: stateRef.current.meId });
+    apply({ type: 'set-project-filter', projectId: id });
+    apply({ type: 'sync/merge', patch: { announcement: `پروژه «${draft.name}» ایجاد شد.` } });
+    return id;
+  }, [apply, live]);
+
   const liveStatus = useSyncExternalStore(
     useCallback((listener: () => void) => live?.subscribe(listener) ?? (() => undefined), [live]),
     () => live?.current ?? DEMO_STATUS,
@@ -105,7 +145,7 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
   }, [live, waiting, dispatch]);
 
   // Lookups by id (`userById`, `projectById`) read the directory; keep it equal to the state.
-  setDirectory(state.users, state.projects, state.formerUsers);
+  setDirectory(state.users, state.projects, state.formerUsers, state.departments);
 
   const unreadFor = useCallback(
     (conversationId: string) => state.unreadByConversation[conversationId] ?? 0,
@@ -148,6 +188,9 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
         ? {
             state,
             dispatch,
+            createTask,
+            saveTask,
+            createProject,
             currentUser,
             activeWorkspace,
             isWorkspaceOwner: activeWorkspace.ownerId === currentUser.id,
@@ -159,7 +202,7 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
             unreadNotifications,
           }
         : null,
-    [state, dispatch, currentUser, activeWorkspace, unreadFor, isPinned, isMuted, totalUnread, unreadNotifications],
+    [state, dispatch, createTask, saveTask, createProject, currentUser, activeWorkspace, unreadFor, isPinned, isMuted, totalUnread, unreadNotifications],
   );
 
   const liveValue = useMemo(() => (live ? { store: live, status: liveStatus } : null), [live, liveStatus]);

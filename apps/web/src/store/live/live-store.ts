@@ -17,11 +17,14 @@ import type {
   TaskCard,
   TaskDetail,
   TaskDraft,
+  CreateTaskBody,
+  DepartmentView,
   WorkflowView,
 } from '@taskin/contracts';
 import { toISODate } from '@taskin/jalali';
 import { api } from '@/api/endpoints';
-import { ApiProblem, http, isProblem } from '@/api/http';
+import { ApiProblem, http, isProblem, newIdempotencyKey } from '@/api/http';
+import { normalizeDepartmentName } from '@/lib/project-form';
 import { codeMessage, problemMessage } from '@/api/messages';
 import {
   activityFromView,
@@ -56,7 +59,7 @@ import { session } from '@/api/session';
 import { DEFAULT_PERMISSION_MATRIX, DEPARTMENTS } from '@/data/reference';
 import { LIVE_EMPTY_STATE } from '../initial-state';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
-import type { ConversationDraft, PickedFile, TaskPatch, VoiceRecording, WorkspaceAction, WorkspaceState } from '../workspace-reducer';
+import type { ConversationDraft, PickedFile, ProjectDraft, TaskPatch, VoiceRecording, WorkspaceAction, WorkspaceState } from '../workspace-reducer';
 
 export type LivePhase = 'restoring' | 'signed-out' | 'loading' | 'no-workspace' | 'ready';
 
@@ -140,6 +143,8 @@ export class LiveStore {
   private readonly sendingNow = new Map<string, string>();
   /** This member's messages that did not reach the server: how to send each again, or let it go. */
   private readonly unsent = new Map<string, { readonly retry: () => void; readonly discard: () => void }>();
+  /** A form retry reuses completed uploads instead of reserving the same bytes again. */
+  private taskUploads = new WeakMap<Blob, Promise<AttachmentView>>();
 
   private getState: () => WorkspaceState = () => LIVE_EMPTY_STATE;
   private apply: Apply = () => undefined;
@@ -248,6 +253,7 @@ export class LiveStore {
   }
 
   private reset(): void {
+    this.taskUploads = new WeakMap();
     this.workspaceId = '';
     this.versions.clear();
     this.noteVersions.clear();
@@ -310,7 +316,7 @@ export class LiveStore {
       const [view, members, departments, projects, workflow, cards, conversations, inbox, activity, calendar, invitations, roles, categories, notes, sessions, scheduled, hours] = await Promise.all([
         api.workspaces.get(w),
         api.workspaces.members(w, true),
-        optional(http.get<Array<{ readonly id: string; readonly name: string }>>(`/workspaces/${w}/departments`), []),
+        optional(api.departments.list(w), []),
         api.projects.list(w),
         api.workflow.list(w),
         api.tasks.all(w),
@@ -356,6 +362,7 @@ export class LiveStore {
           session: 'active',
           meId: me.user.id,
           users: users.length > 0 ? users : [meToUser(me.user)],
+          departments,
           formerUsers,
           // Read from the server when «آرشیو / سطل زباله» opens.
           projectTrash: [],
@@ -574,7 +581,7 @@ export class LiveStore {
         }, () => this.refreshTask(action.taskId));
         return;
       case 'create-task':
-        this.createTask(action.draft, prev, next);
+        void this.createTask(action.draft, prev, next).catch(() => undefined);
         return;
       case 'log-work':
         this.run(
@@ -629,12 +636,10 @@ export class LiveStore {
         void this.moveSubtask(action.taskId, action.subtaskId, next);
         return;
       case 'attach-task-files':
-        this.attachFiles(action.taskId, action.files);
+        void this.attachTaskFiles(action.taskId, action.files).catch(() => undefined);
         return;
       case 'remove-task-attachment':
-        this.run(async () => {
-          await api.tasks.detach(this.workspaceId, await this.serverId(action.taskId), action.attachmentId);
-        }, () => this.refreshTask(action.taskId));
+        void this.removeTaskAttachment(action.taskId, action.attachmentId).catch(() => undefined);
         return;
       case 'send-file':
         this.sendFile(action.conversationId, action.messageId, action.picked, action.caption, action.replyToId, action.asFile ?? false, next);
@@ -655,22 +660,7 @@ export class LiveStore {
         return;
       case 'create-project':
         if (prev.projects.some((project) => project.id === action.projectId) || !next.projects.some((project) => project.id === action.projectId)) return;
-        this.track(action.projectId, async () => {
-          const departmentName = DEPARTMENTS.find((department) => department.id === action.draft.departmentId)?.name;
-          const departmentId = [...this.departments].find(([, name]) => name === departmentName)?.[0];
-          const created = await api.projects.create(this.workspaceId, {
-            key: action.draft.key,
-            name: action.draft.name.trim(),
-            description: action.draft.description.trim(),
-            color: action.draft.color,
-            ...(departmentId ? { departmentId } : {}),
-          });
-          this.apply({ type: 'sync/upsert-project', project: projectFromView(created, (id) => (id ? this.departments.get(id) : undefined)), replaceId: action.projectId });
-          // Resolve its companion even if the socket event was missed. Replays use the same
-          // reducer identity reconciliation as realtime, so neither ordering adds a second row.
-          await Promise.all([this.refreshWorkflow(), this.refreshProjectChannel(created.id)]);
-          return created.id;
-        });
+        void this.track(action.projectId, () => this.createProject(action.draft, undefined, action.projectId)).catch(() => undefined);
         return;
       case 'create-conversation':
         this.createConversation(action.draft, prev, next);
@@ -928,12 +918,75 @@ export class LiveStore {
     this.realtime.typing(conversationId, active);
   }
 
+  /** The composer waits for canonical memberships, board columns and companion channel. */
+  async createProject(draft: ProjectDraft, commandId = newIdempotencyKey(), replaceId?: string): Promise<string> {
+    const workspaceId = this.workspaceId;
+    try {
+      const selected = draft.departmentIds ?? [draft.departmentId];
+      // A lost department response may already have committed. Re-read before creating any
+      // form-local additions so retry (or a concurrent creator) reuses the canonical row.
+      if ((draft.customDepartments?.length ?? 0) > 0) {
+        const listed = await api.departments.list(workspaceId);
+        if (workspaceId !== this.workspaceId) throw new Error('The active workspace changed.');
+        this.departments = new Map(listed.map((department) => [department.id, department.name]));
+        this.apply({ type: 'sync/merge', patch: { departments: listed } });
+      }
+      const departmentIds: string[] = [];
+      for (const [index, selectedId] of selected.entries()) {
+        let id = this.departments.has(selectedId) ? selectedId : undefined;
+        const custom = draft.customDepartments?.find((department) => department.id === selectedId);
+        const name = custom?.name ?? DEPARTMENTS.find((department) => department.id === selectedId)?.name;
+        if (!id && name) id = [...this.departments].find(([, existingName]) => normalizeDepartmentName(existingName) === normalizeDepartmentName(name))?.[0];
+        if (!id && custom) {
+          let department: DepartmentView;
+          try {
+            department = await api.departments.create(workspaceId, { name: custom.name.trim() }, `${commandId}_dept_${index}`);
+          } catch (error) {
+            if (!isProblem(error, 'CONFLICT')) throw error;
+            const listed = await api.departments.list(workspaceId);
+            const existing = listed.find((entry) => normalizeDepartmentName(entry.name) === normalizeDepartmentName(custom.name));
+            if (!existing) throw error;
+            department = existing;
+          }
+          if (workspaceId !== this.workspaceId) throw new Error('The active workspace changed.');
+          id = department.id;
+          this.departments.set(department.id, department.name);
+          this.apply({ type: 'sync/merge', patch: { departments: [
+            ...this.getState().departments.filter((entry) => entry.id !== department.id), department,
+          ] } });
+        }
+        if (!id && draft.departmentIds !== undefined) throw new ApiProblem(422, 'VALIDATION_FAILED', 'The selected department is no longer available.', null);
+        if (id && !departmentIds.includes(id)) departmentIds.push(id);
+      }
+      const body = {
+        key: draft.key, name: draft.name.trim(), color: draft.color,
+        ...(draft.description.trim() ? { description: draft.description.trim() } : {}),
+        departmentIds, memberIds: [...new Set(draft.memberIds ?? [])],
+      };
+      const created = await api.projects.create(workspaceId, body, commandId);
+      if (workspaceId !== this.workspaceId) throw new Error('The active workspace changed.');
+      this.apply({ type: 'sync/upsert-project', project: projectFromView(created, (id) => (id ? this.departments.get(id) : undefined)), ...(replaceId ? { replaceId } : {}) });
+      // The response itself reconciles the board and channel even if realtime was missed.
+      // A partial refresh failure leaves the draft retryable with the same command key.
+      await Promise.all([this.refreshWorkflow(), this.refreshProjectChannel(created.id)]);
+      if (workspaceId !== this.workspaceId) throw new Error('The active workspace changed.');
+      return created.id;
+    } catch (error) {
+      if (workspaceId === this.workspaceId) this.fail(error);
+      throw error;
+    }
+  }
+
   /* ---------------------------------------------------------------- tasks */
 
-  private createTask(draft: TaskDraft, prev: WorkspaceState, next: WorkspaceState): void {
+  createTask(draft: TaskDraft, prev: WorkspaceState, next: WorkspaceState, files: readonly File[] = [], commandId?: string): Promise<string> {
     const local = next.tasks.find((task) => !prev.tasks.some((entry) => entry.id === task.id));
-    if (!local) return;
-    this.track(local.id, async () => {
+    if (!local) return Promise.reject(new Error('The task draft was not created.'));
+    return this.track(local.id, async () => {
+      // Complete every new upload before creating the task: a rejected file cannot leave a
+      // task that the open form would create again when the person retries.
+      const uploaded: AttachmentView[] = [];
+      for (const file of files) uploaded.push(await this.taskUpload(file, file.name));
       const column = apiColumnFor(serverColumnsOf(this.getState(), local.projectId), { status: local.status, boardColumnId: local.boardColumnId });
       let detail: TaskDetail;
       const source = draft.sourceMessageId ? this.getState().messages.find((message) => message.id === draft.sourceMessageId) : undefined;
@@ -946,6 +999,7 @@ export class LiveStore {
           columnId: column?.id ?? null,
           priority: draft.priority,
           assigneeIds: draft.assigneeIds,
+          ...(draft.startDate ? { startDate: draft.startDate } : {}),
           dueDate: draft.dueDate,
           subtasks: draft.subtaskTitles,
           attachmentIds: draft.attachments.filter((attachment) => !isLocal(attachment.id)).map((attachment) => attachment.id),
@@ -958,21 +1012,31 @@ export class LiveStore {
           columnId: column?.id ?? null,
           priority: draft.priority,
           assigneeIds: draft.assigneeIds,
+          ...(draft.startDate ? { startDate: draft.startDate } : {}),
           dueDate: draft.dueDate,
         });
         detail = converted.task;
       } else {
-        detail = await api.tasks.create(this.workspaceId, {
+        const body: CreateTaskBody = {
           projectId: await this.serverId(draft.projectId),
           title: draft.title,
           description: draft.description,
           columnId: column?.id ?? null,
           priority: draft.priority,
           assigneeIds: draft.assigneeIds,
+          ...(draft.startDate ? { startDate: draft.startDate } : {}),
           dueDate: draft.dueDate,
           subtasks: draft.subtaskTitles,
+          attachmentIds: [...new Set([...draft.attachments.filter((attachment) => !isLocal(attachment.id)).map((attachment) => attachment.id), ...uploaded.map((attachment) => attachment.id)])],
           ...agileFieldsOf(draft),
-        });
+        };
+        detail = commandId ? await api.tasks.create(this.workspaceId, body, commandId) : await api.tasks.create(this.workspaceId, body);
+      }
+      // Conversion routes deliberately accept only the source message's files. Newly picked
+      // files use the normal ownership-checked, idempotent attachment link afterwards.
+      if ((draft.sourceMessageId || draft.sourceNoteId) && uploaded.length > 0) {
+        for (const attachment of uploaded) await api.tasks.attach(this.workspaceId, detail.id, attachment.id);
+        detail = await api.tasks.get(this.workspaceId, detail.id);
       }
       // Conversions take no agile fields: the converted task gets them in a second step.
       const agile = agileFieldsOf(draft);
@@ -982,6 +1046,13 @@ export class LiveStore {
       this.detailLoaded.add(detail.id);
       this.upsertDetail(detail, local.id);
       return detail.id;
+    }, () => {
+      this.apply({ type: 'sync/remove-task', taskId: local.id });
+      const state = this.getState();
+      this.apply({ type: 'sync/merge', patch: {
+        messages: state.messages.map((message) => message.linkedTaskId === local.id ? { ...message, linkedTaskId: prev.messages.find((entry) => entry.id === message.id)?.linkedTaskId ?? null } : message),
+        notes: state.notes.map((note) => note.linkedTaskId === local.id ? { ...note, linkedTaskId: prev.notes.find((entry) => entry.id === note.id)?.linkedTaskId ?? null } : note),
+      } });
     });
   }
 
@@ -1005,6 +1076,11 @@ export class LiveStore {
   }
 
   private async patchTask(taskId: string, patch: TaskPatch): Promise<void> {
+    await this.saveTask(taskId, patch).catch(() => undefined);
+  }
+
+  /** A form waits for acknowledgement; failures keep its unsaved field draft available. */
+  async saveTask(taskId: string, patch: TaskPatch): Promise<void> {
     await this.attempt(taskId, async (id, version) => {
       const body = {
         ...(patch.title !== undefined ? { title: patch.title } : {}),
@@ -1020,14 +1096,20 @@ export class LiveStore {
         ...(patch.isBacklog !== undefined ? { isBacklog: patch.isBacklog } : {}),
       };
       this.upsertDetail(await api.tasks.update(this.workspaceId, id, version, body));
-    });
+    }, true);
+  }
+
+  async saveTaskColumn(taskId: string, columnId: string): Promise<void> {
+    await this.attempt(taskId, async (id, version) => {
+      this.upsertCard(await api.tasks.move(this.workspaceId, id, { columnId, expectedVersion: version }));
+    }, true);
   }
 
   /**
    * Runs a versioned task change. The version comes from the last response or event; a stale one
    * (412) reloads the task as it is now, and any other failure puts the server's copy back.
    */
-  private async attempt(taskId: string, change: (id: string, version: number) => Promise<void>): Promise<void> {
+  private async attempt(taskId: string, change: (id: string, version: number) => Promise<void>, reject = false): Promise<void> {
     try {
       const id = await this.serverId(taskId);
       let version = this.versions.get(id);
@@ -1039,6 +1121,7 @@ export class LiveStore {
     } catch (error) {
       this.fail(error);
       await this.refreshTask(taskId).catch(() => undefined);
+      if (reject) throw error;
     }
   }
 
@@ -1088,15 +1171,15 @@ export class LiveStore {
     }
   }
 
-  private async refreshTask(taskId: string): Promise<void> {
+  private async refreshTask(taskId: string, reject = false): Promise<void> {
     const id = await this.serverId(taskId).catch(() => null);
     if (!id) return;
     try {
       const detail = await api.tasks.get(this.workspaceId, id);
-      this.versions.delete(id);
       this.upsertDetail(detail);
     } catch (error) {
       if (isProblem(error, 'NOT_FOUND') || isProblem(error, 'FORBIDDEN')) this.apply({ type: 'sync/remove-task', taskId: id });
+      if (reject) throw error;
     }
   }
 
@@ -1118,16 +1201,42 @@ export class LiveStore {
   }
 
   /** Uploads picked files, then links each to the task. */
-  private attachFiles(taskId: string, files: readonly PickedFile[]): void {
-    this.run(async () => {
+  async attachTaskFiles(taskId: string, files: readonly PickedFile[]): Promise<void> {
+    try {
       const id = await this.serverId(taskId);
       for (const picked of files) {
-        const stored = await uploadFile(this.workspaceId, picked.file, picked.name);
+        const stored = await this.taskUpload(picked.file, picked.name);
         await api.tasks.attach(this.workspaceId, id, stored.id);
       }
-      await this.refreshTask(id);
+      await this.refreshTask(id, true);
+    } catch (error) {
+      this.fail(error);
+      await this.refreshTask(taskId);
+      throw error;
+    } finally {
       for (const picked of files) URL.revokeObjectURL(picked.previewUrl);
-    }, () => this.refreshTask(taskId));
+    }
+  }
+
+  async removeTaskAttachment(taskId: string, attachmentId: string): Promise<void> {
+    try {
+      const id = await this.serverId(taskId);
+      await api.tasks.detach(this.workspaceId, id, attachmentId);
+      await this.refreshTask(id, true);
+    } catch (error) {
+      this.fail(error);
+      await this.refreshTask(taskId);
+      throw error;
+    }
+  }
+
+  private taskUpload(file: Blob, name: string): Promise<AttachmentView> {
+    const known = this.taskUploads.get(file);
+    if (known) return known;
+    const uploading = uploadFile(this.workspaceId, file, name);
+    this.taskUploads.set(file, uploading);
+    void uploading.catch(() => this.taskUploads.delete(file));
+    return uploading;
   }
 
   /* ---------------------------------------------------------------- board */
@@ -1164,7 +1273,9 @@ export class LiveStore {
 
   /** Every project's columns (one request), and the cards too after a column took some with it. */
   private async refreshWorkflow(withTasks = false): Promise<void> {
-    const [views, cards] = await Promise.all([api.workflow.list(this.workspaceId), withTasks ? api.tasks.all(this.workspaceId) : Promise.resolve(null)]);
+    const workspaceId = this.workspaceId;
+    const [views, cards] = await Promise.all([api.workflow.list(workspaceId), withTasks ? api.tasks.all(workspaceId) : Promise.resolve(null)]);
+    if (workspaceId !== this.workspaceId) return;
     const columns = columnsFromWorkflows(views);
     const state = this.getState();
     const previous = new Map(state.tasks.map((task) => [task.id, task]));
@@ -1511,7 +1622,15 @@ export class LiveStore {
   }
 
   private async refreshProjects(): Promise<void> {
-    const projects = await api.projects.list(this.workspaceId);
+    const workspaceId = this.workspaceId;
+    const [projects, departments] = await Promise.all([
+      api.projects.list(workspaceId), optional(api.departments.list(workspaceId), null),
+    ]);
+    if (workspaceId !== this.workspaceId) return;
+    if (departments) {
+      this.departments = new Map(departments.map((department) => [department.id, department.name]));
+      this.apply({ type: 'sync/merge', patch: { departments } });
+    }
     const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
     this.apply({ type: 'sync/merge', patch: { projects: projects.filter((project) => !project.archived).map((project) => projectFromView(project, departmentName)) } });
   }
@@ -1702,7 +1821,9 @@ export class LiveStore {
   }
 
   private async refreshProjectChannel(projectId: string): Promise<void> {
-    const conversations = await api.conversations.list(this.workspaceId);
+    const workspaceId = this.workspaceId;
+    const conversations = await api.conversations.list(workspaceId);
+    if (workspaceId !== this.workspaceId) return;
     const channel = conversations.find((conversation) => conversation.projectId === projectId && conversation.membershipMode === 'project_synced' && !conversation.archived);
     if (channel) this.apply({ type: 'sync/upsert-conversation', conversation: this.conversationFrom(channel) });
   }
@@ -1766,7 +1887,7 @@ export class LiveStore {
   }
 
   /** Runs a create and remembers which server id the local one becomes, for changes made meanwhile. */
-  private track(localId: string, create: () => Promise<string>, failed?: () => void): void {
+  private track(localId: string, create: () => Promise<string>, failed?: () => void): Promise<string> {
     const created = create();
     this.pending.set(localId, created);
     created.catch((error: unknown) => {
@@ -1776,6 +1897,7 @@ export class LiveStore {
       if (failed) failed();
       else void this.load(this.workspaceId, true);
     });
+    return created;
   }
 
   /** Runs a change; a failure is shown and `recover` re-reads what it touched. */

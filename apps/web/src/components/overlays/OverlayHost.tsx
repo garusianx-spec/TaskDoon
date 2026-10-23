@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
@@ -21,6 +22,8 @@ import { DeleteWorkspaceModal } from '@/components/workspace/DeleteWorkspaceModa
 import { nextLocalId } from '@/store/ids';
 import { userById } from '@/store/selectors';
 import { useOverlays } from './context';
+import { IconButton } from '@/components/ui';
+import { CheckCircleIcon, CloseIcon } from '@/components/icons';
 
 /**
  * Renders every app-level dialog exactly once, at the root, bound to the global overlay
@@ -30,7 +33,13 @@ import { useOverlays } from './context';
 export function OverlayHost() {
   const router = useRouter();
   const pathname = usePathname();
-  const { state, dispatch, currentUser, activeWorkspace, isWorkspaceOwner } = useWorkspace();
+  const { state, dispatch, createTask, createProject, currentUser, activeWorkspace, isWorkspaceOwner } = useWorkspace();
+  const [taskNotice, setTaskNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!taskNotice) return;
+    const timer = setTimeout(() => setTaskNotice(null), 6000);
+    return () => clearTimeout(timer);
+  }, [taskNotice]);
   const { active, open, close } = useOverlays();
   const live = useLive();
   const hasPassword = live?.status.user?.hasPassword ?? false;
@@ -62,13 +71,25 @@ export function OverlayHost() {
         open={active?.kind === 'task-composer'}
         draft={active?.kind === 'task-composer' ? active.draft : null}
         columns={state.boardColumns}
+        {...(pathname.startsWith('/tasks') && state.projectFilterId ? { fixedProjectId: state.projectFilterId } : {})}
         onCreateProject={() => open({ kind: 'project-composer' })}
         onClose={close}
-        onSubmit={(draft) => {
-          dispatch({ type: 'create-task', draft, authorId: currentUser.id });
+        onSubmit={async (draft, files, commandId) => {
+          await createTask(draft, files, commandId);
           close();
+          setTaskNotice(`وظیفه «${draft.title}» با موفقیت ایجاد شد.`);
         }}
       />
+
+      {taskNotice && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-toast flex justify-center px-4 sm:bottom-6">
+          <div role="status" className="pointer-events-auto flex max-w-lg items-start gap-2.5 rounded-xl border border-secondary bg-surface p-3 shadow-lg">
+            <CheckCircleIcon size={20} className="mt-0.5 shrink-0 text-status-done" />
+            <p className="min-w-0 flex-1 break-words text-body-sm text-fg-primary">{taskNotice}</p>
+            <IconButton label="بستن پیام موفقیت" icon={<CloseIcon size={16} />} size="xs" onClick={() => setTaskNotice(null)} />
+          </div>
+        </div>
+      )}
 
       <ProjectLimitDialog
         open={active?.kind === 'project-composer' && atProjectLimit}
@@ -80,10 +101,13 @@ export function OverlayHost() {
       <CreateProjectModal
         open={active?.kind === 'project-composer' && !atProjectLimit}
         projectCount={state.projects.length}
+        departments={state.departments}
+        members={state.users}
+        currentUserId={currentUser.id}
+        canCreateDepartment={isWorkspaceOwner || state.permissions[currentUser.role].members.create}
         onClose={close}
-        onSubmit={(draft) => {
-          const projectId = nextLocalId('project');
-          dispatch({ type: 'create-project', projectId, draft, ownerId: currentUser.id });
+        onSubmit={async (draft, commandId) => {
+          await createProject(draft, commandId);
           close();
           goTo('/tasks');
         }}

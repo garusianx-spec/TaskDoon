@@ -1,0 +1,29 @@
+ ○ Compiling /tasks ...
+ ✓ Compiled /tasks in 7.3s (1075 modules)
+ ✓ Compiled in 1294ms (420 modules)
+ GET /tasks 200 in 8698ms
+ ✓ Compiled in 193ms (404 modules)
+ ○ Compiling /icon.svg ...
+ ✓ Compiled /icon.svg in 1272ms (672 modules)
+ GET /icon.svg?f6ab33347e5d1aa8 200 in 1607ms
+ GET /tasks 200 in 292ms
+ GET /icon.svg?f6ab33347e5d1aa8 200 in 60ms
+PASS  live project creation omits the description textarea
+PASS  the invited workspace member can be selected before project creation
+PASS  the custom department is stored through the departments API
+PASS  the project payload contains all selected default and custom department IDs
+PASS  the project creation payload contains the selected member user ID
+PASS  the project payload excludes the removed description field
+PASS  the server creates project memberships without duplicates
+ GET /tasks 200 in 257ms
+ GET /icon.svg?f6ab33347e5d1aa8 200 in 25ms
+PASS  all selected departments survive a server reload
+PASS  the selected project member survives a server reload
+PASS  the database stores exactly one project-synced companion channel
+PASS  the selected member also belongs to the project companion channel
+PASS  the multidepartment project generates the four standard board columns
+PASS  the generated board accepts a task in its own project and initial column
+PASS  the live project board renders the new task
+PASS  direct database inspection confirms three departments and two project members
+
+15 passed, 0 failed, 0 console problems

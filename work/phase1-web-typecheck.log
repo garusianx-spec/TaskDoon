@@ -1,0 +1,25 @@
+
+> @taskin/web@0.1.0 pretypecheck
+> npm run build:deps
+
+
+> @taskin/web@0.1.0 build:deps
+> tsc -b ../../packages/contracts ../../packages/jalali ../../packages/text
+
+
+> @taskin/web@0.1.0 typecheck
+> tsc --noEmit
+
+test/task-form-persistence.test.ts(10,74): error TS2322: Type '"file"' is not assignable to type 'FileKind'.
+npm error Lifecycle script `typecheck` failed with error:
+npm error code 2
+npm error path C:\Users\garus\Documents\Codex\2026-10-07\taskdoon\apps\web
+npm error workspace @taskin/web@0.1.0
+npm error location C:\Users\garus\Documents\Codex\2026-10-07\taskdoon\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc --noEmit
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

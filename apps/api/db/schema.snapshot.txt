@@ -271,6 +271,9 @@ platform_audit_logs.target_user_id uuid
 platform_audit_logs.target_workspace_id uuid
 platform_audit_logs.trace_id text
 platform_audit_logs.user_agent text
+project_departments.department_id uuid not null
+project_departments.project_id uuid not null
+project_departments.workspace_id uuid not null
 project_members.added_at timestamp with time zone not null default now()
 project_members.added_by uuid
 project_members.project_id uuid not null
@@ -793,6 +796,13 @@ platform_audit_logs platform_audit_logs_created_at_not_null: NOT NULL created_at
 platform_audit_logs platform_audit_logs_id_not_null: NOT NULL id
 platform_audit_logs platform_audit_logs_pkey: PRIMARY KEY (id)
 platform_audit_logs platform_audit_logs_target_user_id_users_id_fk: FOREIGN KEY (target_user_id) REFERENCES users(id)
+project_departments project_departments_department_fk: FOREIGN KEY (workspace_id, department_id) REFERENCES departments(workspace_id, id) ON DELETE CASCADE
+project_departments project_departments_department_id_not_null: NOT NULL department_id
+project_departments project_departments_pk: PRIMARY KEY (project_id, department_id)
+project_departments project_departments_project_fk: FOREIGN KEY (workspace_id, project_id) REFERENCES projects(workspace_id, id) ON DELETE CASCADE
+project_departments project_departments_project_id_not_null: NOT NULL project_id
+project_departments project_departments_workspace_id_not_null: NOT NULL workspace_id
+project_departments project_departments_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 project_members project_members_added_at_not_null: NOT NULL added_at
 project_members project_members_pk: PRIMARY KEY (project_id, user_id)
 project_members project_members_project_fk: FOREIGN KEY (workspace_id, project_id) REFERENCES projects(workspace_id, id) ON DELETE CASCADE
@@ -1167,6 +1177,9 @@ platform_audit_logs CREATE INDEX platform_audit_logs_admin_idx ON public.platfor
 platform_audit_logs CREATE INDEX platform_audit_logs_target_idx ON public.platform_audit_logs USING btree (target_user_id, created_at DESC NULLS LAST) WHERE (target_user_id IS NOT NULL)
 platform_audit_logs CREATE INDEX platform_audit_logs_workspace_idx ON public.platform_audit_logs USING btree (target_workspace_id, id DESC NULLS LAST) WHERE (target_workspace_id IS NOT NULL)
 platform_audit_logs CREATE UNIQUE INDEX platform_audit_logs_pkey ON public.platform_audit_logs USING btree (id)
+project_departments CREATE INDEX project_departments_workspace_department_idx ON public.project_departments USING btree (workspace_id, department_id)
+project_departments CREATE INDEX project_departments_workspace_project_idx ON public.project_departments USING btree (workspace_id, project_id)
+project_departments CREATE UNIQUE INDEX project_departments_pk ON public.project_departments USING btree (project_id, department_id)
 project_members CREATE INDEX project_members_user_idx ON public.project_members USING btree (workspace_id, user_id)
 project_members CREATE UNIQUE INDEX project_members_pk ON public.project_members USING btree (project_id, user_id)
 project_stars CREATE UNIQUE INDEX project_stars_pk ON public.project_stars USING btree (user_id, project_id)
@@ -1260,6 +1273,7 @@ outbox_events enabled=false forced=false
 password_reset_tokens enabled=false forced=false
 plans enabled=false forced=false
 platform_audit_logs enabled=false forced=false
+project_departments enabled=true forced=true
 project_members enabled=true forced=true
 project_stars enabled=true forced=true
 projects enabled=true forced=true
@@ -1305,6 +1319,7 @@ note_categories note_categories_owner ALL using(((workspace_id = ( SELECT app.cu
 notes notes_owner ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (owner_id = ( SELECT app.current_user_id() AS current_user_id)))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (owner_id = ( SELECT app.current_user_id() AS current_user_id))))
 notifications notifications_fanout ALL using(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (( SELECT app.current_user_id() AS current_user_id) IS NULL))) check(((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)) AND (( SELECT app.current_user_id() AS current_user_id) IS NULL)))
 notifications notifications_recipient ALL using((recipient_id = ( SELECT app.current_user_id() AS current_user_id))) check()
+project_departments project_departments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 project_members project_members_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 project_stars project_stars_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 projects projects_hide_deleted SELECT using(((deleted_at IS NULL) OR ( SELECT app.include_deleted() AS include_deleted))) check()
@@ -1343,6 +1358,7 @@ idempotency_keys idempotency_keys_touch -> touch_updated_at
 member_working_hours member_working_hours_touch -> touch_updated_at
 notes notes_touch -> touch_updated_at
 outbox_events outbox_events_notify -> notify_outbox
+projects projects_sync_primary_department -> sync_project_primary_department
 projects projects_touch -> touch_updated_at
 role_permissions role_permissions_protect_locked -> protect_locked_role_permissions
 roles roles_protect_locked -> protect_locked_roles
@@ -1376,6 +1392,7 @@ app.scheduled_messages_due(p_limit integer) security definer
 app.search_note_ids(p_pattern text) security definer
 app.search_task_ids(p_pattern text) security definer
 app.send_message(p_workspace uuid, p_user uuid, p_request_id text, p_conversation uuid, p_client_msg_id uuid, p_kind message_kind, p_text text, p_meta jsonb, p_attachment uuid, p_reply_to uuid, p_search text, p_mentions uuid[]) invoker
+app.sync_project_primary_department() invoker
 app.sync_task_status() invoker
 app.touch_updated_at() invoker
 app.uuidv7() invoker
@@ -1408,6 +1425,7 @@ outbox_events DELETE,INSERT,SELECT,UPDATE
 password_reset_tokens DELETE,INSERT,SELECT,UPDATE
 plans SELECT
 platform_audit_logs INSERT,SELECT
+project_departments DELETE,INSERT,SELECT,UPDATE
 project_members DELETE,INSERT,SELECT,UPDATE
 project_stars DELETE,INSERT,SELECT,UPDATE
 projects DELETE,INSERT,SELECT,UPDATE

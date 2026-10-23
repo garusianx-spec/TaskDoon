@@ -109,6 +109,7 @@ export class MessageTasksService {
         columnId: body.columnId ?? null,
         priority: body.priority,
         assigneeIds: body.assigneeIds,
+        startDate: body.startDate,
         dueDate: body.dueDate ?? null,
         subtasks: body.subtasks,
       },

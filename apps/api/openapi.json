@@ -8759,6 +8759,13 @@
             "nullable": true,
             "format": "uuid"
           },
+          "departmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           "color": {
             "type": "string",
             "enum": [
@@ -8835,6 +8842,7 @@
           "name",
           "description",
           "departmentId",
+          "departmentIds",
           "color",
           "parentId",
           "visibility",
@@ -8869,6 +8877,15 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "departmentIds": {
+            "maxItems": 20,
+            "description": "Complete department selection; first is the legacy primary, empty clears all",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "color": {
             "type": "string",
@@ -8978,6 +8995,15 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "departmentIds": {
+            "maxItems": 20,
+            "description": "Replaces the complete selection; omit to leave unchanged",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "color": {
             "type": "string",
@@ -10935,6 +10961,10 @@
               "format": "uuid"
             }
           },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
           "dueDate": {
             "type": "string",
             "nullable": true,
@@ -12172,6 +12202,10 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
           },
           "dueDate": {
             "type": "string",
