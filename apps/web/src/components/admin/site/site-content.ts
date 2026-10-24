@@ -14,7 +14,7 @@ export function normalizeContent(content: SiteContent): SiteContent {
     if (Array.isArray(value)) return value.map((entry) => clean(entry));
     if (value && typeof value === 'object') {
       const result = Object.fromEntries(Object.entries(value).map(([name, child]) => [name, clean(child, name)]).filter(([, child]) => child !== undefined));
-      if (['cta', 'secondaryCta', 'primaryCta'].includes(key) && (!result.href || !result.label)) return undefined;
+      if (['cta', 'secondaryCta', 'primaryCta', 'headerCta'].includes(key) && (!result.href || !result.label)) return undefined;
       if (['media', 'cover', 'logo'].includes(key) && !result.src) return undefined;
       return result;
     }

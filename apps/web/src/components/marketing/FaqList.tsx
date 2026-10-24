@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/Input';
 export function FaqList({ documents, searchable = false }: { documents: PublishedSiteDocument[]; searchable?: boolean }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [expanded, setExpanded] = useState<string | null>(searchable ? null : documents[0]?.id ?? null);
   const categories = [...new Set(documents.map(document => asText(document.data.category)).filter(Boolean))];
   const filtered = useMemo(() => documents.filter(document => (!category || document.data.category === category) && normaliseForSearch(`${document.title} ${asText(document.data.answer)} ${document.description}`).includes(normaliseForSearch(query))), [documents, category, query]);
   return <div className="marketing-faq-content">
     {searchable && <div className="marketing-faq-search"><Input label="جست‌وجو در پرسش‌ها" placeholder="دنبال چه پاسخی می‌گردید؟" type="search" value={query} onChange={event => setQuery(event.target.value)} />{categories.length > 0 && <div className="marketing-filter-tabs" role="group" aria-label="دسته‌بندی پرسش‌ها"><button type="button" aria-pressed={!category} onClick={() => setCategory('')}>همه</button>{categories.map(value => <button key={value} type="button" aria-pressed={category === value} onClick={() => setCategory(value)}>{value}</button>)}</div>}</div>}
-    <div className="marketing-faq-list">{filtered.map(document => <details key={document.id} id={`faq-${document.slug}`} className="marketing-faq-item"><summary>{document.title}<span aria-hidden="true">+</span></summary><p>{asText(document.data.answer, document.description)}</p></details>)}</div>
+    <div className="marketing-faq-list">{filtered.map(document => { const open = expanded === document.id; return <div key={document.id} id={`faq-${document.slug}`} className={`marketing-faq-item ${open ? 'is-open' : ''}`}><h3><button type="button" id={`faq-trigger-${document.id}`} className="marketing-faq-trigger" aria-expanded={open} aria-controls={`faq-panel-${document.id}`} onClick={() => setExpanded(open ? null : document.id)}>{document.title}<span aria-hidden="true">{open ? '−' : '+'}</span></button></h3><div id={`faq-panel-${document.id}`} role="region" aria-labelledby={`faq-trigger-${document.id}`} aria-hidden={!open} className="marketing-faq-panel"><div><p>{asText(document.data.answer, document.description)}</p></div></div></div>; })}</div>
     {!filtered.length && <p className="marketing-empty" role="status">پرسشی با این عبارت پیدا نشد. از راه فرم تماس با ما در ارتباط باشید.</p>}
   </div>;
 }

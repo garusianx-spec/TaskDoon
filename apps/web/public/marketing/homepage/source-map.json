@@ -1,0 +1,286 @@
+{
+  "source": "Desktop - 3.pdf, page 1, 1440 \u00d7 6442; corresponding Figma frame 32:3352",
+  "note": "Original PDF embedded images and isolated artwork exports. Text and product interfaces are implemented in HTML, not flattened screenshots. Figma asset downloads returned a WAF challenge or TLS timeout.",
+  "assets": [
+    {
+      "file": "benefit-0.png",
+      "figmaNode": "101:3523",
+      "pdfRect": [
+        356,
+        1166,
+        22,
+        22
+      ]
+    },
+    {
+      "file": "benefit-1.png",
+      "figmaNode": "101:3529",
+      "pdfRect": [
+        664,
+        1166,
+        22,
+        22
+      ]
+    },
+    {
+      "file": "benefit-2.png",
+      "figmaNode": "101:3534",
+      "pdfRect": [
+        972,
+        1166,
+        22,
+        22
+      ]
+    },
+    {
+      "file": "benefit-3.png",
+      "figmaNode": "101:3538",
+      "pdfRect": [
+        1280,
+        1166,
+        22,
+        22
+      ]
+    },
+    {
+      "file": "partner-0.png",
+      "figmaNode": "34:6338",
+      "pdfRect": [
+        173.43999862670898,
+        853,
+        109,
+        28
+      ]
+    },
+    {
+      "file": "partner-1.png",
+      "figmaNode": "34:6342",
+      "pdfRect": [
+        410.739990234375,
+        853,
+        98.11000061035156,
+        28
+      ]
+    },
+    {
+      "file": "partner-2.png",
+      "figmaNode": "34:6346",
+      "pdfRect": [
+        637.1500244140625,
+        853,
+        95.76000213623047,
+        28
+      ]
+    },
+    {
+      "file": "partner-3.png",
+      "figmaNode": "34:6350",
+      "pdfRect": [
+        861.2100219726562,
+        853,
+        80.63999938964844,
+        28
+      ]
+    },
+    {
+      "file": "partner-4.png",
+      "figmaNode": "34:6354",
+      "pdfRect": [
+        1070.1500244140625,
+        853,
+        64,
+        28
+      ]
+    },
+    {
+      "file": "partner-5.png",
+      "figmaNode": "34:6359",
+      "pdfRect": [
+        179.52999877929688,
+        913,
+        62,
+        20
+      ]
+    },
+    {
+      "file": "partner-6.png",
+      "figmaNode": "34:6363",
+      "pdfRect": [
+        397.5299987792969,
+        913,
+        77.18000030517578,
+        20
+      ]
+    },
+    {
+      "file": "partner-7.png",
+      "figmaNode": "34:6367",
+      "pdfRect": [
+        630.7099609375,
+        913,
+        61.56999969482422,
+        20
+      ]
+    },
+    {
+      "file": "partner-8.png",
+      "figmaNode": "34:6371",
+      "pdfRect": [
+        848.2799682617188,
+        913,
+        72.6500015258789,
+        20
+      ]
+    },
+    {
+      "file": "partner-9.png",
+      "figmaNode": "34:6375",
+      "pdfRect": [
+        1076.929931640625,
+        913,
+        43,
+        20
+      ]
+    },
+    {
+      "file": "orbit-0.png",
+      "figmaNode": "89:4673",
+      "pdfRect": [
+        600.572265625,
+        3178,
+        36.19047546386719,
+        40
+      ]
+    },
+    {
+      "file": "orbit-1.png",
+      "figmaNode": "89:4677",
+      "pdfRect": [
+        835.80859375,
+        3202,
+        36.19047546386719,
+        40
+      ]
+    },
+    {
+      "file": "orbit-2.png",
+      "figmaNode": "89:4687",
+      "pdfRect": [
+        936,
+        3186,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "orbit-3.png",
+      "figmaNode": "89:4695",
+      "pdfRect": [
+        480,
+        3250,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "orbit-4.png",
+      "figmaNode": "89:4699",
+      "pdfRect": [
+        904,
+        3298,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "orbit-5.png",
+      "figmaNode": "89:4708",
+      "pdfRect": [
+        496,
+        3490,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "orbit-6.png",
+      "figmaNode": "89:4713",
+      "pdfRect": [
+        920,
+        3506,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "orbit-7.png",
+      "figmaNode": "89:4729",
+      "pdfRect": [
+        618.666015625,
+        3578,
+        36.19047546386719,
+        40
+      ]
+    },
+    {
+      "file": "orbit-8.png",
+      "figmaNode": "89:4733",
+      "pdfRect": [
+        785.142578125,
+        3578,
+        36.19047546386719,
+        40
+      ]
+    },
+    {
+      "file": "avatar-0.webp",
+      "figmaNode": "70:3937",
+      "pdfRect": [
+        440.3333435058594,
+        4210.125,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "avatar-1.webp",
+      "figmaNode": "70:3961",
+      "pdfRect": [
+        853.6666564941406,
+        4188.125,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "avatar-2.webp",
+      "figmaNode": "70:4004",
+      "pdfRect": [
+        1266.9999389648438,
+        4210.125,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "avatar-3.webp",
+      "figmaNode": "70:3982",
+      "pdfRect": [
+        853.6666564941406,
+        4434.25,
+        40,
+        40
+      ]
+    },
+    {
+      "file": "avatar-4.webp",
+      "figmaNode": "70:4025",
+      "pdfRect": [
+        1266.9999389648438,
+        4456.25,
+        40,
+        40
+      ]
+    }
+  ]
+}

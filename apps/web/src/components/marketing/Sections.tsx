@@ -6,6 +6,7 @@ import { ProductPreview } from './ProductPreview';
 import { FaqList } from './FaqList';
 import { PricingPlans } from './PricingPlans';
 import { LeadForm } from './LeadForm';
+import { HomeSection } from './HomeSections';
 
 export function MarketingMedia({ media, priority = false, framed = false }: { media: SiteMediaRef; priority?: boolean; framed?: boolean }) {
   if (!siteMediaHref(media.src)) return null;
@@ -68,6 +69,7 @@ export function DocumentCards({ documents }: { documents: PublishedSiteDocument[
 
 export function SectionRenderer({ section, documents = [], depth = 0, isPrimary = false }: { section: SiteSection; documents?: PublishedSiteDocument[]; depth?: number; isPrimary?: boolean }) {
   if (!section.visible || depth > 3) return null;
+  if (typeof section.data?.presentation === 'string' && section.data.presentation === `home-${section.type}`) return <HomeSection section={section} documents={documents} isPrimary={isPrimary} />;
   const items = section.items ?? [];
   const className = `marketing-section marketing-section-${section.type} marketing-variant-${section.variant ?? 'default'} marketing-layout-${section.layout ?? 'grid'}`;
   const source = asText(section.data?.source);
