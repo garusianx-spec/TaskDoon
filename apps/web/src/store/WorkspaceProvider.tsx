@@ -12,7 +12,8 @@ import {
   type Dispatch,
   type ReactNode,
 } from 'react';
-import type { Conversation, TaskDraft, User, Workspace } from '@taskin/contracts';
+import type { Conversation, ProfileSettings, TaskDraft, User, Workspace } from '@taskin/contracts';
+import { profileNameError } from '@/lib/profile-name';
 import { IS_LIVE } from '@/lib/data-source';
 import { workspaceReducer, type ProjectDraft, type TaskPatch, type WorkspaceAction, type WorkspaceState } from './workspace-reducer';
 import { nextLocalId } from './ids';
@@ -28,6 +29,8 @@ interface WorkspaceContextValue {
   readonly createTask: (draft: TaskDraft, files?: readonly File[], commandId?: string) => Promise<string>;
   readonly saveTask: (taskId: string, patch: TaskPatch, columnId?: string) => Promise<void>;
   readonly createProject: (draft: ProjectDraft, commandId: string) => Promise<string>;
+  readonly saveProfile: (fullName: string, profile: ProfileSettings) => Promise<void>;
+  readonly saveNote: (noteId: string) => Promise<void>;
   readonly currentUser: User;
   readonly activeWorkspace: Workspace;
   /** True when the signed-in member is the active workspace's Owner. */
@@ -125,6 +128,21 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     return id;
   }, [apply, live]);
 
+  const saveProfile = useCallback(async (fullName: string, profile: ProfileSettings) => {
+    const error = profileNameError(fullName);
+    if (error) throw new Error(error);
+    if (live) await live.saveProfile(fullName.trim(), profile);
+    else {
+      apply({ type: 'update-display-name', fullName });
+      apply({ type: 'update-profile', profile });
+    }
+  }, [apply, live]);
+
+  const saveNote = useCallback(async (noteId: string) => {
+    if (live) await live.flushNote(noteId);
+    apply({ type: 'sync/merge', patch: { announcement: 'یادداشت ذخیره شد. آماده نوشتن یادداشت تازه هستید.' } });
+  }, [apply, live]);
+
   const liveStatus = useSyncExternalStore(
     useCallback((listener: () => void) => live?.subscribe(listener) ?? (() => undefined), [live]),
     () => live?.current ?? DEMO_STATUS,
@@ -172,8 +190,7 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     [state.notifications],
   );
 
-  // Presence is the one identity field the member edits themselves (profile modal); name,
-  // email and title come from the organisation directory.
+  // Every account display reads the same directory entry, updated after profile confirmation.
   const me = state.users.find((user) => user.id === state.meId);
   const currentUser = useMemo<User | undefined>(
     () => (me ? { ...me, presence: state.profile.presence } : undefined),
@@ -191,6 +208,8 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
             createTask,
             saveTask,
             createProject,
+            saveProfile,
+            saveNote,
             currentUser,
             activeWorkspace,
             isWorkspaceOwner: activeWorkspace.ownerId === currentUser.id,
@@ -202,7 +221,7 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
             unreadNotifications,
           }
         : null,
-    [state, dispatch, createTask, saveTask, createProject, currentUser, activeWorkspace, unreadFor, isPinned, isMuted, totalUnread, unreadNotifications],
+    [state, dispatch, createTask, saveTask, createProject, saveProfile, saveNote, currentUser, activeWorkspace, unreadFor, isPinned, isMuted, totalUnread, unreadNotifications],
   );
 
   const liveValue = useMemo(() => (live ? { store: live, status: liveStatus } : null), [live, liveStatus]);

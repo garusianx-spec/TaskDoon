@@ -24,6 +24,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import { check, eventually, finish, launch, out, visible, watchConsole } from '../lib/harness.mjs';
 import { verifyProjectCreation } from './project-creation.mjs';
+import { verifyProfileNavNotes } from './profile-nav-notes.mjs';
 
 /** The API accepts its cookie routes (refresh, sign-out) only from its web origin: PUBLIC_WEB_ORIGIN or CORS_ORIGINS. */
 const base = process.env.BASE_URL ?? 'http://localhost:3000';
@@ -544,6 +545,8 @@ try {
     await eventually(async () => (await noteList.count()) === notesBefore + 1 && (await noteList.filter({ hasText: 'جلسه هفتگی' }).count()) === 1, 20_000),
     'after a reload: the note with words, and no blank one',
   );
+
+  await verifyProfileNavNotes(owner, { runId });
 
   /* ------------------------------------------------ Phase 2: the plan's project limit */
 

@@ -33,7 +33,7 @@ import { CheckCircleIcon, CloseIcon } from '@/components/icons';
 export function OverlayHost() {
   const router = useRouter();
   const pathname = usePathname();
-  const { state, dispatch, createTask, createProject, currentUser, activeWorkspace, isWorkspaceOwner } = useWorkspace();
+  const { state, dispatch, createTask, createProject, saveProfile, currentUser, activeWorkspace, isWorkspaceOwner } = useWorkspace();
   const [taskNotice, setTaskNotice] = useState<string | null>(null);
   useEffect(() => {
     if (!taskNotice) return;
@@ -214,9 +214,10 @@ export function OverlayHost() {
         profile={state.profile}
         onClose={close}
         onOpenSecurity={() => open({ kind: 'security' })}
-        onSave={(profile) => {
-          dispatch({ type: 'update-profile', profile });
+        onSave={async (fullName, profile) => {
+          await saveProfile(fullName, profile);
           close();
+          setTaskNotice('پروفایل شما به‌روزرسانی شد.');
         }}
       />
 

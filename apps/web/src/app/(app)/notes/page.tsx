@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Note, TagTone } from '@taskin/contracts';
-import { DEFAULT_NOTE_CATEGORY_ID } from '@/data/reference';
+import { newNoteCategory, reconcileNoteCategory } from '@/lib/note-form';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { filterNotes, noteCategoryLabel, taskById } from '@/store/selectors';
 import { taskDraft } from '@/store/drafts';
@@ -31,12 +31,18 @@ import {
  * editor in the workspace.
  */
 export default function NotesPage() {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, saveNote } = useWorkspace();
   const { openTaskComposer } = useOverlays();
   const [categoryId, setCategoryId] = useState<string>('all');
   const [color, setColor] = useState<TagTone | null>(null);
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!saveNotice) return;
+    const timer = setTimeout(() => setSaveNotice(null), 6000);
+    return () => clearTimeout(timer);
+  }, [saveNotice]);
   const [selectedId, setSelectedId] = useState<string | null>(
     () => filterNotes(state.notes, { categoryId: 'all', color: null, search: '' })[0]?.id ?? null,
   );
@@ -45,6 +51,14 @@ export default function NotesPage() {
   const [mobileEditorOpen, setMobileEditorOpen] = useState(false);
 
   const { notes, noteCategories: categories } = state;
+  const [seenCategories, setSeenCategories] = useState({ workspaceId: state.activeWorkspaceId, items: categories });
+  if (seenCategories.items !== categories || seenCategories.workspaceId !== state.activeWorkspaceId) {
+    setSeenCategories({ workspaceId: state.activeWorkspaceId, items: categories });
+    const nextFilter = seenCategories.workspaceId === state.activeWorkspaceId
+      ? reconcileNoteCategory(seenCategories.items, categories, categoryId)
+      : 'all';
+    if (nextFilter !== categoryId) setCategoryId(nextFilter);
+  }
   // The note «یادداشت جدید» just started: kept only once it has words in it.
   const [draftId, setDraftId] = useState<string | null>(null);
   // The editor's key per note: a draft keeps its editor (focus, caret) when it is stored.
@@ -62,6 +76,9 @@ export default function NotesPage() {
   }
   const visible = useMemo(() => filterNotes(notes, { categoryId, color, search }), [notes, categoryId, color, search]);
   const selected = notes.find((note) => note.id === selectedId) ?? visible[0];
+  const editorIdentity = selected ? (editorKeys[selected.id] ?? selected.id) : null;
+  const currentEditor = useRef({ workspaceId: state.activeWorkspaceId, identity: editorIdentity });
+  currentEditor.current = { workspaceId: state.activeWorkspaceId, identity: editorIdentity };
 
   /** Leaving a new note that is still blank: it goes, and nothing was ever saved of it. */
   const discardBlankDraft = (keep?: string) => {
@@ -95,19 +112,17 @@ export default function NotesPage() {
     setMobileEditorOpen(false);
   };
 
-  const createNote = () => {
+  const startNote = (notebookId: string | null) => {
     discardBlankDraft();
     const noteId = nextLocalId('note');
-    // A new note belongs to the category being viewed; under "همه" it starts as personal while
-    // that notebook exists (the server picks it in the live app), else in no notebook.
-    const personal = categories.some((category) => category.id === DEFAULT_NOTE_CATEGORY_ID) ? DEFAULT_NOTE_CATEGORY_ID : null;
-    dispatch({ type: 'create-note', noteId, categoryId: categoryId === 'all' ? personal : categoryId });
+    dispatch({ type: 'create-note', noteId, categoryId: notebookId });
     // A colour or search filter would hide the blank note; clear them so it stays in view.
     setColor(null);
     setSearch('');
     open(noteId);
     setDraftId(noteId);
   };
+  const createNote = () => startNote(newNoteCategory(categories, categoryId));
 
   const convertToTask = (note: Note) => {
     const { description, subtasks } = splitForTask(note.body);
@@ -208,6 +223,7 @@ export default function NotesPage() {
         </section>
 
         <div className={cn('min-h-0 min-w-0 flex-1 flex-col', mobileEditorOpen ? 'flex' : 'hidden lg:flex')}>
+          {saveNotice && <p role="status" className="border-b border-secondary bg-sunken px-4 py-2 text-caption text-fg-secondary">{saveNotice}</p>}
           {selected ? (
             <NoteEditor
               key={editorKeys[selected.id] ?? selected.id}
@@ -215,6 +231,13 @@ export default function NotesPage() {
               categories={categories}
               linkedTask={selected.linkedTaskId ? taskById(state.tasks, selected.linkedTaskId) : undefined}
               onPatch={(patch) => dispatch({ type: 'update-note', noteId: selected.id, patch })}
+              onSave={async () => {
+                const origin = currentEditor.current;
+                await saveNote(selected.id);
+                if (origin.workspaceId !== currentEditor.current.workspaceId || origin.identity !== currentEditor.current.identity) return;
+                startNote(selected.categoryId);
+                setSaveNotice('یادداشت ذخیره شد. یادداشت تازه‌ای بنویسید.');
+              }}
               onDelete={() => {
                 const next = visible.find((note) => note.id !== selected.id);
                 dispatch({ type: 'delete-note', noteId: selected.id });

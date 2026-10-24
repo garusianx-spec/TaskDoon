@@ -243,6 +243,7 @@ export type WorkspaceAction =
   | { readonly type: 'invite-members'; readonly draft: InvitationDraft; readonly invitedById: string }
   | { readonly type: 'revoke-invitation'; readonly invitationId: string }
   | { readonly type: 'update-profile'; readonly profile: ProfileSettings }
+  | { readonly type: 'update-display-name'; readonly fullName: string }
   | { readonly type: 'set-two-factor'; readonly enabled: boolean }
   | { readonly type: 'record-password-change' }
   | { readonly type: 'revoke-login-session'; readonly sessionId: string }
@@ -1348,6 +1349,11 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case 'update-profile':
       return { ...state, profile: action.profile, announcement: 'پروفایل شما به‌روزرسانی شد.' };
+
+    case 'update-display-name': {
+      const fullName = action.fullName.trim();
+      return { ...state, users: state.users.map(user => user.id === state.meId ? { ...user, fullName, initials: monogram(fullName) } : user) };
+    }
 
     case 'set-two-factor':
       return {

@@ -401,7 +401,7 @@ export function eventFromView(view: CalendarEventView): CalendarEvent {
 }
 
 export function noteCategoryFromView(view: NoteCategoryView): NoteCategory {
-  return { id: view.id, label: view.label, builtIn: view.builtIn };
+  return { id: view.id, key: view.key, label: view.label, builtIn: view.builtIn };
 }
 
 export function noteFromView(view: NoteView): Note {

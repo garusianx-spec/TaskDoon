@@ -5,6 +5,9 @@ import type {
   ConversationDetail,
   ConversationView,
   MeUser,
+  Note,
+  CreateNoteBody,
+  ProfileSettings,
   Message,
   MessageView,
   PermissionMatrix,
@@ -25,6 +28,8 @@ import { toISODate } from '@taskin/jalali';
 import { api } from '@/api/endpoints';
 import { ApiProblem, http, isProblem, newIdempotencyKey } from '@/api/http';
 import { normalizeDepartmentName } from '@/lib/project-form';
+import { profileNameError } from '@/lib/profile-name';
+import { noteSaveError } from '@/lib/note-form';
 import { codeMessage, problemMessage } from '@/api/messages';
 import {
   activityFromView,
@@ -126,6 +131,8 @@ export class LiveStore {
   private roleIds = new Map<RoleId, { readonly id: string; readonly version: number }>();
   private readonly typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly noteTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly noteWrites = new Map<string, Promise<void>>();
+  private readonly noteCreateRequests = new Map<string, { readonly body: CreateNoteBody; readonly key: string }>();
   private typingSentAt = new Map<string, number>();
   /** Signed file links, reused until shortly before they expire. */
   private readonly links = new Map<string, { readonly url: string; readonly expires: number }>();
@@ -257,6 +264,10 @@ export class LiveStore {
     this.workspaceId = '';
     this.versions.clear();
     this.noteVersions.clear();
+    for (const timer of this.noteTimers.values()) clearTimeout(timer);
+    this.noteTimers.clear();
+    this.noteWrites.clear();
+    this.noteCreateRequests.clear();
     this.pending.clear();
     this.seqOf.clear();
     this.lastSeq.clear();
@@ -780,7 +791,7 @@ export class LiveStore {
         return;
       case 'update-note':
         if (this.isNoteDraft(action.noteId)) this.createNote(action.noteId);
-        else this.saveNote(action.noteId);
+        else this.scheduleNote(action.noteId);
         return;
       case 'delete-note':
       case 'discard-note':
@@ -1509,6 +1520,28 @@ export class LiveStore {
 
   /* ---------------------------------------------------------------- notes, roles, sessions */
 
+  /** Account identity is global; presence belongs to the workspace captured at save time. */
+  async saveProfile(fullName: string, profile: ProfileSettings): Promise<void> {
+    const error = profileNameError(fullName);
+    if (error) throw new Error(error);
+    const workspaceId = this.workspaceId;
+    const userId = this.getState().meId;
+    const before = this.getState();
+    if (before.users.find(user => user.id === userId)?.fullName !== fullName.trim()) {
+      const user = await api.me.update({ fullName: fullName.trim() });
+      if (this.getState().meId !== userId || user.id !== userId) throw new Error('The signed-in account changed.');
+      this.apply({ type: 'update-display-name', fullName: user.fullName });
+      this.patch({ user });
+      session.updateUser(user);
+    }
+    if (workspaceId !== this.workspaceId || this.getState().meId !== userId) throw new Error('The workspace changed.');
+    if (before.profile.presence !== profile.presence || before.profile.statusMessage !== profile.statusMessage) {
+      await api.workspaces.setPresence(workspaceId, profile.presence === 'offline' ? 'away' : profile.presence, profile.statusMessage);
+    }
+    if (workspaceId !== this.workspaceId || this.getState().meId !== userId) throw new Error('The workspace changed.');
+    this.apply({ type: 'update-profile', profile });
+  }
+
   /** A new note not yet sent: nothing of it exists on the server. */
   private isNoteDraft(noteId: string): boolean {
     return isLocal(noteId) && !this.pending.has(noteId);
@@ -1518,50 +1551,92 @@ export class LiveStore {
    * Stores a new note once it has a non-blank title or body, with everything set on it so far;
    * until then it is only a draft on this page, and an empty one is discarded, never saved.
    */
-  private createNote(noteId: string): void {
+  private createNote(noteId: string): Promise<string> | undefined {
     const draft = this.getState().notes.find((note) => note.id === noteId);
     if (!draft || (!draft.title.trim() && !draft.body.trim())) return;
-    this.track(noteId, async () => {
-      // No notebook named: the server files it in «شخصی» while that exists.
-      const created = await api.notes.create(this.workspaceId, {
-        ...(draft.categoryId !== null ? { categoryId: await this.serverId(draft.categoryId) } : {}),
-        title: draft.title,
-        body: draft.body,
-        colors: draft.colors,
-        pinned: draft.pinned,
-      });
+    const workspaceId = this.workspaceId;
+    const userId = this.getState().meId;
+    const token = this.loadToken;
+    return this.track(noteId, async () => {
+      let request = this.noteCreateRequests.get(noteId);
+      if (!request) {
+        request = { key: newIdempotencyKey(), body: {
+          categoryId: draft.categoryId === null ? null : await this.serverId(draft.categoryId),
+          title: draft.title, body: draft.body, colors: draft.colors, pinned: draft.pinned,
+        } };
+        if (token !== this.loadToken || workspaceId !== this.workspaceId || userId !== this.getState().meId) throw new Error('The workspace changed.');
+        this.noteCreateRequests.set(noteId, request);
+      }
+      let created;
+      try {
+        created = await api.notes.create(workspaceId, request.body, request.key);
+      } catch (error) {
+        // A definite refusal did not commit; a network/5xx outcome retries the identical command.
+        if (isProblem(error) && error.status >= 400 && error.status < 500) this.noteCreateRequests.delete(noteId);
+        throw error;
+      }
+      if (token !== this.loadToken || workspaceId !== this.workspaceId || userId !== this.getState().meId) return created.id;
+      this.noteCreateRequests.delete(noteId);
       this.noteVersions.set(created.id, created.version);
       // Deleted while it was being stored: `delete-note` removes it from the server too.
       const current = this.getState().notes.find((note) => note.id === noteId);
       if (!current) return created.id;
-      this.apply({ type: 'sync/upsert-note', note: { ...noteFromView(created), title: current.title, body: current.body, colors: current.colors, pinned: current.pinned }, replaceId: noteId });
+      clearTimeout(this.noteTimers.get(noteId));
+      this.noteTimers.delete(noteId);
+      this.apply({ type: 'sync/upsert-note', note: { ...noteFromView(created), title: current.title, body: current.body, categoryId: current.categoryId, colors: current.colors, pinned: current.pinned }, replaceId: noteId });
       // Typed on while the note was being created: the usual autosave sends the rest.
-      if (current.title !== draft.title || current.body !== draft.body || current.colors !== draft.colors || current.pinned !== draft.pinned) this.saveNote(noteId);
+      if (current.title !== created.title || current.body !== created.body || current.categoryId !== created.categoryId || current.colors.join(',') !== created.colors.join(',') || current.pinned !== created.pinned) this.scheduleNote(created.id);
       return created.id;
-    });
+    }, () => undefined); // Keep the draft and all its edits available for an explicit retry.
   }
 
-  private saveNote(noteId: string): void {
+  private scheduleNote(noteId: string): void {
     clearTimeout(this.noteTimers.get(noteId));
     this.noteTimers.set(
       noteId,
       setTimeout(() => {
         this.noteTimers.delete(noteId);
-        this.run(async () => {
-          const id = await this.serverId(noteId);
-          const note = this.getState().notes.find((entry) => entry.id === id);
-          if (!note) return;
-          const saved = await api.notes.update(this.workspaceId, id, this.noteVersions.get(id) ?? 1, {
-            title: note.title,
-            body: note.body,
-            colors: note.colors,
-            pinned: note.pinned,
-            categoryId: note.categoryId === null ? null : await this.serverId(note.categoryId),
-          });
-          this.noteVersions.set(saved.id, saved.version);
-        }, () => this.load(this.workspaceId, true));
+        void this.flushNote(noteId).catch((error: unknown) => {
+          if (isProblem(error, 'PRECONDITION_FAILED')) this.notify(noteSaveError(error));
+          else this.fail(error);
+        });
       }, NOTE_SAVE_MS),
     );
+  }
+
+  /** Flush the debounce and await all preceding writes; never race the note's If-Match version. */
+  async flushNote(noteId: string): Promise<void> {
+    const workspaceId = this.workspaceId;
+    const userId = this.getState().meId;
+    const token = this.loadToken;
+    const checkScope = () => {
+      if (workspaceId !== this.workspaceId || userId !== this.getState().meId || token !== this.loadToken) throw new Error('The workspace changed.');
+    };
+    clearTimeout(this.noteTimers.get(noteId));
+    this.noteTimers.delete(noteId);
+    if (this.isNoteDraft(noteId)) this.createNote(noteId);
+    const id = await this.serverId(noteId);
+    checkScope();
+    if (isLocal(id)) throw new Error('برای ذخیره، عنوان یا متن یادداشت را بنویسید.');
+    for (const key of new Set([noteId, id])) {
+      clearTimeout(this.noteTimers.get(key));
+      this.noteTimers.delete(key);
+    }
+    const writing = (this.noteWrites.get(id) ?? Promise.resolve()).catch(() => undefined).then(async () => {
+      checkScope();
+      const note: Note | undefined = this.getState().notes.find(entry => entry.id === id);
+      if (!note) throw new Error('یادداشت دیگر در این فضای کاری در دسترس نیست.');
+      const categoryId = note.categoryId === null ? null : await this.serverId(note.categoryId);
+      checkScope();
+      const saved = await api.notes.update(workspaceId, id, this.noteVersions.get(id) ?? 1, {
+        title: note.title, body: note.body, colors: note.colors, pinned: note.pinned, categoryId,
+      });
+      checkScope();
+      this.noteVersions.set(saved.id, saved.version);
+    });
+    this.noteWrites.set(id, writing);
+    void writing.finally(() => { if (this.noteWrites.get(id) === writing) this.noteWrites.delete(id); }).catch(() => undefined);
+    await writing;
   }
 
   private async saveRole(role: RoleId, matrix: PermissionMatrix): Promise<void> {

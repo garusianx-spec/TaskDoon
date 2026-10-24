@@ -423,6 +423,8 @@ export interface CalendarEventDraft {
  */
 export interface NoteCategory {
   readonly id: string;
+  /** Stable built-in key; live IDs are UUIDs, demo IDs use the key itself. */
+  readonly key?: string | null;
   readonly label: string;
   readonly builtIn: boolean;
 }

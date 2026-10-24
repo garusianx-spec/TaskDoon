@@ -37,6 +37,8 @@ import type {
   InvitationView,
   ManualPresence,
   MeResponse,
+  MeUser,
+  UpdateMeBody,
   MemberView,
   MessagePage,
   NoteCategoryView,
@@ -92,6 +94,7 @@ async function everyPage<T>(fetchPage: (cursor: string | null) => Promise<{ read
 export const api = {
   me: {
     get: () => http.get<MeResponse>('/me'),
+    update: (body: UpdateMeBody) => http.patch<MeUser>('/me', body),
     notifications: (params: { readonly workspaceId?: string; readonly filter?: NotificationFilter; readonly limit?: number }) =>
       http.get<NotificationPage>(`/me/notifications${query(params)}`),
     markNotificationsRead: (body: { readonly ids?: readonly string[]; readonly all?: boolean; readonly workspaceId?: string }) =>
@@ -249,7 +252,8 @@ export const api = {
     createCategory: (workspaceId: string, label: string) => http.post<NoteCategoryView>(`${ws(workspaceId)}/note-categories`, { label }, { idempotent: true }),
     removeCategory: (workspaceId: string, categoryId: string) => http.delete<void>(`${ws(workspaceId)}/note-categories/${categoryId}`),
     all: (workspaceId: string) => everyPage<NoteView>((cursor) => http.get<NotePage>(`${ws(workspaceId)}/notes${query({ limit: 100, cursor })}`)),
-    create: (workspaceId: string, body: CreateNoteBody) => http.post<NoteView>(`${ws(workspaceId)}/notes`, body, { idempotent: true }),
+    create: (workspaceId: string, body: CreateNoteBody, idempotencyKey?: string) =>
+      http.post<NoteView>(`${ws(workspaceId)}/notes`, body, { idempotent: true, ...(idempotencyKey ? { idempotencyKey } : {}) }),
     update: (workspaceId: string, noteId: string, version: number, body: UpdateNoteBody) =>
       http.patch<NoteView>(`${ws(workspaceId)}/notes/${noteId}`, body, { ifMatch: version }),
     remove: (workspaceId: string, noteId: string) => http.delete<void>(`${ws(workspaceId)}/notes/${noteId}`),
