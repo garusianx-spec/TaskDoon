@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { PresenceState, ProfileSettings, User } from '@taskin/contracts';
 import { PRESENCE_OPTIONS, departmentName, roleLabel } from '@/data/reference';
 import { cn } from '@/lib/cn';
+import { profileNameError } from '@/lib/profile-name';
+import { problemMessage } from '@/api/messages';
 import { toPersianDigits } from '@taskin/jalali';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
@@ -15,7 +17,7 @@ export interface ProfileModalProps {
   readonly user: User;
   readonly profile: ProfileSettings;
   readonly onClose: () => void;
-  readonly onSave: (profile: ProfileSettings) => void;
+  readonly onSave: (fullName: string, profile: ProfileSettings) => Promise<void>;
   readonly onOpenSecurity: () => void;
 }
 
@@ -30,21 +32,27 @@ const PRESENCE_DOT: Readonly<Record<PresenceState, string>> = {
 };
 
 /**
- * "پروفایل من". Identity (name, email, title, department, role) is owned by the
- * organisation directory and shown read-only; availability and the status line are the
- * member's own and are edited here.
+ * Account name and workspace availability. Save awaits confirmation and keeps failed edits.
  */
 export function ProfileModal({ open, user, profile, onClose, onSave, onOpenSecurity }: ProfileModalProps) {
   const [presence, setPresence] = useState<PresenceState>(profile.presence);
   const [statusMessage, setStatusMessage] = useState(profile.statusMessage);
+  const [fullName, setFullName] = useState(user.fullName);
+  const [nameError, setNameError] = useState<string>();
+  const [saveError, setSaveError] = useState<string>();
+  const [saving, setSaving] = useState(false);
+  const busy = useRef(false);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   useResetOnOpen(
     open,
     () => {
       setPresence(profile.presence);
       setStatusMessage(profile.statusMessage);
+      setFullName(user.fullName);
+      setNameError(undefined);
+      setSaveError(undefined);
     },
-    profile,
   );
 
   const { registerItem, onKeyDown } = useRovingFocus(PRESENCE_OPTIONS.length, 'horizontal', {
@@ -54,28 +62,49 @@ export function ProfileModal({ open, user, profile, onClose, onSave, onOpenSecur
     },
   });
 
-  const dirty = presence !== profile.presence || statusMessage.trim() !== profile.statusMessage;
+  const submit = async () => {
+    if (busy.current) return;
+    const error = profileNameError(fullName);
+    if (error) {
+      nameRef.current?.focus();
+      setNameError(error);
+      return;
+    }
+    busy.current = true;
+    setSaving(true);
+    setSaveError(undefined);
+    try {
+      await onSave(fullName.trim(), { presence, statusMessage: statusMessage.trim() });
+    } catch (error) {
+      setSaveError(problemMessage(error, 'ذخیره پروفایل ممکن نشد. دوباره تلاش کنید.'));
+    } finally {
+      busy.current = false;
+      setSaving(false);
+    }
+  };
+  const close = () => { if (!busy.current) onClose(); };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       size="md"
       title="پروفایل من"
-      description="وضعیت حضور و پیامی که همکاران کنار نام شما می‌بینند."
+      description="نام نمایشی، وضعیت حضور و پیامی که همکاران کنار نام شما می‌بینند."
       icon={<UserIcon size={20} />}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" disabled={saving} onClick={close}>
             انصراف
           </Button>
-          <Button disabled={!dirty} onClick={() => onSave({ presence, statusMessage: statusMessage.trim() })}>
-            ذخیره تغییرات
+          <Button loading={saving} type="submit" form="profile-settings-form">
+            {saving ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
           </Button>
         </>
       }
     >
-      <div className="flex flex-col gap-5">
+      <form id="profile-settings-form" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+      <fieldset disabled={saving} aria-busy={saving} className="flex min-w-0 flex-col gap-5">
         <section className="flex items-center gap-4 rounded-xl border border-secondary bg-sunken p-4">
           <Avatar
             name={user.fullName}
@@ -95,6 +124,22 @@ export function ProfileModal({ open, user, profile, onClose, onSave, onOpenSecur
             {roleLabel(user.role)}
           </Badge>
         </section>
+
+        <Input
+          ref={nameRef}
+          label="نام نمایشی"
+          name="fullName"
+          autoComplete="name"
+          required
+          maxLength={160}
+          value={fullName}
+          onChange={(event) => { setFullName(event.target.value); setNameError(undefined); setSaveError(undefined); }}
+          onFocus={() => setNameError(undefined)}
+          onBlur={() => setNameError(profileNameError(fullName))}
+          error={nameError}
+          hint="۲ تا ۸۰ نویسه؛ این نام در همه فضاهای کاری شما نمایش داده می‌شود."
+        />
+        {saveError && <p role="alert" className="text-body-sm text-status-blocked">{saveError}</p>}
 
         <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <ProfileField label="ایمیل سازمانی">
@@ -183,13 +228,14 @@ export function ProfileModal({ open, user, profile, onClose, onSave, onOpenSecur
         <div className="flex items-start gap-2.5 rounded-lg border border-secondary bg-surface p-3">
           <InfoCircleIcon size={18} className="mt-0.5 shrink-0 text-fg-quaternary" />
           <p className="flex-1 text-caption text-fg-tertiary">
-            نام، ایمیل، سمت و دپارتمان از فهرست اعضای سازمان خوانده می‌شوند و فقط مدیر سیستم می‌تواند آن‌ها را تغییر دهد.
+            نام نمایشی متعلق به حساب شماست. ایمیل، سمت و دپارتمان از فهرست اعضای سازمان خوانده می‌شوند.
           </p>
           <Button size="xs" variant="secondary" iconStart={<ShieldIcon size={14} />} onClick={onOpenSecurity}>
             امنیت و ورود
           </Button>
         </div>
-      </div>
+      </fieldset>
+      </form>
     </Modal>
   );
 }

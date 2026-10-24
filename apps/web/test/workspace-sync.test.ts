@@ -19,7 +19,7 @@ const serverProject: Project = {
 const serverChannel: Conversation = {
   id: serverChannelId, kind: 'channel', title: draft.name, tone: draft.color,
   memberIds: ['owner'], pinned: false, muted: false, unreadCount: 0,
-  topic: 'کانال پروژه', projectId: serverProjectId,
+  topic: 'کانال پروژه', projectId: serverProjectId, archived: false, archiveManager: true,
 };
 const ack: WorkspaceAction = { type: 'sync/upsert-project', project: serverProject, replaceId: localProjectId };
 const broadcast: WorkspaceAction = { type: 'sync/upsert-conversation', conversation: serverChannel };
@@ -44,6 +44,13 @@ describe('project companion channel identity synchronization', () => {
     state = workspaceReducer(workspaceReducer(state, broadcast), broadcast);
     expect(state.projects.map((project) => project.id)).toEqual([serverProjectId]);
     expect(state.conversations).toEqual([serverChannel]);
+  });
+
+  it('reconciles a stale persisted companion by project identity, not title', () => {
+    const stale = { ...serverChannel, id: 'stale-server-id' };
+    const state = workspaceReducer({ ...LIVE_EMPTY_STATE, conversations: [stale] }, broadcast);
+    expect(state.conversations).toEqual([serverChannel]);
+    expect(workspaceReducer(state, broadcast).conversations).toEqual([serverChannel]);
   });
 
   it('replaces the project id on its optimistic companion before the server channel arrives', () => {
@@ -94,7 +101,7 @@ describe('project companion channel identity synchronization', () => {
 describe('project creation without a socket notification', () => {
   it('reconciles the companion from the API instead of leaving a local-only ghost', async () => {
     const created: ProjectView = {
-      ...serverProject, key: draft.key, description: '', departmentId: null,
+      ...serverProject, key: draft.key, description: '', departmentId: null, departmentIds: [],
       visibility: 'workspace', archived: false, myRole: 'lead', myActions: ['view'],
       taskCount: 0, openTaskCount: 0, createdAt: '2026-10-15T00:00:00.000Z',
     };

@@ -18,7 +18,7 @@ import {
   USERS,
   WORKSPACES,
 } from '@/data/workspace';
-import { builtInColumnsFor, BUILT_IN_NOTE_CATEGORIES, DEFAULT_PERMISSION_MATRIX } from '@/data/reference';
+import { builtInColumnsFor, BUILT_IN_NOTE_CATEGORIES, DEFAULT_PERMISSION_MATRIX, DEPARTMENTS } from '@/data/reference';
 import { IS_LIVE } from '@/lib/data-source';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 
@@ -28,6 +28,7 @@ export const DEMO_WORKSPACE_STATE: WorkspaceState = {
   meId: CURRENT_USER_ID,
   users: USERS,
   projects: PROJECTS,
+  departments: DEPARTMENTS,
   formerUsers: [],
   projectTrash: [],
   typingByConversation: {},
@@ -83,6 +84,7 @@ export const LIVE_EMPTY_STATE: WorkspaceState = {
   meId: '',
   users: [],
   projects: [],
+  departments: [],
   formerUsers: [],
   projectTrash: [],
   workspaces: [],

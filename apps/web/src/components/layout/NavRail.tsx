@@ -58,7 +58,8 @@ export function NavRail() {
 
       <div className="my-2 h-px w-8 bg-gray-200" aria-hidden="true" />
 
-      <ul className="flex flex-1 flex-col items-center gap-1">
+      <h2 id="desktop-navigation-title" className="mb-1 text-caption font-medium text-fg-secondary">منو</h2>
+      <ul aria-labelledby="desktop-navigation-title" className="flex flex-1 flex-col items-center gap-1">
         {MODULES.map((module) => {
           const Icon = MODULE_ICONS[module.id];
           const active = pathname.startsWith(module.href);

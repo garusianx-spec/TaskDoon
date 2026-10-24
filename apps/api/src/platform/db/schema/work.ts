@@ -17,7 +17,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { createdAt, instant, position, updatedAt, uuidPk } from './columns.js';
 import { avatarTone, issueSeverity, issueType, projectRole, projectVisibility, tagTone, taskDependencyType, taskPriority, taskStatus } from './enums.js';
-import { workspaceMembers, workspaces } from './tenancy.js';
+import { departments, workspaceMembers, workspaces } from './tenancy.js';
 
 /**
  * Projects, the board and tasks (RFC §7). Every table is tenant-scoped with row-level security.
@@ -128,6 +128,23 @@ export const projects = pgTable(
     check('projects_description_len', sql`char_length(${t.description}) <= 2000`),
     check('projects_not_own_parent', sql`${t.parentId} is distinct from ${t.id}`),
     check('projects_flat', sql`${t.parentId} is null`),
+  ],
+);
+
+/** Every department selected for a project; `projects.departmentId` remains the legacy primary. */
+export const projectDepartments = pgTable(
+  'project_departments',
+  {
+    workspaceId: tenant(),
+    projectId: uuid().notNull(),
+    departmentId: uuid().notNull(),
+  },
+  (t) => [
+    primaryKey({ name: 'project_departments_pk', columns: [t.projectId, t.departmentId] }),
+    foreignKey({ name: 'project_departments_project_fk', columns: [t.workspaceId, t.projectId], foreignColumns: [projects.workspaceId, projects.id] }).onDelete('cascade'),
+    foreignKey({ name: 'project_departments_department_fk', columns: [t.workspaceId, t.departmentId], foreignColumns: [departments.workspaceId, departments.id] }).onDelete('cascade'),
+    index('project_departments_workspace_project_idx').on(t.workspaceId, t.projectId),
+    index('project_departments_workspace_department_idx').on(t.workspaceId, t.departmentId),
   ],
 );
 

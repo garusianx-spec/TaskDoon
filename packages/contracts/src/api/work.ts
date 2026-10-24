@@ -29,7 +29,9 @@ export interface ProjectView {
   readonly key: string;
   readonly name: string;
   readonly description: string;
+  /** Legacy primary department; new clients use `departmentIds` for the complete selection. */
   readonly departmentId: string | null;
+  readonly departmentIds: readonly string[];
   readonly color: AvatarTone;
   /** Always `null`: projects are flat (Phase 3.1). Kept so older clients still read the view. */
   readonly parentId: string | null;
@@ -52,6 +54,8 @@ export interface CreateProjectBody {
   readonly name: string;
   readonly description?: string;
   readonly departmentId?: string | null;
+  /** Up to 20 departments. The first is the primary department; an empty list clears all. */
+  readonly departmentIds?: readonly string[];
   readonly color?: AvatarTone;
   readonly visibility?: ProjectVisibility;
   /**
@@ -65,6 +69,8 @@ export interface UpdateProjectBody {
   readonly name?: string;
   readonly description?: string;
   readonly departmentId?: string | null;
+  /** Replaces the complete selection; omit to leave it unchanged. */
+  readonly departmentIds?: readonly string[];
   readonly color?: AvatarTone;
   readonly visibility?: ProjectVisibility;
   readonly archived?: boolean;

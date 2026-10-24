@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { conversationById, messagePreview, projectColumns, taskById, userById } from '@/store/selectors';
@@ -37,7 +37,8 @@ export interface AppShellProps {
 export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { state, dispatch, currentUser, isPinned, isMuted } = useWorkspace();
+  const { state, dispatch, saveTask, currentUser, isPinned, isMuted } = useWorkspace();
+  const [taskBusy, setTaskBusy] = useState(false);
   const signedOut = state.session === 'signed-out';
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
       ? conversationById(state.conversations, state.inspector.conversationId)
       : undefined;
 
-  const closeInspector = useCallback(() => dispatch({ type: 'close-inspector' }), [dispatch]);
+  const closeInspector = useCallback(() => { if (!taskBusy) dispatch({ type: 'close-inspector' }); }, [dispatch, taskBusy]);
   // The chat message the inspected task came from: from the loaded history, else as the server described it.
   const sourceMessage = inspectorTask?.sourceMessageId ? state.messages.find((message) => message.id === inspectorTask.sourceMessageId) : undefined;
   const sourceRef = inspectorTask?.sourceMessage;
@@ -143,14 +144,13 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
       <TaskDetailDialog open={inspectorTask !== undefined} onClose={closeInspector} title="جزئیات وظیفه">
         {inspectorTask && (
           <TaskInspector
+            key={inspectorTask.id}
             task={inspectorTask}
             currentUser={currentUser}
             columns={projectColumns(state.boardColumns, inspectorTask.projectId)}
             onClose={closeInspector}
-            onPatch={(patch) => dispatch({ type: 'patch-task', taskId: inspectorTask.id, patch })}
-            onMoveToColumn={(columnId) =>
-              dispatch({ type: 'move-task-to-column', taskId: inspectorTask.id, columnId })
-            }
+            onSave={(patch, columnId) => saveTask(inspectorTask.id, patch, columnId)}
+            onBusyChange={setTaskBusy}
             onToggleStar={() => dispatch({ type: 'toggle-task-star', taskId: inspectorTask.id })}
             onToggleSubtask={(subtaskId) =>
               dispatch({ type: 'toggle-subtask', taskId: inspectorTask.id, subtaskId })
@@ -171,15 +171,20 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
                 replyToId,
               })
             }
-            onAttachFiles={(files) =>
-              dispatch({
+            onAttachFiles={async (files) => {
+              const picked = files.map((file) => ({ attachmentId: nextLocalId('att'), file, name: file.name, previewUrl: URL.createObjectURL(file) }));
+              if (liveStore) await liveStore.attachTaskFiles(inspectorTask.id, picked);
+              else dispatch({
                 type: 'attach-task-files',
                 taskId: inspectorTask.id,
                 authorId: currentUser.id,
-                files: files.map((file) => ({ attachmentId: nextLocalId('att'), file, name: file.name, previewUrl: URL.createObjectURL(file) })),
-              })
-            }
-            onRemoveAttachment={(attachmentId) => dispatch({ type: 'remove-task-attachment', taskId: inspectorTask.id, attachmentId })}
+                files: picked,
+              });
+            }}
+            onRemoveAttachment={async (attachmentId) => {
+              if (liveStore) await liveStore.removeTaskAttachment(inspectorTask.id, attachmentId);
+              else dispatch({ type: 'remove-task-attachment', taskId: inspectorTask.id, attachmentId });
+            }}
             source={taskSource}
             onOpenSource={() => {
               if (!sourceConversationId || !inspectorTask.sourceMessageId) return;

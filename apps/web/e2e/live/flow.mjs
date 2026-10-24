@@ -23,6 +23,8 @@
  */
 import { readFileSync, statSync } from 'node:fs';
 import { check, eventually, finish, launch, out, visible, watchConsole } from '../lib/harness.mjs';
+import { verifyProjectCreation } from './project-creation.mjs';
+import { verifyProfileNavNotes } from './profile-nav-notes.mjs';
 
 /** The API accepts its cookie routes (refresh, sign-out) only from its web origin: PUBLIC_WEB_ORIGIN or CORS_ORIGINS. */
 const base = process.env.BASE_URL ?? 'http://localhost:3000';
@@ -544,10 +546,16 @@ try {
     'after a reload: the note with words, and no blank one',
   );
 
+  await verifyProfileNavNotes(owner, { runId });
+
   /* ------------------------------------------------ Phase 2: the plan's project limit */
 
   // The free plan allows five projects; the workspace has one.
   for (let index = 2; index <= 5; index += 1) {
+    if (index === 2) {
+      await verifyProjectCreation(owner, { projectName: `پروژه ${index}`, guestName, runId });
+      continue;
+    }
     await quickCreate(owner, 'پروژه جدید');
     dialog = owner.getByRole('dialog', { name: 'پروژه جدید' });
     await dialog.getByLabel('نام پروژه').fill(`پروژه ${index}`);

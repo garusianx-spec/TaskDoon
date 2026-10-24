@@ -1,5 +1,5 @@
 import type { WorkspaceState } from './workspace-reducer';
-import { BUILT_IN_NOTE_CATEGORIES } from '@/data/reference';
+import { BUILT_IN_NOTE_CATEGORIES, DEPARTMENTS } from '@/data/reference';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 
 /**
@@ -8,6 +8,7 @@ import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
  * settings, permissions, the theme — belongs to the account and survives a switch.
  */
 export const SCOPED_KEYS = [
+  'departments',
   'tasks',
   'archivedTasks',
   'boardColumns',
@@ -31,6 +32,7 @@ export type WorkspaceScope = Pick<WorkspaceState, (typeof SCOPED_KEYS)[number]>;
 
 /** A workspace nobody has worked in yet: the default board columns and note categories. */
 export const EMPTY_SCOPE: WorkspaceScope = {
+  departments: DEPARTMENTS,
   tasks: [],
   archivedTasks: [],
   // A new workspace has no projects yet, so no boards: each project brings its own columns.

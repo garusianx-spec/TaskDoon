@@ -164,6 +164,7 @@ export function projectFromView(view: ProjectView, departmentName: (id: string |
     id: view.id,
     name: view.name,
     departmentId: departmentIdFor(departmentName(view.departmentId)),
+    departmentIds: view.departmentIds ?? (view.departmentId ? [view.departmentId] : []),
     color: view.color,
     starred: view.starred,
     parentId: view.parentId,
@@ -305,6 +306,8 @@ export function conversationFromView(view: ConversationView, meId: string, nameO
     tone: view.tone,
     topic: view.topic || (view.projectId ? 'کانال پروژه' : view.kind === 'direct' ? 'گفتگوی مستقیم' : view.kind === 'channel' ? 'کانال' : 'گروه تیمی'),
     projectId: view.projectId,
+    archived: view.archived,
+    archiveManager: view.myRole === 'owner' || view.myRole === 'admin',
   };
 }
 
@@ -400,7 +403,7 @@ export function eventFromView(view: CalendarEventView): CalendarEvent {
 }
 
 export function noteCategoryFromView(view: NoteCategoryView): NoteCategory {
-  return { id: view.id, label: view.label, builtIn: view.builtIn };
+  return { id: view.id, key: view.key, label: view.label, builtIn: view.builtIn };
 }
 
 export function noteFromView(view: NoteView): Note {

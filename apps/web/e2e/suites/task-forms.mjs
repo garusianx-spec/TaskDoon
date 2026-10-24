@@ -1,0 +1,70 @@
+import { base, check, eventually, finish, launch, out, visible, watchConsole } from '../lib/harness.mjs';
+
+const browser = await launch();
+const page = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
+watchConsole(page);
+await page.goto(base + '/tasks', { waitUntil: 'networkidle' });
+const composer = page.getByRole('dialog', { name: 'تعریف وظیفه جدید' });
+const details = page.getByRole('dialog', { name: 'جزئیات وظیفه' });
+const create = () => page.getByRole('button', { name: 'وظیفه جدید', exact: true }).click();
+
+await create();
+check(await visible(composer.getByRole('combobox', { name: 'پروژه', exact: true })), 'global task creation retains the project selector');
+await composer.getByRole('button', { name: 'ایجاد وظیفه', exact: true }).click();
+check(await visible(composer.getByText('عنوان وظیفه الزامی است.')), 'empty title shows a recoverable validation error');
+await composer.getByRole('button', { name: 'انصراف', exact: true }).click();
+
+const project = page.getByRole('navigation', { name: 'درخت پروژه‌ها' }).locator('button').filter({ has: page.locator('svg') }).filter({ hasText: 'پلتفرم تسکین' }).first();
+// Use the first actual project entry, excluding the create/trash controls.
+const projectEntry = await project.count() ? project : page.getByRole('navigation', { name: 'درخت پروژه‌ها' }).locator('button[aria-current], div.group\\/project > button').first();
+await projectEntry.click();
+const projectName = (await projectEntry.locator('span').first().textContent()).trim();
+await create();
+check((await composer.getByRole('combobox', { name: 'پروژه', exact: true }).count()) === 0, 'project-scoped creation infers the project without a redundant selector');
+check(await visible(composer.getByRole('button', { name: 'انتخاب تاریخ شروع', exact: true })), 'creation offers a start date');
+check(await visible(composer.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true })), 'creation retains its due date alongside start date');
+const title = 'وظیفه آزمایشی فرم و فایل';
+await composer.getByLabel('عنوان وظیفه', { exact: true }).fill(title);
+await composer.getByLabel('توضیحات', { exact: true }).fill('متن اولیه برای بررسی ذخیره و لغو');
+await composer.locator('input[type="file"]').setInputFiles({ name: 'empty.txt', mimeType: 'text/plain', buffer: Buffer.alloc(0) });
+check(await visible(composer.getByText(/خالی/).first()), 'empty attachment is rejected with actionable feedback');
+await composer.locator('input[type="file"]').setInputFiles({ name: 'brief.txt', mimeType: 'text/plain', buffer: Buffer.from('Task form attachment') });
+check(await visible(composer.getByText('brief.txt', { exact: true })), 'creation displays the selected attachment');
+await composer.getByRole('button', { name: 'ایجاد وظیفه', exact: true }).click();
+check(await visible(details), 'successful creation opens the task details');
+check(await visible(page.getByRole('status').filter({ hasText: 'با موفقیت ایجاد شد' })), 'creation shows a success toast');
+check((await details.getByLabel('عنوان وظیفه', { exact: true }).inputValue()) === title, 'the title is directly editable in the details modal');
+check(await visible(details.getByText(projectName, { exact: true })), 'the new task belongs to the project being viewed');
+check(await visible(details.getByText('brief.txt', { exact: true })), 'the attachment survives creation');
+check((await details.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0, 'the time-tracking section is removed');
+check(await visible(details.getByLabel('برآورد زمان وظیفه')), 'estimated time is retained');
+check(await visible(details.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true })), 'due date is retained');
+check((await details.getByRole('region', { name: 'نظرات و گزارش‌ها', exact: true }).count()) === 1, 'comments and reports share one section');
+
+await details.getByLabel('عنوان وظیفه', { exact: true }).fill('عنوان ذخیره‌شده');
+await details.getByRole('textbox', { name: 'توضیحات وظیفه', exact: true }).fill('توضیحات ذخیره‌شده');
+await details.getByLabel('برآورد زمان وظیفه').fill('2h');
+await details.getByLabel('برآورد زمان وظیفه').press('Tab');
+await details.getByRole('button', { name: 'ذخیره تغییرات', exact: true }).click();
+check(await eventually(async () => (await details.count()) === 0), 'Save Changes persists edits and closes the modal');
+await page.getByRole('group', { name: /عنوان ذخیره‌شده/ }).locator('h4').click();
+check((await details.getByRole('textbox', { name: 'توضیحات وظیفه', exact: true }).inputValue()) === 'توضیحات ذخیره‌شده', 'saved description remains after reopening');
+check((await details.getByLabel('برآورد زمان وظیفه').inputValue()) === '۲ ساعت', 'saved estimated time remains after reopening');
+
+await details.getByLabel('عنوان وظیفه', { exact: true }).fill('تغییر لغوشده');
+await details.getByRole('button', { name: 'انصراف', exact: true }).click();
+check(await visible(page.getByRole('group', { name: /عنوان ذخیره‌شده/ })), 'Cancel discards unsaved scalar edits');
+await page.getByRole('group', { name: /عنوان ذخیره‌شده/ }).locator('h4').click();
+await details.getByLabel('نوشتن نظر یا گزارش').fill('گزارش پیشرفت در بخش یکپارچه');
+await details.getByRole('button', { name: 'ارسال نظر یا گزارش', exact: true }).click();
+check(await visible(details.getByText('گزارش پیشرفت در بخش یکپارچه', { exact: true })), 'the unified comments/reports composer sends its content');
+await details.locator('input[type="file"]').setInputFiles({ name: 'update.txt', mimeType: 'text/plain', buffer: Buffer.from('Updated attachment') });
+check(await visible(details.getByText('update.txt', { exact: true })), 'editing a task supports additional attachments');
+await details.getByRole('button', { name: 'حذف update.txt', exact: true }).click();
+check(await eventually(async () => (await details.getByText('update.txt', { exact: true }).count()) === 0), 'an attachment can be removed without losing other changes');
+await page.screenshot({ path: `${out}/task_forms.png` });
+await details.getByLabel('عنوان وظیفه', { exact: true }).fill('');
+await details.getByRole('button', { name: 'ذخیره تغییرات', exact: true }).click();
+check(await visible(details.getByText('عنوان وظیفه را وارد کنید.')), 'Save Changes rejects a blank title and keeps the modal open');
+await page.screenshot({ path: `${out}/task_forms_validation.png` });
+await finish(browser);

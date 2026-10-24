@@ -12,13 +12,8 @@ export type RoleId = 'owner' | 'admin' | 'manager' | 'member' | 'guest';
 
 export type PresenceState = 'online' | 'busy' | 'away' | 'offline';
 
-export type DepartmentId =
-  | 'engineering'
-  | 'product'
-  | 'design'
-  | 'marketing'
-  | 'finance'
-  | 'operations';
+/** Workspace departments have UUIDs; the demo's built-in departments use readable keys. */
+export type DepartmentId = string;
 
 export interface Department {
   readonly id: DepartmentId;
@@ -278,6 +273,8 @@ export interface Project {
   readonly id: string;
   readonly name: string;
   readonly departmentId: DepartmentId;
+  /** All selected departments. Older fixture projects use the single primary above. */
+  readonly departmentIds?: readonly DepartmentId[];
   readonly color: AvatarTone;
   readonly starred: boolean;
   /** Always `null`: projects are flat (Phase 3.1). */
@@ -378,6 +375,8 @@ export interface Conversation {
   readonly unreadCount: number;
   readonly tone: AvatarTone;
   readonly topic: string;
+  readonly archived?: boolean;
+  readonly archiveManager?: boolean;
   /** A project's own channel: its members follow the project's (added and removed there). */
   readonly projectId?: string | null;
 }
@@ -426,6 +425,8 @@ export interface CalendarEventDraft {
  */
 export interface NoteCategory {
   readonly id: string;
+  /** Stable built-in key; live IDs are UUIDs, demo IDs use the key itself. */
+  readonly key?: string | null;
   readonly label: string;
   readonly builtIn: boolean;
 }
@@ -587,6 +588,8 @@ export interface TaskDraft {
   readonly boardColumnId: string | null;
   readonly priority: TaskPriority;
   readonly assigneeIds: readonly string[];
+  /** Defaults to today when the composer has not chosen a start date. */
+  readonly startDate?: string | null;
   readonly dueDate: string | null;
   readonly sourceMessageId: string | null;
   readonly sourceNoteId: string | null;

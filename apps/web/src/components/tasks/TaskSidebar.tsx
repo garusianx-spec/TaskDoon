@@ -4,13 +4,13 @@ import { useState } from 'react';
 import type { DepartmentId, SmartViewId, Task } from '@taskin/contracts';
 import { cn } from '@/lib/cn';
 import { formatCount } from '@/lib/format';
-import { DEPARTMENTS } from '@/data/reference';
+import { directory } from '@/store/directory';
+import { DepartmentIcon } from './DepartmentIcon';
 import { projectList } from '@/store/selectors';
 import { IconButton, Tooltip } from '@/components/ui';
 import {
   AddIcon,
   ArchiveIcon,
-  BriefcaseIcon,
   ClockIcon,
   FolderAddIcon,
   FolderIcon,
@@ -84,7 +84,8 @@ export function TaskSidebar({
 
   const projectCount = (projectId: string): number => tasks.filter((task) => task.projectId === projectId).length;
 
-  const visibleProjects = departmentFilter ? projects.filter((project) => project.departmentId === departmentFilter) : projects;
+  const departments = directory.departments();
+  const visibleProjects = departmentFilter ? projects.filter((project) => (project.departmentIds ?? [project.departmentId]).includes(departmentFilter)) : projects;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -199,7 +200,7 @@ export function TaskSidebar({
             دپارتمان
           </h3>
           <div className="flex flex-wrap gap-1.5 px-1.5">
-            {DEPARTMENTS.map((department) => {
+            {departments.map((department) => {
               const active = departmentFilter === department.id;
               return (
                 <button
@@ -214,7 +215,7 @@ export function TaskSidebar({
                       : 'border-secondary bg-surface text-fg-tertiary hover:bg-hover',
                   )}
                 >
-                  <BriefcaseIcon size={12} />
+                  <DepartmentIcon department={department} size={12} />
                   {department.name}
                 </button>
               );

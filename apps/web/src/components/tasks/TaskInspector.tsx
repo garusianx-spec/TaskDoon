@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BoardColumn, Task, TaskPriority, User } from '@taskin/contracts';
 import { cn } from '@/lib/cn';
 import { formatJalali } from '@taskin/jalali';
@@ -14,6 +14,7 @@ import {
   Badge,
   Button,
   IconButton,
+  Input,
   Popover,
   RelativeTime,
   Select,
@@ -26,7 +27,6 @@ import { JalaliDatePicker } from './JalaliDatePicker';
 import { ColumnDot } from './ColumnDot';
 import { DependencyManager } from './agile/DependencyManager';
 import { IssueFields } from './agile/IssueFields';
-import { TimeTrackingPanel } from './agile/TimeTrackingPanel';
 import type { TaskPatch } from '@/store/workspace-reducer';
 import {
   CloseIcon,
@@ -49,16 +49,16 @@ export interface TaskInspectorProps {
   /** Board columns, custom ones included — the status picker moves the card between them. */
   readonly columns: readonly BoardColumn[];
   readonly onClose: () => void;
-  readonly onPatch: (patch: TaskPatch) => void;
-  readonly onMoveToColumn: (columnId: string) => void;
+  readonly onSave: (patch: TaskPatch, columnId?: string) => Promise<void> | void;
+  readonly onBusyChange?: (busy: boolean) => void;
   readonly onToggleStar: () => void;
   readonly onToggleSubtask: (subtaskId: string) => void;
   readonly onAddSubtask: (title: string) => void;
   readonly onRemoveSubtask: (subtaskId: string) => void;
   readonly onMoveSubtask: (subtaskId: string, delta: number) => void;
   readonly onAddComment: (body: string, replyToId: string | null) => void;
-  readonly onAttachFiles?: (files: readonly File[]) => void;
-  readonly onRemoveAttachment?: (attachmentId: string) => void;
+  readonly onAttachFiles?: (files: readonly File[]) => Promise<void> | void;
+  readonly onRemoveAttachment?: (attachmentId: string) => Promise<void> | void;
   /** The chat message the task came from, when it did. */
   readonly source?: TaskSourceView | null;
   /** Opens the source message in its conversation, highlighted. */
@@ -79,12 +79,12 @@ export interface TaskSourceView {
  * internal discussion thread kept separate from the chat module.
  */
 export function TaskInspector({
-  task,
+  task: persistedTask,
   currentUser,
   columns,
   onClose,
-  onPatch,
-  onMoveToColumn,
+  onSave,
+  onBusyChange,
   onToggleStar,
   onToggleSubtask,
   onAddSubtask,
@@ -97,11 +97,71 @@ export function TaskInspector({
   onOpenSource,
 }: TaskInspectorProps) {
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const savingRef = useRef(false);
+  const [draft, setDraft] = useState<TaskPatch>({});
+  const [columnId, setColumnId] = useState<string | undefined>();
+  const [saving, setSaving] = useState(false);
+  const [fileBusy, setFileBusy] = useState(false);
+  const fileBusyRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const [titleTouched, setTitleTouched] = useState(false);
+  useEffect(() => {
+    onBusyChange?.(saving || fileBusy);
+    return () => onBusyChange?.(false);
+  }, [saving, fileBusy, onBusyChange]);
+  const stagedColumn = columns.find((entry) => entry.id === columnId);
+  const task = {
+    ...persistedTask,
+    ...draft,
+    ...(stagedColumn ? { status: stagedColumn.status, boardColumnId: stagedColumn.custom ? stagedColumn.id : null } : {}),
+  };
+  const onPatch = (patch: TaskPatch) => {
+    setDraft((current) => ({ ...current, ...patch }));
+    setError(null);
+  };
   const [comment, setComment] = useState('');
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const project = projectById(task.projectId);
   const column = columnForTask(columns, task);
   const reviewer = task.reviewerId ? userById(task.reviewerId) : undefined;
+
+  const save = async () => {
+    if (savingRef.current || fileBusyRef.current) return;
+    setTitleTouched(true);
+    if (!task.title.trim()) {
+      formRef.current?.querySelector<HTMLInputElement>('input[name="task-title"]')?.focus();
+      return;
+    }
+    if (task.dueDate && task.startDate > task.dueDate) {
+      setError('مهلت انجام را در تاریخ شروع یا پس از آن انتخاب کنید.');
+      return;
+    }
+    const invalid = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+    if (invalid) { invalid.focus(); return; }
+    savingRef.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({ ...draft, ...(draft.title !== undefined ? { title: task.title.trim() } : {}) }, columnId);
+      onClose();
+    } catch {
+      setError('همهٔ تغییرات ذخیره نشد. اتصال و دسترسی خود را بررسی کنید و دوباره ذخیره کنید؛ تغییرات شما در فرم باقی مانده است.');
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  };
+
+  const changeFiles = async (operation: () => Promise<void> | void) => {
+    if (fileBusyRef.current || savingRef.current) return;
+    fileBusyRef.current = true;
+    setFileBusy(true);
+    setError(null);
+    try { await operation(); }
+    catch { setError('فایل ذخیره نشد. اندازه و نوع فایل و اتصال را بررسی کنید و دوباره تلاش کنید.'); }
+    finally { fileBusyRef.current = false; setFileBusy(false); }
+  };
 
   const submitComment = () => {
     const body = comment.trim();
@@ -112,7 +172,8 @@ export function TaskInspector({
   };
 
   return (
-    <>
+    <form ref={formRef} onSubmit={(event) => { event.preventDefault(); void save(); }} aria-busy={saving || fileBusy}>
+      <fieldset disabled={saving || fileBusy} className="min-w-0 border-0 p-0">
       {/* Stays in view while the dialog scrolls, so closing is always one click away. */}
       <header className="sticky top-0 z-10 flex shrink-0 items-start gap-2 border-b border-secondary bg-surface p-4 sm:px-6">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -122,7 +183,17 @@ export function TaskInspector({
             </Badge>
             <span className="numeric latin-inline text-micro font-medium text-fg-quaternary">{task.code}</span>
           </div>
-          <h2 className="text-title font-bold leading-7 text-fg-primary">{task.title}</h2>
+          <Input
+            label="عنوان وظیفه"
+            hint="عنوان وظیفه را ویرایش کنید."
+            name="task-title"
+            value={task.title}
+            onChange={(event) => { setTitleTouched(false); onPatch({ title: event.target.value }); }}
+            onBlur={() => setTitleTouched(true)}
+            error={titleTouched && !task.title.trim() ? 'عنوان وظیفه را وارد کنید.' : undefined}
+            maxLength={200}
+            className="font-semibold"
+          />
           {project && <p className="truncate text-caption text-fg-tertiary">{project.name}</p>}
         </div>
 
@@ -135,7 +206,7 @@ export function TaskInspector({
             className={task.starred ? 'text-status-progress' : undefined}
           />
         </Tooltip>
-        <IconButton label="بستن پنل جزئیات" icon={<CloseIcon size={20} />} size="sm" onClick={onClose} />
+        <IconButton label="بستن پنل جزئیات" icon={<CloseIcon size={20} />} size="sm" onClick={onClose} disabled={saving || fileBusy} />
       </header>
 
       {/*
@@ -152,7 +223,7 @@ export function TaskInspector({
               label="وضعیت وظیفه"
               size="sm"
               value={column?.id ?? task.status}
-              onValueChange={onMoveToColumn}
+              onValueChange={(nextColumnId) => { setColumnId(nextColumnId); setError(null); }}
               options={columns.map((entry) => ({
                 value: entry.id,
                 label: entry.title,
@@ -229,8 +300,8 @@ export function TaskInspector({
             <Textarea
               label="توضیحات وظیفه"
               hideLabel
-              defaultValue={task.description}
-              onBlur={(event) => onPatch({ description: event.target.value })}
+              value={task.description}
+              onChange={(event) => onPatch({ description: event.target.value })}
               className="min-h-24 text-body-sm"
               placeholder="شرح وظیفه را بنویسید…"
             />
@@ -246,8 +317,6 @@ export function TaskInspector({
               onMove={onMoveSubtask}
             />
           </section>
-
-          <TimeTrackingPanel task={task} />
 
           <DependencyManager task={task} />
   
@@ -294,7 +363,7 @@ export function TaskInspector({
                 className="ms-auto"
                 iconStart={<PaperclipIcon size={14} />}
                 onClick={() => fileRef.current?.click()}
-                disabled={!onAttachFiles}
+                disabled={!onAttachFiles || fileBusy || saving}
               >
                 پیوست فایل
               </Button>
@@ -307,9 +376,13 @@ export function TaskInspector({
                 aria-label="انتخاب فایل برای پیوست به وظیفه"
                 data-testid="task-file-input"
                 onChange={(event) => {
-                  const files = [...(event.target.files ?? [])].filter((file) => file.size > 0);
+                  const files = [...(event.target.files ?? [])];
                   event.target.value = '';
-                  if (files.length > 0) onAttachFiles?.(files);
+                  if (files.some((file) => file.size === 0)) {
+                    setError('فایل خالی قابل پیوست نیست؛ یک فایل دارای محتوا انتخاب کنید.');
+                    return;
+                  }
+                  if (files.length > 0 && onAttachFiles) void changeFiles(() => onAttachFiles(files));
                 }}
               />
             </div>
@@ -350,8 +423,8 @@ export function TaskInspector({
                         icon={<TrashIcon size={16} />}
                         size="xs"
                         className="hover:text-status-blocked"
-                        onClick={() => onRemoveAttachment?.(attachment.id)}
-                        disabled={!onRemoveAttachment}
+                        onClick={() => { if (onRemoveAttachment) void changeFiles(() => onRemoveAttachment(attachment.id)); }}
+                        disabled={!onRemoveAttachment || fileBusy || saving}
                       />
                     </li>
                   );
@@ -360,16 +433,16 @@ export function TaskInspector({
             )}
           </section>
   
-          <section aria-label="گفتگوی داخلی وظیفه">
+          <section aria-label="نظرات و گزارش‌ها">
             <div className="mb-2 flex items-center gap-2">
               <MessagesIcon size={16} className="text-fg-tertiary" />
-              <h3 className="text-title-sm font-semibold text-fg-primary">گفتگوی داخلی</h3>
+              <h3 className="text-title-sm font-semibold text-fg-primary">نظرات و گزارش‌ها</h3>
               <span className="numeric text-caption text-fg-tertiary">
                 {formatCount(task.comments.length)}
               </span>
             </div>
             <p className="mb-3 text-micro text-fg-tertiary">
-              این گفتگو مستقل از کانال‌های سازمان است و فقط برای اعضای این وظیفه نمایش داده می‌شود.
+              دیدگاه‌ها، گزارش پیشرفت و گفتگوی مربوط به وظیفه را در همین بخش بنویسید.
             </p>
   
             <ul className="flex flex-col gap-3">
@@ -442,8 +515,7 @@ export function TaskInspector({
                   decorative
                 />
                 <Textarea
-                  label="نوشتن دیدگاه"
-                  hideLabel
+                  label="نوشتن نظر یا گزارش"
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
                   onKeyDown={(event) => {
@@ -452,12 +524,12 @@ export function TaskInspector({
                       submitComment();
                     }
                   }}
-                  placeholder="دیدگاه خود را بنویسید…  (Ctrl + Enter برای ارسال)"
+                  placeholder="نظر یا گزارش پیشرفت را بنویسید…  (Ctrl + Enter برای ارسال)"
                   className="min-h-10 text-body-sm"
                   containerClassName="flex-1"
                 />
                 <IconButton
-                  label="ارسال دیدگاه"
+                  label="ارسال نظر یا گزارش"
                   icon={<SendIcon size={18} />}
                   variant="primary"
                   onClick={submitComment}
@@ -468,7 +540,14 @@ export function TaskInspector({
           </section>
         </div>
       </div>
-    </>
+      </fieldset>
+      <footer className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-3 border-t border-secondary bg-surface p-4 sm:px-6">
+        {fileBusy && <p role="status" className="me-auto text-caption text-fg-tertiary">در حال ذخیره فایل…</p>}
+        {error && <p role="alert" className="w-full text-body-sm text-status-blocked">{error}</p>}
+        <Button variant="secondary" onClick={onClose} disabled={saving || fileBusy}>انصراف</Button>
+        <Button type="submit" loading={saving} aria-disabled={fileBusy}>ذخیره تغییرات</Button>
+      </footer>
+    </form>
   );
 }
 
