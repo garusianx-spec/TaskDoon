@@ -1,2 +1,0 @@
-import fs from 'node:fs';
-const p='C:/Users/garus/OneDrive/Desktop/taskin/apps/web/src/admin/api.ts';let s=fs.readFileSync(p,'utf8');const before='query({ ...filters, limit: 50 })';const anchor="http.get<SystemBroadcastPage>(`/admin/broadcasts${"+before+"}`)";const after="http.get<SystemBroadcastPage>(`/admin/broadcasts${query({ cursor: filters.cursor, status: filters.includeArchived ? 'all' : 'current', limit: 50 })}`)";if(!s.includes(anchor))throw new Error('Broadcast query anchor missing');s=s.replace(anchor,after);fs.writeFileSync(p,s);

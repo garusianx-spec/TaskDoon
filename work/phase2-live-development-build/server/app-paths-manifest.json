@@ -1,4 +1,0 @@
-{
-  "/icon.svg/route": "app/icon.svg/route.js",
-  "/(app)/tasks/page": "app/(app)/tasks/page.js"
-}

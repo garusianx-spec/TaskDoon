@@ -1,8 +1,0 @@
-{
-  "databaseRemoved": "phase4_live_cec2e4e2bd",
-  "ownedWorkspacePrefixesChecked": 13,
-  "objectsDeleted": 2,
-  "redisKeysDeleted": 167,
-  "apiStopped": true,
-  "cleanupAt": "2026-10-08T11:51:28.764Z"
-}

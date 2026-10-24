@@ -1,9 +1,0 @@
-{
-  "oldMigrationAndMetadataFilesUnchanged": 42,
-  "migrationJournalPrefixUnchanged": true,
-  "migrationsApplied": 23,
-  "freshAndUpgradeSchemasMatch": true,
-  "existingUserPreserved": true,
-  "snapshotRegenerated": true,
-  "isolatedDatabasesRemoved": true
-}
