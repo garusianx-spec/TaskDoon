@@ -5010,7 +5010,9 @@
               "type": "string",
               "enum": [
                 "mine",
-                "public"
+                "public",
+                "all",
+                "archived"
               ]
             }
           },
@@ -5151,6 +5153,50 @@
                 }
               }
             }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "chat"
+        ]
+      },
+      "delete": {
+        "operationId": "Chat_deleteArchived",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteArchivedConversationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
           }
         },
         "security": [
@@ -11841,6 +11887,18 @@
           "archived",
           "createdAt",
           "members"
+        ]
+      },
+      "DeleteArchivedConversationDto": {
+        "type": "object",
+        "properties": {
+          "confirmTitle": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "confirmTitle"
         ]
       },
       "UpdateConversationDto": {

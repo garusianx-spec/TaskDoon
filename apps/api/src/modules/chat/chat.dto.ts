@@ -151,7 +151,7 @@ export class ReadCursorDto implements ReadCursorBody {
 }
 
 export class ConversationListQueryDto {
-  @ApiPropertyOptional({ enum: ['mine', 'public'], default: 'mine' }) @IsOptional() @IsIn(['mine', 'public']) readonly scope?: 'mine' | 'public';
+  @ApiPropertyOptional({ enum: ['mine', 'public', 'all', 'archived'], default: 'mine' }) @IsOptional() @IsIn(['mine', 'public', 'all', 'archived']) readonly scope?: 'mine' | 'public' | 'all' | 'archived';
   @ApiPropertyOptional({ type: Boolean, description: 'Include hidden direct chats' }) @IsOptional() @Transform(trueish) @IsBoolean() readonly includeHidden?: boolean;
 }
 
@@ -354,4 +354,8 @@ export class WorkingHoursViewDto implements WorkingHoursView {
   @ApiProperty() readonly message!: string;
   @ApiProperty({ example: 'Asia/Tehran', description: "The workspace's zone, which the hours are read in" }) readonly timeZone!: string;
   @ApiProperty({ type: String, nullable: true, format: 'date-time', description: '`null`: never saved, these are the defaults' }) readonly updatedAt!: string | null;
+}
+
+export class DeleteArchivedConversationDto {
+ @ApiProperty({ maxLength: 80 }) @IsString() @Length(1, 80) readonly confirmTitle!: string;
 }

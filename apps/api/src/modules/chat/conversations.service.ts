@@ -73,9 +73,9 @@ export class ConversationsService {
 
   /**
    * The sidebar (`mine`: every conversation the caller is in, pinned first, then by activity) or
-   * the public channels the caller can join (`public`). One statement.
+   * `archived`/`all` participant history, or public channels the caller can join. One statement.
    */
-  async list(member: MembershipContext, query: { scope?: 'mine' | 'public'; includeHidden?: boolean }): Promise<ConversationView[]> {
+  async list(member: MembershipContext, query: { scope?: 'mine' | 'public' | 'all' | 'archived'; includeHidden?: boolean }): Promise<ConversationView[]> {
     requireMessageGrant(member, 'view');
     const w = member.workspaceId;
     let where: SQL;
@@ -83,7 +83,7 @@ export class ConversationsService {
       if (!publicChannelVisible(member)) return [];
       where = sql`c.workspace_id = ${w} and c.kind = 'channel' and not c.is_private and c.archived_at is null`;
     } else {
-      where = sql`c.workspace_id = ${w} and cm.user_id is not null and c.archived_at is null ${query.includeHidden ? sql`` : sql`and cm.hidden_at is null`}`;
+      where = sql`c.workspace_id = ${w} and cm.user_id is not null ${query.scope === 'all' ? sql`` : query.scope === 'archived' ? sql`and c.archived_at is not null` : sql`and c.archived_at is null`} ${query.includeHidden ? sql`` : sql`and cm.hidden_at is null`}`;
     }
     return this.uow.run({ workspaceId: w, userId: member.userId }, async ({ tx }) => {
       const result = await tx.execute<ConversationRow>(
@@ -175,6 +175,18 @@ export class ConversationsService {
 
   /* ================================================================== create and update */
 
+  async deleteArchived(member: MembershipContext, conversationId: string, confirmTitle: string): Promise<void> {
+    requireMessageGrant(member, 'delete');
+    await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
+      const access = await loadConversation(tx, member, conversationId, { lock: true });
+      if (!access.conversation.archived || !access.canManage) throw ApiError.forbidden();
+      if (confirmTitle !== access.conversation.title) throw ApiError.validation([{ field: 'confirmTitle', message: 'must match the conversation title' }]);
+      await this.audit.write(tx, { action: 'conversation.archive.delete', workspaceId: member.workspaceId, resourceType: 'conversation', resourceId: conversationId });
+      await tx.execute(sql`delete from conversations where workspace_id = ${member.workspaceId} and id = ${conversationId}`);
+      await this.outbox.add(tx, { type: 'conversation.updated', aggregateType: 'conversation', aggregateId: conversationId, workspaceId: member.workspaceId, payload: { conversationId, fields: ['deleted'] } });
+    });
+  }
+
   /** Creates a conversation; for a direct chat, returns the existing one with that person if any. */
   async create(member: MembershipContext, body: CreateConversationBody): Promise<{ conversation: ConversationDetail; created: boolean }> {
     requireMessageGrant(member, 'create');
@@ -247,6 +259,7 @@ export class ConversationsService {
   async update(member: MembershipContext, conversationId: string, body: UpdateConversationBody): Promise<ConversationDetail> {
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const access = await loadConversation(tx, member, conversationId, { lock: true });
+      if (access.conversation.archived) throw new ApiError('CONVERSATION_ARCHIVED');
       if (access.conversation.kind === 'direct') throw new ApiError('DIRECT_CONVERSATION');
       if (!access.canManage) throw ApiError.forbidden('Only the conversation\'s owners and admins can change it.');
       if (access.conversation.kind !== 'channel' && (body.isPrivate !== undefined || body.postPolicy !== undefined)) {
@@ -353,6 +366,7 @@ export class ConversationsService {
     await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const w = member.workspaceId;
       const access = await loadConversation(tx, member, conversationId, { lock: true });
+      if (access.conversation.archived) throw new ApiError('CONVERSATION_ARCHIVED');
       if (access.conversation.kind === 'direct') throw new ApiError('DIRECT_CONVERSATION');
       if (access.conversation.membershipMode === 'project_synced') throw new ApiError('PROJECT_CHANNEL');
       const target = await tx.execute<{ role: ConversationRole }>(sql`

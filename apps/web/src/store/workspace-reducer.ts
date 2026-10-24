@@ -1199,7 +1199,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         projects: state.projects.filter((entry) => entry.id !== project.id),
         tasks: state.tasks.filter((task) => !taskIds.has(task.id)),
         boardColumns: state.boardColumns.filter((column) => column.projectId !== project.id),
-        conversations: state.conversations.filter((conversation) => conversation.projectId !== project.id),
+        conversations: state.conversations.map(conversation => conversation.projectId === project.id ? { ...conversation, archived: true } : conversation),
         activeConversationId: channels.some((channel) => channel.id === state.activeConversationId) ? '' : state.activeConversationId,
         projectTrash: [entry, ...state.projectTrash.filter((trashed) => trashed.project.id !== project.id)],
         projectFilterId: state.projectFilterId === project.id ? null : state.projectFilterId,
@@ -1217,7 +1217,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         projects: [...state.projects.filter((project) => project.id !== entry.project.id), entry.project],
         tasks: stash ? [...state.tasks, ...stash.tasks] : state.tasks,
         boardColumns: stash ? [...state.boardColumns, ...stash.boardColumns] : state.boardColumns,
-        conversations: stash ? [...state.conversations, ...stash.conversations] : state.conversations,
+        conversations: state.conversations,
         projectTrash: state.projectTrash.filter((trashed) => trashed !== entry),
         announcement: `پروژه «${entry.project.name}» بازیابی شد.`,
       };
@@ -1626,7 +1626,7 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
       // project id, never by its title (unrelated groups may have exactly the same name).
       const replaceId = action.replaceId ?? (
         conversation.kind === 'channel' && conversation.projectId && !conversation.id.includes('-local-')
-          ? state.conversations.find((entry) => entry.kind === 'channel' && entry.projectId === conversation.projectId && entry.id.includes('-local-'))?.id
+          ? state.conversations.find((entry) => entry.kind === 'channel' && entry.projectId === conversation.projectId && entry.id !== conversation.id)?.id
           : undefined
       );
       const swap = (id: string): string => (replaceId !== undefined && id === replaceId ? conversation.id : id);

@@ -19,6 +19,7 @@ import { Authenticated } from '../auth/guards.js';
 import { CurrentMember, WorkspaceScoped } from '../rbac/guards.js';
 import { MessageTasksService } from '../bridges/message-tasks.service.js';
 import {
+  DeleteArchivedConversationDto,
   ConvertMessageDto,
   ConvertMessageResultDto,
   ConversationDetailDto,
@@ -86,6 +87,13 @@ export class ChatController {
   @ApiOkResponse({ type: ConversationDetailDto })
   get(@CurrentMember() member: MembershipContext, @Param('conversationId', UUID) conversationId: string): Promise<ConversationDetail> {
     return this.conversations.get(member, conversationId);
+  }
+
+  @Delete(':conversationId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  deleteArchived(@CurrentMember() member: MembershipContext, @Param('conversationId', UUID) id: string, @Body() body: DeleteArchivedConversationDto): Promise<void> {
+    return this.conversations.deleteArchived(member, id, body.confirmTitle);
   }
 
   @Patch(':conversationId')

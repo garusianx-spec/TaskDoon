@@ -127,7 +127,8 @@ describe('Phase 3.1: project channels, the project trash and departed members', 
     expectStatus(restored, 200);
     expect(restored.body).toMatchObject({ id: project.id, name: 'پروژه موقت', taskCount: 1 });
     expectStatus(await t.http().get(`${base()}/tasks/${task.id}`).set(bearer(admin)), 200);
-    expect((await channelOf(member, project.id))?.id).toBe(channel?.id);
+    expect(await channelOf(member, project.id)).toBeUndefined();
+    expect((await t.http().get(`${base()}/conversations/${channel!.id}`).set(bearer(member))).body.archived).toBe(true);
     expect((await trash(owner)).some((item) => item.id === project.id)).toBe(false);
     expect(await outboxEvents(t, 'project.restored', project.id)).toHaveLength(1);
   });

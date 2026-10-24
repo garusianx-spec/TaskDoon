@@ -218,9 +218,9 @@ export class ProjectsService {
   }
 
   /**
-   * Moves the project to the trash (workspace owner only). It disappears at once — tree, boards,
-   * tasks, calendar, search and its chat channel — and stays restorable for {@link PROJECT_TRASH_DAYS}
-   * days, when the purge removes it and its tasks for good.
+   * Moves the project to the trash (workspace owner only), hiding its boards, tasks and calendar.
+   * The project stays restorable for {@link PROJECT_TRASH_DAYS} days, then it and its tasks are
+   * purged. Its companion moves into the permanent read-only archive and keeps its history.
    */
   async remove(member: MembershipContext, projectId: string): Promise<void> {
     assertWorkspaceOwner(member);
@@ -231,7 +231,7 @@ export class ProjectsService {
         .update(projects)
         .set({ deletedAt: sql`now()`, deletedBy: member.userId })
         .where(and(eq(projects.workspaceId, member.workspaceId), eq(projects.id, projectId)));
-      await setProjectChannelsArchived(tx, this.outbox, member.workspaceId, projectId, true);
+      await setProjectChannelsArchived(tx, this.outbox, member.workspaceId, projectId);
       await this.memberships.bump(unit, member.workspaceId);
       await this.audit.write(tx, { action: 'project.delete', workspaceId: member.workspaceId, resourceType: 'project', resourceId: projectId, changes: { before: { key: project.key, name: project.name } } });
       await this.outbox.add(tx, { type: 'project.deleted', aggregateType: 'project', aggregateId: projectId, workspaceId: member.workspaceId, payload: { projectId } });
@@ -266,8 +266,8 @@ export class ProjectsService {
   }
 
   /**
-   * «بازیابی»: brings a project back from the trash as it was — tasks, board, members and its
-   * channel. It counts against the plan again, and its key must still be free.
+   * «بازیابی»: brings a project back from the trash as it was — tasks, board and members.
+   * Its channel remains archived. It counts against the plan again, and its key must still be free.
    */
   async restore(member: MembershipContext, projectId: string): Promise<ProjectView> {
     assertWorkspaceOwner(member);
@@ -297,7 +297,7 @@ export class ProjectsService {
         if (isUniqueViolation(error, 'projects_ws_key_uq')) throw new ApiError('PROJECT_KEY_TAKEN', `Another project now uses the key ${project.key}.`);
         throw error;
       }
-      await setProjectChannelsArchived(tx, this.outbox, member.workspaceId, projectId, false);
+      // Companion history remains permanently archived even when the project is restored.
       await this.memberships.bump(unit, member.workspaceId);
       await this.audit.write(tx, { action: 'project.restore', workspaceId: member.workspaceId, resourceType: 'project', resourceId: projectId, changes: { after: { key: project.key, name: project.name } } });
       await this.outbox.add(tx, { type: 'project.restored', aggregateType: 'project', aggregateId: projectId, workspaceId: member.workspaceId, payload: { projectId } });

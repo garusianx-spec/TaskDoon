@@ -209,7 +209,8 @@ export const api = {
   },
 
   conversations: {
-    list: (workspaceId: string) => http.get<ConversationView[]>(`${ws(workspaceId)}/conversations`),
+    list: (workspaceId: string) => http.get<ConversationView[]>(`${ws(workspaceId)}/conversations?scope=all`),
+    deleteArchived: (workspaceId: string, id: string, confirmTitle: string) => http.delete<void>(`${ws(workspaceId)}/conversations/${id}`, { confirmTitle }),
     get: (workspaceId: string, conversationId: string) => http.get<ConversationDetail>(`${ws(workspaceId)}/conversations/${conversationId}`),
     create: (workspaceId: string, body: CreateConversationBody) =>
       http.post<ConversationDetail>(`${ws(workspaceId)}/conversations`, body, { idempotent: true }),

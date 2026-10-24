@@ -1,0 +1,88 @@
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import type { UploadView } from '@taskin/contracts';
+import { FilesService } from '../../src/modules/content/files.service.js';
+import { readFile } from 'node:fs/promises';
+import { addMember, bearer, createTestApp, idempotencyKey, ownerWithWorkspace, type TestApp, type Session } from './harness.js';
+import { createProject, expectStatus, wsPath } from './work-helpers.js';
+import { ProjectsService } from '../../src/modules/work/projects.service.js';
+import { UnitOfWork } from '../../src/platform/db/unit-of-work.js';
+import { OutboxWriter } from '../../src/platform/outbox/outbox-writer.js';
+import { openProjectChannel } from '../../src/modules/chat/project-channels.js';
+let t: TestApp, owner: Session, member: Session, workspaceId: string;
+beforeAll(async () => { t = await createTestApp(); const seeded = await ownerWithWorkspace(t); owner=seeded.owner; workspaceId=seeded.workspace.id; member=await addMember(t,owner,workspaceId,'member'); });
+afterAll(async () => { await t?.close(); });
+it('resolves the same companion concurrently without creating rows or duplicate events', async () => {
+  const project = await createProject(t, owner, workspaceId);
+  const resolve = () => t.app.get(UnitOfWork).run({workspaceId,userId:owner.userId}, ({tx}) => openProjectChannel(tx,t.app.get(OutboxWriter),{workspaceId,projectId:project.id,name:project.name,description:'',color:'brand',createdBy:owner.userId,members:[]}));
+  const eventsBefore = await t.admin.query("select count(*) from outbox_events where event_type='conversation.created' and aggregate_id in (select id::text from conversations where project_id=$1)", [project.id]);
+  const ids=await Promise.all([resolve(),resolve(),resolve()]);
+  const eventsAfter = await t.admin.query("select count(*) from outbox_events where event_type='conversation.created' and aggregate_id=$1", [ids[0]]);
+  expect(eventsAfter.rows).toEqual(eventsBefore.rows);
+  expect(new Set(ids).size).toBe(1);
+  expect((await t.admin.query('select id from conversations where project_id=$1',[project.id])).rows).toHaveLength(1);
+  await expect(t.admin.query("insert into conversations(workspace_id,kind,title,project_id,membership_mode,created_by) values($1,'channel','duplicate',$2,'project_synced',$3)",[workspaceId,project.id,owner.userId])).rejects.toMatchObject({code:'23505'});
+});
+it('keeps archived history beyond project purge and allows only explicit authorized deletion', async () => {
+  const project=await createProject(t,owner,workspaceId,{memberIds:[member.userId]});
+  const base=wsPath(workspaceId);
+  const channel=(await t.http().get(`${base}/conversations`).set(bearer(owner))).body.find((c:{projectId:string})=>c.projectId===project.id);
+  const url=`${base}/conversations/${channel.id}`;
+  const message=await t.http().post(`${url}/messages`).set(bearer(owner)).send({clientMsgId:randomUUID(),kind:'text',text:'Permanent memory'});
+  expectStatus(message,201);
+  const bytes = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(200, 32), Buffer.from('%%EOF\n')]);
+  const planned = await t.http().post(`${base}/files/uploads`).set(bearer(owner)).set('Idempotency-Key', idempotencyKey())
+    .send({fileName:'archive.pdf',size:bytes.length,contentType:'application/pdf'});
+  expectStatus(planned,201);
+  const upload = planned.body as UploadView;
+  if (upload.plan.kind !== 'post') throw new Error('expected a POST upload plan');
+  const form = new FormData();
+  for (const [key,value] of Object.entries(upload.plan.fields)) form.append(key,value);
+  form.append('Content-Type','application/pdf');
+  form.append('file',new Blob([bytes],{type:'application/pdf'}),'archive.pdf');
+  expect((await fetch(upload.plan.url,{method:'POST',body:form})).status).toBeLessThan(300);
+  expectStatus(await t.http().post(`${base}/files/uploads/${upload.attachment.id}/complete`).set(bearer(owner)).send({}),200);
+  await t.flushNotifications();
+  expectStatus(await t.http().post(`${url}/messages`).set(bearer(owner)).send({clientMsgId:randomUUID(),kind:'file',attachmentId:upload.attachment.id}),201);
+  const foreign = await ownerWithWorkspace(t);
+  expectStatus(await t.http().delete(`${wsPath(foreign.workspace.id)}/conversations/${channel.id}`).set(bearer(foreign.owner)).send({confirmTitle:channel.title}),404);
+  expectStatus(await t.http().delete(`${base}/projects/${project.id}`).set(bearer(owner)),204);
+  expect((await t.http().get(`${base}/conversations?scope=archived`).set(bearer(owner))).body.map((c:{id:string})=>c.id)).toContain(channel.id);
+  await t.admin.query("update projects set deleted_at=now()-interval '100 days' where id=$1",[project.id]);
+  expect(await t.app.get(ProjectsService).purgeDue()).toBe(1);
+  expect((await t.http().get(url).set(bearer(owner))).body.archived).toBe(true);
+  await t.admin.query("update attachments set created_at=now()-interval '100 days' where id=$1",[upload.attachment.id]);
+  expect(await t.app.get(FilesService).collectGarbage()).toEqual({stale:0,unlinked:0});
+  const download = await t.http().get(`${base}/files/${upload.attachment.id}/download`).set(bearer(member)).redirects(0);
+  expectStatus(download,302);
+  expect(Buffer.from(await (await fetch(download.headers.location as string)).arrayBuffer())).toEqual(bytes);
+
+  expect((await t.http().get(`${url}/messages`).set(bearer(owner))).body.items.some((m:{text:string})=>m.text==='Permanent memory')).toBe(true);
+  expectStatus(await t.http().post(`${url}/messages`).set(bearer(owner)).send({clientMsgId:randomUUID(),kind:'text',text:'No write'}),409);
+  const messageUrl = `${url}/messages/${message.body.id}`;
+  expectStatus(await t.http().patch(messageUrl).set(bearer(owner)).send({text:'Changed'}),409);
+  expectStatus(await t.http().delete(messageUrl).set(bearer(owner)),409);
+  expectStatus(await t.http().put(`${messageUrl}/reactions/${encodeURIComponent('👍')}`).set(bearer(owner)),409);
+  expectStatus(await t.http().patch(url).set(bearer(owner)).send({title:'Changed'}),409);
+  expectStatus(await t.http().delete(`${url}/members/${member.userId}`).set(bearer(owner)),409);
+  expectStatus(await t.http().delete(url).set(bearer(member)).send({confirmTitle:channel.title}),403);
+  expectStatus(await t.http().delete(url).set(bearer(owner)).send({confirmTitle:'wrong'}),400);
+  expectStatus(await t.http().delete(url).set(bearer(owner)).send({confirmTitle:channel.title}),204);
+  expectStatus(await t.http().get(url).set(bearer(owner)),404);
+});
+it('repairs existing duplicates without deleting any conversation or message history', async () => {
+  const project=await createProject(t,owner,workspaceId);
+  const client=await t.admin.connect();
+  try {
+    await client.query('begin');
+    await client.query('drop index conversations_project_uq');
+    const extra=await client.query("insert into conversations(workspace_id,kind,title,project_id,membership_mode,created_by) values($1,'channel','legacy duplicate',$2,'project_synced',$3) returning id",[workspaceId,project.id,owner.userId]);
+    const id=extra.rows[0].id;
+    await client.query("insert into messages(workspace_id,conversation_id,seq,author_id,kind,body_text) values($1,$2,1,$3,'text','legacy history')",[workspaceId,id,owner.userId]);
+    await client.query(await readFile(new URL('../../db/migrations/0023_project_channel_uniqueness.sql',import.meta.url),'utf8'));
+    expect((await client.query('select id from conversations where project_id=$1',[project.id])).rows).toHaveLength(1);
+    expect((await client.query('select project_id, archived_at is not null as archived, is_private from conversations where id=$1',[id])).rows).toEqual([{project_id:null,archived:true,is_private:true}]);
+    expect((await client.query('select body_text from messages where conversation_id=$1',[id])).rows[0].body_text).toBe('legacy history');
+    await client.query('commit');
+  } catch(error) { await client.query('rollback'); throw error; } finally { client.release(); }
+});

@@ -375,6 +375,8 @@ export interface Conversation {
   readonly unreadCount: number;
   readonly tone: AvatarTone;
   readonly topic: string;
+  readonly archived?: boolean;
+  readonly archiveManager?: boolean;
   /** A project's own channel: its members follow the project's (added and removed there). */
   readonly projectId?: string | null;
 }

@@ -1124,6 +1124,7 @@ conversations CREATE INDEX conversations_project_idx ON public.conversations USI
 conversations CREATE INDEX conversations_public_idx ON public.conversations USING btree (workspace_id, created_at) WHERE ((kind = 'channel'::conversation_kind) AND (NOT is_private) AND (archived_at IS NULL))
 conversations CREATE UNIQUE INDEX conversations_direct_uq ON public.conversations USING btree (workspace_id, direct_key) WHERE (kind = 'direct'::conversation_kind)
 conversations CREATE UNIQUE INDEX conversations_pkey ON public.conversations USING btree (id)
+conversations CREATE UNIQUE INDEX conversations_project_uq ON public.conversations USING btree (workspace_id, project_id) WHERE (project_id IS NOT NULL)
 conversations CREATE UNIQUE INDEX conversations_ws_id_uq ON public.conversations USING btree (workspace_id, id)
 departments CREATE UNIQUE INDEX departments_pkey ON public.departments USING btree (id)
 departments CREATE UNIQUE INDEX departments_ws_id_uq ON public.departments USING btree (workspace_id, id)

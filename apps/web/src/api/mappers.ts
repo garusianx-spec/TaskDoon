@@ -306,6 +306,8 @@ export function conversationFromView(view: ConversationView, meId: string, nameO
     tone: view.tone,
     topic: view.topic || (view.projectId ? 'کانال پروژه' : view.kind === 'direct' ? 'گفتگوی مستقیم' : view.kind === 'channel' ? 'کانال' : 'گروه تیمی'),
     projectId: view.projectId,
+    archived: view.archived,
+    archiveManager: view.myRole === 'owner' || view.myRole === 'admin',
   };
 }
 

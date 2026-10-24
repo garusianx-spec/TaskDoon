@@ -1906,11 +1906,6 @@ export class LiveStore {
   private async refreshConversation(conversationId: string): Promise<void> {
     try {
       const detail = await api.conversations.get(this.workspaceId, conversationId);
-      // Archived (a project's channel while the project is in the trash): out of the list.
-      if (detail.archived) {
-        this.apply({ type: 'sync/remove-conversation', conversationId });
-        return;
-      }
       this.cursorsFrom(detail);
       this.lastSeq.set(detail.id, Math.max(this.lastSeq.get(detail.id) ?? 0, detail.lastSeq));
       this.apply({ type: 'sync/upsert-conversation', conversation: this.conversationFrom(detail) });
