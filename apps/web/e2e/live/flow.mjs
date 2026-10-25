@@ -151,15 +151,22 @@ try {
   check(await eventually(async () => (await dialog.getByRole('checkbox', { name: guestName }).count()) === 1, 10_000), 'the owner can assign the new member');
   await dialog.getByRole('checkbox', { name: guestName }).click();
   await dialog.getByRole('button', { name: 'ایجاد وظیفه' }).click();
+  // Phase 1 keeps the composer open until persistence finishes, then opens details.
+  // The optimistic board card can appear before that transition; an early Escape
+  // is ignored while saving and leaves the final modal covering the checkbox.
+  await dialog.waitFor({ state: 'hidden' });
+  const ownerTaskDetails = owner.getByRole('dialog', { name: 'جزئیات وظیفه', exact: true });
+  await ownerTaskDetails.waitFor();
+  check((await ownerTaskDetails.getByRole('textbox', { name: 'عنوان وظیفه', exact: true }).inputValue()) === taskTitle, 'successful task creation opens its editable details');
   const ownerCard = owner.getByRole('group', { name: new RegExp(taskTitle) });
   check(await visible(ownerCard), 'the task appears on the owner’s board');
-  // A new task opens in the (modal) task dialog; close it to get back to the board.
-  await owner.keyboard.press('Escape');
+  await ownerTaskDetails.getByRole('button', { name: 'بستن پنل جزئیات', exact: true }).click();
+  await ownerTaskDetails.waitFor({ state: 'hidden' });
 
   const guestCard = guest.getByRole('group', { name: new RegExp(taskTitle) });
   check(await visible(guestCard, 10_000), 'the task appears live on the guest’s board');
 
-  await owner.getByRole('checkbox', { name: `انجام شد: ${taskTitle}` }).click();
+  await ownerCard.getByRole('checkbox', { name: `انجام شد: ${taskTitle}`, exact: true }).click();
   const guestDone = guest.getByRole('region', { name: 'ستون انجام شد' });
   check(await eventually(async () => (await guestDone.getByRole('group', { name: new RegExp(taskTitle) }).count()) === 1, 10_000), 'completing it moves it to «انجام شد» live for the guest');
   await owner.reload();
@@ -363,7 +370,9 @@ try {
   check(await eventually(async () => JSON.stringify(await order(owner)) === JSON.stringify(['سوم', 'اول', 'دوم'])), 'the subtask moves to the top');
   await owner.getByTestId('task-file-input').setInputFiles({ name: 'پیوست وظیفه.pdf', mimeType: 'application/pdf', buffer: PDF });
   check(await visible(owner.getByText('پیوست وظیفه.pdf')), 'a file attaches to the task');
-  await owner.waitForTimeout(1_500);
+  // Save is disabled during upload and resolves only after pending task edits persist.
+  await ownerTaskDetails.getByRole('button', { name: 'ذخیره تغییرات', exact: true }).click();
+  await ownerTaskDetails.waitFor({ state: 'hidden' });
   await owner.reload();
   await helloFor(ownerThread).getByRole('button', { name: 'مشاهده وظیفه مرتبط' }).click({ timeout: 20_000 });
   check(await eventually(async () => JSON.stringify(await order(owner)) === JSON.stringify(['سوم', 'اول', 'دوم']), 10_000), 'the order is stored: the same after a reload');

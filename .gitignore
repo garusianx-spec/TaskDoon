@@ -24,3 +24,7 @@ apps/web/e2e/out
 .local/
 .devops-tools/
 .env.prod.local
+
+work/
+outputs/
+.local/

@@ -192,7 +192,17 @@ export function Popover({
         : 'end-0';
 
   return (
-    <div className={cn('relative inline-flex', className)}>
+    <div
+      className={cn('relative inline-flex', className)}
+      onKeyDown={open && constrainToViewport ? (event) => {
+        if (event.key !== 'Escape') return;
+        // Focus can still be on the trigger before the popup's autofocus frame runs.
+        // Consume Escape from either surface before an enclosing modal sees it.
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      } : undefined}
+    >
       {cloneElement(trigger, {
         ref: triggerRef,
         'aria-expanded': open,
@@ -207,13 +217,6 @@ export function Popover({
           role={haspopup === 'menu' ? 'menu' : 'dialog'}
           aria-label={label}
           tabIndex={-1}
-          onKeyDown={constrainToViewport ? (event) => {
-            if (event.key !== 'Escape') return;
-            // Consume Escape before an enclosing modal's document listener dismisses it.
-            event.preventDefault();
-            event.stopPropagation();
-            close();
-          } : undefined}
           style={constrainToViewport ? {
             left: position?.left ?? 0, right: 'auto', top: position?.top ?? 0, bottom: 'auto',
             maxWidth: position?.maxWidth, maxHeight: position?.maxHeight, overflowY: 'auto',

@@ -19,6 +19,12 @@ const open = async () => {
   await dialog.waitFor();
 };
 const dismissPicker = async (picker, label) => {
+  if (label.startsWith('mobile')) {
+    // Reproduce a fast Escape before the popup's autofocus animation frame: the
+    // trigger still owns focus, and only the picker must close, never its form.
+    const pickerId = await picker.getAttribute('id');
+    await dialog.locator(`button[aria-controls="${pickerId}"]`).focus();
+  }
   await page.keyboard.press('Escape');
   check(await eventually(async () => (await picker.count()) === 0) && await dialog.isVisible(), `${label}: Escape closes the picker and preserves the project draft`);
 };
