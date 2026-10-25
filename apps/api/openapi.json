@@ -5010,7 +5010,9 @@
               "type": "string",
               "enum": [
                 "mine",
-                "public"
+                "public",
+                "all",
+                "archived"
               ]
             }
           },
@@ -5151,6 +5153,50 @@
                 }
               }
             }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "chat"
+        ]
+      },
+      "delete": {
+        "operationId": "Chat_deleteArchived",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteArchivedConversationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
           }
         },
         "security": [
@@ -8759,6 +8805,13 @@
             "nullable": true,
             "format": "uuid"
           },
+          "departmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           "color": {
             "type": "string",
             "enum": [
@@ -8835,6 +8888,7 @@
           "name",
           "description",
           "departmentId",
+          "departmentIds",
           "color",
           "parentId",
           "visibility",
@@ -8869,6 +8923,15 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "departmentIds": {
+            "maxItems": 20,
+            "description": "Complete department selection; first is the legacy primary, empty clears all",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "color": {
             "type": "string",
@@ -8978,6 +9041,15 @@
             "type": "string",
             "nullable": true,
             "format": "uuid"
+          },
+          "departmentIds": {
+            "maxItems": 20,
+            "description": "Replaces the complete selection; omit to leave unchanged",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "color": {
             "type": "string",
@@ -10935,6 +11007,10 @@
               "format": "uuid"
             }
           },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
           "dueDate": {
             "type": "string",
             "nullable": true,
@@ -11813,6 +11889,18 @@
           "members"
         ]
       },
+      "DeleteArchivedConversationDto": {
+        "type": "object",
+        "properties": {
+          "confirmTitle": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "confirmTitle"
+        ]
+      },
       "UpdateConversationDto": {
         "type": "object",
         "properties": {
@@ -12172,6 +12260,10 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
           },
           "dueDate": {
             "type": "string",

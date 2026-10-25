@@ -1,8 +1,8 @@
 import { base, check, eventually, finish, launch, out, visible, watchConsole } from '../lib/harness.mjs';
 
 /*
- * Agile tracking on the demo workspace: issue types and severity, the type filter, estimates and
- * worklogs, dependencies (cycles refused, the blocked pill, the non-blocking Done warning) and the
+ * Agile tracking on the demo workspace: issue types and severity, the type filter, estimates,
+ * dependencies (cycles refused, the blocked pill, the non-blocking Done warning) and the
  * backlog. Cards nobody touched must look exactly as before.
  */
 const browser = await launch();
@@ -20,6 +20,10 @@ const openCard = async (title) => {
 };
 const closeDialog = async () => {
   await page.keyboard.press('Escape');
+  await eventually(async () => (await dialog.count()) === 0);
+};
+const saveDialog = async () => {
+  await dialog.getByRole('button', { name: 'ذخیره تغییرات', exact: true }).click();
   await eventually(async () => (await dialog.count()) === 0);
 };
 const pick = async (scope, combobox, option) => {
@@ -66,44 +70,36 @@ check(await eventually(async () => (await cards.count()) === initialCards + 1), 
 await openCard(/خطای ورود با رمز عبور/);
 await pick(dialog, 'نوع وظیفه', 'ویژگی');
 check(await eventually(async () => (await dialog.getByRole('combobox', { name: 'شدت باگ', exact: true }).count()) === 0), 'a feature has no severity');
-await closeDialog();
+await saveDialog();
 check(await eventually(async () => (await card(/خطای ورود با رمز عبور/).getByRole('img', { name: 'ویژگی' }).count()) === 1), 'the card now shows the feature glyph');
 
-// 4. Estimate and time logging.
+// 4. Estimates remain editable; time tracking has intentionally left task details.
 await openCard(/تهیه سند معماری/);
 const estimate = dialog.getByLabel('برآورد زمان وظیفه');
+check((await dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0, 'task details have no time tracking section');
+check((await dialog.getByRole('button', { name: 'ثبت زمان', exact: true }).count()) === 0, 'task details have no worklog action');
+check(await visible(dialog.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true })), 'the due date remains editable');
+check(await visible(dialog.getByRole('button', { name: 'انتخاب تاریخ شروع', exact: true })), 'the start date is editable alongside the due date');
 await estimate.fill('2h');
 await estimate.press('Enter');
 check(await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'), 'estimate «2h» reads «۲ ساعت»');
-const timing = dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' });
-check((await timing.textContent()).includes('صرف‌شده: ۰ دقیقه'), 'nothing spent yet');
-
-await timing.getByRole('button', { name: 'ثبت زمان' }).click();
-const worklog = page.getByRole('dialog', { name: 'ثبت زمان کار' });
-await visible(worklog);
-await worklog.getByLabel('مدت کار').fill('abc');
-await worklog.getByLabel('یادداشت کار').click();
-check(await visible(worklog.getByText(/مدت را مثلاً/)), 'an unreadable duration is refused');
-await worklog.getByLabel('مدت کار').fill('1h 30m');
-check(await visible(worklog.getByText('= ۱ ساعت و ۳۰ دقیقه')), '«1h 30m» reads as one hour thirty');
-await worklog.getByLabel('یادداشت کار').fill('بررسی سناریوهای آفلاین');
-await worklog.getByRole('button', { name: 'ثبت', exact: true }).click();
-check(await eventually(async () => (await worklog.count()) === 0), 'the worklog dialog closes');
-check(await eventually(async () => (await timing.textContent()).includes('صرف‌شده: ۱ ساعت و ۳۰ دقیقه')), 'spent time adds up');
-check((await timing.textContent()).includes('۳۰ دقیقه باقی‌مانده'), 'remaining time against the estimate');
-check((await timing.getByRole('progressbar', { name: 'زمان صرف‌شده نسبت به برآورد' }).getAttribute('aria-valuenow')) === '90', 'progress bar at 90 of 120');
-check(await visible(timing.getByText('بررسی سناریوهای آفلاین')), 'the note is listed');
-
-// Escape closes the worklog dialog only.
-await timing.getByRole('button', { name: 'ثبت زمان' }).click();
-await visible(worklog);
-await page.keyboard.press('Escape');
-check(await eventually(async () => (await worklog.count()) === 0 && (await dialog.count()) === 1), 'Escape closes the worklog dialog, not the task');
-await timing.getByRole('button', { name: 'ثبت زمان' }).click();
-await worklog.getByLabel('مدت کار').fill('۴۵');
-await worklog.getByRole('button', { name: 'ثبت', exact: true }).click();
-check(await eventually(async () => (await timing.textContent()).includes('۱۵ دقیقه بیش از برآورد')), 'going over the estimate is flagged');
-await page.screenshot({ path: `${out}/agile_time.png` });
+await estimate.fill('abc');
+await estimate.press('Tab');
+check(await visible(dialog.getByText(/مثلاً «۲ ساعت»/)), 'an unreadable estimate duration is refused');
+await estimate.fill('۲ ساعت');
+check((await estimate.getAttribute('aria-invalid')) !== 'true', 'corrective input clears the estimate error immediately');
+await estimate.press('Tab');
+check((await estimate.getAttribute('aria-invalid')) !== 'true', 'returning to the exact formatted estimate remains valid after blur');
+await saveDialog();
+await openCard(/تهیه سند معماری/);
+check(await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'), 'the corrected original estimate saves and persists on reopening');
+await estimate.fill('1h 30m');
+await estimate.press('Enter');
+check(await eventually(async () => (await estimate.inputValue()) === '۱ ساعت و ۳۰ دقیقه'), '«1h 30m» reads as one hour thirty');
+await saveDialog();
+await openCard(/تهیه سند معماری/);
+check(await eventually(async () => (await estimate.inputValue()) === '۱ ساعت و ۳۰ دقیقه'), 'the estimate persists after Save Changes and reopening');
+await page.screenshot({ path: `${out}/agile_estimate.png` });
 await closeDialog();
 
 // 5. Dependencies: links, a refused cycle, the blocked pill and the Done warning.
@@ -156,7 +152,7 @@ await closeDialog();
 await openCard(/رفع ناسازگاری چیدمان/);
 await dialog.getByRole('button', { name: 'انتقال به بک‌لاگ' }).click();
 check(await eventually(async () => (await dialog.getByRole('button', { name: 'انتقال به بورد' }).count()) === 1), 'the dialog offers the way back');
-await closeDialog();
+await saveDialog();
 check(await eventually(async () => (await card(/رفع ناسازگاری چیدمان/).count()) === 0), 'a backlog item leaves the board');
 await page.getByRole('tab', { name: 'بک‌لاگ' }).click();
 const backlog = page.getByRole('region', { name: 'بک‌لاگ' });

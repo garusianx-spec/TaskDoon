@@ -30,11 +30,15 @@ import type {
   CreateInvitationsResult,
   CreateNoteBody,
   CreateProjectBody,
+  CreateDepartmentBody,
+  DepartmentView,
   CreateTaskBody,
   CreateWorkspaceBody,
   InvitationView,
   ManualPresence,
   MeResponse,
+  MeUser,
+  UpdateMeBody,
   MemberView,
   MessagePage,
   NoteCategoryView,
@@ -90,6 +94,7 @@ async function everyPage<T>(fetchPage: (cursor: string | null) => Promise<{ read
 export const api = {
   me: {
     get: () => http.get<MeResponse>('/me'),
+    update: (body: UpdateMeBody) => http.patch<MeUser>('/me', body),
     notifications: (params: { readonly workspaceId?: string; readonly filter?: NotificationFilter; readonly limit?: number }) =>
       http.get<NotificationPage>(`/me/notifications${query(params)}`),
     markNotificationsRead: (body: { readonly ids?: readonly string[]; readonly all?: boolean; readonly workspaceId?: string }) =>
@@ -131,13 +136,20 @@ export const api = {
 
   projects: {
     list: (workspaceId: string) => http.get<ProjectView[]>(`${ws(workspaceId)}/projects`),
-    create: (workspaceId: string, body: CreateProjectBody) => http.post<ProjectView>(`${ws(workspaceId)}/projects`, body, { idempotent: true }),
+    create: (workspaceId: string, body: CreateProjectBody, idempotencyKey?: string) =>
+      http.post<ProjectView>(`${ws(workspaceId)}/projects`, body, { idempotent: true, ...(idempotencyKey ? { idempotencyKey } : {}) }),
     star: (workspaceId: string, projectId: string, starred: boolean) =>
       starred ? http.put<void>(`${ws(workspaceId)}/projects/${projectId}/star`) : http.delete<void>(`${ws(workspaceId)}/projects/${projectId}/star`),
     /** To the trash (workspace owner): restorable for 40 days. */
     remove: (workspaceId: string, projectId: string) => http.delete<void>(`${ws(workspaceId)}/projects/${projectId}`),
     trash: (workspaceId: string) => http.get<TrashedProjectView[]>(`${ws(workspaceId)}/projects/trash`),
     restore: (workspaceId: string, projectId: string) => http.post<ProjectView>(`${ws(workspaceId)}/projects/${projectId}/restore`),
+  },
+
+  departments: {
+    list: (workspaceId: string) => http.get<DepartmentView[]>(`${ws(workspaceId)}/departments`),
+    create: (workspaceId: string, body: CreateDepartmentBody, idempotencyKey?: string) =>
+      http.post<DepartmentView>(`${ws(workspaceId)}/departments`, body, { ...(idempotencyKey ? { idempotencyKey } : {}) }),
   },
 
   workflow: {
@@ -157,7 +169,8 @@ export const api = {
     all: (workspaceId: string) =>
       everyPage<TaskCard>((cursor) => http.get<TaskPage>(`${ws(workspaceId)}/tasks${query({ limit: 200, cursor })}`)),
     get: (workspaceId: string, taskId: string) => http.get<TaskDetail>(`${ws(workspaceId)}/tasks/${taskId}`),
-    create: (workspaceId: string, body: CreateTaskBody) => http.post<TaskDetail>(`${ws(workspaceId)}/tasks`, body, { idempotent: true }),
+    create: (workspaceId: string, body: CreateTaskBody, idempotencyKey?: string) =>
+      http.post<TaskDetail>(`${ws(workspaceId)}/tasks`, body, { idempotent: true, ...(idempotencyKey ? { idempotencyKey } : {}) }),
     update: (workspaceId: string, taskId: string, version: number, body: UpdateTaskBody) =>
       http.patch<TaskDetail>(`${ws(workspaceId)}/tasks/${taskId}`, body, { ifMatch: version }),
     move: (workspaceId: string, taskId: string, body: { readonly columnId: string; readonly afterId?: string | null; readonly beforeId?: string | null; readonly expectedVersion: number }) =>
@@ -196,7 +209,8 @@ export const api = {
   },
 
   conversations: {
-    list: (workspaceId: string) => http.get<ConversationView[]>(`${ws(workspaceId)}/conversations`),
+    list: (workspaceId: string) => http.get<ConversationView[]>(`${ws(workspaceId)}/conversations?scope=all`),
+    deleteArchived: (workspaceId: string, id: string, confirmTitle: string) => http.delete<void>(`${ws(workspaceId)}/conversations/${id}`, { confirmTitle }),
     get: (workspaceId: string, conversationId: string) => http.get<ConversationDetail>(`${ws(workspaceId)}/conversations/${conversationId}`),
     create: (workspaceId: string, body: CreateConversationBody) =>
       http.post<ConversationDetail>(`${ws(workspaceId)}/conversations`, body, { idempotent: true }),
@@ -239,7 +253,8 @@ export const api = {
     createCategory: (workspaceId: string, label: string) => http.post<NoteCategoryView>(`${ws(workspaceId)}/note-categories`, { label }, { idempotent: true }),
     removeCategory: (workspaceId: string, categoryId: string) => http.delete<void>(`${ws(workspaceId)}/note-categories/${categoryId}`),
     all: (workspaceId: string) => everyPage<NoteView>((cursor) => http.get<NotePage>(`${ws(workspaceId)}/notes${query({ limit: 100, cursor })}`)),
-    create: (workspaceId: string, body: CreateNoteBody) => http.post<NoteView>(`${ws(workspaceId)}/notes`, body, { idempotent: true }),
+    create: (workspaceId: string, body: CreateNoteBody, idempotencyKey?: string) =>
+      http.post<NoteView>(`${ws(workspaceId)}/notes`, body, { idempotent: true, ...(idempotencyKey ? { idempotencyKey } : {}) }),
     update: (workspaceId: string, noteId: string, version: number, body: UpdateNoteBody) =>
       http.patch<NoteView>(`${ws(workspaceId)}/notes/${noteId}`, body, { ifMatch: version }),
     remove: (workspaceId: string, noteId: string) => http.delete<void>(`${ws(workspaceId)}/notes/${noteId}`),

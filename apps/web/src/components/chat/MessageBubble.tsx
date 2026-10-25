@@ -28,6 +28,7 @@ import {
 
 
 export interface MessageBubbleProps {
+  readonly readOnly?: boolean;
   readonly message: Message;
   readonly author: User;
   readonly outgoing: boolean;
@@ -47,6 +48,7 @@ export interface MessageBubbleProps {
 }
 
 export function MessageBubble({
+  readOnly = false,
   message,
   author,
   outgoing,
@@ -68,7 +70,7 @@ export function MessageBubble({
 
   const startLongPress = () => {
     // An unsent message offers only its own two actions, shown under it.
-    if (message.failed) return;
+    if (message.failed || readOnly) return;
     longPressTimer.current = window.setTimeout(() => onLongPress(message), 500);
   };
   const cancelLongPress = () => {
@@ -87,7 +89,7 @@ export function MessageBubble({
       onContextMenu={(event) => {
         // The long-press gesture doubles as the desktop context menu.
         event.preventDefault();
-        if (!message.failed) onLongPress(message);
+        if (!message.failed && !readOnly) onLongPress(message);
       }}
     >
       <div className="w-8 shrink-0">
@@ -190,7 +192,7 @@ export function MessageBubble({
             </div>
           </div>
 
-          <div
+          {!readOnly && <div
             className={cn(
               // Pointer layouts only: touch users get the same actions from the
               // long-press bottom sheet, and :hover sticks after a tap on mobile.
@@ -296,10 +298,10 @@ export function MessageBubble({
                 </MenuList>
               )}
             </Popover>
-          </div>
+          </div>}
         </div>
 
-        {message.failed && (
+        {message.failed && !readOnly && (
           <div role="group" aria-label="پیام ارسال نشد" className={cn('flex flex-wrap items-center gap-1.5', outgoing && 'justify-end')}>
             <span className="inline-flex items-center gap-1 text-caption font-medium text-status-blocked">
               <WarningIcon size={14} />
@@ -326,6 +328,7 @@ export function MessageBubble({
                 <button
                   key={reaction.emoji}
                   type="button"
+                  disabled={readOnly}
                   onClick={() => onToggleReaction(message.id, reaction.emoji)}
                   aria-pressed={mine}
                   aria-label={`${reaction.emoji} — ${formatCount(reaction.userIds.length)} نفر`}

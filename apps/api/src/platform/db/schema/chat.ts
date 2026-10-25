@@ -57,6 +57,7 @@ export const conversations = pgTable(
   },
   (t) => [
     unique('conversations_ws_id_uq').on(t.workspaceId, t.id),
+    uniqueIndex('conversations_project_uq').on(t.workspaceId, t.projectId).where(sql`${t.projectId} is not null`),
     uniqueIndex('conversations_direct_uq').on(t.workspaceId, t.directKey).where(sql`${t.kind} = 'direct'`),
     index('conversations_project_idx').on(t.workspaceId, t.projectId).where(sql`${t.projectId} is not null`),
     // Browsing the public channels of a workspace.

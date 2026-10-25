@@ -18,7 +18,9 @@ const OWNER_SCOPED = new Set(['notes', 'note_categories', 'scheduled_messages'])
 /** Gives a workspace at least one row in every tenant table, through the API where it can. */
 async function populate(t: TestApp, owner: Session, workspaceId: string): Promise<void> {
   const base = wsPath(workspaceId);
-  const project = await createProject(t, owner, workspaceId);
+  const departmentList = await t.http().get(`${base}/departments`).set(bearer(owner));
+  expectStatus(departmentList, 200);
+  const project = await createProject(t, owner, workspaceId, { departmentIds: [departmentList.body[0].id] });
   const label = await t.http().post(`${base}/labels`).set(bearer(owner)).send({ name: `برچسب ${workspaceId.slice(0, 4)}` });
   const task = await createTask(t, owner, workspaceId, { projectId: project.id, assigneeIds: [owner.userId], labelIds: [label.body.id], subtasks: ['گام'] });
   expectStatus(await t.http().put(`${base}/tasks/${task.id}/star`).set(bearer(owner)), 204);

@@ -402,6 +402,7 @@ export class MessagesService implements OnModuleDestroy {
     const view = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const target = await this.target(tx, member, messageId, { lock: true, conversationId: options.conversationId });
       if (target.author_id !== member.userId) throw ApiError.forbidden('Only the author can edit a message.');
+      if (target.access.conversation.archived) throw new ApiError('CONVERSATION_ARCHIVED');
       if (target.deleted) throw new ApiError('MESSAGE_GONE');
       if (target.kind !== 'text' && target.kind !== 'file') throw ApiError.validation([{ field: 'text', message: 'only text messages and captions can be edited' }]);
       if (target.age_hours > EDIT_WINDOW_HOURS) throw new ApiError('EDIT_WINDOW_CLOSED');
@@ -442,6 +443,7 @@ export class MessagesService implements OnModuleDestroy {
   async remove(member: MembershipContext, messageId: string, options: { conversationId?: string } = {}): Promise<void> {
     const removed = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const target = await this.target(tx, member, messageId, { lock: true, conversationId: options.conversationId });
+      if (target.access.conversation.archived) throw new ApiError('CONVERSATION_ARCHIVED');
       if (target.deleted) return null;
       if (target.author_id !== member.userId && !target.access.canModerate) throw ApiError.forbidden();
       await tx.execute(sql`
@@ -479,6 +481,7 @@ export class MessagesService implements OnModuleDestroy {
     if (!/^[^\s\p{Cc}]{1,16}$/u.test(emoji) || Buffer.byteLength(emoji) > 32) throw ApiError.validation([{ field: 'emoji', message: 'must be one emoji' }]);
     const outcome = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const target = await this.target(tx, member, messageId, { conversationId: options.conversationId });
+      if (target.access.conversation.archived) throw new ApiError('CONVERSATION_ARCHIVED');
       if (target.deleted) throw new ApiError('MESSAGE_GONE');
       if (target.access.myRole === null) throw ApiError.forbidden('Join the channel to react.');
       if (on) {
@@ -516,6 +519,14 @@ export class MessagesService implements OnModuleDestroy {
 
   /** The message and the caller's access to its conversation; 404 when it is in another conversation than `conversationId`. */
   private async target(tx: Tx, member: MembershipContext, messageId: string, options: { lock?: boolean; conversationId?: string } = {}) {
+    // Serialize mutations with project archiving/manual deletion, locking the conversation
+    // before any message row. The following statement then reads the committed archive state.
+    await tx.execute(sql`
+      select c.id from conversations c
+      join messages m on m.workspace_id = c.workspace_id and m.conversation_id = c.id
+      where m.workspace_id = ${member.workspaceId} and m.id = ${messageId}
+        ${options.conversationId ? sql`and c.id = ${options.conversationId}` : sql``}
+      for update of c`);
     const result = await tx.execute<{
       conversation_id: string;
       author_id: string | null;

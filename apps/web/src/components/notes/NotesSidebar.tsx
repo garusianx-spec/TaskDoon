@@ -98,7 +98,7 @@ export function NotesSidebar({
           </h3>
           <CreateCategoryButton categories={categories} onCreate={onCreateCategory} />
           {entries.map(({ id, label, removable }) => {
-            const Icon = categoryIcon(id);
+            const Icon = categoryIcon(categories.find(category => category.id === id)?.key ?? id);
             const active = categoryId === id;
             return (
               <div key={id} className="relative flex items-center">

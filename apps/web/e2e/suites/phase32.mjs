@@ -8,8 +8,11 @@ import { base, check, eventually, finish, launch, out, visible, watchConsole } f
 const browser = await launch();
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
 watchConsole(page);
-// A clock the suite can move forward: schedules go out when their time comes.
-await page.clock.install();
+// Start at local midday: after 23:00 the modal's default +1h date is tomorrow,
+// so changing only its time no longer exercises today's past-time validation.
+const clockStart = new Date();
+clockStart.setHours(12, 0, 0, 0);
+await page.clock.install({ time: clockStart });
 const rail = page.getByRole('navigation', { name: 'ناوبری اصلی' });
 
 /* ---------- 1. Scheduling from the composer ---------- */

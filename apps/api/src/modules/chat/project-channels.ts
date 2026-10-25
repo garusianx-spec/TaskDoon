@@ -34,7 +34,13 @@ export async function openProjectChannel(tx: Tx, outbox: OutboxWriter, seed: Pro
   const inserted = await tx.execute<{ id: string }>(sql`
     insert into conversations (workspace_id, kind, title, topic, tone, is_private, post_policy, project_id, membership_mode, created_by)
     values (${w}, 'channel', ${title(seed.name)}, ${topic(seed.description)}, ${seed.color}, true, 'everyone', ${seed.projectId}, 'project_synced', ${seed.createdBy})
+    on conflict (workspace_id, project_id) where project_id is not null do nothing
     returning id`);
+  if (!inserted.rows[0]) {
+    const existing = await tx.execute<{ id: string }>(sql`select id from conversations where workspace_id = ${w} and project_id = ${seed.projectId}`);
+    if (!existing.rows[0]) throw new Error('project channel resolution failed');
+    return existing.rows[0].id;
+  }
   const conversationId = inserted.rows[0]?.id;
   if (!conversationId) throw new Error('project channel insert returned nothing');
   const others = seed.members.filter((entry) => entry.userId !== seed.createdBy);
@@ -126,12 +132,12 @@ export async function syncProjectChannelMember(
   }
 }
 
-/** The project went to the trash (`archived`) or came back: its channel goes and returns with it. */
-export async function setProjectChannelsArchived(tx: Tx, outbox: OutboxWriter, workspaceId: string, projectId: string, archived: boolean): Promise<void> {
+/** Project deletion permanently archives its companion; restoration never reopens history. */
+export async function setProjectChannelsArchived(tx: Tx, outbox: OutboxWriter, workspaceId: string, projectId: string): Promise<void> {
   const changed = await tx.execute<{ id: string }>(sql`
-    update conversations set archived_at = ${archived ? sql`now()` : sql`null`}
+    update conversations set archived_at = now()
     where workspace_id = ${workspaceId} and project_id = ${projectId} and membership_mode = 'project_synced'
-      and (archived_at is null) = ${archived}
+      and archived_at is null
     returning id`);
   for (const { id } of changed.rows) {
     await outbox.add(tx, {
@@ -148,7 +154,7 @@ export async function setProjectChannelsArchived(tx: Tx, outbox: OutboxWriter, w
 export async function renameProjectChannels(tx: Tx, outbox: OutboxWriter, workspaceId: string, projectId: string, name: string): Promise<void> {
   const changed = await tx.execute<{ id: string }>(sql`
     update conversations set title = ${title(name)}
-    where workspace_id = ${workspaceId} and project_id = ${projectId} and membership_mode = 'project_synced' and title is distinct from ${title(name)}
+    where workspace_id = ${workspaceId} and project_id = ${projectId} and membership_mode = 'project_synced' and archived_at is null and title is distinct from ${title(name)}
     returning id`);
   for (const { id } of changed.rows) {
     await outbox.add(tx, {

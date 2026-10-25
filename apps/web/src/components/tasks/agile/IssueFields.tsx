@@ -117,6 +117,7 @@ function EstimateInput({ value, onCommit }: { readonly value: number | null; rea
   }, [shown]);
 
   const commit = () => {
+    setError(undefined);
     if (text.trim() === '') {
       if (value !== null) onCommit(null);
       return;
@@ -127,7 +128,6 @@ function EstimateInput({ value, onCommit }: { readonly value: number | null; rea
       setError('مثلاً «۲ ساعت»، «1h 30m» یا «۹۰» (دقیقه) بنویسید.');
       return;
     }
-    setError(undefined);
     if (minutes !== value) onCommit(minutes);
     else setText(shown);
   };
@@ -139,7 +139,7 @@ function EstimateInput({ value, onCommit }: { readonly value: number | null; rea
       value={text}
       placeholder="مثلاً 2h یا ۹۰ دقیقه"
       error={error}
-      onChange={(event) => setText(event.target.value)}
+      onChange={(event) => { setText(event.target.value); setError(undefined); }}
       onBlur={commit}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {

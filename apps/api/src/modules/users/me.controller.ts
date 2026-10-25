@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { IsEmail, IsIn, IsOptional, IsString, Length, ValidateIf } from 'class-validator';
+import { Transform } from 'class-transformer';
 import type { AvatarTone, MeResponse, MeUser, MeWorkspace, RoleId, UpdateMeBody } from '@taskin/contracts';
 import { ROLE_IDS } from '@taskin/contracts';
 import type { AuthPrincipal } from '../../platform/http/request.js';
@@ -12,7 +13,8 @@ export const AVATAR_TONES: readonly AvatarTone[] = ['brand', 'teal', 'violet', '
 
 export class UpdateMeDto implements UpdateMeBody {
   @ApiPropertyOptional({ minLength: 2, maxLength: 80 })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @Length(2, 80)
   readonly fullName?: string;

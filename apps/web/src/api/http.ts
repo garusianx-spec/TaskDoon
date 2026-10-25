@@ -51,6 +51,8 @@ export interface RequestOptions {
   readonly body?: unknown;
   /** Adds an `Idempotency-Key`, so a retried create is applied once. */
   readonly idempotent?: boolean;
+  /** A form command keeps its key when retrying after an uncertain network outcome. */
+  readonly idempotencyKey?: string;
   /** Sends `If-Match` with this version. */
   readonly ifMatch?: number;
   readonly headers?: Readonly<Record<string, string>>;
@@ -91,7 +93,7 @@ async function send(method: string, path: string, options: RequestOptions, idemp
  * new token (with the same idempotency key); any other failure becomes an `ApiProblem`.
  */
 export async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
-  const idempotencyKey = options.idempotent ? newIdempotencyKey() : null;
+  const idempotencyKey = options.idempotencyKey ?? (options.idempotent ? newIdempotencyKey() : null);
   let response = await send(method, path, options, idempotencyKey);
   if (response.status === 401 && options.authenticated !== false && (await credentials.refresh())) {
     response = await send(method, path, options, idempotencyKey);

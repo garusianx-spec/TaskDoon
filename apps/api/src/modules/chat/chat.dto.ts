@@ -54,7 +54,7 @@ import type {
   WorkingHoursView,
 } from '@taskin/contracts';
 import { AVATAR_TONES } from '../users/me.controller.js';
-import { OptionalNullableDate, OptionalNullableUuid } from '../../platform/http/dto.js';
+import { IsCalendarDate, LatinDigits, OptionalNullableDate, OptionalNullableUuid } from '../../platform/http/dto.js';
 import { AttachmentViewDto, TASK_PRIORITIES, TaskDetailDto } from '../work/work.dto.js';
 import { WEEK_DAYS } from './working-hours.js';
 
@@ -151,7 +151,7 @@ export class ReadCursorDto implements ReadCursorBody {
 }
 
 export class ConversationListQueryDto {
-  @ApiPropertyOptional({ enum: ['mine', 'public'], default: 'mine' }) @IsOptional() @IsIn(['mine', 'public']) readonly scope?: 'mine' | 'public';
+  @ApiPropertyOptional({ enum: ['mine', 'public', 'all', 'archived'], default: 'mine' }) @IsOptional() @IsIn(['mine', 'public', 'all', 'archived']) readonly scope?: 'mine' | 'public' | 'all' | 'archived';
   @ApiPropertyOptional({ type: Boolean, description: 'Include hidden direct chats' }) @IsOptional() @Transform(trueish) @IsBoolean() readonly includeHidden?: boolean;
 }
 
@@ -279,6 +279,7 @@ export class ConvertMessageDto implements ConvertMessageBody {
   @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly columnId?: string | null;
   @ApiPropertyOptional({ enum: TASK_PRIORITIES }) @IsOptional() @IsIn(TASK_PRIORITIES) readonly priority?: TaskPriority;
   @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' }) @IsOptional() @IsArray() @ArrayMaxSize(20) @IsUUID('all', { each: true }) readonly assigneeIds?: string[];
+  @ApiPropertyOptional({ format: 'date' }) @IsOptional() @LatinDigits() @IsCalendarDate() readonly startDate?: string;
   @ApiPropertyOptional({ type: String, nullable: true, format: 'date' }) @OptionalNullableDate() readonly dueDate?: string | null;
   @ApiPropertyOptional({ type: String, isArray: true }) @IsOptional() @IsArray() @ArrayMaxSize(100) @IsString({ each: true }) @Length(1, 200, { each: true }) readonly subtasks?: string[];
   @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid', description: "The message's own file; nothing else can be linked here" })
@@ -353,4 +354,8 @@ export class WorkingHoursViewDto implements WorkingHoursView {
   @ApiProperty() readonly message!: string;
   @ApiProperty({ example: 'Asia/Tehran', description: "The workspace's zone, which the hours are read in" }) readonly timeZone!: string;
   @ApiProperty({ type: String, nullable: true, format: 'date-time', description: '`null`: never saved, these are the defaults' }) readonly updatedAt!: string | null;
+}
+
+export class DeleteArchivedConversationDto {
+ @ApiProperty({ maxLength: 80 }) @IsString() @Length(1, 80) readonly confirmTitle!: string;
 }

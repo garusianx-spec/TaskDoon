@@ -8,6 +8,7 @@ import type {
   CalendarEventDraft,
   ChatFilterId,
   Conversation,
+  Department,
   DepartmentId,
   InspectorTarget,
   Invitation,
@@ -66,6 +67,7 @@ export interface WorkspaceState {
   /** Everyone in the active workspace (the directory), and its projects. */
   readonly users: readonly User[];
   readonly projects: readonly Project[];
+  readonly departments: readonly Department[];
   /**
    * People removed from the workspace (Phase 3.1): out of the directory and every picker, yet still
    * named — as former members — on the messages, tasks and activity they left behind.
@@ -241,6 +243,7 @@ export type WorkspaceAction =
   | { readonly type: 'invite-members'; readonly draft: InvitationDraft; readonly invitedById: string }
   | { readonly type: 'revoke-invitation'; readonly invitationId: string }
   | { readonly type: 'update-profile'; readonly profile: ProfileSettings }
+  | { readonly type: 'update-display-name'; readonly fullName: string }
   | { readonly type: 'set-two-factor'; readonly enabled: boolean }
   | { readonly type: 'record-password-change' }
   | { readonly type: 'revoke-login-session'; readonly sessionId: string }
@@ -365,6 +368,10 @@ export interface ProjectDraft {
   readonly key: string;
   readonly color: AvatarTone;
   readonly departmentId: DepartmentId;
+  readonly departmentIds?: readonly DepartmentId[];
+  /** Not persisted until submit; local IDs are resolved to workspace department UUIDs. */
+  readonly customDepartments?: readonly { readonly id: string; readonly name: string }[];
+  readonly memberIds?: readonly string[];
   readonly description: string;
 }
 
@@ -761,7 +768,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const { draft } = action;
       const id = nextId('t');
       const today = new Date();
-      const startDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const startDate = draft.startDate ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const placement: TaskPlacement = (draft.boardColumnId
         ? placementForColumn(state.boardColumns, draft.boardColumnId)
         : null) ?? { status: draft.status, boardColumnId: null };
@@ -1135,21 +1142,24 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'create-project': {
       const name = action.draft.name.trim();
       if (!name || state.projects.some((project) => project.id === action.projectId)) return state;
+      const departmentIds = [...new Set(action.draft.departmentIds ?? [action.draft.departmentId])];
+      const memberIds = [...new Set([action.ownerId, ...(action.draft.memberIds ?? [])])];
       const project: Project = {
         id: action.projectId,
         name,
-        departmentId: action.draft.departmentId,
+        departmentId: departmentIds[0] ?? '',
+        departmentIds,
         color: action.draft.color,
         starred: false,
         parentId: null,
-        memberIds: [action.ownerId],
+        memberIds,
       };
       // …and its own chat channel, whose members follow the project's (the live app gets it from the API).
       const channel: Conversation = {
         id: nextId('conv'),
         kind: 'channel',
         title: name,
-        memberIds: [action.ownerId],
+        memberIds,
         pinned: false,
         muted: false,
         unreadCount: 0,
@@ -1160,6 +1170,9 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         projects: [...state.projects, project],
+        departments: [...state.departments, ...(action.draft.customDepartments ?? [])
+          .filter((department) => departmentIds.includes(department.id) && !state.departments.some((entry) => entry.id === department.id))
+          .map((department) => ({ ...department, memberCount: 0 }))],
         // Every project starts with a board of its own: its copy of the four built-in columns.
         boardColumns: [...state.boardColumns, ...builtInColumnsFor(project.id)],
         conversations: [...state.conversations, channel],
@@ -1186,7 +1199,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         projects: state.projects.filter((entry) => entry.id !== project.id),
         tasks: state.tasks.filter((task) => !taskIds.has(task.id)),
         boardColumns: state.boardColumns.filter((column) => column.projectId !== project.id),
-        conversations: state.conversations.filter((conversation) => conversation.projectId !== project.id),
+        conversations: state.conversations.map(conversation => conversation.projectId === project.id ? { ...conversation, archived: true } : conversation),
         activeConversationId: channels.some((channel) => channel.id === state.activeConversationId) ? '' : state.activeConversationId,
         projectTrash: [entry, ...state.projectTrash.filter((trashed) => trashed.project.id !== project.id)],
         projectFilterId: state.projectFilterId === project.id ? null : state.projectFilterId,
@@ -1204,7 +1217,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         projects: [...state.projects.filter((project) => project.id !== entry.project.id), entry.project],
         tasks: stash ? [...state.tasks, ...stash.tasks] : state.tasks,
         boardColumns: stash ? [...state.boardColumns, ...stash.boardColumns] : state.boardColumns,
-        conversations: stash ? [...state.conversations, ...stash.conversations] : state.conversations,
+        conversations: state.conversations,
         projectTrash: state.projectTrash.filter((trashed) => trashed !== entry),
         announcement: `پروژه «${entry.project.name}» بازیابی شد.`,
       };
@@ -1336,6 +1349,11 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case 'update-profile':
       return { ...state, profile: action.profile, announcement: 'پروفایل شما به‌روزرسانی شد.' };
+
+    case 'update-display-name': {
+      const fullName = action.fullName.trim();
+      return { ...state, users: state.users.map(user => user.id === state.meId ? { ...user, fullName, initials: monogram(fullName) } : user) };
+    }
 
     case 'set-two-factor':
       return {
@@ -1608,7 +1626,7 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
       // project id, never by its title (unrelated groups may have exactly the same name).
       const replaceId = action.replaceId ?? (
         conversation.kind === 'channel' && conversation.projectId && !conversation.id.includes('-local-')
-          ? state.conversations.find((entry) => entry.kind === 'channel' && entry.projectId === conversation.projectId && entry.id.includes('-local-'))?.id
+          ? state.conversations.find((entry) => entry.kind === 'channel' && entry.projectId === conversation.projectId && entry.id !== conversation.id)?.id
           : undefined
       );
       const swap = (id: string): string => (replaceId !== undefined && id === replaceId ? conversation.id : id);
