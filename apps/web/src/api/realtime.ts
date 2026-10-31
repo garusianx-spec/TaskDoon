@@ -52,7 +52,8 @@ export class RealtimeClient {
 
   constructor(private readonly hooks: RealtimeHooks) {}
 
-  connect(workspaceId: string): void {
+  /** A null workspace keeps only the authenticated user/session/platform rooms. */
+  connect(workspaceId: string | null): void {
     this.workspaceId = workspaceId;
     if (this.socket) {
       if (this.socket.connected) void this.subscribe();

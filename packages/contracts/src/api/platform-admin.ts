@@ -341,3 +341,51 @@ export interface PlatformWorkspaceModerationResult {
   /** `false` when the workspace was already in the requested state. */
   readonly changed: boolean;
 }
+
+/* ---------------------------------------------------------------- phase 4: platform operations */
+
+export interface PlatformMetrics {
+  readonly generatedAt: string;
+  readonly cached: boolean;
+  readonly users: { readonly total: number; readonly active: number; readonly suspended: number; readonly newLast7Days: number; readonly newLast30Days: number; readonly activeLast7Days: number };
+  readonly workspaces: { readonly total: number; readonly active: number; readonly suspended: number; readonly deleted: number };
+  readonly content: { readonly readyFiles: number; readonly storageUsedBytes: number; readonly tasks: number; readonly messages: number; readonly messagesLast7Days: number };
+}
+
+export interface PlatformProbe {
+  readonly ok: boolean;
+  readonly latencyMs: number;
+  readonly error?: string;
+}
+
+export interface PlatformSmsProvider {
+  readonly name: string;
+  readonly failures: number;
+  readonly openUntil: string | null;
+}
+
+export interface PlatformHealth {
+  readonly checkedAt: string;
+  readonly services: Readonly<Record<'database' | 'adminPool' | 'redisCore' | 'redisRt' | 'storage', PlatformProbe>>;
+  readonly sms: { readonly providers: readonly PlatformSmsProvider[]; readonly failedJobs: number | null };
+}
+
+export interface PlatformQueueFailure {
+  readonly name: string;
+  readonly attempts: number;
+  readonly failedAt: string | null;
+  readonly reason: string;
+}
+
+export interface PlatformQueueHealth {
+  readonly name: 'notifications' | 'work' | 'maintenance';
+  readonly counts: Readonly<Record<'waiting' | 'active' | 'delayed' | 'failed' | 'paused', number>>;
+  readonly recentFailures: readonly PlatformQueueFailure[];
+  readonly error?: string;
+}
+
+export interface PlatformOutboxHealth {
+  readonly checkedAt: string;
+  readonly pending: { readonly count: number; readonly oldestAgeSeconds: number };
+  readonly queues: readonly PlatformQueueHealth[];
+}

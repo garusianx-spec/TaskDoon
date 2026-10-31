@@ -2,7 +2,7 @@
   "name": "@taskin/web",
   "version": "0.1.0",
   "private": true,
-  "description": "Taskin web app — Next.js, RTL, Jalali",
+  "description": "Taskin web app \u2014 Next.js, RTL, Jalali",
   "scripts": {
     "build:deps": "tsc -b ../../packages/contracts ../../packages/jalali ../../packages/text",
     "predev": "npm run build:deps",
@@ -22,7 +22,9 @@
     "test:e2e:live:workspace-moderation": "node e2e/live/workspace-moderation.mjs",
     "test:e2e:live:agile": "node e2e/live/agile.mjs",
     "pretest": "npm run build:deps",
-    "test": "vitest run --config vitest.config.mts"
+    "test": "vitest run --config vitest.config.mts",
+    "test:broadcasts": "node --test e2e/unit/broadcasts.test.mjs",
+    "test:e2e:live:broadcasts": "node e2e/live/broadcasts.mjs"
   },
   "dependencies": {
     "@taskin/contracts": "0.1.0",

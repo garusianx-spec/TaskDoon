@@ -169,6 +169,20 @@
       "when": 1792869495877,
       "tag": "0023_project_channel_uniqueness",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792869495901,
+      "tag": "0024_system_broadcasts",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792869495902,
+      "tag": "0025_system_broadcasts_security",
+      "breakpoints": true
     }
   ]
 }

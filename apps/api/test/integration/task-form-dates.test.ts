@@ -49,4 +49,3 @@ describe('task composer start dates across conversion routes', () => {
     expect((again.body as ConvertNoteResult).existing).toBe(true);
   });
 });
-

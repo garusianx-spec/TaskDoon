@@ -41,6 +41,7 @@ jobs:
       - run: npm run -ws lint
       - run: npm run -ws typecheck
       - run: npm run test --workspace @taskin/jalali --workspace @taskin/text
+      - run: npm run test:broadcasts
       - run: npm run check:contrast
       - name: Deployment webhook safety checks
         run: node --test infra/ci/trigger-coolify.test.mjs
@@ -310,6 +311,10 @@ jobs:
           DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
       - name: Agile tracking (issue types, worklogs, dependencies, backlog)
         run: npm run test:e2e:live:agile
+      - name: Platform broadcasts, overview and global delivery
+        run: npm run test:e2e:live:broadcasts
+        env:
+          DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
       - name: Failure diagnostics
         if: failure()
         run: |

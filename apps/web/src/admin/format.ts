@@ -69,6 +69,15 @@ export const PROJECT_ROLES: Readonly<Record<ProjectRole, string>> = { lead: 'س�
 
 /** The platform audit log's verbs. */
 export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
+  'admin.broadcasts.list': 'فهرست اطلاعیه‌ها',
+  'admin.broadcast.create': 'ساخت اطلاعیه',
+  'admin.broadcast.update': 'ویرایش اطلاعیه',
+  'admin.broadcast.archive': 'بایگانی اطلاعیه',
+  'admin.broadcast.activate': 'فعال‌کردن اطلاعیه',
+  'admin.broadcast.deactivate': 'غیرفعال‌کردن اطلاعیه',
+  'admin.metrics.view': 'مشاهده آمار پلتفرم',
+  'admin.health.view': 'مشاهده سلامت سرویس‌ها',
+  'admin.health.outbox.view': 'مشاهده سلامت صف‌ها',
   'admin.users.search': 'جستجوی کاربران',
   'admin.user.view': 'مشاهده پروفایل',
   'admin.sessions.view': 'مشاهده نشست‌ها',

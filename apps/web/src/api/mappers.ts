@@ -134,6 +134,7 @@ export function workspaceFromView(view: WorkspaceView): Workspace {
     iconUrl: view.iconUrl,
     plan: PLAN_LABELS[view.planId] ?? view.planId,
     projectLimit: view.limits.maxProjects,
+    timeZone: view.settings.timeZone,
     memberCount: view.memberCount,
     ownerId: view.ownerId,
   };

@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  Delete,
+  Patch,
   Get,
   HttpCode,
   HttpStatus,
@@ -36,6 +38,11 @@ import type {
   PlatformWorkspaceDetail,
   PlatformWorkspacePage,
 } from '@taskin/contracts';
+import type { SystemBroadcastPage, SystemBroadcastView, PlatformMetrics, PlatformHealth, PlatformOutboxHealth } from '@taskin/contracts';
+import { BroadcastQueryDto, CreateBroadcastDto, UpdateBroadcastDto, SystemBroadcastPageDto, SystemBroadcastViewDto } from '../broadcasts/broadcasts.dto.js';
+import { PlatformBroadcastsService } from './platform-broadcasts.service.js';
+import { PlatformHealthService } from './platform-health.service.js';
+import { PlatformMetricsDto, PlatformHealthDto, PlatformOutboxHealthDto } from './platform-health.dto.js';
 import { AppConfig } from '../../config/app-config.js';
 import { Public } from '../../platform/http/public.js';
 import type { AuthPrincipal } from '../../platform/http/request.js';
@@ -131,7 +138,61 @@ export class PlatformAdminController {
     private readonly workspaces: PlatformWorkspacesService,
     private readonly moderation: PlatformModerationService,
     private readonly workspaceModeration: PlatformWorkspaceModerationService,
+    private readonly broadcasts: PlatformBroadcastsService,
+    private readonly healthService: PlatformHealthService,
   ) {}
+
+  /* ---------------------------------------------------------------- phase 4: platform operations */
+
+  @Get('broadcasts')
+  @ApiOperation({ summary: 'Platform broadcasts, including inactive and optionally archived entries' })
+  @ApiOkResponse({ type: SystemBroadcastPageDto })
+  listBroadcasts(@CurrentPlatformAdmin() admin: PlatformAdmin, @Query() query: BroadcastQueryDto): Promise<SystemBroadcastPage> {
+    return this.broadcasts.list(admin, query);
+  }
+
+  @Post('broadcasts')
+  @ApiOperation({ summary: 'Create a platform announcement (audited and delivered through the outbox)' })
+  @ApiCreatedResponse({ type: SystemBroadcastViewDto })
+  createBroadcast(@CurrentPlatformAdmin() admin: PlatformAdmin, @Body() body: CreateBroadcastDto): Promise<SystemBroadcastView> {
+    return this.broadcasts.create(admin, body);
+  }
+
+  @Patch('broadcasts/:broadcastId')
+  @ApiOperation({ summary: 'Edit or activate a platform announcement' })
+  @ApiOkResponse({ type: SystemBroadcastViewDto })
+  updateBroadcast(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('broadcastId', ParseUUIDPipe) id: string, @Body() body: UpdateBroadcastDto): Promise<SystemBroadcastView> {
+    return this.broadcasts.update(admin, id, body);
+  }
+
+  @Delete('broadcasts/:broadcastId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Soft archive a platform announcement' })
+  @ApiNoContentResponse()
+  archiveBroadcast(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('broadcastId', ParseUUIDPipe) id: string): Promise<void> {
+    return this.broadcasts.archive(admin, id);
+  }
+
+  @Get('metrics')
+  @ApiOperation({ summary: 'Platform counts and storage usage, cached for 60 seconds' })
+  @ApiOkResponse({ type: PlatformMetricsDto })
+  metrics(@CurrentPlatformAdmin() admin: PlatformAdmin): Promise<PlatformMetrics> {
+    return this.healthService.metrics(admin);
+  }
+
+  @Get('health')
+  @ApiOperation({ summary: 'Parallel readiness probes and passive SMS provider status' })
+  @ApiOkResponse({ type: PlatformHealthDto })
+  health(@CurrentPlatformAdmin() admin: PlatformAdmin): Promise<PlatformHealth> {
+    return this.healthService.health(admin);
+  }
+
+  @Get('health/outbox')
+  @ApiOperation({ summary: 'Outbox backlog, queue counts and sanitized failure summaries' })
+  @ApiOkResponse({ type: PlatformOutboxHealthDto })
+  outboxHealth(@CurrentPlatformAdmin() admin: PlatformAdmin): Promise<PlatformOutboxHealth> {
+    return this.healthService.outbox(admin);
+  }
 
   /* ---------------------------------------------------------------- users and sessions */
 

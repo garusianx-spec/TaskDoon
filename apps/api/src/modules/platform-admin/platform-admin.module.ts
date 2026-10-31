@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { PlatformBroadcastsService } from './platform-broadcasts.service.js';
+import { PlatformHealthService } from './platform-health.service.js';
 import { DomainModule } from '../domain.module.js';
 import { PlatformAdminDatabase } from './admin-database.js';
 import { PlatformAdminUnitOfWork } from './admin-unit-of-work.js';
@@ -21,6 +23,8 @@ import { PlatformWorkspacesService } from './platform-workspaces.service.js';
   imports: [DomainModule],
   controllers: [PlatformAdminProbeController, PlatformAdminController, PasswordResetController],
   providers: [
+    PlatformBroadcastsService,
+    PlatformHealthService,
     PlatformAdminDatabase,
     PlatformAdminUnitOfWork,
     PlatformAdminGuard,

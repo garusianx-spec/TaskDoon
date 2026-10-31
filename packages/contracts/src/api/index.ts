@@ -5,3 +5,4 @@ export * from './work.js';
 export * from './content.js';
 export * from './chat.js';
 export * from './platform-admin.js';
+export * from './broadcasts.js';

@@ -8,7 +8,7 @@ import {
   buildMonthGrid,
   formatJalali,
   gregorianToJalali,
-  parseISODate,
+  fromISODate,
   shiftJalaliMonth,
   toISODate,
   toPersianDigits,
@@ -20,6 +20,7 @@ export interface JalaliDatePickerProps {
   readonly value: string | null;
   readonly onChange: (iso: string) => void;
   readonly label: string;
+  readonly timeZone?: string;
   readonly disabled?: boolean;
 }
 
@@ -30,20 +31,21 @@ export interface JalaliDatePickerProps {
  * day / one week, PageUp/PageDown by one month, and the month header announces the change.
  * "هفته قبل" navigation in RTL means ArrowRight moves to the previous day.
  */
-export function JalaliDatePicker({ value, onChange, label, disabled = false }: JalaliDatePickerProps) {
-  const selected = useMemo(() => gregorianToJalali(value ? parseISODate(value) : new Date()), [value]);
+export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = false }: JalaliDatePickerProps) {
+  const todayIso = toISODate(new Date(), timeZone);
+  const selected = useMemo(() => gregorianToJalali(fromISODate(value ?? todayIso)), [value, todayIso]);
   const [cursor, setCursor] = useState({ year: selected.year, month: selected.month });
-  const [focusedDate, setFocusedDate] = useState(value ?? toISODate(new Date()));
+  const [focusedDate, setFocusedDate] = useState(value ?? todayIso);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   const cells = useMemo(
-    () => buildMonthGrid(cursor.year, cursor.month, new Date()),
-    [cursor.year, cursor.month],
+    () => buildMonthGrid(cursor.year, cursor.month, fromISODate(todayIso)),
+    [cursor.year, cursor.month, todayIso],
   );
 
   const monthLabel = useMemo(() => {
     const first = cells.find((cell) => cell.inCurrentMonth);
-    return first ? formatJalali(first.iso, 'month-year') : '';
+    return first ? formatJalali(fromISODate(first.iso), 'month-year') : '';
   }, [cells]);
 
   const focusDay = (iso: string) => {
@@ -54,7 +56,7 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
   const step = (delta: number, moveFocus = false) => {
     const next = shiftJalaliMonth(cursor.year, cursor.month, delta);
     setCursor({ year: next.year, month: next.month });
-    const day = gregorianToJalali(parseISODate(focusedDate)).day;
+    const day = gregorianToJalali(fromISODate(focusedDate)).day;
     const currentMonth = buildMonthGrid(next.year, next.month).filter((cell) => cell.inCurrentMonth);
     const target = currentMonth.find((cell) => cell.jalali.day === day) ?? currentMonth[currentMonth.length - 1];
     if (target) {
@@ -73,7 +75,7 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
       onOpenChange={(open) => {
         if (!open) return;
         setCursor({ year: selected.year, month: selected.month });
-        setFocusedDate(value ?? toISODate(new Date()));
+        setFocusedDate(value ?? todayIso);
       }}
       trigger={
         <button
@@ -87,7 +89,7 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
         >
           <CalendarIcon size={18} className="shrink-0 text-fg-quaternary" />
           <span className="numeric flex-1 truncate font-medium text-fg-primary">
-            {value ? formatJalali(value, 'medium') : 'انتخاب تاریخ'}
+            {value ? formatJalali(fromISODate(value), 'medium') : 'انتخاب تاریخ'}
           </span>
         </button>
       }
@@ -139,7 +141,7 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
                   role="gridcell"
                   aria-selected={isSelected}
                   aria-current={cell.isToday ? 'date' : undefined}
-                  aria-label={formatJalali(cell.iso, 'long')}
+                  aria-label={formatJalali(fromISODate(cell.iso), 'long')}
                   data-date={cell.iso}
                   tabIndex={cell.iso === focusedDate ? 0 : -1}
                   onFocus={() => setFocusedDate(cell.iso)}
@@ -153,9 +155,9 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
                     const delta = deltas[event.key];
                     if (delta !== undefined) {
                       event.preventDefault();
-                      const date = parseISODate(cell.iso);
-                      date.setUTCDate(date.getUTCDate() + delta);
-                      const iso = date.toISOString().slice(0, 10);
+                      const date = fromISODate(cell.iso);
+                      date.setDate(date.getDate() + delta);
+                      const iso = toISODate(date);
                       onChange(iso);
                       const next = gregorianToJalali(date);
                       if (next.year !== cursor.year || next.month !== cursor.month) {
@@ -197,10 +199,8 @@ export function JalaliDatePicker({ value, onChange, label, disabled = false }: J
               variant="secondary"
               fullWidth
               onClick={() => {
-                const today = new Date();
-                const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                onChange(iso);
-                const jalali = gregorianToJalali(today);
+                onChange(todayIso);
+                const jalali = gregorianToJalali(fromISODate(todayIso));
                 setCursor({ year: jalali.year, month: jalali.month });
                 close();
               }}

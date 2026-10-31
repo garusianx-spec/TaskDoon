@@ -71,6 +71,7 @@ export function OverlayHost() {
         open={active?.kind === 'task-composer'}
         draft={active?.kind === 'task-composer' ? active.draft : null}
         columns={state.boardColumns}
+        timeZone={activeWorkspace.timeZone}
         {...(pathname.startsWith('/tasks') && state.projectFilterId ? { fixedProjectId: state.projectFilterId } : {})}
         onCreateProject={() => open({ kind: 'project-composer' })}
         onClose={close}

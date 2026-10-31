@@ -3,6 +3,8 @@
  * its user and session rooms from the handshake, and in one workspace's rooms at a time.
  */
 export const rooms = {
+  /** Announcements received by every authenticated socket, across workspace switches. */
+  platform: 'platform',
   /** Notifications, permission changes and workspace removal, from every workspace. */
   user: (userId: string) => `user:${userId}`,
   /** Forced disconnect when the session is signed out. */

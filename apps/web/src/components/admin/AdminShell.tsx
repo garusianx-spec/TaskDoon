@@ -6,10 +6,12 @@ import { Suspense, type ReactNode } from 'react';
 import { useAdmin, useAdminMe } from '@/admin/AdminSession';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui';
-import { BriefcaseIcon, LogoutIcon, MessagesIcon, PeopleIcon, ShieldIcon } from '@/components/icons';
+import { BriefcaseIcon, ChartIcon, LogoutIcon, MessagesIcon, NotificationIcon, PeopleIcon, ShieldIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 const SECTIONS = [
+  { href: '/admin/overview', label: 'نمای کلی پلتفرم', icon: ChartIcon },
+  { href: '/admin/broadcasts', label: 'اطلاعیه‌های سراسری', icon: NotificationIcon },
   { href: '/admin/users', label: 'کاربران و سشن‌ها', icon: PeopleIcon },
   { href: '/admin/conversations', label: 'رصد پیام‌ها و گروه‌ها', icon: MessagesIcon },
   { href: '/admin/workspaces', label: 'ورک‌اسپیس‌ها و نقش‌ها', icon: BriefcaseIcon },

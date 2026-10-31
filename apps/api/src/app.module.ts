@@ -9,6 +9,7 @@ import { AppConfig, ConfigModule } from './config/app-config.js';
 import type { Env } from './config/env.js';
 import { AuthController } from './modules/auth/auth.controller.js';
 import { JwtAuthGuard } from './modules/auth/guards.js';
+import { BroadcastsController } from './modules/broadcasts/broadcasts.controller.js';
 import { ChatController } from './modules/chat/chat.controller.js';
 import { SchedulingController } from './modules/chat/scheduling.controller.js';
 import { DomainModule } from './modules/domain.module.js';
@@ -73,7 +74,7 @@ class HttpApiModule {
           }),
         }),
       ],
-      controllers: [AuthController, MeController, InboxController, WorkspaceEntryController, WorkspaceController, WorkController, AgileController, ContentController, ChatController, SchedulingController],
+      controllers: [BroadcastsController, AuthController, MeController, InboxController, WorkspaceEntryController, WorkspaceController, WorkController, AgileController, ContentController, ChatController, SchedulingController],
       providers: pipeline,
     };
   }

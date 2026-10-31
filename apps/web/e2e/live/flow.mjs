@@ -85,6 +85,23 @@ const guestContext = await browser.newContext({ viewport, locale: 'fa-IR' });
 const guest = await guestContext.newPage();
 watchConsole(owner);
 watchConsole(guest);
+// Keep the failing route and API problem code beside Chromium's generic HTTP 400
+// console error. Observe responses without adding a second console/pageerror watcher
+// or logging request bodies (which can contain sign-in codes and credentials).
+for (const page of [owner, guest]) {
+  page.on('response', async (response) => {
+    if (response.status() !== 400) return;
+    const path = new URL(response.url()).pathname;
+    if (!path.startsWith('/api/v1/')) return;
+    try {
+      const problem = await response.json();
+      console.error(`HTTP 400 ${response.request().method()} ${path} code=${problem.code ?? 'unknown'}`);
+    } catch {
+      console.error(`HTTP 400 ${response.request().method()} ${path} (non-JSON response)`);
+    }
+  });
+}
+
 const railOf = (page) => page.getByRole('navigation', { name: 'ناوبری اصلی' });
 const quickCreate = async (page, item) => {
   await railOf(page).getByRole('button', { name: 'ایجاد سریع' }).click();

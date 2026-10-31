@@ -31,7 +31,9 @@
     "test:int": "npm run test:int -w @taskin/api",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d --wait postgres pgbouncer redis-core redis-rt s3 s3-init mailpit",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
-    "infra:app": "docker compose -f infra/docker-compose.yml --profile app up -d --build --wait"
+    "infra:app": "docker compose -f infra/docker-compose.yml --profile app up -d --build --wait",
+    "test:broadcasts": "npm run test:broadcasts -w @taskin/web",
+    "test:e2e:live:broadcasts": "npm run test:e2e:live:broadcasts -w @taskin/web"
   },
   "devDependencies": {
     "drizzle-orm": "0.45.3",

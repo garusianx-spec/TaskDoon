@@ -28,3 +28,5 @@ apps/web/e2e/out
 work/
 outputs/
 .local/
+
+TaskDoon-backup.git/

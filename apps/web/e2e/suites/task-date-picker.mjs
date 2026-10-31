@@ -1,7 +1,7 @@
 import { base, check, eventually, finish, launch, visible, watchConsole } from '../lib/harness.mjs';
 
 const browser = await launch();
-const page = await (await browser.newContext({ viewport: { width: 375, height: 900 } })).newPage();
+const page = await (await browser.newContext({ viewport: { width: 375, height: 900 }, timezoneId: process.env.E2E_TIME_ZONE ?? 'UTC' })).newPage();
 watchConsole(page);
 
 async function openComposer() {
@@ -73,8 +73,11 @@ try {
   const panel = composer.getByRole('dialog', { name: 'انتخاب مهلت انجام', exact: true });
   await page.setViewportSize({ width: 375, height: 900 });
   check(await eventually(() => contained(panel)), 'open calendar repositions after desktop-to-mobile resize');
+  const todayIso = await panel.locator('[aria-current="date"]').getAttribute('data-date');
   await panel.getByRole('button', { name: 'امروز', exact: true }).click();
   check(await eventually(async () => !(await panel.isVisible()) && await composer.isVisible()), 'selecting today applies a date and keeps task form open');
+  await composer.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true }).click();
+  check(await panel.locator(`[data-date="${todayIso}"]`).getAttribute('aria-selected') === 'true', 'Today selects the same civil date highlighted by the calendar');
 } catch (error) {
   check(false, `calendar flow stopped: ${error.message}`);
 } finally {

@@ -19,6 +19,11 @@ export function realtimeFor(row: OutboxRow): RealtimeItem[] {
   const payload = row.payload as unknown;
 
   switch (type) {
+    case 'system.broadcast': {
+      const data = payload as OutboxEventMap['system.broadcast'];
+      // A global invalidation must not disclose the operator or their request metadata.
+      return [{ emit: { type: 'system:broadcast', workspaceId: null, rooms: [rooms.platform], data, durable: false, actorId: null, requestId: null, occurredAt: meta.occurredAt } }];
+    }
     case 'session.revoked': {
       const data = payload as OutboxEventMap['session.revoked'];
       return [{ op: { op: 'revoke', sessionIds: data.sessionIds, reason: data.reason } }];

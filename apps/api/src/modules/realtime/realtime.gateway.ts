@@ -135,7 +135,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       socket.disconnect(true);
       return;
     }
-    await socket.join([rooms.user(socket.data.userId), rooms.session(socket.data.sessionId)]);
+    await socket.join([rooms.platform, rooms.user(socket.data.userId), rooms.session(socket.data.sessionId)]);
     this.scheduleExpiry(socket);
     await this.presence.connected(socket);
   }
