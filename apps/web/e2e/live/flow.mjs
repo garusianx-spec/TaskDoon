@@ -23,6 +23,8 @@
  */
 import { readFileSync, statSync } from 'node:fs';
 import { check, eventually, finish, launch, out, visible, watchConsole } from '../lib/harness.mjs';
+import { verifyProjectCreation } from './project-creation.mjs';
+import { verifyProfileNavNotes } from './profile-nav-notes.mjs';
 
 /** The API accepts its cookie routes (refresh, sign-out) only from its web origin: PUBLIC_WEB_ORIGIN or CORS_ORIGINS. */
 const base = process.env.BASE_URL ?? 'http://localhost:3000';
@@ -83,6 +85,23 @@ const guestContext = await browser.newContext({ viewport, locale: 'fa-IR' });
 const guest = await guestContext.newPage();
 watchConsole(owner);
 watchConsole(guest);
+// Keep the failing route and API problem code beside Chromium's generic HTTP 400
+// console error. Observe responses without adding a second console/pageerror watcher
+// or logging request bodies (which can contain sign-in codes and credentials).
+for (const page of [owner, guest]) {
+  page.on('response', async (response) => {
+    if (response.status() !== 400) return;
+    const path = new URL(response.url()).pathname;
+    if (!path.startsWith('/api/v1/')) return;
+    try {
+      const problem = await response.json();
+      console.error(`HTTP 400 ${response.request().method()} ${path} code=${problem.code ?? 'unknown'}`);
+    } catch {
+      console.error(`HTTP 400 ${response.request().method()} ${path} (non-JSON response)`);
+    }
+  });
+}
+
 const railOf = (page) => page.getByRole('navigation', { name: 'ناوبری اصلی' });
 const quickCreate = async (page, item) => {
   await railOf(page).getByRole('button', { name: 'ایجاد سریع' }).click();
@@ -149,15 +168,22 @@ try {
   check(await eventually(async () => (await dialog.getByRole('checkbox', { name: guestName }).count()) === 1, 10_000), 'the owner can assign the new member');
   await dialog.getByRole('checkbox', { name: guestName }).click();
   await dialog.getByRole('button', { name: 'ایجاد وظیفه' }).click();
+  // Phase 1 keeps the composer open until persistence finishes, then opens details.
+  // The optimistic board card can appear before that transition; an early Escape
+  // is ignored while saving and leaves the final modal covering the checkbox.
+  await dialog.waitFor({ state: 'hidden' });
+  const ownerTaskDetails = owner.getByRole('dialog', { name: 'جزئیات وظیفه', exact: true });
+  await ownerTaskDetails.waitFor();
+  check((await ownerTaskDetails.getByRole('textbox', { name: 'عنوان وظیفه', exact: true }).inputValue()) === taskTitle, 'successful task creation opens its editable details');
   const ownerCard = owner.getByRole('group', { name: new RegExp(taskTitle) });
   check(await visible(ownerCard), 'the task appears on the owner’s board');
-  // A new task opens in the (modal) task dialog; close it to get back to the board.
-  await owner.keyboard.press('Escape');
+  await ownerTaskDetails.getByRole('button', { name: 'بستن پنل جزئیات', exact: true }).click();
+  await ownerTaskDetails.waitFor({ state: 'hidden' });
 
   const guestCard = guest.getByRole('group', { name: new RegExp(taskTitle) });
   check(await visible(guestCard, 10_000), 'the task appears live on the guest’s board');
 
-  await owner.getByRole('checkbox', { name: `انجام شد: ${taskTitle}` }).click();
+  await ownerCard.getByRole('checkbox', { name: `انجام شد: ${taskTitle}`, exact: true }).click();
   const guestDone = guest.getByRole('region', { name: 'ستون انجام شد' });
   check(await eventually(async () => (await guestDone.getByRole('group', { name: new RegExp(taskTitle) }).count()) === 1, 10_000), 'completing it moves it to «انجام شد» live for the guest');
   await owner.reload();
@@ -361,7 +387,9 @@ try {
   check(await eventually(async () => JSON.stringify(await order(owner)) === JSON.stringify(['سوم', 'اول', 'دوم'])), 'the subtask moves to the top');
   await owner.getByTestId('task-file-input').setInputFiles({ name: 'پیوست وظیفه.pdf', mimeType: 'application/pdf', buffer: PDF });
   check(await visible(owner.getByText('پیوست وظیفه.pdf')), 'a file attaches to the task');
-  await owner.waitForTimeout(1_500);
+  // Save is disabled during upload and resolves only after pending task edits persist.
+  await ownerTaskDetails.getByRole('button', { name: 'ذخیره تغییرات', exact: true }).click();
+  await ownerTaskDetails.waitFor({ state: 'hidden' });
   await owner.reload();
   await helloFor(ownerThread).getByRole('button', { name: 'مشاهده وظیفه مرتبط' }).click({ timeout: 20_000 });
   check(await eventually(async () => JSON.stringify(await order(owner)) === JSON.stringify(['سوم', 'اول', 'دوم']), 10_000), 'the order is stored: the same after a reload');
@@ -544,10 +572,16 @@ try {
     'after a reload: the note with words, and no blank one',
   );
 
+  await verifyProfileNavNotes(owner, { runId });
+
   /* ------------------------------------------------ Phase 2: the plan's project limit */
 
   // The free plan allows five projects; the workspace has one.
   for (let index = 2; index <= 5; index += 1) {
+    if (index === 2) {
+      await verifyProjectCreation(owner, { projectName: `پروژه ${index}`, guestName, runId });
+      continue;
+    }
     await quickCreate(owner, 'پروژه جدید');
     dialog = owner.getByRole('dialog', { name: 'پروژه جدید' });
     await dialog.getByLabel('نام پروژه').fill(`پروژه ${index}`);
@@ -592,7 +626,15 @@ try {
   await owner.getByRole('button', { name: `حذف ${guestName} از فضای کاری` }).click();
   dialog = owner.getByRole('dialog', { name: `حذف ${guestName} از فضای کاری` });
   await dialog.getByLabel('رمز مدیر').fill('Taskin-2026!');
+  // The row disappears optimistically. Wait for the durable removal before reloading,
+  // otherwise navigation can interrupt the step-up → DELETE sequence.
+  const memberRemoved = owner.waitForResponse((response) =>
+    response.request().method() === 'DELETE'
+    && /^\/api\/v1\/workspaces\/[^/]+\/members\/[^/]+$/.test(new URL(response.url()).pathname)
+    && response.status() === 204,
+  );
   await dialog.getByRole('button', { name: 'حذف از فضای کاری' }).click();
+  await memberRemoved;
   check(await eventually(async () => (await owner.getByRole('listitem').filter({ hasText: guestName }).count()) === 0, 15_000), 'the owner removes the guest from the workspace (with the admin password)');
   await railOf(owner).getByRole('link', { name: 'گفتگوها' }).click();
   await owner.waitForURL('**/chats');

@@ -1,26 +1,25 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import {
   JALALI_WEEKDAYS,
   JALALI_WEEKDAYS_SHORT,
   buildMonthGrid,
   formatJalali,
-  fromISODate,
   gregorianToJalali,
-  toISODate,
+  fromISODate,
   shiftJalaliMonth,
+  toISODate,
   toPersianDigits,
 } from '@taskin/jalali';
 import { Button, Popover } from '@/components/ui';
 import { CalendarIcon, ChevronBackwardIcon, ChevronForwardIcon } from '@/components/icons';
 
 export interface JalaliDatePickerProps {
-  readonly value: string;
+  readonly value: string | null;
   readonly onChange: (iso: string) => void;
   readonly label: string;
-  /** The workspace's calendar zone; omitted, use the device's day. */
   readonly timeZone?: string;
   readonly disabled?: boolean;
 }
@@ -33,10 +32,12 @@ export interface JalaliDatePickerProps {
  * "هفته قبل" navigation in RTL means ArrowRight moves to the previous day.
  */
 export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = false }: JalaliDatePickerProps) {
-  const selected = useMemo(() => gregorianToJalali(fromISODate(value)), [value]);
-  const [cursor, setCursor] = useState({ year: selected.year, month: selected.month });
-
   const todayIso = toISODate(new Date(), timeZone);
+  const selected = useMemo(() => gregorianToJalali(fromISODate(value ?? todayIso)), [value, todayIso]);
+  const [cursor, setCursor] = useState({ year: selected.year, month: selected.month });
+  const [focusedDate, setFocusedDate] = useState(value ?? todayIso);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+
   const cells = useMemo(
     () => buildMonthGrid(cursor.year, cursor.month, fromISODate(todayIso)),
     [cursor.year, cursor.month, todayIso],
@@ -47,19 +48,39 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
     return first ? formatJalali(fromISODate(first.iso), 'month-year') : '';
   }, [cells]);
 
-  const step = (delta: number) => {
+  const focusDay = (iso: string) => {
+    setFocusedDate(iso);
+    requestAnimationFrame(() => gridRef.current?.querySelector<HTMLButtonElement>(`[data-date="${iso}"]`)?.focus());
+  };
+
+  const step = (delta: number, moveFocus = false) => {
     const next = shiftJalaliMonth(cursor.year, cursor.month, delta);
     setCursor({ year: next.year, month: next.month });
+    const day = gregorianToJalali(fromISODate(focusedDate)).day;
+    const currentMonth = buildMonthGrid(next.year, next.month).filter((cell) => cell.inCurrentMonth);
+    const target = currentMonth.find((cell) => cell.jalali.day === day) ?? currentMonth[currentMonth.length - 1];
+    if (target) {
+      if (moveFocus) focusDay(target.iso);
+      else setFocusedDate(target.iso);
+    }
   };
 
   return (
     <Popover
       label={label}
       align="start"
-      panelClassName="min-w-0 p-3"
+      className="w-full min-w-0"
+      panelClassName="w-[22rem] min-w-0 p-3"
+      constrainToViewport
+      onOpenChange={(open) => {
+        if (!open) return;
+        setCursor({ year: selected.year, month: selected.month });
+        setFocusedDate(value ?? todayIso);
+      }}
       trigger={
         <button
           type="button"
+          aria-label={label}
           disabled={disabled}
           className={cn(
             'flex h-10 w-full items-center gap-2 rounded-lg border border-primary bg-surface px-3 text-start text-body-sm shadow-xs transition-colors',
@@ -68,19 +89,19 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
         >
           <CalendarIcon size={18} className="shrink-0 text-fg-quaternary" />
           <span className="numeric flex-1 truncate font-medium text-fg-primary">
-            {formatJalali(fromISODate(value), 'medium')}
+            {value ? formatJalali(fromISODate(value), 'medium') : 'انتخاب تاریخ'}
           </span>
         </button>
       }
     >
       {(close) => (
-        <div className="w-72">
+        <div className="w-full min-w-0">
           <div className="mb-2 flex items-center justify-between gap-1">
             <button
               type="button"
               onClick={() => step(-1)}
               aria-label="ماه قبل"
-              className="flex size-8 items-center justify-center rounded-lg text-fg-tertiary transition-colors hover:bg-hover"
+              className="flex size-11 items-center justify-center rounded-lg text-fg-tertiary transition-colors hover:bg-hover"
             >
               <ChevronBackwardIcon size={18} />
             </button>
@@ -91,13 +112,13 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
               type="button"
               onClick={() => step(1)}
               aria-label="ماه بعد"
-              className="flex size-8 items-center justify-center rounded-lg text-fg-tertiary transition-colors hover:bg-hover"
+              className="flex size-11 items-center justify-center rounded-lg text-fg-tertiary transition-colors hover:bg-hover"
             >
               <ChevronForwardIcon size={18} />
             </button>
           </div>
 
-          <div role="grid" aria-label={label} className="grid grid-cols-7 gap-0.5">
+          <div ref={gridRef} role="grid" aria-label={label} className="grid grid-cols-7 gap-0.5">
             {JALALI_WEEKDAYS_SHORT.map((day, index) => (
               <div
                 key={day}
@@ -121,7 +142,9 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
                   aria-selected={isSelected}
                   aria-current={cell.isToday ? 'date' : undefined}
                   aria-label={formatJalali(fromISODate(cell.iso), 'long')}
-                  tabIndex={isSelected ? 0 : -1}
+                  data-date={cell.iso}
+                  tabIndex={cell.iso === focusedDate ? 0 : -1}
+                  onFocus={() => setFocusedDate(cell.iso)}
                   onKeyDown={(event) => {
                     const deltas: Readonly<Record<string, number>> = {
                       ArrowLeft: 1,
@@ -132,23 +155,23 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
                     const delta = deltas[event.key];
                     if (delta !== undefined) {
                       event.preventDefault();
-                      const index = cells.findIndex((entry) => entry.iso === cell.iso);
-                      const target = cells[index + delta];
-                      if (target) {
-                        onChange(target.iso);
-                        if (!target.inCurrentMonth) {
-                          const next = gregorianToJalali(fromISODate(target.iso));
-                          setCursor({ year: next.year, month: next.month });
-                        }
+                      const date = fromISODate(cell.iso);
+                      date.setDate(date.getDate() + delta);
+                      const iso = toISODate(date);
+                      onChange(iso);
+                      const next = gregorianToJalali(date);
+                      if (next.year !== cursor.year || next.month !== cursor.month) {
+                        setCursor({ year: next.year, month: next.month });
                       }
+                      focusDay(iso);
                       return;
                     }
                     if (event.key === 'PageDown') {
                       event.preventDefault();
-                      step(1);
+                      step(1, true);
                     } else if (event.key === 'PageUp') {
                       event.preventDefault();
-                      step(-1);
+                      step(-1, true);
                     }
                   }}
                   onClick={() => {
@@ -156,7 +179,7 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
                     close();
                   }}
                   className={cn(
-                    'numeric flex h-9 items-center justify-center rounded-lg text-body-sm font-medium transition-colors',
+                    'numeric flex h-11 min-w-0 items-center justify-center rounded-lg text-body-sm font-medium transition-colors',
                     !cell.inCurrentMonth && 'text-fg-disabled',
                     cell.inCurrentMonth && !isSelected && 'text-fg-primary hover:bg-hover',
                     isWeekend && cell.inCurrentMonth && !isSelected && 'text-status-blocked',
@@ -176,10 +199,8 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
               variant="secondary"
               fullWidth
               onClick={() => {
-                const iso = toISODate(new Date(), timeZone);
-                const today = fromISODate(iso);
-                onChange(iso);
-                const jalali = gregorianToJalali(today);
+                onChange(todayIso);
+                const jalali = gregorianToJalali(fromISODate(todayIso));
                 setCursor({ year: jalali.year, month: jalali.month });
                 close();
               }}

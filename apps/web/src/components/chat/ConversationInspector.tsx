@@ -56,7 +56,9 @@ export function ConversationInspector({
           <div className="mb-2 flex items-center gap-2">
             <h3 className="text-title-sm font-semibold text-fg-primary">اعضا</h3>
             <span className="numeric text-caption text-fg-tertiary">{formatCount(members.length)}</span>
-            {conversation.projectId ? (
+            {conversation.archived ? (
+              <span className="ms-auto text-micro text-fg-tertiary">بایگانی فقط خواندنی</span>
+            ) : conversation.projectId ? (
               // A project's channel: its members are the project's, added and removed there.
               <span className="ms-auto text-micro text-fg-tertiary">همان اعضای پروژه</span>
             ) : (

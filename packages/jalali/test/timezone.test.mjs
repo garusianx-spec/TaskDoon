@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fromISODate, gregorianToJalali, toISODate } from '../dist/index.js';
+import { fromISODate, gregorianToJalali, parseISODate, formatJalali, toISODate } from '../dist/index.js';
 
 test('workspace today follows Tehran at the UTC instant that failed live task creation', () => {
   const instant = new Date('2026-10-08T22:20:35.000Z');
@@ -32,4 +32,15 @@ test('picker civil dates and device-local callers preserve the chosen calendar d
   assert.equal(toISODate(selected), '2026-03-21');
   assert.equal(toISODate(selected, undefined), '2026-03-21');
   assert.deepEqual(gregorianToJalali(selected), { year: 1405, month: 1, day: 1 });
+});
+
+test('date-only parser and formatting preserve Nowruz west of UTC', () => {
+  assert.equal(toISODate(parseISODate('2026-03-21')), '2026-03-21');
+  assert.deepEqual(gregorianToJalali(parseISODate('2026-03-21')), { year: 1405, month: 1, day: 1 });
+  assert.equal(formatJalali('2026-03-21', 'long'), formatJalali(fromISODate('2026-03-21'), 'long'));
+});
+
+test('timestamp parsing still preserves the represented instant', () => {
+  assert.equal(parseISODate('2026-03-21T00:30:00+03:30').toISOString(), '2026-03-20T21:00:00.000Z');
+  assert.throws(() => parseISODate('invalid'), RangeError);
 });

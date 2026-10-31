@@ -107,7 +107,7 @@ export function ChatView({
   // Files picked or dropped, waiting in the preview until they are sent (or dropped again).
   const [queued, setQueued] = useState<readonly File[]>([]);
   const [dragging, setDragging] = useState(false);
-  const draggingFiles = (event: DragEvent<HTMLElement>) => onAttach !== undefined && event.dataTransfer.types.includes('Files');
+  const draggingFiles = (event: DragEvent<HTMLElement>) => !conversation.archived && onAttach !== undefined && event.dataTransfer.types.includes('Files');
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   /** What was on screen last render, to tell "opened a thread" from "a message arrived". */
@@ -332,6 +332,7 @@ export function ChatView({
                       )}
                     >
                       <MessageBubble
+                        readOnly={conversation.archived}
                         message={message}
                         author={author}
                         outgoing={message.authorId === currentUserId}
@@ -347,9 +348,9 @@ export function ChatView({
                         currentUserId={currentUserId}
                         onReply={setReplyToId}
                         onConvertToTask={(target) => onConvertToTask(buildDraft(target))}
-                        onToggleReaction={onToggleReaction}
+                        onToggleReaction={conversation.archived ? () => undefined : onToggleReaction}
                         onOpenLinkedTask={onOpenTask}
-                        onLongPress={setSheetMessage}
+                        onLongPress={conversation.archived ? () => undefined : setSheetMessage}
                         {...(onResend ? { onResend } : {})}
                         {...(onDiscard ? { onDiscard } : {})}
                       />
@@ -371,8 +372,8 @@ export function ChatView({
         </p>
       )}
 
-      {scheduled.length > 0 && <ScheduledMessagesBar count={scheduled.length} onOpen={() => setScheduledOpen(true)} />}
-      {onSendScheduledNow && onCancelScheduled && (
+      {!conversation.archived && scheduled.length > 0 && <ScheduledMessagesBar count={scheduled.length} onOpen={() => setScheduledOpen(true)} />}
+      {!conversation.archived && onSendScheduledNow && onCancelScheduled && (
         <ScheduledMessagesModal
           open={scheduledOpen && scheduled.length > 0}
           entries={scheduled}
@@ -382,7 +383,7 @@ export function ChatView({
         />
       )}
 
-      <ChatComposer
+      {conversation.archived ? <p role="status" className="border-t border-secondary p-4 text-body-sm text-fg-secondary">این گفتگو برای همیشه بایگانی شده و فقط خواندنی است.</p> : <ChatComposer
         conversationTitle={conversation.title}
         replyPreview={replyPreview}
         onCancelReply={() => setReplyToId(null)}
@@ -401,14 +402,14 @@ export function ChatView({
               },
             }
           : {})}
-      />
+      />}
 
-      {onAttach && (
+      {onAttach && !conversation.archived && (
         <AttachmentPreviewModal files={queued} onFilesChange={setQueued} onSend={onAttach} maxBytes={MAX_FILE_BYTES} />
       )}
 
       <MessageActionSheet
-        message={sheetMessage}
+        message={conversation.archived ? null : sheetMessage}
         onClose={() => setSheetMessage(null)}
         onReply={(id) => {
           setReplyToId(id);

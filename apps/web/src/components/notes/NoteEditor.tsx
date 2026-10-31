@@ -5,6 +5,7 @@ import type { Note, NoteCategory, NotePatch, Task } from '@taskin/contracts';
 import { TAG_TONES } from '@/data/reference';
 import { noteCategoryLabel } from '@/store/selectors';
 import { cn } from '@/lib/cn';
+import { noteSaveError } from '@/lib/note-form';
 import { formatFraction } from '@/lib/format';
 import { TAG_DOT } from '@/lib/tag-tone';
 import { checklistProgress, toggleChecklistLine } from '@taskin/text';
@@ -23,6 +24,7 @@ import {
   ArrowBackwardIcon,
   BoldIcon,
   ChecklistIcon,
+  CheckIcon,
   ConvertToTaskIcon,
   EditIcon,
   EyeIcon,
@@ -44,6 +46,7 @@ export interface NoteEditorProps {
   readonly categories: readonly NoteCategory[];
   readonly linkedTask: Task | undefined;
   readonly onPatch: (patch: NotePatch) => void;
+  readonly onSave: () => Promise<void>;
   readonly onDelete: () => void;
   readonly onConvertToTask: () => void;
   readonly onOpenTask: (taskId: string) => void;
@@ -56,17 +59,41 @@ type Mode = 'edit' | 'preview';
 /**
  * Note editor. "ویرایش" edits text as Markdown and checklists as real checkboxes (see
  * `NoteBlockEditor`); "پیش‌نمایش" renders headings and emphasis with the same live boxes.
- * Every keystroke is saved to workspace state, so there is no save button to forget.
+ * Autosave remains available; explicit Save awaits persistence before opening a fresh draft.
  */
-export function NoteEditor({ note, categories, linkedTask, onPatch, onDelete, onConvertToTask, onOpenTask, onBack }: NoteEditorProps) {
+export function NoteEditor({ note, categories, linkedTask, onPatch, onSave, onDelete, onConvertToTask, onOpenTask, onBack }: NoteEditorProps) {
   const [mode, setMode] = useState<Mode>(() => (note.body.trim() ? 'preview' : 'edit'));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string>();
+  const busy = useRef(false);
+  const titleRef = useRef<HTMLInputElement>(null);
   const blocksRef = useRef<NoteBlockEditorHandle | null>(null);
   const id = useNamespacedId('note-');
   const progress = checklistProgress(note.body);
   const isBlank = !note.title && !note.body;
+  const save = async () => {
+    if (busy.current) return;
+    if (!note.title.trim() && !note.body.trim()) {
+      titleRef.current?.focus();
+      setSaveError('برای ذخیره، عنوان یا متن یادداشت را بنویسید.');
+      return;
+    }
+    busy.current = true;
+    setSaving(true);
+    setSaveError(undefined);
+    try {
+      await onSave();
+    } catch (error) {
+      setSaveError(noteSaveError(error));
+    } finally {
+      busy.current = false;
+      setSaving(false);
+    }
+  };
 
   return (
-    <article aria-labelledby={`${id}-title-label`} className="flex h-full min-h-0 flex-col bg-surface">
+    <article aria-labelledby={`${id}-title-label`} aria-busy={saving} className="flex h-full min-h-0 flex-col bg-surface">
+      <fieldset disabled={saving} className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-secondary px-3 py-2.5 sm:px-4">
         <IconButton
           label="بازگشت به فهرست یادداشت‌ها"
@@ -79,6 +106,7 @@ export function NoteEditor({ note, categories, linkedTask, onPatch, onDelete, on
         <div className="w-40 shrink-0">
           <Select
             label="دسته"
+            hideLabel={false}
             size="sm"
             value={note.categoryId ?? NO_NOTEBOOK}
             onValueChange={(categoryId) => onPatch({ categoryId: categoryId === NO_NOTEBOOK ? null : categoryId })}
@@ -124,7 +152,7 @@ export function NoteEditor({ note, categories, linkedTask, onPatch, onDelete, on
           })}
         </div>
 
-        <div className="ms-auto flex items-center gap-1.5">
+        <div className="ms-auto flex max-w-full flex-wrap items-center justify-end gap-1.5">
           <Popover
             label="تایید حذف یادداشت"
             panelClassName="w-64 p-3"
@@ -164,11 +192,15 @@ export function NoteEditor({ note, categories, linkedTask, onPatch, onDelete, on
           ) : null}
           <Button
             size="sm"
+            variant="secondary"
             iconStart={<ConvertToTaskIcon size={16} />}
             aria-haspopup="dialog"
             onClick={onConvertToTask}
           >
             تبدیل یادداشت به وظیفه
+          </Button>
+          <Button size="sm" iconStart={<CheckIcon size={16} />} loading={saving} onClick={() => void save()}>
+            {saving ? 'در حال ذخیره…' : 'ذخیره یادداشت'}
           </Button>
         </div>
       </div>
@@ -179,9 +211,10 @@ export function NoteEditor({ note, categories, linkedTask, onPatch, onDelete, on
             عنوان یادداشت
           </label>
           <input
+            ref={titleRef}
             id={`${id}-title`}
             value={note.title}
-            onChange={(event) => onPatch({ title: event.target.value })}
+            onChange={(event) => { setSaveError(undefined); onPatch({ title: event.target.value }); }}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 event.preventDefault();
@@ -194,6 +227,7 @@ export function NoteEditor({ note, categories, linkedTask, onPatch, onDelete, on
             autoFocus={isBlank}
             className="w-full rounded-md bg-transparent text-heading font-bold text-fg-primary outline-none placeholder:text-fg-placeholder focus-visible:ring-0 focus-visible:ring-offset-0"
           />
+          {saveError && <p role="alert" className="text-body-sm text-status-blocked">{saveError}</p>}
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-caption text-fg-tertiary">
             <span>{noteCategoryLabel(categories, note.categoryId)}</span>
@@ -254,7 +288,7 @@ export function NoteEditor({ note, categories, linkedTask, onPatch, onDelete, on
           </div>
 
           {mode === 'edit' ? (
-            <NoteBlockEditor ref={blocksRef} initialBody={note.body} onChange={(body) => onPatch({ body })} />
+            <NoteBlockEditor ref={blocksRef} initialBody={note.body} onChange={(body) => { setSaveError(undefined); onPatch({ body }); }} />
           ) : note.body.trim() ? (
             <NoteMarkdown
               source={note.body}
@@ -271,6 +305,7 @@ export function NoteEditor({ note, categories, linkedTask, onPatch, onDelete, on
           )}
         </div>
       </div>
+      </fieldset>
     </article>
   );
 }

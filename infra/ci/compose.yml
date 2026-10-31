@@ -1,0 +1,44 @@
+# CI-only compatibility with the hardened daemon. Production uses docker-compose.prod.yml.
+# All host ports are loopback; credentials here belong only to ephemeral test databases.
+x-api-health: &api-health
+  test:
+    - CMD
+    - /usr/local/bin/node
+    - --input-type=module
+    - -e
+    - "try { const r = await fetch('http://127.0.0.1:4000/health/ready', { signal: AbortSignal.timeout(2500) }); process.exit(r.ok ? 0 : 1); } catch { process.exit(1); }"
+  interval: 5s
+  timeout: 3s
+  start_period: 20s
+  retries: 30
+
+services:
+  postgres:
+    image: postgres:18.6-alpine3.24@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    ports: !override ['127.0.0.1:5432:5432']
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'taskin']
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.24.1-p1@sha256:3db3d7223e93af52b4116f642951a1a5fa44702a88c2a59cf7562cac19320c9e
+    ports: !override ['127.0.0.1:6432:6432']
+  redis-core:
+    image: redis:7.4.11-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    ports: !override ['127.0.0.1:6379:6379']
+  redis-rt:
+    image: redis:7.4.11-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    ports: !override ['127.0.0.1:6380:6379']
+  s3:
+    image: chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+    ports: !override ['127.0.0.1:8333:8333']
+  s3-init:
+    image: chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+  mailpit:
+    image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
+    ports: !override ['127.0.0.1:1025:1025', '127.0.0.1:8025:8025']
+  api:
+    build:
+      target: runner
+    environment:
+      DATABASE_MIGRATOR_URL: !reset null
+    healthcheck: *api-health
+    ports: !override ['127.0.0.1:4000:4000']

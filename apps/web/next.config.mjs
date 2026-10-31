@@ -1,5 +1,6 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { containerBuildId } from './scripts/container-build-id.mjs';
 
 const monorepoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -13,6 +14,8 @@ const apiOrigin = process.env.TASKIN_API_ORIGIN ?? 'http://localhost:4000';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
+  generateBuildId: async () => containerBuildId(),
   // The dev-tools badge sits bottom-left, over the composer's send button in this RTL layout.
   devIndicators: false,
   eslint: { dirs: ['src'] },

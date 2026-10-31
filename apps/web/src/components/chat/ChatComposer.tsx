@@ -41,6 +41,7 @@ export function ChatComposer({ onSend, replyPreview, onCancelReply, conversation
   const [fileError, setFileError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const finishingRecording = useRef(false);
   const recorder = useVoiceRecorder();
   const recording = recorder.state.phase === 'recording' ? recorder.state : null;
 
@@ -54,9 +55,15 @@ export function ChatComposer({ onSend, replyPreview, onCancelReply, conversation
   };
 
   const finishRecording = async () => {
-    const recorded = await recorder.stop();
-    if (recorded && onVoice) onVoice(recorded);
-    else if (!recorded) setFileError('پیام صوتی باید دست‌کم یک ثانیه باشد.');
+    if (finishingRecording.current) return;
+    finishingRecording.current = true;
+    try {
+      const recorded = await recorder.stop();
+      if (recorded && onVoice) onVoice(recorded);
+      else if (!recorded) setFileError('پیام صوتی باید دست‌کم یک ثانیه باشد.');
+    } finally {
+      finishingRecording.current = false;
+    }
   };
 
   const resize = (element: HTMLTextAreaElement) => {

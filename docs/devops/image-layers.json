@@ -1,0 +1,124 @@
+{
+  "baseCommit": "7f9c984",
+  "branch": "feat/devops-phase1-containerization",
+  "platform": "linux/amd64",
+  "engine": "29.8.1",
+  "images": [
+    {
+      "service": "api",
+      "tag": "taskdoon-api:phase1",
+      "localImageId": "sha256:a142cf4347cde786c02bc399a39ad2690bf0cce8a5260b1cd2b650f542e70b99",
+      "architecture": "amd64",
+      "os": "linux",
+      "user": "node",
+      "unpackedLayerBytes": 234405888,
+      "dockerInspectStorageBytes": 292912155,
+      "layers": [
+        {
+          "instruction": "COPY /runtime-root /",
+          "bytes": 117710848
+        },
+        {
+          "instruction": "WORKDIR /repo/apps/api",
+          "bytes": 16384
+        },
+        {
+          "instruction": "COPY --chown=node:node /repo/node_modules /repo/node_modules",
+          "bytes": 114475008
+        },
+        {
+          "instruction": "COPY --chown=node:node /repo/apps/api/node_modules ./node_modules",
+          "bytes": 417792
+        },
+        {
+          "instruction": "COPY --chown=node:node /runtime/packages /repo/packages",
+          "bytes": 147456
+        },
+        {
+          "instruction": "COPY --chown=node:node /runtime/apps/api ./",
+          "bytes": 1638400
+        }
+      ]
+    },
+    {
+      "service": "web",
+      "tag": "taskdoon-web:phase1",
+      "localImageId": "sha256:88b579bf7a703afe82a2709c90de50b3a63f739a344a26ac22281803a91fe806",
+      "architecture": "amd64",
+      "os": "linux",
+      "user": "node",
+      "unpackedLayerBytes": 174915584,
+      "dockerInspectStorageBytes": 234875122,
+      "layers": [
+        {
+          "instruction": "COPY /runtime-root/ /",
+          "bytes": 117706752
+        },
+        {
+          "instruction": "WORKDIR /app",
+          "bytes": 4096
+        },
+        {
+          "instruction": "COPY --chown=node:node /app/apps/web/.next/standalone ./",
+          "bytes": 55169024
+        },
+        {
+          "instruction": "COPY --chown=node:node /app/apps/web/public ./apps/web/public",
+          "bytes": 77824
+        },
+        {
+          "instruction": "COPY --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static",
+          "bytes": 1957888
+        }
+      ]
+    },
+    {
+      "service": "migrator",
+      "tag": "taskdoon-migrator:phase1",
+      "localImageId": "sha256:c99b732654d538b56f57f59e8a1b5814f9446857f21d0c0fe93b10f60d8984f5",
+      "architecture": "amd64",
+      "os": "linux",
+      "user": "node",
+      "unpackedLayerBytes": 124186624,
+      "dockerInspectStorageBytes": 169492621,
+      "layers": [
+        {
+          "instruction": "COPY /runtime-root /",
+          "bytes": 117710848
+        },
+        {
+          "instruction": "WORKDIR /repo/apps/api",
+          "bytes": 16384
+        },
+        {
+          "instruction": "COPY --chown=node:node /migration-runtime/node_modules /repo/node_modules",
+          "bytes": 6115328
+        },
+        {
+          "instruction": "COPY --chown=node:node /migration-runtime/apps/api/node_modules ./node_modules",
+          "bytes": 20480
+        },
+        {
+          "instruction": "COPY --chown=node:node /runtime/apps/api/package.json ./package.json",
+          "bytes": 20480
+        },
+        {
+          "instruction": "COPY --chown=node:node /repo/apps/api/dist/cli/migrate.js ./dist/cli/migrate.js",
+          "bytes": 28672
+        },
+        {
+          "instruction": "COPY --chown=node:node /repo/apps/api/dist/platform/db/migrate.js ./dist/platform/db/migrate.js",
+          "bytes": 32768
+        },
+        {
+          "instruction": "COPY --chown=node:node apps/api/db/migrations/*.sql ./db/migrations/",
+          "bytes": 208896
+        },
+        {
+          "instruction": "COPY --chown=node:node apps/api/db/migrations/meta/_journal.json ./db/migrations/meta/_journal.json",
+          "bytes": 32768
+        }
+      ]
+    }
+  ]
+}

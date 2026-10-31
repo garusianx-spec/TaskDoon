@@ -240,6 +240,7 @@ export interface ConvertMessageBody {
   readonly columnId?: string | null;
   readonly priority?: TaskPriority;
   readonly assigneeIds?: readonly string[];
+  readonly startDate?: string;
   readonly dueDate?: string | null;
   readonly subtasks?: readonly string[];
   /** Must be the message's attachment; nothing else can be linked through this route. */

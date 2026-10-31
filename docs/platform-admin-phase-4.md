@@ -31,6 +31,10 @@ Info/warning dismissals persist in localStorage; critical dismissals use session
 
 ## Verification
 
-Run npm run typecheck, npm run lint, npm test, npm run test:broadcasts, and npm run test:int. Regenerate OpenAPI with npm run openapi -w @taskin/api; regenerate the catalog snapshot with npm run db:snapshot -w @taskin/api against an isolated database migrated with all 23 migrations. The byte-compared generated artifacts use LF on Windows and Unix.
+Run npm run typecheck, npm run lint, npm test, npm run test:broadcasts, and npm run test:int. Regenerate OpenAPI with npm run openapi -w @taskin/api; regenerate the catalog snapshot with npm run db:snapshot -w @taskin/api against an isolated database migrated with all 26 migrations. The byte-compared generated artifacts use LF on Windows and Unix.
+
+The broadcast migrations are `0024_system_broadcasts` and `0025_system_broadcasts_security`, appended after main’s project department and channel migrations. Existing databases on main can upgrade without replaying or replacing those migrations.
+
+Task calendar defaults and Today use the workspace timezone. Date-only values retain their civil day west of UTC; timestamp values retain their represented instant. Run `TZ=America/Los_Angeles npm test -w @taskin/jalali` and `E2E_TIME_ZONE=America/Los_Angeles TZ=America/Los_Angeles npm run test:e2e -- task-date-picker task-forms phase32` against a demo build to cover the timezone regression.
 
 The new integration specs exercise authorization, time boundaries, audit/outbox rollback, cache races, database grants, global delivery, cross-workspace aggregation, dependency failures and real queue behavior. The live browser suite is npm run test:e2e:live:broadcasts and uses the same console-SMS log and platform-admin CLI setup as the other live admin suites. It archives its announcement fixtures when finished.

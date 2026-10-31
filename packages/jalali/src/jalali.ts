@@ -171,7 +171,9 @@ export function toPersianDigits(input: string | number): string {
 }
 
 export function parseISODate(iso: string): Date {
-  const parsed = new Date(iso);
+  // Calendar dates have no offset. Keep their civil day in every device zone;
+  // timestamps retain their explicit instant and offset semantics.
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? fromISODate(iso) : new Date(iso);
   if (Number.isNaN(parsed.getTime())) {
     throw new RangeError(`Invalid ISO date: ${iso}`);
   }
