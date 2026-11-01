@@ -24,7 +24,8 @@
     "pretest": "npm run build:deps",
     "test": "vitest run --config vitest.config.mts",
     "test:broadcasts": "node --test e2e/unit/broadcasts.test.mjs",
-    "test:e2e:live:broadcasts": "node e2e/live/broadcasts.mjs"
+    "test:e2e:live:broadcasts": "node e2e/live/broadcasts.mjs",
+    "test:e2e:live:admin-auth": "node e2e/live/admin-conditional-auth.mjs"
   },
   "dependencies": {
     "@taskin/contracts": "0.1.0",

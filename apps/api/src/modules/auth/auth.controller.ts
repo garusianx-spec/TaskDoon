@@ -7,6 +7,11 @@ import { ApiError } from '../../platform/http/api-error.js';
 import { Public } from '../../platform/http/public.js';
 import type { AuthPrincipal } from '../../platform/http/request.js';
 import {
+  AdminPasswordDto,
+  AdminRecoveryRequestDto,
+  AdminRecoveryCompleteDto,
+  EmailVerificationConfirmDto,
+  EmailVerificationRequestDto,
   AuthSessionDto,
   OtpChallengeDto,
   OtpConfirmDto,
@@ -60,6 +65,7 @@ export class AuthController {
     schema: {
       oneOf: [
         { type: 'object', properties: { status: { type: 'string', enum: ['signed_in'] }, session: { $ref: getSchemaPath(AuthSessionDto) } } },
+        { type: 'object', properties: { status: { type: 'string', enum: ['password_required'] }, temporaryToken: { type: 'string' }, expiresInSeconds: { type: 'integer' } } },
         { type: 'object', properties: { status: { type: 'string', enum: ['signup_required'] }, signupToken: { type: 'string' }, expiresInSeconds: { type: 'integer' } } },
       ],
     },
@@ -68,6 +74,49 @@ export class AuthController {
     const { result, refresh } = await this.auth.verifyOtp(body.challengeId, body.code, device(request, body.deviceLabel));
     if (refresh) setAuthCookies(response, this.config, refresh.token, refresh.expiresAt);
     return result;
+  }
+
+  @Public()
+  @Post('admin/password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Complete the admin password challenge after a successful phone OTP' })
+  @ApiOkResponse({ type: AuthSessionDto })
+  async adminPassword(@Body() body: AdminPasswordDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthSession> {
+    const issued = await this.auth.adminPassword(body.temporaryToken, body.password, device(request, body.deviceLabel));
+    setAuthCookies(response, this.config, issued.refresh.token, issued.refresh.expiresAt);
+    return issued.body;
+  }
+
+  @Public()
+  @Post('admin/recovery/request')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Send recovery proof to the previously verified email, when configured' })
+  requestAdminRecovery(@Body() body: AdminRecoveryRequestDto): Promise<void> {
+    return this.auth.requestAdminRecovery(body.temporaryToken);
+  }
+
+  @Public()
+  @Post('admin/recovery/complete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Reset the admin password with OTP proof and a verified email recovery code; end all sessions' })
+  completeAdminRecovery(@Body() body: AdminRecoveryCompleteDto): Promise<void> {
+    return this.auth.completeAdminRecovery(body.temporaryToken, body.code, body.newPassword);
+  }
+
+  @Authenticated()
+  @Post('email/verification/request')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Send a verification code to the current profile email' })
+  requestEmailVerification(@CurrentAuth() principal: AuthPrincipal, @Body() _body: EmailVerificationRequestDto): Promise<void> {
+    return this.auth.requestEmailVerification(principal);
+  }
+
+  @Authenticated()
+  @Post('email/verification/confirm')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Verify the current profile email with its single-use code' })
+  confirmEmailVerification(@CurrentAuth() principal: AuthPrincipal, @Body() body: EmailVerificationConfirmDto): Promise<void> {
+    return this.auth.confirmEmailVerification(principal, body.code);
   }
 
   @Public()

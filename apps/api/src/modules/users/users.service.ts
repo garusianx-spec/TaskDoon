@@ -4,7 +4,7 @@ import type { MeResponse, MeUser, MeWorkspace, RoleId, UpdateMeBody } from '@tas
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import type { Tx } from '../../platform/db/database.js';
 import { isUniqueViolation } from '../../platform/db/pg-errors.js';
-import { roles, users, workspaceMembers, workspaces } from '../../platform/db/schema/all.js';
+import { authChallenges, roles, users, workspaceMembers, workspaces } from '../../platform/db/schema/all.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import { StorageService } from '../../platform/storage/storage.js';
@@ -88,9 +88,12 @@ export class UsersService {
 
   async update(userId: string, patch: UpdateMeBody): Promise<MeUser> {
     return this.uow.run({ workspaceId: null, userId }, async ({ tx }) => {
-      const before = await this.findById(tx, userId);
+      const [before] = await tx.select().from(users).where(and(eq(users.id, userId), isNull(users.deletedAt))).for('update');
       if (!before) throw new ApiError('UNAUTHENTICATED');
       try {
+        if (patch.email !== undefined && (patch.email?.trim().toLowerCase() ?? null) !== (before.email?.toLowerCase() ?? null)) {
+          await tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(and(eq(authChallenges.userId, userId), isNull(authChallenges.consumedAt), sql`${authChallenges.purpose} in ('email_verify', 'admin_recovery')`));
+        }
         const [after] = await tx
           .update(users)
           .set({

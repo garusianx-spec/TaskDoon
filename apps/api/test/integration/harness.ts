@@ -254,6 +254,11 @@ export async function signIn(t: TestApp, phone = randomPhone(), fullName = 'کا
   let setCookie = verify.headers['set-cookie'];
   if (result.status === 'signed_in') {
     session = result.session;
+  } else if (result.status === 'password_required') {
+    const completed = await client.post('/api/v1/auth/admin/password').send({ temporaryToken: result.temporaryToken, password: STRONG_PASSWORD });
+    if (completed.status !== 200) throw new Error(`admin/password ${completed.status}: ${JSON.stringify(completed.body)}`);
+    session = completed.body as AuthSession;
+    setCookie = completed.headers['set-cookie'];
   } else {
     const signup = await client.post('/api/v1/auth/signup').send({ signupToken: result.signupToken, fullName });
     if (signup.status !== 201) throw new Error(`signup ${signup.status}: ${JSON.stringify(signup.body)}`);

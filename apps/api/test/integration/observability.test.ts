@@ -16,6 +16,7 @@ import {
   randomIp,
   randomPhone,
   refreshCookies,
+  requestOtp,
   type Session,
   signIn,
   sqlCount,
@@ -308,6 +309,31 @@ describe('M1 checklist: audit trail and correlation', () => {
       r.set(bearer(operator)).send({ message: 'اطلاعیه اصلاح‌شده' }),
     );
     await traced('delete', '/api/v1/admin/broadcasts/{broadcastId}', `/api/v1/admin/broadcasts/${broadcast.id}`, (r) => r.set(bearer(operator)));
+
+    // Conditional platform admin sign-in and recovery through an address whose ownership was proved.
+    // Keep this after platform operations: recovery revokes every operator session.
+    await traced('patch', '/api/v1/me', '/api/v1/me', (r) => r.set(bearer(operator)).send({ email: 'operator@rahnama.ir' }));
+    await traced('post', '/api/v1/auth/email/verification/request', '/api/v1/auth/email/verification/request', (r) => r.set(bearer(operator)).send({}));
+    const emailProof = t.mail.at(-1)?.text.match(/[A-Za-z0-9_-]{43}/)?.[0];
+    expect(emailProof).toBeTruthy();
+    await traced('post', '/api/v1/auth/email/verification/confirm', '/api/v1/auth/email/verification/confirm', (r) => r.set(bearer(operator)).send({ code: emailProof }));
+    const adminProof = async () => {
+      const otp = await requestOtp(t, operator.phone);
+      const verified = await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: otp.challengeId, code: lastCode(t, operator.phone) });
+      expect(verified.status).toBe(200);
+      const result = verified.body as OtpVerifyResult;
+      if (result.status !== 'password_required') throw new Error('expected an admin password challenge');
+      return result.temporaryToken;
+    };
+    const passwordProof = await adminProof();
+    await traced('post', '/api/v1/auth/admin/password', '/api/v1/auth/admin/password', (r) => r.send({ temporaryToken: passwordProof, password: STRONG_PASSWORD }));
+    const recoveryProof = await adminProof();
+    await traced('post', '/api/v1/auth/admin/recovery/request', '/api/v1/auth/admin/recovery/request', (r) => r.send({ temporaryToken: recoveryProof }));
+    const recoveryCode = t.mail.at(-1)?.text.match(/[A-Za-z0-9_-]{43}/)?.[0];
+    expect(recoveryCode).toBeTruthy();
+    await traced('post', '/api/v1/auth/admin/recovery/complete', '/api/v1/auth/admin/recovery/complete', (r) =>
+      r.send({ temporaryToken: recoveryProof, code: recoveryCode, newPassword: 'Recovered-Operator-1405!' }),
+    );
 
     // Phone and password: sign-in, confirming that session with an SMS code, and recovery.
     const keyholder = await withAdminPassword(t, await signIn(t, randomPhone(), 'دارنده رمز'));

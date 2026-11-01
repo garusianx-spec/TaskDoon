@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { AuthSession, OtpChallenge, OtpVerifyResult, PlatformAuditPage, PlatformModerationResult, PlatformUserDetail, PlatformUserPage } from '@taskin/contracts';
+import type { OtpChallenge, OtpVerifyResult, PlatformAuditPage, PlatformModerationResult, PlatformUserDetail, PlatformUserPage } from '@taskin/contracts';
 import {
   bearer,
   createTestApp,
@@ -17,6 +17,7 @@ import {
   type TestApp,
   withAdminPassword,
 } from './harness.js';
+import { legacyPasswordSession } from './legacy-password-session.js';
 import { connect, type Connected } from './socket-helpers.js';
 import { expectStatus, outboxEvents } from './work-helpers.js';
 
@@ -138,10 +139,11 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
       expect((await t.admin.query("select count(*)::int as n from platform_audit_logs where action like 'admin.user.%' and target_user_id = $1", [target.userId])).rows[0]).toEqual({ n: 0 });
     });
 
-    it('holds a password session until it is confirmed with an SMS code', async () => {
+    it('refuses new password-only admin sign-in and holds legacy sessions until SMS confirmation', async () => {
       const login = await passwordLogin(operator.phone);
-      expectStatus(login, 200);
-      const passwordOnly = await stepUp(t, { ...operator, accessToken: (login.body as AuthSession).accessToken, sessionId: (login.body as AuthSession).sessionId });
+      expectStatus(login, 401);
+      expect(login.body).toMatchObject({ code: 'CREDENTIALS_INVALID' });
+      const passwordOnly = await stepUp(t, await legacyPasswordSession(t, operator));
       const target = await signIn(t, randomPhone(), 'هدف پیامکی');
       for (const act of actions(target.userId)) {
         const refused = await act(passwordOnly);

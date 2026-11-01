@@ -43,6 +43,7 @@ import {
   type TestApp,
   withAdminPassword,
 } from './harness.js';
+import { legacyPasswordSession } from './legacy-password-session.js';
 import { createConversation, sendRest } from './chat-helpers.js';
 import { createProject, expectStatus, outboxEvents, putProjectMember, usePlan, wsPath } from './work-helpers.js';
 
@@ -237,10 +238,12 @@ describe('Platform super admin (phase 1)', () => {
       }
     });
 
-    it('holds a session opened with a password until it is confirmed with an SMS code', async () => {
+    it('refuses new password-only admin sign-in and holds legacy sessions until SMS confirmation', async () => {
       const login = await t.http().post('/api/v1/auth/password/login').send({ phone: localForm(operator.phone), password: STRONG_PASSWORD });
-      expectStatus(login, 200);
-      const passwordOnly: Session = { ...operator, accessToken: (login.body as AuthSession).accessToken, sessionId: (login.body as AuthSession).sessionId };
+      expectStatus(login, 401);
+      expect(login.body).toMatchObject({ code: 'CREDENTIALS_INVALID' });
+      expect(login.headers['set-cookie']).toBeUndefined();
+      const passwordOnly = await legacyPasswordSession(t, operator);
       const probe = await admin(passwordOnly).get('/me');
       expectStatus(probe, 200);
       expect(probe.body).toMatchObject({ smsConfirmationRequired: true, stepUpRequired: true });

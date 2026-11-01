@@ -149,3 +149,24 @@ export const passwordResetTokens = pgTable(
     check('password_reset_tokens_channel', sql`${t.channel} in ('sms', 'email', 'manual')`),
   ],
 );
+
+/** Restricted, single-use authentication proofs. Only SHA-256 hashes are persisted. */
+export const authChallenges = pgTable(
+  'auth_challenges',
+  {
+    id: uuidPk(),
+    userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+    purpose: text().notNull(),
+    tokenHash: bytea().notNull().unique('auth_challenges_token_hash_uq'),
+    securityVersion: integer().notNull(),
+    email: citext(),
+    parentHash: bytea(),
+    expiresAt: instant().notNull(),
+    consumedAt: instant(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('auth_challenges_user_idx').on(t.userId),
+    check('auth_challenges_purpose', sql`${t.purpose} in ('admin_login', 'admin_recovery', 'email_verify')`),
+  ],
+);

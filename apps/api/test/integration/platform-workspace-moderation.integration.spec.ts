@@ -1,7 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type {
-  AuthSession,
   MeResponse,
   PlanLimits,
   PlatformAuditPage,
@@ -29,6 +28,7 @@ import {
   type TestApp,
   withAdminPassword,
 } from './harness.js';
+import { legacyPasswordSession } from './legacy-password-session.js';
 import { createConversation, history, sendRest } from './chat-helpers.js';
 import { call, connect, type Connected, next } from './socket-helpers.js';
 import { createProject, expectStatus, outboxEvents, wsPath } from './work-helpers.js';
@@ -139,8 +139,9 @@ describe('Platform super admin (phase 3): workspace moderation, ownership and li
       expectStatus(await t.http().post(`/api/v1/admin/workspaces/${workspace.id}/suspend`).send({ reason: 'بدون ورود' }), 401);
 
       const login = await t.http().set('X-Forwarded-For', randomIp()).post('/api/v1/auth/password/login').send({ phone: localForm(operator.phone), password: STRONG_PASSWORD });
-      expectStatus(login, 200);
-      const passwordOnly = await stepUp(t, { ...operator, accessToken: (login.body as AuthSession).accessToken, sessionId: (login.body as AuthSession).sessionId });
+      expectStatus(login, 401);
+      expect(login.body).toMatchObject({ code: 'CREDENTIALS_INVALID' });
+      const passwordOnly = await stepUp(t, await legacyPasswordSession(t, operator));
       for (const act of actions(workspace.id, member.userId)) expect((await act(passwordOnly)).body).toMatchObject({ code: 'SMS_CONFIRMATION_REQUIRED' });
 
       const state = (await t.admin.query('select suspended_at, owner_user_id, limit_overrides from workspaces where id = $1', [workspace.id])).rows[0];

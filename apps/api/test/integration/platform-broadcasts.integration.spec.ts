@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ActiveBroadcasts, AuthSession, SystemBroadcastPage, SystemBroadcastView } from '@taskin/contracts';
+import type { ActiveBroadcasts, SystemBroadcastPage, SystemBroadcastView } from '@taskin/contracts';
 import { BroadcastsService } from '../../src/modules/broadcasts/broadcasts.service.js';
 import { PlatformAuditWriter } from '../../src/modules/platform-admin/platform-audit.writer.js';
 import { Clock } from '../../src/platform/clock/clock.js';
 import { RedisClients } from '../../src/platform/redis/redis.js';
 import { bearer, createTestApp, idempotencyKey, localForm, ownerWithWorkspace, randomPhone, type Session, signIn, stepUp, STRONG_PASSWORD, type TestApp, withAdminPassword } from './harness.js';
+import { legacyPasswordSession } from './legacy-password-session.js';
 import { connect, next } from './socket-helpers.js';
 import { expectStatus, outboxEvents } from './work-helpers.js';
 
@@ -85,10 +86,11 @@ describe('Platform super admin, phase 4: global broadcasts', () => {
     }
   });
 
-  it('requires SMS confirmation even after a password session has stepped up', async () => {
+  it('requires SMS confirmation even after a legacy password session has stepped up', async () => {
     const login = await t.http().post('/api/v1/auth/password/login').send({ phone: localForm(operator.phone), password: STRONG_PASSWORD });
-    expectStatus(login, 200);
-    const passwordSession = { ...operator, accessToken: (login.body as AuthSession).accessToken };
+    expectStatus(login, 401);
+    expect(login.body).toMatchObject({ code: 'CREDENTIALS_INVALID' });
+    const passwordSession = await legacyPasswordSession(t, operator);
     const stepped = await stepUp(t, passwordSession);
     const response = await t.http().get('/api/v1/admin/broadcasts').set(bearer(stepped));
     expectStatus(response, 401);

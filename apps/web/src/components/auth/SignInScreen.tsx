@@ -14,6 +14,8 @@ type Step =
   | { readonly kind: 'phone' }
   | { readonly kind: 'code'; readonly phone: string; readonly challengeId: string; readonly codeLength: number; readonly resendAt: number }
   | { readonly kind: 'name'; readonly signupToken: string }
+  | { readonly kind: 'admin-password'; readonly temporaryToken: string; readonly expiresAt: number }
+  | { readonly kind: 'admin-recovery'; readonly temporaryToken: string; readonly expiresAt: number }
   | { readonly kind: 'password' }
   | { readonly kind: 'forgot' }
   | { readonly kind: 'reset'; readonly phone: string; readonly challengeId: string; readonly codeLength: number; readonly resendAt: number };
@@ -26,7 +28,7 @@ const MIN_PASSWORD = 8;
  * instead; a forgotten password is replaced with a code texted to the phone. Codes are typed in
  * any digit script.
  */
-export function SignInScreen({ store }: { readonly store: LiveStore }) {
+export function SignInScreen({ store, adminPanel = false }: { readonly store: Pick<LiveStore, 'signedIn' | 'invited'>; readonly adminPanel?: boolean }) {
   const [step, setStep] = useState<Step>({ kind: 'phone' });
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -34,6 +36,7 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   /** Signed out because the account was suspended: said once, above the first step. */
   const [suspended] = useState(() => session.endReason() === 'suspended');
@@ -45,14 +48,25 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
   }, [step.kind]);
 
   useEffect(() => {
-    if (step.kind !== 'code' && step.kind !== 'reset') return;
+    if (step.kind !== 'code' && step.kind !== 'reset' && step.kind !== 'admin-password' && step.kind !== 'admin-recovery') return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [step.kind]);
 
+  useEffect(() => {
+    if ((step.kind === 'admin-password' || step.kind === 'admin-recovery') && now >= step.expiresAt) {
+      setStep({ kind: 'phone' });
+      setPassword('');
+      setRepeat('');
+      setCode('');
+      setError('مهلت تأیید ورود تمام شد؛ کد پیامکی تازه‌ای بگیرید.');
+    }
+  }, [now, step]);
+
   /** Another way in (or back): the typed number stays, the rest starts over. */
   const goTo = (next: Step) => {
     setError(null);
+    setNotice(null);
     setCode('');
     setPassword('');
     setRepeat('');
@@ -93,8 +107,45 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
     if (step.kind !== 'code') return;
     void attempt(async () => {
       const result = await session.verifyCode(step.challengeId, toLatinDigits(code).trim());
-      if ('signupToken' in result) setStep({ kind: 'name', signupToken: result.signupToken });
-      else await store.signedIn();
+      if ('signupToken' in result) {
+        if (adminPanel) {
+          goTo({ kind: 'phone' });
+          setError('این شماره در تسک‌دون حساب ندارد.');
+        } else setStep({ kind: 'name', signupToken: result.signupToken });
+      } else if ('temporaryToken' in result) {
+        setCode('');
+        setPassword('');
+        setNow(Date.now());
+        setStep({ kind: 'admin-password', temporaryToken: result.temporaryToken, expiresAt: Date.now() + result.expiresInSeconds * 1000 });
+      } else await store.signedIn();
+    });
+  };
+
+  const onAdminPassword = (event: FormEvent) => {
+    event.preventDefault();
+    if (step.kind !== 'admin-password' || busy || !password) return;
+    void attempt(async () => {
+      await session.completeAdminPassword(step.temporaryToken, password);
+      goTo({ kind: 'phone' });
+      await store.signedIn();
+    });
+  };
+
+  const onAdminRecovery = (event: FormEvent) => {
+    event.preventDefault();
+    if (step.kind !== 'admin-recovery' || busy) return;
+    if (!code.trim()) {
+      setError('کد بازیابی ایمیل‌شده را وارد کنید.');
+      return;
+    }
+    if (password.length < MIN_PASSWORD || password !== repeat) {
+      setError(password !== repeat ? 'تکرار رمز عبور با خود آن یکی نیست.' : 'رمز تازه دست‌کم ۸ نویسه، با حروف و عدد یا نماد باشد.');
+      return;
+    }
+    void attempt(async () => {
+      await session.completeAdminRecovery(step.temporaryToken, code.trim(), password);
+      goTo({ kind: 'phone' });
+      setNotice('رمز تازه ذخیره شد. برای ورود، کد پیامکی تازه‌ای بگیرید.');
     });
   };
 
@@ -175,6 +226,34 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
       <span>{codeMessage('ACCOUNT_SUSPENDED')}</span>
     </p>
   );
+
+  if (step.kind === 'admin-password' || step.kind === 'admin-recovery') {
+    const recovering = step.kind === 'admin-recovery';
+    return (
+      <AuthCard labelledBy="sign-in-title" title={recovering ? 'بازیابی رمز مدیر' : 'تأیید رمز مدیر'} description={recovering ? 'اگر ایمیل تأییدشده‌ای برای حساب ثبت باشد، کد بازیابی به آن ارسال می‌شود. کد را از ایمیل کپی کنید.' : 'شماره موبایل تأیید شد. برای تکمیل ورود، رمز مدیر را وارد کنید.'}>
+        <form className="flex flex-col gap-4" onSubmit={recovering ? onAdminRecovery : onAdminPassword} noValidate>
+          {recovering && (
+            <Input ref={fieldRef} label="کد بازیابی ایمیل" name="recovery-code" autoComplete="one-time-code" dir="ltr" value={code} onChange={(event) => setCode(event.target.value)} iconStart={<KeyIcon size={18} />} />
+          )}
+          <Input ref={recovering ? undefined : fieldRef} label={recovering ? 'رمز عبور تازه' : 'رمز مدیر'} name={recovering ? 'new-password' : 'admin-password'} type="password" autoComplete={recovering ? 'new-password' : 'current-password'} dir="ltr" value={password} onChange={(event) => setPassword(event.target.value)} iconStart={<LockIcon size={18} />} error={recovering ? undefined : error ?? undefined} />
+          {recovering && (
+            <Input label="تکرار رمز عبور تازه" name="repeat-password" type="password" autoComplete="new-password" dir="ltr" value={repeat} onChange={(event) => setRepeat(event.target.value)} error={error ?? undefined} />
+          )}
+          <Button type="submit" fullWidth size="lg" loading={busy} disabled={!password || (recovering && !code.trim())}>{recovering ? 'ذخیره رمز تازه' : 'تکمیل ورود'}</Button>
+          {!recovering && (
+            <Button variant="link" type="button" disabled={busy} onClick={() => void attempt(async () => {
+              await session.requestAdminRecovery(step.temporaryToken);
+              goTo({ ...step, kind: 'admin-recovery' });
+            })}>بازیابی با ایمیل تأییدشده</Button>
+          )}
+          {recovering && (
+            <Button variant="link" type="button" disabled={busy} onClick={() => goTo({ ...step, kind: 'admin-password' })}>بازگشت به رمز مدیر</Button>
+          )}
+          <Button variant="link" type="button" disabled={busy} iconStart={<ArrowRightIcon size={16} />} onClick={() => goTo({ kind: 'phone' })}>شروع دوباره ورود</Button>
+        </form>
+      </AuthCard>
+    );
+  }
 
   if (step.kind === 'password') {
     return (
@@ -329,7 +408,7 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
             ورود
           </Button>
           <div className="flex items-center justify-between text-caption text-fg-tertiary">
-            <Button variant="link" type="button" iconStart={<ArrowRightIcon size={16} />} onClick={() => setStep({ kind: 'phone' })}>
+            <Button variant="link" type="button" disabled={busy} iconStart={<ArrowRightIcon size={16} />} onClick={() => goTo({ kind: 'phone' })}>
               تغییر شماره
             </Button>
             <Button variant="link" type="button" disabled={wait > 0 || busy} onClick={() => void requestCode(step.phone)}>
@@ -367,7 +446,7 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
   return (
     <AuthCard
       labelledBy="sign-in-title"
-      title={store.invited ? 'پیوستن به فضای کاری' : 'ورود به تسک‌دون'}
+      title={adminPanel ? 'ورود به پنل مدیریت پلتفرم' : store.invited ? 'پیوستن به فضای کاری' : 'ورود به تسک‌دون'}
       description={
         store.invited
           ? 'به یک فضای کاری دعوت شده‌اید. با شماره موبایلی که دعوت‌نامه به آن رسیده وارد شوید.'
@@ -376,6 +455,7 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
     >
       <form className="flex flex-col gap-4" onSubmit={onPhone} noValidate>
         {suspendedNotice}
+        {notice && <p role="status" className="text-body-sm text-status-done">{notice}</p>}
         <Input
           ref={fieldRef}
           label="شماره موبایل"
@@ -393,9 +473,11 @@ export function SignInScreen({ store }: { readonly store: LiveStore }) {
         <Button type="submit" fullWidth size="lg" loading={busy}>
           دریافت کد ورود
         </Button>
-        <Button variant="link" type="button" iconStart={<LockIcon size={16} />} onClick={() => goTo({ kind: 'password' })}>
-          ورود با رمز عبور
-        </Button>
+        {!adminPanel && (
+          <Button variant="link" type="button" iconStart={<LockIcon size={16} />} onClick={() => goTo({ kind: 'password' })}>
+            ورود با رمز عبور
+          </Button>
+        )}
       </form>
     </AuthCard>
   );
