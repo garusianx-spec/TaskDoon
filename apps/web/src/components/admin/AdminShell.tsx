@@ -15,6 +15,7 @@ const SECTIONS = [
   { href: '/admin/users', label: 'کاربران و سشن‌ها', icon: PeopleIcon },
   { href: '/admin/conversations', label: 'رصد پیام‌ها و گروه‌ها', icon: MessagesIcon },
   { href: '/admin/workspaces', label: 'ورک‌اسپیس‌ها و نقش‌ها', icon: BriefcaseIcon },
+  { href: '/admin/roles', label: 'مدیریت دسترسی‌ها و مدیران', icon: ShieldIcon },
   { href: '/admin/audit', label: 'گزارش بازرسی', icon: ShieldIcon },
 ] as const;
 
@@ -37,7 +38,7 @@ export function AdminShell({ children }: { readonly children: ReactNode }) {
           </Button>
         </div>
         <nav aria-label="بخش‌های پنل مدیریت" className="-mx-1 flex gap-1 overflow-x-auto lg:mx-0 lg:flex-col lg:overflow-visible">
-          {SECTIONS.map(({ href, label, icon: Icon }) => {
+          {SECTIONS.filter(section => section.href !== '/admin/roles' || admin.role === 'SUPER_ADMIN').map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
               <Link

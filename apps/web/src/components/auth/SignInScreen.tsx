@@ -14,6 +14,7 @@ type Step =
   | { readonly kind: 'phone' }
   | { readonly kind: 'code'; readonly phone: string; readonly challengeId: string; readonly codeLength: number; readonly resendAt: number }
   | { readonly kind: 'name'; readonly signupToken: string }
+  | { readonly kind: 'admin-setup'; readonly temporaryToken: string; readonly expiresAt: number; readonly sent: boolean }
   | { readonly kind: 'admin-password'; readonly temporaryToken: string; readonly expiresAt: number }
   | { readonly kind: 'admin-recovery'; readonly temporaryToken: string; readonly expiresAt: number }
   | { readonly kind: 'password' }
@@ -48,13 +49,13 @@ export function SignInScreen({ store, adminPanel = false }: { readonly store: Pi
   }, [step.kind]);
 
   useEffect(() => {
-    if (step.kind !== 'code' && step.kind !== 'reset' && step.kind !== 'admin-password' && step.kind !== 'admin-recovery') return;
+    if (step.kind !== 'code' && step.kind !== 'reset' && step.kind !== 'admin-password' && step.kind !== 'admin-recovery' && step.kind !== 'admin-setup') return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [step.kind]);
 
   useEffect(() => {
-    if ((step.kind === 'admin-password' || step.kind === 'admin-recovery') && now >= step.expiresAt) {
+    if ((step.kind === 'admin-password' || step.kind === 'admin-recovery' || step.kind === 'admin-setup') && now >= step.expiresAt) {
       setStep({ kind: 'phone' });
       setPassword('');
       setRepeat('');
@@ -116,7 +117,9 @@ export function SignInScreen({ store, adminPanel = false }: { readonly store: Pi
         setCode('');
         setPassword('');
         setNow(Date.now());
-        setStep({ kind: 'admin-password', temporaryToken: result.temporaryToken, expiresAt: Date.now() + result.expiresInSeconds * 1000 });
+        setStep(result.status === 'admin_setup_required'
+          ? { kind: 'admin-setup', temporaryToken: result.temporaryToken, expiresAt: Date.now() + result.expiresInSeconds * 1000, sent: false }
+          : { kind: 'admin-password', temporaryToken: result.temporaryToken, expiresAt: Date.now() + result.expiresInSeconds * 1000 });
       } else await store.signedIn();
     });
   };
@@ -226,6 +229,29 @@ export function SignInScreen({ store, adminPanel = false }: { readonly store: Pi
       <span>{codeMessage('ACCOUNT_SUSPENDED')}</span>
     </p>
   );
+
+  if (step.kind === 'admin-setup') {
+    return (
+      <AuthCard labelledBy="sign-in-title" title="راه‌اندازی دسترسی مدیریت" description="شماره موبایل تأیید شد. ایمیل بازیابی تعیین‌شده را تأیید کنید و رمز مدیر را بسازید.">
+        <form className="flex flex-col gap-4" onSubmit={event => {
+          event.preventDefault();
+          if (busy) return;
+          if (!step.sent) { void attempt(async () => { await session.requestAdminSetup(step.temporaryToken); setStep({ ...step, sent: true }); }); return; }
+          if (password !== repeat) { setError('تکرار رمز عبور با خود آن یکی نیست.'); return; }
+          void attempt(async () => { await session.completeAdminSetup(step.temporaryToken, code.trim(), password); goTo({ kind: 'phone' }); setNotice('دسترسی مدیریت فعال شد. با کد پیامکی تازه و رمز مدیر وارد شوید.'); });
+        }}>
+          {step.sent ? <>
+            <Input ref={fieldRef} label="کد راه‌اندازی ایمیل" dir="ltr" autoComplete="one-time-code" value={code} onChange={event => setCode(event.target.value)} />
+            <Input label="رمز مدیر جدید" type="password" dir="ltr" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} hint="دست‌کم ۸ نویسه، با حروف و عدد یا نماد." />
+            <Input label="تکرار رمز مدیر" type="password" dir="ltr" autoComplete="new-password" value={repeat} onChange={event => setRepeat(event.target.value)} />
+          </> : <p className="text-body-sm text-fg-secondary">کد راه‌اندازی فقط به ایمیل بازیابی ثبت‌شده ارسال می‌شود. در صورت نداشتن دسترسی، با مدیر ارشد تماس بگیرید.</p>}
+          {error && <p role="alert" className="text-body-sm text-status-blocked">{error}</p>}
+          <Button type="submit" fullWidth loading={busy} disabled={step.sent && (!code.trim() || password.length < MIN_PASSWORD)}>{step.sent ? 'فعال‌سازی دسترسی مدیریت' : 'ارسال کد راه‌اندازی ایمیل'}</Button>
+          <Button type="button" variant="link" disabled={busy} onClick={() => goTo({ kind: 'phone' })}>شروع دوباره ورود</Button>
+        </form>
+      </AuthCard>
+    );
+  }
 
   if (step.kind === 'admin-password' || step.kind === 'admin-recovery') {
     const recovering = step.kind === 'admin-recovery';

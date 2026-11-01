@@ -1,3 +1,4 @@
+import type { PlatformAdminRole, AdministrativeStatus } from '@taskin/contracts';
 import { sql } from 'drizzle-orm';
 import { boolean, check, index, inet, integer, pgTable, smallint, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { bytea, citext, createdAt, instant, updatedAt, uuidPk } from './columns.js';
@@ -15,7 +16,7 @@ export const users = pgTable(
     id: uuidPk(),
     /** E.164, e.g. `+989121234567`, normalised from whatever digits the person typed. */
     phone: text().notNull(),
-    phoneVerifiedAt: instant().notNull(),
+    phoneVerifiedAt: instant(),
     email: citext(),
     emailVerifiedAt: instant(),
     fullName: text().notNull(),
@@ -31,8 +32,11 @@ export const users = pgTable(
     /** Bumping it invalidates every access token the user holds (phone change, compromise). */
     securityVersion: integer().notNull().default(1),
     status: userStatus().notNull().default('active'),
-    /** Platform super admin (operators of TaskDoon itself): granted only by the CLI, never through the API. */
+    /** Administrative compatibility flag. SUPER_ADMIN bootstrap remains trusted; role endpoints assign ADMIN/OPERATOR. */
     isPlatformAdmin: boolean().notNull().default(false),
+    adminSetupRequired: boolean().notNull().default(false),
+    platformAdminRole: text().$type<PlatformAdminRole>(),
+    platformAdminStatus: text().$type<AdministrativeStatus>().notNull().default('ACTIVE'),
     /** An admin issued a reset code: the old password no longer verifies until a new one is set. */
     passwordResetRequired: boolean().notNull().default(false),
     createdAt: createdAt(),
@@ -42,6 +46,8 @@ export const users = pgTable(
   (t) => [
     uniqueIndex('users_phone_uq').on(t.phone).where(sql`${t.deletedAt} is null`),
     uniqueIndex('users_email_uq').on(t.email).where(sql`${t.email} is not null and ${t.deletedAt} is null`),
+    check('users_platform_admin_role', sql`${t.platformAdminRole} is null or ${t.platformAdminRole} in ('SUPER_ADMIN', 'ADMIN', 'OPERATOR')`),
+    check('users_platform_admin_status', sql`${t.platformAdminStatus} in ('ACTIVE', 'PENDING_SETUP', 'SUSPENDED')`),
     check('users_full_name_len', sql`char_length(${t.fullName}) between 2 and 80`),
     check('users_phone_e164', sql`${t.phone} ~ '^\\+[1-9][0-9]{7,14}$'`),
   ],
@@ -167,6 +173,6 @@ export const authChallenges = pgTable(
   },
   (t) => [
     index('auth_challenges_user_idx').on(t.userId),
-    check('auth_challenges_purpose', sql`${t.purpose} in ('admin_login', 'admin_recovery', 'email_verify')`),
+    check('auth_challenges_purpose', sql`${t.purpose} in ('admin_login', 'admin_recovery', 'email_verify', 'admin_setup', 'admin_setup_email')`),
   ],
 );

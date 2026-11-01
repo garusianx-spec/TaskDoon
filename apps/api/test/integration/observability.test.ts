@@ -361,6 +361,23 @@ describe('M1 checklist: audit trail and correlation', () => {
     await traced('delete', '/api/v1/workspaces/{workspaceId}', ws, (r) => r.set(bearer(newOwner)).send({ confirmName: 'ردیابی' }));
     await traced('post', '/api/v1/auth/logout', '/api/v1/auth/logout', (r) => r.set(bearer(user)).set('Cookie', user.cookies).set('X-CSRF-Token', user.csrf).set('Origin', ORIGIN));
 
+    // Administrative access management: independent super-admin authority and a real setup.
+    const root = await withAdminPassword(t, await signIn(t, '+989901819085', 'مالک پلتفرم'));
+    await t.admin.query("update users set is_platform_admin=true, platform_admin_role='SUPER_ADMIN' where id=$1", [root.userId]);
+    const administrativePhone = randomPhone();
+    const provisioned = await traced('post', '/api/v1/admin/users/roles', '/api/v1/admin/users/roles', r => r.set(bearer(root)).send({ phone: administrativePhone, fullName: 'مدیر در انتظار', recoveryEmail: 'setup@rahnama.ir', role: 'ADMIN' }));
+    const setupOtp = await requestOtp(t, administrativePhone);
+    const setupProof = await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: setupOtp.challengeId, code: lastCode(t, administrativePhone) });
+    expect(setupProof.body.status).toBe('admin_setup_required');
+    const temporaryToken = setupProof.body.temporaryToken as string;
+    await traced('post', '/api/v1/auth/admin/setup/request', '/api/v1/auth/admin/setup/request', r => r.send({ temporaryToken }));
+    const setupCode = t.mail.at(-1)?.text.match(/[A-Za-z0-9_-]{43}/)?.[0];
+    expect(setupCode).toBeTruthy();
+    await traced('post', '/api/v1/auth/admin/setup/complete', '/api/v1/auth/admin/setup/complete', r => r.send({ temporaryToken, code: setupCode, newPassword: STRONG_PASSWORD }));
+    const rolePath = `/api/v1/admin/users/roles/${provisioned.body.id}`;
+    await traced('patch', '/api/v1/admin/users/roles/{id}', rolePath, r => r.set(bearer(root)).send({ role: 'OPERATOR' }));
+    await traced('delete', '/api/v1/admin/users/roles/{id}', rolePath, r => r.set(bearer(root)));
+
     // Every mutating operation in the API was exercised…
     const document = JSON.parse(await readFile(OPENAPI_FILE, 'utf8')) as { paths: Record<string, Record<string, unknown>> };
     const mutating = Object.entries(document.paths).flatMap(([path, operations]) =>

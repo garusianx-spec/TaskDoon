@@ -1,4 +1,7 @@
 import type {
+  AdministrativeUser,
+  AssignAdminRoleBody,
+  UpdateAdminRoleBody,
   CreateBroadcastBody,
   UpdateBroadcastBody,
   SystemBroadcastPage,
@@ -54,6 +57,10 @@ export interface MessageFilters {
  * last 15 minutes and answers STEP_UP_REQUIRED otherwise; the shell turns that into its prompt.
  */
 export const adminApi = {
+  administrativeUsers: () => http.get<AdministrativeUser[]>('/admin/users/roles'),
+  assignAdmin: (body: AssignAdminRoleBody) => http.post<AdministrativeUser>('/admin/users/roles', body),
+  updateAdmin: (id: string, body: UpdateAdminRoleBody) => http.patch<AdministrativeUser>(`/admin/users/roles/${id}`, body),
+  revokeAdmin: (id: string) => http.delete<void>(`/admin/users/roles/${id}`),
   me: () => http.get<PlatformAdminMe>('/admin/me'),
 
   broadcasts: (filters: { readonly cursor?: string | null; readonly includeArchived?: boolean } = {}) =>

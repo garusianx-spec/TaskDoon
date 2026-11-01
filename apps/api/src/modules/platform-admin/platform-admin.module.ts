@@ -1,3 +1,6 @@
+import { AdminRolesController } from './admin-roles.controller.js';
+import { AdminRolesService } from './admin-roles.service.js';
+import { PlatformRoleGuard } from './admin-roles.guard.js';
 import { Module } from '@nestjs/common';
 import { PlatformBroadcastsService } from './platform-broadcasts.service.js';
 import { PlatformHealthService } from './platform-health.service.js';
@@ -21,8 +24,9 @@ import { PlatformWorkspacesService } from './platform-workspaces.service.js';
  */
 @Module({
   imports: [DomainModule],
-  controllers: [PlatformAdminProbeController, PlatformAdminController, PasswordResetController],
+  controllers: [AdminRolesController, PlatformAdminProbeController, PlatformAdminController, PasswordResetController],
   providers: [
+    AdminRolesService, PlatformRoleGuard,
     PlatformBroadcastsService,
     PlatformHealthService,
     PlatformAdminDatabase,

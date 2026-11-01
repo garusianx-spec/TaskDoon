@@ -1,3 +1,4 @@
+import { isPrimaryOwner } from '../../platform/security/platform-role-policy.js';
 import { Injectable } from '@nestjs/common';
 import { and, desc, eq, isNotNull, isNull, gt, type SQL, sql } from 'drizzle-orm';
 import type {
@@ -266,6 +267,7 @@ export class PlatformUsersService {
     await this.uow.run({ workspaceId: null, userId: admin.userId }, async (unit) => {
       const session = await this.sessions.find(unit.tx, sessionId);
       if (!session) throw ApiError.notFound('The session');
+      await this.protectOwner(unit.tx, session.userId);
       await this.sessions.revoke(unit, [sessionId], 'admin_action', session.userId);
       await this.auditLog.record(
         admin,
@@ -278,6 +280,7 @@ export class PlatformUsersService {
   async revokeAll(admin: PlatformAdmin, userId: string): Promise<{ revoked: number }> {
     return this.uow.run({ workspaceId: null, userId: admin.userId }, async (unit) => {
       await this.requireUser(unit.tx, userId);
+      await this.protectOwner(unit.tx, userId);
       const revoked = await this.sessions.revokeOthers(unit, userId, null, 'admin_action');
       await this.auditLog.record(admin, { action: 'admin.sessions.revoke_all', targetUserId: userId, resourceType: 'user', resourceId: userId, metadata: { revoked } }, unit);
       return { revoked };
@@ -301,6 +304,7 @@ export class PlatformUsersService {
         .where(eq(users.id, userId))
         .for('update');
       if (!user || user.deletedAt || user.status === 'deleted') throw ApiError.notFound('The user');
+      if (isPrimaryOwner(user.phone)) throw new ApiError('ADMIN_TARGET_PROTECTED');
       if (channel === 'email' && !user.email) throw ApiError.validation([{ field: 'channel', message: 'the user has no email address' }]);
 
       await tx.update(passwordResetTokens).set({ usedAt: sql`now()` }).where(and(eq(passwordResetTokens.userId, userId), isNull(passwordResetTokens.usedAt)));
@@ -345,6 +349,11 @@ export class PlatformUsersService {
         link: channel === 'manual' ? link : null,
       };
     });
+  }
+
+  private async protectOwner(tx: Tx, userId: string): Promise<void> {
+    const [target] = await tx.select({ phone: users.phone }).from(users).where(eq(users.id, userId));
+    if (target && isPrimaryOwner(target.phone)) throw new ApiError('ADMIN_TARGET_PROTECTED');
   }
 
   private async requireUser(tx: Tx, userId: string): Promise<void> {

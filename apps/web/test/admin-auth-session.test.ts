@@ -65,3 +65,19 @@ describe('conditional admin sign-in', () => {
     ]);
   });
 });
+
+describe('administrative setup boundary', () => {
+  it('keeps setup proof out of authenticated session state and never auto-signs in on activation', async () => {
+    post.mockResolvedValueOnce(grant);
+    await session.passwordSignIn('09121234567', 'Example123!');
+    const proof = { status: 'admin_setup_required', temporaryToken: 'setup-proof', expiresInSeconds: 600 };
+    post.mockResolvedValueOnce(proof);
+    expect(await session.verifyCode('setup-otp', '123456')).toEqual(proof);
+    expect(session.current).toBeNull();
+    post.mockResolvedValue(undefined);
+    await session.requestAdminSetup(proof.temporaryToken);
+    await session.completeAdminSetup(proof.temporaryToken, 'email-proof', 'New-Password123!');
+    expect(session.current).toBeNull();
+    expect(post).toHaveBeenLastCalledWith('/auth/admin/setup/complete', { temporaryToken: 'setup-proof', code: 'email-proof', newPassword: 'New-Password123!' }, { authenticated: false });
+  });
+});

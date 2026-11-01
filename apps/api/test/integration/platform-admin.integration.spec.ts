@@ -174,7 +174,7 @@ describe('Platform super admin (phase 1)', () => {
     it('asks for a fresh password step-up on everything but the probe', async () => {
       const probe = await admin(operatorFresh).get('/me');
       expectStatus(probe, 200);
-      expect(probe.body).toEqual({ userId: operator.userId, fullName: 'اپراتور پلتفرم', smsConfirmationRequired: false, stepUpRequired: true, available: true } satisfies PlatformAdminMe);
+      expect(probe.body).toEqual({ userId: operator.userId, fullName: 'اپراتور پلتفرم', role: 'ADMIN', smsConfirmationRequired: false, stepUpRequired: true, available: true } satisfies PlatformAdminMe);
       expect(probe.headers['cache-control']).toBe('no-store');
       for (const [method, path] of routes(ali.userId, workspace.id).filter(([, path]) => path !== '/me')) {
         const response = await admin(operatorFresh)[method](path);

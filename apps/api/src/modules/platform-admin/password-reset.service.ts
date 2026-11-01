@@ -1,3 +1,4 @@
+import { isPrimaryOwner } from '../../platform/security/platform-role-policy.js';
 import { Injectable } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
@@ -47,7 +48,7 @@ export class PasswordResetService {
         .innerJoin(users, eq(users.id, passwordResetTokens.userId))
         .where(eq(passwordResetTokens.tokenHash, sha256(code)))
         .for('update', { of: [passwordResetTokens, users] });
-      if (!row?.usable || !row.active) throw new ApiError('RESET_TOKEN_INVALID');
+      if (!row?.usable || !row.active || isPrimaryOwner(row.phone)) throw new ApiError('RESET_TOKEN_INVALID');
 
       await tx.update(passwordResetTokens).set({ usedAt: sql`now()` }).where(eq(passwordResetTokens.id, row.id));
       await this.passwords.store(unit, row.userId, passwordHash);

@@ -57,14 +57,17 @@ export class AuthService {
   async verifyOtp(challengeId: string, code: string, device: DeviceInfo): Promise<{ result: OtpVerifyResult; refresh?: IssuedRefresh }> {
     const { phone } = await this.otp.verify(challengeId, code, device.ip ?? undefined);
     const signedIn = await this.uow.run({ workspaceId: null, userId: null }, async (unit) => {
-      const user = await this.usersService.findByPhone(unit.tx, phone);
+      // Serialize session issuance with administrative assignment/revocation.
+      const [user] = await unit.tx.select().from(users).where(and(eq(users.phone, phone), isNull(users.deletedAt))).for('update');
       if (!user) return null;
       if (user.status === 'suspended') throw new ApiError('ACCOUNT_SUSPENDED');
       if (user.status !== 'active') throw ApiError.forbidden('This account is suspended.');
+      if (!user.phoneVerifiedAt) await unit.tx.update(users).set({ phoneVerifiedAt: sql`now()` }).where(eq(users.id, user.id));
       if (user.isPlatformAdmin) {
+        if (user.platformAdminStatus === 'SUSPENDED') throw new ApiError('ACCOUNT_SUSPENDED');
         const temporaryToken = randomToken();
-        await unit.tx.insert(authChallenges).values({ userId: user.id, purpose: 'admin_login', tokenHash: sha256(temporaryToken), securityVersion: user.securityVersion, expiresAt: new Date(Date.now() + 600_000) });
-        return { temporaryToken };
+        await unit.tx.insert(authChallenges).values({ userId: user.id, purpose: user.adminSetupRequired ? 'admin_setup' : 'admin_login', tokenHash: sha256(temporaryToken), securityVersion: user.securityVersion, expiresAt: new Date(Date.now() + 600_000) });
+        return { temporaryToken, setupRequired: user.adminSetupRequired };
       }
       const { session, refresh } = await this.sessions.create(unit, user.id, device, ['otp']);
       await this.audit.write(unit.tx, { action: 'auth.signin', actorUserId: user.id, resourceType: 'session', resourceId: session.id });
@@ -74,7 +77,7 @@ export class AuthService {
       const signup = await this.tokens.signSignup(phone);
       return { result: { status: 'signup_required', signupToken: signup.token, expiresInSeconds: signup.expiresInSeconds } };
     }
-    if (signedIn.temporaryToken !== undefined) return { result: { status: 'password_required', temporaryToken: signedIn.temporaryToken, expiresInSeconds: 600 } };
+    if (signedIn.temporaryToken !== undefined) return { result: { status: signedIn.setupRequired ? 'admin_setup_required' : 'password_required', temporaryToken: signedIn.temporaryToken, expiresInSeconds: 600 } };
     const body = await this.sessionBody(signedIn.user, signedIn.session);
     return { result: { status: 'signed_in', session: body }, refresh: signedIn.refresh };
   }
@@ -90,7 +93,7 @@ export class AuthService {
     await this.limit(this.redis.key('password', 'signin', 'ip', device.ip ?? 'unknown'), 3600, PASSWORD_SIGNINS_PER_IP_PER_HOUR);
     const userId = await this.passwords.authenticate(phone, password);
     const signedIn = await this.uow.run({ workspaceId: null, userId: null }, async (unit) => {
-      const user = await this.usersService.findById(unit.tx, userId);
+      const [user] = await unit.tx.select().from(users).where(and(eq(users.id, userId), isNull(users.deletedAt))).for('update');
       if (!user || user.status !== 'active' || user.isPlatformAdmin) throw new ApiError('CREDENTIALS_INVALID');
       const { session, refresh } = await this.sessions.create(unit, user.id, device, ['pwd']);
       await this.audit.write(unit.tx, { action: 'auth.signin.password', actorUserId: user.id, resourceType: 'session', resourceId: session.id });
@@ -150,6 +153,40 @@ export class AuthService {
         aggregateId: user.id,
         payload: { to: user.phone, template: 'alert', tokens: { event: 'رمز عبور حساب شما با کد پیامکی تغییر کرد' } },
       });
+    });
+  }
+
+  /** A pending administrator must prove both destinations before setting the first admin password. */
+  async requestAdminSetup(temporaryToken: string): Promise<void> {
+    const checked = await this.uow.run({ workspaceId: null, userId: null }, ({ tx }) => this.adminChallenge(tx, temporaryToken, 'admin_setup'));
+    await this.limit(this.redis.key('admin', 'setup', checked.user.id), 3600, 5);
+    const code = randomToken();
+    const email = await this.uow.run({ workspaceId: null, userId: checked.user.id }, async ({ tx }) => {
+      const { user } = await this.adminChallenge(tx, temporaryToken, 'admin_setup');
+      if (!user.email) throw new ApiError('CONFLICT', 'An operator must configure the recovery email.');
+      await tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(and(eq(authChallenges.userId, user.id), eq(authChallenges.purpose, 'admin_setup_email'), isNull(authChallenges.consumedAt)));
+      await tx.insert(authChallenges).values({ userId: user.id, purpose: 'admin_setup_email', tokenHash: sha256(code), parentHash: sha256(temporaryToken), securityVersion: user.securityVersion, email: user.email, expiresAt: new Date(Date.now() + 600_000) });
+      await this.audit.write(tx, { action: 'auth.admin.setup.request', actorUserId: user.id, resourceType: 'user', resourceId: user.id });
+      return user.email;
+    });
+    await this.mail.send({ to: email, subject: 'راه‌اندازی دسترسی مدیریت تسک‌دون', text: `کد راه‌اندازی مدیریت تسک‌دون: ${code}\nاین کد تا ده دقیقه معتبر است.` });
+  }
+
+  async completeAdminSetup(temporaryToken: string, code: string, newPassword: string): Promise<void> {
+    const checked = await this.uow.run({ workspaceId: null, userId: null }, ({ tx }) => this.adminChallenge(tx, temporaryToken, 'admin_setup'));
+    await this.limit(this.redis.key('admin', 'setup', 'complete', checked.user.id), 3600, 10);
+    const passwordHash = await this.passwords.hash(newPassword);
+    await this.uow.run({ workspaceId: null, userId: checked.user.id }, async unit => {
+      const { user } = await this.adminChallenge(unit.tx, temporaryToken, 'admin_setup');
+      const proof = await this.emailChallenge(unit.tx, code, 'admin_setup_email', user);
+      if (!proof.parentHash?.equals(sha256(temporaryToken))) throw new ApiError('AUTH_INVALID');
+      await this.passwords.store(unit, user.id, passwordHash);
+      await unit.tx.update(users).set({ adminSetupRequired: false, platformAdminStatus: 'ACTIVE', phoneVerifiedAt: sql`now()`, emailVerifiedAt: sql`now()`, passwordResetRequired: false, securityVersion: sql`${users.securityVersion} + 1` }).where(eq(users.id, user.id));
+      await unit.tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(and(eq(authChallenges.userId, user.id), isNull(authChallenges.consumedAt)));
+      await unit.tx.update(passwordResetTokens).set({ usedAt: sql`now()` }).where(and(eq(passwordResetTokens.userId, user.id), isNull(passwordResetTokens.usedAt)));
+      await this.sessions.revokeOthers(unit, user.id, null, 'password_changed');
+      unit.afterCommit(() => this.revocations.forgetStanding(user.id));
+      await this.audit.write(unit.tx, { action: 'auth.admin.setup.complete', actorUserId: user.id, resourceType: 'user', resourceId: user.id });
     });
   }
 
@@ -232,14 +269,14 @@ export class AuthService {
     });
   }
 
-  private async adminChallenge(tx: Tx, token: string) {
+  private async adminChallenge(tx: Tx, token: string, purpose: 'admin_login' | 'admin_setup' = 'admin_login') {
     const [row] = await tx.select({ user: users, challenge: authChallenges }).from(authChallenges).innerJoin(users, eq(users.id, authChallenges.userId))
-      .where(and(eq(authChallenges.tokenHash, sha256(token)), eq(authChallenges.purpose, 'admin_login'))).for('update', { of: [authChallenges, users] });
-    if (!row || row.challenge.consumedAt || row.challenge.expiresAt.getTime() <= Date.now() || row.user.deletedAt || row.user.status !== 'active' || !row.user.isPlatformAdmin || row.user.securityVersion !== row.challenge.securityVersion) throw new ApiError('AUTH_INVALID');
+      .where(and(eq(authChallenges.tokenHash, sha256(token)), eq(authChallenges.purpose, purpose))).for('update', { of: [authChallenges, users] });
+    if (!row || row.challenge.consumedAt || row.challenge.expiresAt.getTime() <= Date.now() || row.user.deletedAt || row.user.status !== 'active' || !row.user.isPlatformAdmin || row.user.platformAdminStatus === 'SUSPENDED' || (purpose === 'admin_setup' ? !row.user.adminSetupRequired : row.user.adminSetupRequired) || row.user.securityVersion !== row.challenge.securityVersion) throw new ApiError('AUTH_INVALID');
     return row;
   }
 
-  private async emailChallenge(tx: Tx, code: string, purpose: 'admin_recovery' | 'email_verify', user: UserRow) {
+  private async emailChallenge(tx: Tx, code: string, purpose: 'admin_recovery' | 'email_verify' | 'admin_setup_email', user: UserRow) {
     const [proof] = await tx.select().from(authChallenges).where(and(eq(authChallenges.tokenHash, sha256(code)), eq(authChallenges.purpose, purpose), eq(authChallenges.userId, user.id))).for('update');
     if (!proof || proof.consumedAt || proof.expiresAt.getTime() <= Date.now() || proof.securityVersion !== user.securityVersion || !proof.email || proof.email.toLowerCase() !== user.email?.toLowerCase()) throw new ApiError('AUTH_INVALID');
     return proof;

@@ -11,6 +11,7 @@ import type { PlanLimits } from './workspaces.js';
  */
 
 export interface PlatformAdminMe {
+  readonly role?: PlatformAdminRole;
   readonly userId: string;
   readonly fullName: string;
   /**
@@ -388,4 +389,28 @@ export interface PlatformOutboxHealth {
   readonly checkedAt: string;
   readonly pending: { readonly count: number; readonly oldestAgeSeconds: number };
   readonly queues: readonly PlatformQueueHealth[];
+}
+
+/** Platform roles are independent of workspace membership. Only SUPER_ADMIN manages them. */
+export type PlatformAdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR';
+export type AdministrativeStatus = 'ACTIVE' | 'PENDING_SETUP' | 'SUSPENDED';
+export interface AdministrativeUser {
+  readonly id: string;
+  readonly fullName: string;
+  readonly phone: string;
+  readonly email: string | null;
+  readonly role: PlatformAdminRole;
+  readonly status: AdministrativeStatus;
+  readonly createdAt: string;
+  readonly protected: boolean;
+}
+export interface AssignAdminRoleBody {
+  readonly phone: string;
+  readonly fullName: string;
+  readonly recoveryEmail: string;
+  readonly role: 'ADMIN' | 'OPERATOR';
+}
+export interface UpdateAdminRoleBody {
+  readonly role?: 'ADMIN' | 'OPERATOR';
+  readonly suspended?: boolean;
 }

@@ -65,7 +65,7 @@ export class AuthController {
     schema: {
       oneOf: [
         { type: 'object', properties: { status: { type: 'string', enum: ['signed_in'] }, session: { $ref: getSchemaPath(AuthSessionDto) } } },
-        { type: 'object', properties: { status: { type: 'string', enum: ['password_required'] }, temporaryToken: { type: 'string' }, expiresInSeconds: { type: 'integer' } } },
+        { type: 'object', properties: { status: { type: 'string', enum: ['password_required', 'admin_setup_required'] }, temporaryToken: { type: 'string' }, expiresInSeconds: { type: 'integer' } } },
         { type: 'object', properties: { status: { type: 'string', enum: ['signup_required'] }, signupToken: { type: 'string' }, expiresInSeconds: { type: 'integer' } } },
       ],
     },
@@ -75,6 +75,18 @@ export class AuthController {
     if (refresh) setAuthCookies(response, this.config, refresh.token, refresh.expiresAt);
     return result;
   }
+
+  @Public()
+  @Post('admin/setup/request')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Send the pending administrator setup code to the assigned recovery email after OTP proof' })
+  requestAdminSetup(@Body() body: AdminRecoveryRequestDto): Promise<void> { return this.auth.requestAdminSetup(body.temporaryToken); }
+
+  @Public()
+  @Post('admin/setup/complete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Complete phone/email/password setup without issuing a session' })
+  completeAdminSetup(@Body() body: AdminRecoveryCompleteDto): Promise<void> { return this.auth.completeAdminSetup(body.temporaryToken, body.code, body.newPassword); }
 
   @Public()
   @Post('admin/password')
