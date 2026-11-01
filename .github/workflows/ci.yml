@@ -252,9 +252,15 @@ jobs:
         run: docker compose --profile scale down --volumes
 
   e2e-live:
-    name: Live app end to end (web on the Compose API)
+    name: Live app end to end (${{ matrix.scenario }})
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    # Each scenario gets fresh services and rate-limit state. The complete set of
+    # browser sign-ins must not share one client's hourly OTP allowance.
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [standard, admin-auth]
     env:
       COMPOSE_FILE: infra/docker-compose.yml:infra/ci/compose.yml
       COMPOSE_PROJECT_NAME: taskdoon-ci-live
@@ -292,26 +298,38 @@ jobs:
           printf '%s\n' "$!" > "$RUNNER_TEMP/api-log.pid"
           printf 'API_LOG=%s/api.log\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Two people, one workspace (sign-in, invitation, tasks, chat, notifications, sign-out)
+        if: matrix.scenario == 'standard'
         run: npm run test:e2e:live
       # The hardened daemon excludes operator CLIs and owner credentials. The unchanged
       # suites default to the separately built host CLI, with test-only owner credentials.
       - name: Platform super admin (directory, sessions, messages, reset code, audit)
+        if: matrix.scenario == 'standard'
         run: npm run test:e2e:live:admin
         env:
           DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
+      - name: Conditional admin password and verified email recovery
+        if: matrix.scenario == 'admin-auth'
+        run: npm run test:e2e:live:admin-auth
+        env:
+          DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
       - name: Phone and password (wrong password and SMS recovery)
+        if: matrix.scenario == 'standard'
         run: npm run test:e2e:live:password
       - name: Platform moderation (suspend, sessions, forced password change, audit)
+        if: matrix.scenario == 'standard'
         run: npm run test:e2e:live:moderation
         env:
           DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
       - name: Workspace moderation (suspension, quotas, transfer, audit)
+        if: matrix.scenario == 'standard'
         run: npm run test:e2e:live:workspace-moderation
         env:
           DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
       - name: Agile tracking (issue types, worklogs, dependencies, backlog)
+        if: matrix.scenario == 'standard'
         run: npm run test:e2e:live:agile
       - name: Platform broadcasts, overview and global delivery
+        if: matrix.scenario == 'standard'
         run: npm run test:e2e:live:broadcasts
         env:
           DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
@@ -324,7 +342,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: live-e2e-screenshots
+          name: live-e2e-screenshots-${{ matrix.scenario }}
           path: apps/web/e2e/out
           if-no-files-found: ignore
           retention-days: 7

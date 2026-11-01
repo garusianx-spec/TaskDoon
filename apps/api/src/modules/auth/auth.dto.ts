@@ -177,3 +177,46 @@ export class SessionViewDto implements SessionView {
 }
 
 export const AUTH_METHODS: readonly AuthMethod[] = ['otp', 'pwd'];
+
+/** Restricted proof returned only after the phone OTP has succeeded. */
+export class AdminRecoveryRequestDto {
+  @ApiProperty()
+  @IsString()
+  @Length(43, 43)
+  readonly temporaryToken!: string;
+}
+
+export class AdminPasswordDto extends AdminRecoveryRequestDto {
+  @ApiProperty({ format: 'password' })
+  @IsString()
+  @Length(1, 128)
+  readonly password!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  readonly deviceLabel?: string;
+}
+
+export class EmailVerificationConfirmDto {
+  @ApiProperty()
+  @IsString()
+  @Length(43, 43)
+  readonly code!: string;
+}
+
+export class AdminRecoveryCompleteDto extends AdminRecoveryRequestDto {
+  @ApiProperty()
+  @IsString()
+  @Length(43, 43)
+  readonly code!: string;
+
+  @ApiProperty({ format: 'password' })
+  @IsString()
+  @Length(8, 128)
+  readonly newPassword!: string;
+}
+
+/** The delivery address comes only from the account, never from this request. */
+export class EmailVerificationRequestDto {}

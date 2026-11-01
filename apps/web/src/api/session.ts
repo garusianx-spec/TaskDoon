@@ -15,6 +15,12 @@ export interface LiveSession {
   readonly expiresAt: number;
 }
 
+export interface AdminPasswordChallenge {
+  readonly status: 'password_required';
+  readonly temporaryToken: string;
+  readonly expiresInSeconds: number;
+}
+
 type Listener = (session: LiveSession | null) => void;
 
 let current: LiveSession | null = null;
@@ -52,10 +58,36 @@ export const session = {
   },
 
   /** Signs in, or says a new number must pick a name first (`signupToken`). */
-  async verifyCode(challengeId: string, code: string): Promise<{ readonly signupToken: string } | LiveSession> {
+  async verifyCode(challengeId: string, code: string): Promise<{ readonly signupToken: string } | AdminPasswordChallenge | LiveSession> {
     const result = await http.post<OtpVerifyResult>('/auth/otp/verify', { challengeId, code, deviceLabel: deviceLabel() }, { authenticated: false });
     if (result.status === 'signup_required') return { signupToken: result.signupToken };
+    if (result.status === 'password_required') {
+      end();
+      return result;
+    }
     return adopt(result.session);
+  },
+
+  /** Completes the second factor. A temporary challenge is never an API credential. */
+  async completeAdminPassword(temporaryToken: string, password: string): Promise<LiveSession> {
+    return adopt(await http.post<AuthSession>('/auth/admin/password', { temporaryToken, password, deviceLabel: deviceLabel() }, { authenticated: false }));
+  },
+
+  requestAdminRecovery(temporaryToken: string): Promise<void> {
+    return http.post<void>('/auth/admin/recovery/request', { temporaryToken }, { authenticated: false });
+  },
+
+  async completeAdminRecovery(temporaryToken: string, code: string, newPassword: string): Promise<void> {
+    await http.post<void>('/auth/admin/recovery/complete', { temporaryToken, code, newPassword }, { authenticated: false });
+    end();
+  },
+
+  requestEmailVerification(): Promise<void> {
+    return http.post<void>('/auth/email/verification/request');
+  },
+
+  confirmEmailVerification(code: string): Promise<void> {
+    return http.post<void>('/auth/email/verification/confirm', { code });
   },
 
   /** The alternative to the SMS code, for an account that has set a password. */

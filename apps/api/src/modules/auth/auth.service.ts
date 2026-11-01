@@ -3,18 +3,21 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { AuthMethod, AuthSession, OtpChallenge, OtpVerifyResult } from '@taskin/contracts';
 import { AppConfig } from '../../config/app-config.js';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
-import { sha256 } from '../../platform/crypto/crypto.js';
-import { authSessions, passwordResetTokens, refreshTokens, users } from '../../platform/db/schema/all.js';
+import { randomToken, sha256 } from '../../platform/crypto/crypto.js';
+import { authChallenges, authSessions, passwordResetTokens, refreshTokens, users } from '../../platform/db/schema/all.js';
 import { isUniqueViolation } from '../../platform/db/pg-errors.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { AuthPrincipal } from '../../platform/http/request.js';
 import { OutboxWriter } from '../../platform/outbox/outbox-writer.js';
+import type { Tx } from '../../platform/db/database.js';
+import { MailService } from '../../platform/mail/mail.js';
 import { RedisClients } from '../../platform/redis/redis.js';
 import { toMeUser, UsersService } from '../users/users.service.js';
 import { type DeviceInfo, type IssuedRefresh, SessionService } from './session.service.js';
 import { OtpService, toIranMobileE164 } from './otp.service.js';
 import { PasswordService, passwordProblem } from './password.service.js';
+import { RevocationService } from './revocation.service.js';
 import { TokenService } from './token.service.js';
 
 type UserRow = typeof users.$inferSelect;
@@ -47,6 +50,8 @@ export class AuthService {
     private readonly audit: AuditWriter,
     private readonly redis: RedisClients,
     private readonly outbox: OutboxWriter,
+    private readonly mail: MailService,
+    private readonly revocations: RevocationService,
   ) {}
 
   async verifyOtp(challengeId: string, code: string, device: DeviceInfo): Promise<{ result: OtpVerifyResult; refresh?: IssuedRefresh }> {
@@ -56,6 +61,11 @@ export class AuthService {
       if (!user) return null;
       if (user.status === 'suspended') throw new ApiError('ACCOUNT_SUSPENDED');
       if (user.status !== 'active') throw ApiError.forbidden('This account is suspended.');
+      if (user.isPlatformAdmin) {
+        const temporaryToken = randomToken();
+        await unit.tx.insert(authChallenges).values({ userId: user.id, purpose: 'admin_login', tokenHash: sha256(temporaryToken), securityVersion: user.securityVersion, expiresAt: new Date(Date.now() + 600_000) });
+        return { temporaryToken };
+      }
       const { session, refresh } = await this.sessions.create(unit, user.id, device, ['otp']);
       await this.audit.write(unit.tx, { action: 'auth.signin', actorUserId: user.id, resourceType: 'session', resourceId: session.id });
       return { user, session, refresh };
@@ -64,6 +74,7 @@ export class AuthService {
       const signup = await this.tokens.signSignup(phone);
       return { result: { status: 'signup_required', signupToken: signup.token, expiresInSeconds: signup.expiresInSeconds } };
     }
+    if (signedIn.temporaryToken !== undefined) return { result: { status: 'password_required', temporaryToken: signedIn.temporaryToken, expiresInSeconds: 600 } };
     const body = await this.sessionBody(signedIn.user, signedIn.session);
     return { result: { status: 'signed_in', session: body }, refresh: signedIn.refresh };
   }
@@ -80,7 +91,7 @@ export class AuthService {
     const userId = await this.passwords.authenticate(phone, password);
     const signedIn = await this.uow.run({ workspaceId: null, userId: null }, async (unit) => {
       const user = await this.usersService.findById(unit.tx, userId);
-      if (!user || user.status !== 'active') throw new ApiError('CREDENTIALS_INVALID');
+      if (!user || user.status !== 'active' || user.isPlatformAdmin) throw new ApiError('CREDENTIALS_INVALID');
       const { session, refresh } = await this.sessions.create(unit, user.id, device, ['pwd']);
       await this.audit.write(unit.tx, { action: 'auth.signin.password', actorUserId: user.id, resourceType: 'session', resourceId: session.id });
       return { user, session, refresh };
@@ -99,7 +110,7 @@ export class AuthService {
     const account = await this.uow.run({ workspaceId: null, userId: null }, async ({ tx }) => {
       const user = await this.usersService.findByPhone(tx, phone);
       await this.audit.write(tx, { action: 'auth.password.forgot', actorUserId: null, resourceType: 'user', ...(user ? { resourceId: user.id } : {}) });
-      return user && user.status === 'active' ? user : null;
+      return user && user.status === 'active' && !user.isPlatformAdmin ? user : null;
     });
     return account ? this.otp.request(phone, client, 'password_reset') : this.otp.decoy(phone, client);
   }
@@ -118,7 +129,7 @@ export class AuthService {
     await this.uow.run({ workspaceId: null, userId: null }, async (unit) => {
       const { tx } = unit;
       const user = await this.usersService.findByPhone(tx, phone);
-      if (!user || user.status !== 'active') throw new ApiError('OTP_INVALID');
+      if (!user || user.status !== 'active' || user.isPlatformAdmin) throw new ApiError('OTP_INVALID');
       await this.passwords.store(unit, user.id, passwordHash);
       await tx.update(users).set({ passwordResetRequired: false }).where(eq(users.id, user.id));
       await tx
@@ -140,6 +151,98 @@ export class AuthService {
         payload: { to: user.phone, template: 'alert', tokens: { event: 'رمز عبور حساب شما با کد پیامکی تغییر کرد' } },
       });
     });
+  }
+
+  /** Completes the second factor without ever issuing a session from the OTP alone. */
+  async adminPassword(temporaryToken: string, password: string, device: DeviceInfo): Promise<IssuedSession> {
+    await this.limit(this.redis.key('admin', 'password', 'ip', device.ip ?? 'unknown'), 3600, 30);
+    const expected = await this.uow.run({ workspaceId: null, userId: null }, ({ tx }) => this.adminChallenge(tx, temporaryToken));
+    // Password lockouts commit independently; do not hold a user lock while verifying.
+    await this.passwords.verify(expected.user.id, password);
+    const signedIn = await this.uow.run({ workspaceId: null, userId: expected.user.id }, async (unit) => {
+      const { user, challenge } = await this.adminChallenge(unit.tx, temporaryToken);
+      if (user.passwordHash !== expected.user.passwordHash) throw new ApiError('AUTH_INVALID');
+      await unit.tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(eq(authChallenges.id, challenge.id));
+      const { session, refresh } = await this.sessions.create(unit, user.id, device, ['otp', 'pwd']);
+      await this.audit.write(unit.tx, { action: 'auth.signin.admin', actorUserId: user.id, resourceType: 'session', resourceId: session.id });
+      return { user, session, refresh };
+    });
+    return { body: await this.sessionBody(signedIn.user, signedIn.session), refresh: signedIn.refresh };
+  }
+
+  /** Identical response whether recovery is configured or not; no destination is disclosed. */
+  async requestAdminRecovery(temporaryToken: string): Promise<void> {
+    const checked = await this.uow.run({ workspaceId: null, userId: null }, ({ tx }) => this.adminChallenge(tx, temporaryToken));
+    await this.limit(this.redis.key('admin', 'recovery', checked.user.id), 3600, 5);
+    const code = randomToken();
+    const email = await this.uow.run({ workspaceId: null, userId: checked.user.id }, async ({ tx }) => {
+      const { user } = await this.adminChallenge(tx, temporaryToken);
+      await this.audit.write(tx, { action: 'auth.admin.recovery.request', actorUserId: user.id, resourceType: 'user', resourceId: user.id });
+      if (!user.email || !user.emailVerifiedAt) return null;
+      await tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(and(eq(authChallenges.userId, user.id), eq(authChallenges.purpose, 'admin_recovery'), isNull(authChallenges.consumedAt)));
+      await tx.insert(authChallenges).values({ userId: user.id, purpose: 'admin_recovery', tokenHash: sha256(code), parentHash: sha256(temporaryToken), securityVersion: user.securityVersion, email: user.email, expiresAt: new Date(Date.now() + 600_000) });
+      return user.email;
+    });
+    if (email) await this.mail.send({ to: email, subject: 'بازیابی رمز عبور تسک‌دون', text: `کد بازیابی رمز عبور تسک‌دون: ${code}\nاین کد تا ده دقیقه معتبر است.` });
+  }
+
+  async completeAdminRecovery(temporaryToken: string, code: string, newPassword: string): Promise<void> {
+    const checked = await this.uow.run({ workspaceId: null, userId: null }, ({ tx }) => this.adminChallenge(tx, temporaryToken));
+    await this.limit(this.redis.key('admin', 'recovery', 'complete', checked.user.id), 3600, 10);
+    const passwordHash = await this.passwords.hash(newPassword);
+    await this.uow.run({ workspaceId: null, userId: null }, async (unit) => {
+      const { user, challenge } = await this.adminChallenge(unit.tx, temporaryToken);
+      const proof = await this.emailChallenge(unit.tx, code, 'admin_recovery', user);
+      if (!proof.parentHash?.equals(sha256(temporaryToken)) || !user.emailVerifiedAt) throw new ApiError('AUTH_INVALID');
+      await unit.tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(eq(authChallenges.id, proof.id));
+      await unit.tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(eq(authChallenges.id, challenge.id));
+      await this.passwords.store(unit, user.id, passwordHash);
+      await unit.tx.update(users).set({ passwordResetRequired: false, securityVersion: sql`${users.securityVersion} + 1` }).where(eq(users.id, user.id));
+      await unit.tx.update(passwordResetTokens).set({ usedAt: sql`now()` }).where(and(eq(passwordResetTokens.userId, user.id), isNull(passwordResetTokens.usedAt)));
+      await this.sessions.revokeOthers(unit, user.id, null, 'password_changed');
+      unit.afterCommit(() => this.revocations.forgetStanding(user.id));
+      await this.audit.write(unit.tx, { action: 'auth.admin.recovery.complete', actorUserId: user.id, resourceType: 'user', resourceId: user.id });
+    });
+  }
+
+  /** Verifies the current profile address; profile changes invalidate all outstanding proofs. */
+  async requestEmailVerification(principal: AuthPrincipal): Promise<void> {
+    await this.limit(this.redis.key('email', 'verify', principal.userId), 3600, 5);
+    const code = randomToken();
+    const email = await this.uow.run({ workspaceId: null, userId: principal.userId }, async ({ tx }) => {
+      const [user] = await tx.select().from(users).where(and(eq(users.id, principal.userId), isNull(users.deletedAt))).for('update');
+      if (!user || user.status !== 'active') throw new ApiError('AUTH_INVALID');
+      if (!user.email) throw ApiError.validation([{ field: 'email', message: 'Set a profile email first.' }]);
+      await tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(and(eq(authChallenges.userId, user.id), eq(authChallenges.purpose, 'email_verify'), isNull(authChallenges.consumedAt)));
+      await tx.insert(authChallenges).values({ userId: user.id, purpose: 'email_verify', tokenHash: sha256(code), securityVersion: user.securityVersion, email: user.email, expiresAt: new Date(Date.now() + 600_000) });
+      await this.audit.write(tx, { action: 'auth.email.verification.request', actorUserId: user.id, resourceType: 'user', resourceId: user.id });
+      return user.email;
+    });
+    await this.mail.send({ to: email, subject: 'تأیید ایمیل تسک‌دون', text: `کد تأیید ایمیل تسک‌دون: ${code}\nاین کد تا ده دقیقه معتبر است.` });
+  }
+
+  async confirmEmailVerification(principal: AuthPrincipal, code: string): Promise<void> {
+    await this.uow.run({ workspaceId: null, userId: principal.userId }, async ({ tx }) => {
+      const [user] = await tx.select().from(users).where(and(eq(users.id, principal.userId), isNull(users.deletedAt))).for('update');
+      if (!user || user.status !== 'active') throw new ApiError('AUTH_INVALID');
+      const proof = await this.emailChallenge(tx, code, 'email_verify', user);
+      await tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(eq(authChallenges.id, proof.id));
+      await tx.update(users).set({ emailVerifiedAt: sql`now()` }).where(eq(users.id, user.id));
+      await this.audit.write(tx, { action: 'auth.email.verify', actorUserId: user.id, resourceType: 'user', resourceId: user.id });
+    });
+  }
+
+  private async adminChallenge(tx: Tx, token: string) {
+    const [row] = await tx.select({ user: users, challenge: authChallenges }).from(authChallenges).innerJoin(users, eq(users.id, authChallenges.userId))
+      .where(and(eq(authChallenges.tokenHash, sha256(token)), eq(authChallenges.purpose, 'admin_login'))).for('update', { of: [authChallenges, users] });
+    if (!row || row.challenge.consumedAt || row.challenge.expiresAt.getTime() <= Date.now() || row.user.deletedAt || row.user.status !== 'active' || !row.user.isPlatformAdmin || row.user.securityVersion !== row.challenge.securityVersion) throw new ApiError('AUTH_INVALID');
+    return row;
+  }
+
+  private async emailChallenge(tx: Tx, code: string, purpose: 'admin_recovery' | 'email_verify', user: UserRow) {
+    const [proof] = await tx.select().from(authChallenges).where(and(eq(authChallenges.tokenHash, sha256(code)), eq(authChallenges.purpose, purpose), eq(authChallenges.userId, user.id))).for('update');
+    if (!proof || proof.consumedAt || proof.expiresAt.getTime() <= Date.now() || proof.securityVersion !== user.securityVersion || !proof.email || proof.email.toLowerCase() !== user.email?.toLowerCase()) throw new ApiError('AUTH_INVALID');
+    return proof;
   }
 
   /** Texts a confirmation code (purpose `step_up`) to the signed-in account's own phone. */
@@ -194,7 +297,7 @@ export class AuthService {
         if (!isUniqueViolation(error, 'users_phone_uq')) throw error;
       }
       user ??= await this.usersService.findByPhone(unit.tx, claims.phone);
-      if (!user) throw new ApiError('CONFLICT');
+      if (!user || user.status !== 'active' || user.isPlatformAdmin) throw new ApiError('CONFLICT');
       const { session, refresh } = await this.sessions.create(unit, user.id, device, ['otp']);
       await this.audit.write(unit.tx, { action: 'auth.signup', actorUserId: user.id, resourceType: 'user', resourceId: user.id });
       return { user, session, refresh };

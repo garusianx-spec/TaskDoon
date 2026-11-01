@@ -54,6 +54,7 @@ export const REDACT_PATHS = [
   '*.accessToken',
   '*.refreshToken',
   '*.signupToken',
+  '*.temporaryToken',
 ] as const;
 
 /** `+989121234567` → `+98912***4567`. */

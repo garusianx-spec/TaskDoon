@@ -123,6 +123,12 @@ with IP and device, ending sessions, single-use password reset codes), «رصد 
 has an audit log of everything looked at. Only flagged accounts get in, and only after a password
 step-up. Everyone else gets a 404, and the workspace app never links there.
 
+Flagged platform admins complete sign-in with an SMS code followed by their admin password.
+The initial phone request never reveals their role, and OTP verification alone creates no
+session. Forgotten admin passwords require a recovery code delivered to a previously verified
+profile email. See [the Phase 1 flow](docs/product/admin-conditional-password-phase1.md) for
+the additive migration, email verification and regression checks.
+
 - **Flag an account** from the server: `npm run platform-admin -w @taskin/api -- grant 09121234567`. Use `revoke` to remove the flag and `list` to see who has it. It needs `DATABASE_MIGRATOR_URL`.
 - **Database role.** The API reads across tenants only through the read-only
   `taskin_platform_admin` role on its own pool: set `DATABASE_PLATFORM_ADMIN_URL` (the Compose

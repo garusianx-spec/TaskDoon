@@ -11,6 +11,7 @@ const collection = (response, method, resource) => response.request().method() =
 
 export async function verifyProjectCreation(page, { projectName, guestName, runId }) {
   await page.getByRole('navigation', { name: 'ناوبری اصلی' }).waitFor();
+  await page.waitForLoadState('networkidle');
   // Consume bodies as responses arrive; a reload can invalidate an earlier page's CDP body ID.
   const membersRead = page.waitForResponse((response) => collection(response, 'GET', 'members')).then(response => response.json());
   const departmentsRead = page.waitForResponse((response) => collection(response, 'GET', 'departments')).then(response => response.json());
@@ -57,6 +58,9 @@ export async function verifyProjectCreation(page, { projectName, guestName, runI
   check(created.memberIds?.includes(guest.userId) && new Set(created.memberIds).size === created.memberIds.length, 'the server creates project memberships without duplicates');
   await dialog.waitFor({ state: 'detached' });
   await page.waitForURL('**/tasks');
+  // Finish the create-triggered reads before registering reads for the reload. Otherwise a
+  // response from the old document can match and lose its CDP body during navigation.
+  await page.waitForLoadState('networkidle');
 
   const projectsRead = page.waitForResponse((result) => collection(result, 'GET', 'projects')).then(response => response.json());
   const conversationsRead = page.waitForResponse((result) => collection(result, 'GET', 'conversations')).then(response => response.json());

@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { formatMobile, normaliseIranMobile, toLatinDigits } from '@taskin/text';
+import { toLatinDigits } from '@taskin/text';
 import { toPersianDigits } from '@taskin/jalali';
 import { problemMessage } from '@/api/messages';
 import { session } from '@/api/session';
 import { useAdmin } from '@/admin/AdminSession';
 import { AuthCard } from '@/components/auth/AuthCard';
+import { SignInScreen } from '@/components/auth/SignInScreen';
 import { Button, Input } from '@/components/ui';
-import { ArrowRightIcon, KeyIcon, LockIcon, MobileIcon } from '@/components/icons';
+import { KeyIcon, LockIcon } from '@/components/icons';
 import { AdminShell } from './AdminShell';
 
 /** What `/admin` shows in each phase of the admin session; the shell only once all checks pass. */
@@ -27,7 +28,7 @@ export function AdminGate({ children }: { readonly children: ReactNode }) {
         </AuthCard>
       );
     case 'signed-out':
-      return <AdminSignIn onSignedIn={probe} />;
+      return <SignInScreen adminPanel store={{ invited: false, signedIn: probe }} />;
     case 'not-admin':
       // Indistinguishable from an address that does not exist, as the API answers 404.
       return (
@@ -66,204 +67,6 @@ export function AdminGate({ children }: { readonly children: ReactNode }) {
     case 'ready':
       return <AdminShell>{children}</AdminShell>;
   }
-}
-
-type SignInStep =
-  | { readonly kind: 'phone' }
-  | { readonly kind: 'password' }
-  | { readonly kind: 'code'; readonly phone: string; readonly challengeId: string; readonly codeLength: number; readonly resendAt: number };
-
-/**
- * Mobile number → SMS code, or mobile number → password (the panel then asks for an SMS code
- * once). No sign-up here: platform admins are existing accounts.
- */
-function AdminSignIn({ onSignedIn }: { readonly onSignedIn: () => Promise<void> }) {
-  const [step, setStep] = useState<SignInStep>({ kind: 'phone' });
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
-  const fieldRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    fieldRef.current?.focus();
-  }, [step.kind]);
-
-  const goTo = (next: SignInStep) => {
-    setError(null);
-    setPassword('');
-    setStep(next);
-  };
-
-  useEffect(() => {
-    if (step.kind !== 'code') return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [step.kind]);
-
-  const attempt = async (work: () => Promise<void>) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await work();
-    } catch (failure) {
-      setError(problemMessage(failure));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const requestCode = (mobile: string) =>
-    attempt(async () => {
-      const challenge = await session.requestCode(mobile);
-      setCode('');
-      setStep({ kind: 'code', phone: mobile, challengeId: challenge.challengeId, codeLength: challenge.codeLength, resendAt: Date.now() + challenge.resendInSeconds * 1000 });
-    });
-
-  const onPhone = (event: FormEvent) => {
-    event.preventDefault();
-    const mobile = normaliseIranMobile(phone);
-    if (!mobile) {
-      setError('شماره موبایل معتبر نیست؛ مثلاً ۰۹۱۲۱۲۳۴۵۶۷.');
-      return;
-    }
-    void requestCode(mobile);
-  };
-
-  const onCode = (event: FormEvent) => {
-    event.preventDefault();
-    if (step.kind !== 'code') return;
-    void attempt(async () => {
-      const result = await session.verifyCode(step.challengeId, toLatinDigits(code).trim());
-      if ('signupToken' in result) {
-        setStep({ kind: 'phone' });
-        setError('این شماره در تسک‌دون حساب ندارد.');
-        return;
-      }
-      await onSignedIn();
-    });
-  };
-
-  const onPassword = (event: FormEvent) => {
-    event.preventDefault();
-    const mobile = normaliseIranMobile(phone);
-    if (!mobile) {
-      setError('شماره موبایل معتبر نیست؛ مثلاً ۰۹۱۲۱۲۳۴۵۶۷.');
-      return;
-    }
-    if (!password) {
-      setError('رمز عبور را وارد کنید.');
-      return;
-    }
-    void attempt(async () => {
-      await session.passwordSignIn(mobile, password);
-      setPassword('');
-      await onSignedIn();
-    });
-  };
-
-  if (step.kind === 'password') {
-    return (
-      <AuthCard labelledBy="admin-title" title="ورود به پنل مدیریت پلتفرم" description="با رمز عبور وارد شوید؛ پس از آن یک بار کد پیامکی هم خواسته می‌شود.">
-        <form className="flex flex-col gap-4" onSubmit={onPassword} noValidate>
-          <Input
-            ref={fieldRef}
-            label="شماره موبایل"
-            name="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="username"
-            dir="ltr"
-            placeholder="۰۹۱۲ ۱۲۳ ۴۵۶۷"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            iconStart={<MobileIcon size={18} />}
-          />
-          <Input
-            label="رمز عبور"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            dir="ltr"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            iconStart={<LockIcon size={18} />}
-            error={error ?? undefined}
-          />
-          <Button type="submit" fullWidth size="lg" loading={busy}>
-            ورود
-          </Button>
-          <Button variant="link" type="button" iconStart={<ArrowRightIcon size={16} />} onClick={() => goTo({ kind: 'phone' })}>
-            ورود با کد پیامکی
-          </Button>
-        </form>
-      </AuthCard>
-    );
-  }
-
-  if (step.kind === 'code') {
-    const wait = Math.max(0, Math.ceil((step.resendAt - now) / 1000));
-    return (
-      <AuthCard labelledBy="admin-title" title="کد ورود را وارد کنید" description={`کد ${toPersianDigits(step.codeLength)} رقمی به ${formatMobile(step.phone)} پیامک شد.`}>
-        <form className="flex flex-col gap-4" onSubmit={onCode} noValidate>
-          <Input
-            ref={fieldRef}
-            label="کد ورود"
-            name="code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            dir="ltr"
-            className="text-center tracking-[0.5em]"
-            maxLength={step.codeLength}
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            iconStart={<KeyIcon size={18} />}
-            error={error ?? undefined}
-          />
-          <Button type="submit" fullWidth size="lg" loading={busy} disabled={toLatinDigits(code).trim().length !== step.codeLength}>
-            ورود
-          </Button>
-          <div className="flex items-center justify-between text-caption text-fg-tertiary">
-            <Button variant="link" type="button" iconStart={<ArrowRightIcon size={16} />} onClick={() => setStep({ kind: 'phone' })}>
-              تغییر شماره
-            </Button>
-            <Button variant="link" type="button" disabled={wait > 0 || busy} onClick={() => void requestCode(step.phone)}>
-              {wait > 0 ? `ارسال دوباره تا ${toPersianDigits(wait)} ثانیه` : 'ارسال دوباره کد'}
-            </Button>
-          </div>
-        </form>
-      </AuthCard>
-    );
-  }
-
-  return (
-    <AuthCard labelledBy="admin-title" title="ورود به پنل مدیریت پلتفرم" description="فقط مدیران پلتفرم تسک‌دون به این بخش دسترسی دارند.">
-      <form className="flex flex-col gap-4" onSubmit={onPhone} noValidate>
-        <Input
-          ref={fieldRef}
-          label="شماره موبایل"
-          name="phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          dir="ltr"
-          placeholder="۰۹۱۲ ۱۲۳ ۴۵۶۷"
-          value={phone}
-          onChange={(event) => setPhone(event.target.value)}
-          iconStart={<MobileIcon size={18} />}
-          error={error ?? undefined}
-        />
-        <Button type="submit" fullWidth size="lg" loading={busy}>
-          دریافت کد ورود
-        </Button>
-        <Button variant="link" type="button" iconStart={<LockIcon size={16} />} onClick={() => goTo({ kind: 'password' })}>
-          ورود با رمز عبور
-        </Button>
-      </form>
-    </AuthCard>
-  );
 }
 
 /**

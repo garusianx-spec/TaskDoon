@@ -2,8 +2,9 @@ import type { AvatarTone } from '../domain.js';
 
 /**
  * Authentication contracts. The phone number is the account: sign-in is phone → SMS code, or, for
- * an account that has set a password, phone → password. A forgotten password is replaced only
- * with an SMS code sent to that phone. The password is also the step-up factor for sensitive
+ * a non-platform account that has set a password, phone → password. Platform admins complete
+ * OTP first, then a restricted password challenge; recovery also proves a previously verified
+ * email. Other accounts can recover with an SMS code. The password is also the step-up factor for sensitive
  * actions; signing in with it does not count as a step-up.
  *
  * The access token travels in `Authorization: Bearer`. The refresh token never reaches script: it
@@ -25,7 +26,7 @@ export interface OtpChallenge {
   readonly resendInSeconds: number;
 }
 
-/** `POST /auth/password/login`: the alternative to the SMS code. */
+/** `POST /auth/password/login`: the alternative to the SMS code for non-platform accounts. */
 export interface PasswordSignInBody {
   /** Any written form of an Iranian mobile number. */
   readonly phone: string;
@@ -33,7 +34,7 @@ export interface PasswordSignInBody {
   readonly deviceLabel?: string;
 }
 
-/** `POST /auth/password/forgot`: texts a reset code (answers an `OtpChallenge` whether or not the number has an account). */
+/** `POST /auth/password/forgot`: an indistinguishable challenge; platform admins use verified email recovery after OTP instead. */
 export interface PasswordForgotBody {
   readonly phone: string;
 }
@@ -60,6 +61,7 @@ export interface OtpVerifyBody {
 
 export type OtpVerifyResult =
   | { readonly status: 'signed_in'; readonly session: AuthSession }
+  | { readonly status: 'password_required'; readonly temporaryToken: string; readonly expiresInSeconds: number }
   | {
       readonly status: 'signup_required';
       /** Proves the phone was verified; exchange it at `POST /auth/signup` within its lifetime. */
@@ -119,3 +121,16 @@ export interface SessionView {
   /** The session making this request; it can sign out but not revoke itself from the list. */
   readonly current: boolean;
 }
+
+/** A restricted proof of a successful OTP; never an access or refresh token. */
+export interface AdminPasswordBody {
+  readonly temporaryToken: string;
+  readonly password: string;
+  readonly deviceLabel?: string;
+}
+export interface AdminRecoveryRequestBody { readonly temporaryToken: string }
+export interface AdminRecoveryCompleteBody extends AdminRecoveryRequestBody {
+  readonly code: string;
+  readonly newPassword: string;
+}
+export interface EmailVerificationConfirmBody { readonly code: string }

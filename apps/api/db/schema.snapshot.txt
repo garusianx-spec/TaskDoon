@@ -40,6 +40,16 @@ audit_logs.resource_type text
 audit_logs.trace_id text
 audit_logs.user_agent text
 audit_logs.workspace_id uuid
+auth_challenges.consumed_at timestamp with time zone
+auth_challenges.created_at timestamp with time zone not null default now()
+auth_challenges.email citext
+auth_challenges.expires_at timestamp with time zone not null
+auth_challenges.id uuid not null default app.uuidv7()
+auth_challenges.parent_hash bytea
+auth_challenges.purpose text not null
+auth_challenges.security_version integer not null
+auth_challenges.token_hash bytea not null
+auth_challenges.user_id uuid not null
 auth_sessions.absolute_expires_at timestamp with time zone not null
 auth_sessions.amr text[] not null
 auth_sessions.client_name text
@@ -532,6 +542,17 @@ audit_logs audit_logs_action_not_null: NOT NULL action
 audit_logs audit_logs_created_at_not_null: NOT NULL created_at
 audit_logs audit_logs_id_not_null: NOT NULL id
 audit_logs audit_logs_pkey: PRIMARY KEY (id, created_at)
+auth_challenges auth_challenges_created_at_not_null: NOT NULL created_at
+auth_challenges auth_challenges_expires_at_not_null: NOT NULL expires_at
+auth_challenges auth_challenges_id_not_null: NOT NULL id
+auth_challenges auth_challenges_pkey: PRIMARY KEY (id)
+auth_challenges auth_challenges_purpose: CHECK ((purpose = ANY (ARRAY['admin_login'::text, 'admin_recovery'::text, 'email_verify'::text])))
+auth_challenges auth_challenges_purpose_not_null: NOT NULL purpose
+auth_challenges auth_challenges_security_version_not_null: NOT NULL security_version
+auth_challenges auth_challenges_token_hash_not_null: NOT NULL token_hash
+auth_challenges auth_challenges_token_hash_uq: UNIQUE (token_hash)
+auth_challenges auth_challenges_user_id_not_null: NOT NULL user_id
+auth_challenges auth_challenges_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 auth_sessions auth_sessions_absolute_expires_at_not_null: NOT NULL absolute_expires_at
 auth_sessions auth_sessions_amr_not_null: NOT NULL amr
 auth_sessions auth_sessions_created_at_not_null: NOT NULL created_at
@@ -1130,6 +1151,9 @@ audit_logs CREATE INDEX audit_logs_request_idx ON ONLY public.audit_logs USING b
 audit_logs CREATE INDEX audit_logs_resource_idx ON ONLY public.audit_logs USING btree (workspace_id, resource_type, resource_id)
 audit_logs CREATE INDEX audit_logs_ws_created_idx ON ONLY public.audit_logs USING btree (workspace_id, created_at DESC)
 audit_logs CREATE UNIQUE INDEX audit_logs_pkey ON ONLY public.audit_logs USING btree (id, created_at)
+auth_challenges CREATE INDEX auth_challenges_user_idx ON public.auth_challenges USING btree (user_id)
+auth_challenges CREATE UNIQUE INDEX auth_challenges_pkey ON public.auth_challenges USING btree (id)
+auth_challenges CREATE UNIQUE INDEX auth_challenges_token_hash_uq ON public.auth_challenges USING btree (token_hash)
 auth_sessions CREATE INDEX auth_sessions_user_active_idx ON public.auth_sessions USING btree (user_id) WHERE (revoked_at IS NULL)
 auth_sessions CREATE UNIQUE INDEX auth_sessions_pkey ON public.auth_sessions USING btree (id)
 auto_reply_log CREATE UNIQUE INDEX auto_reply_log_pk ON public.auto_reply_log USING btree (workspace_id, user_id, sender_id)
@@ -1281,6 +1305,7 @@ workspaces CREATE UNIQUE INDEX workspaces_slug_uq ON public.workspaces USING btr
 activity_events enabled=true forced=true
 attachments enabled=true forced=true
 audit_logs enabled=true forced=true
+auth_challenges enabled=false forced=false
 auth_sessions enabled=false forced=false
 auto_reply_log enabled=true forced=true
 board_columns enabled=true forced=true
@@ -1435,6 +1460,7 @@ app.workspaces_due_for_purge(p_limit integer) security definer
 activity_events DELETE,INSERT,SELECT,UPDATE
 attachments DELETE,INSERT,SELECT,UPDATE
 audit_logs INSERT,SELECT
+auth_challenges DELETE,INSERT,SELECT,UPDATE
 auth_sessions DELETE,INSERT,SELECT,UPDATE
 auto_reply_log DELETE,INSERT,SELECT,UPDATE
 board_columns DELETE,INSERT,SELECT,UPDATE

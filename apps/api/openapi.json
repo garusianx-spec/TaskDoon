@@ -96,6 +96,23 @@
                         "status": {
                           "type": "string",
                           "enum": [
+                            "password_required"
+                          ]
+                        },
+                        "temporaryToken": {
+                          "type": "string"
+                        },
+                        "expiresInSeconds": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
                             "signup_required"
                           ]
                         },
@@ -114,6 +131,148 @@
           }
         },
         "summary": "Check the code: signs in, or returns a sign-up token for a new number",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/admin/password": {
+      "post": {
+        "operationId": "Auth_adminPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Complete the admin password challenge after a successful phone OTP",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/admin/recovery/request": {
+      "post": {
+        "operationId": "Auth_requestAdminRecovery",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminRecoveryRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Send recovery proof to the previously verified email, when configured",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/admin/recovery/complete": {
+      "post": {
+        "operationId": "Auth_completeAdminRecovery",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminRecoveryCompleteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Reset the admin password with OTP proof and a verified email recovery code; end all sessions",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/email/verification/request": {
+      "post": {
+        "operationId": "Auth_requestEmailVerification",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailVerificationRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a verification code to the current profile email",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/email/verification/confirm": {
+      "post": {
+        "operationId": "Auth_confirmEmailVerification",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailVerificationConfirmDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify the current profile email with its single-use code",
         "tags": [
           "auth"
         ]
@@ -7857,6 +8016,71 @@
         },
         "required": [
           "challengeId",
+          "code"
+        ]
+      },
+      "AdminPasswordDto": {
+        "type": "object",
+        "properties": {
+          "temporaryToken": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          },
+          "deviceLabel": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "temporaryToken",
+          "password"
+        ]
+      },
+      "AdminRecoveryRequestDto": {
+        "type": "object",
+        "properties": {
+          "temporaryToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "temporaryToken"
+        ]
+      },
+      "AdminRecoveryCompleteDto": {
+        "type": "object",
+        "properties": {
+          "temporaryToken": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "temporaryToken",
+          "code",
+          "newPassword"
+        ]
+      },
+      "EmailVerificationRequestDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "EmailVerificationConfirmDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
           "code"
         ]
       },
