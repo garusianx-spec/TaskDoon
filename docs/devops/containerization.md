@@ -33,7 +33,7 @@ docker compose --env-file .env.prod.local -f docker-compose.prod.yml ps
 
 The generated environment and secret files are excluded from Git and build contexts. Their host parent directories are private; individual Compose file secrets are read-only and readable by the separate service UIDs. Every command must pass `--env-file .env.prod.local`; Compose does not auto-load that filename. Reuse these credentials when reusing volumes. Changing the environment alone does not rotate PostgreSQL or Redis persisted credentials.
 
-Open `https://localhost:8443`. Object URLs use `https://storage.localhost:8443`. Trust the generated certificate for both hostnames in your local browser, or use a certificate issued by a locally trusted CA. Where localhost subdomain resolution is absent, add `127.0.0.1 storage.localhost` to the host's resolver configuration. The generated certificate expires after 30 days.
+Open `https://localhost:8443`. Object URLs use the same origin at `https://localhost:8443/taskin-files/...`. Trust the generated certificate for both hostnames in your local browser, or use a certificate issued by a locally trusted CA. Where localhost subdomain resolution is absent, add `127.0.0.1 storage.localhost` to the host's resolver configuration. The generated certificate expires after 30 days.
 
 ```sh
 curl --cacert .local/prod/tls/server.crt https://localhost:8443/health/ready
@@ -56,7 +56,7 @@ Some historic migrations call `uuidv7()` without a schema. The PostgreSQL 16 boo
 
 RedisCore has AOF/everysec, maxmemory 256MB and `noeviction` to protect BullMQ/session/idempotency data. Realtime Redis uses maxmemory 128MB and `volatile-lru`, with no persistence. Both leave memory headroom below their container limits and require generated passwords.
 
-Every service runs under a nonzero UID, drops capabilities and sets no-new-privileges. Root filesystems are read-only with bounded writable tmpfs/data mounts. CPU, memory and PID limits apply to all services. JSON-file logs rotate at 20MB with 3 files. Nginx access logs omit query strings and raw referrers; error verbosity is restricted to critical events. Request IDs and status/duration support diagnosis without retaining presigned URL signatures. Upstreams use Docker DNS with shared zones to survive container IP changes. The storage virtual host preserves the signed Host, port and URI.
+Every service runs under a nonzero UID, drops capabilities and sets no-new-privileges. Root filesystems are read-only with bounded writable tmpfs/data mounts. CPU, memory and PID limits apply to all services. JSON-file logs rotate at 20MB with 3 files. Nginx access logs omit query strings and raw referrers; error verbosity is restricted to critical events. Request IDs and status/duration support diagnosis without retaining presigned URL signatures. Upstreams use Docker DNS with shared zones to survive container IP changes. The `/taskin-files/` route preserves the signed Host, port, bucket path and query string.
 
 Stop while retaining data:
 
@@ -79,3 +79,21 @@ The tests in this phase exercise actual images and services: build/lint/type che
 On this Windows host, the requested checkout is inside WSL Ubuntu with Docker Desktop distro integration disabled. Builds use the real Linux checkout. Default file binds cannot reach that distro until integration is enabled. Verification therefore transferred the same configuration/secret files into isolated Docker volumes and applied an ignored local mount override; service images, commands, users, networks, resources and TLS behavior remained the delivered configuration. A normal Linux Docker host uses the boot commands above without that override.
 
 Official references: [Node image guidance](https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md#smaller-images-without-npmyarn), [Next standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output), [BuildKit caching](https://docs.docker.com/build/cache/optimize/), [BullMQ production Redis policy](https://docs.bullmq.io/guide/going-to-production).
+
+## Production media endpoint
+
+Set `S3_PUBLIC_ENDPOINT=https://taskdoone.ir`, `S3_BUCKET=taskin-files` and
+`S3_FORCE_PATH_STYLE=true` for every API/realtime/worker instance. Production Compose
+and API production defaults use this public endpoint. Keep `S3_ENDPOINT` pointed
+at the internal storage API; do not append the bucket to either endpoint. Restart
+the API roles after changing runtime variables; request fresh presigned links.
+
+Nginx routes `https://taskdoone.ir/taskin-files/` to `taskdoon_storage` without
+rewriting the URI or Host, which are part of the S3 signature. This repository
+uses SeaweedFS at `s3:8333`. For a deployment using MinIO, point that upstream at
+the internal MinIO S3 API (usually `minio:9000`), not its console port; retain the
+same public route and ensure the proxy shares MinIO's internal network. Apply
+this route to the TLS reverse proxy that actually serves `taskdoone.ir`. Local
+production-parity setup overrides the endpoint to `https://localhost:8443` so
+verification does not contact the production site. No production server access
+is implied by validating this repository's configuration.

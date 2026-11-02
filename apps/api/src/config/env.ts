@@ -126,7 +126,7 @@ export const envSchema = z
     MAIL_FROM: z.string().default('TaskDoon <no-reply@taskin.local>'),
 
     S3_ENDPOINT: z.url(),
-    /** The host browsers reach; presigned URLs are signed for it. Defaults to S3_ENDPOINT. */
+    /** The host browsers reach; presigned URLs are signed for it. Defaults to taskdoone.ir in production, S3_ENDPOINT elsewhere. */
     S3_PUBLIC_ENDPOINT: z.url().optional(),
     S3_REGION: z.string().default('us-east-1'),
     S3_BUCKET: z.string().min(3),
@@ -162,7 +162,11 @@ export const envSchema = z
     if (env.SMS_PROVIDERS.includes('smsir') && !env.SMSIR_API_KEY) {
       ctx.addIssue({ code: 'custom', path: ['SMSIR_API_KEY'], message: 'required when smsir is a provider' });
     }
-  });
+  })
+  .transform((env) => ({
+    ...env,
+    S3_PUBLIC_ENDPOINT: env.S3_PUBLIC_ENDPOINT ?? (env.NODE_ENV === 'production' ? 'https://taskdoone.ir' : undefined),
+  }));
 
 export type Env = z.infer<typeof envSchema>;
 

@@ -22,7 +22,7 @@ x-api-environment: &api-environment
   REDIS_CORE_URL: redis://:${REDIS_CORE_PASSWORD:?generate local secrets}@redis-core:6379
   REDIS_RT_URL: redis://:${REDIS_RT_PASSWORD:?generate local secrets}@redis-rt:6379
   S3_ENDPOINT: http://s3:8333
-  S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-https://storage.localhost:8443}
+  S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-https://taskdoone.ir}
   S3_BUCKET: taskin-files
   S3_ACCESS_KEY: ${S3_ACCESS_KEY:?generate local secrets}
   S3_SECRET_KEY: ${S3_SECRET_KEY:?generate local secrets}
