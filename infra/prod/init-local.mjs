@@ -29,7 +29,7 @@ const env = {
   APP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   HTTPS_PORT: port,
   PUBLIC_WEB_ORIGIN: 'https://localhost:' + port,
-  S3_PUBLIC_ENDPOINT: 'https://storage.localhost:' + port,
+  S3_PUBLIC_ENDPOINT: 'https://localhost:' + port,
   SMS_PROVIDERS: 'kavenegar',
   // This boots health/build verification only; it cannot deliver an OTP.
   KAVENEGAR_API_KEY: process.env.KAVENEGAR_API_KEY ?? 'local-verification-placeholder',
