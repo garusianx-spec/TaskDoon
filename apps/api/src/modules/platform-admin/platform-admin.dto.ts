@@ -11,6 +11,7 @@ import type {
   PasswordResetIssued,
   PasswordResetRequiredBody,
   PlatformAdminMe,
+  PlatformAdminRole,
   PlatformAttachmentLink,
   PlatformAuditEntry,
   PlatformAuditPage,
@@ -130,6 +131,7 @@ export class PlatformWorkspaceQueryDto {
 /* ------------------------------------------------------------------ responses */
 
 export class PlatformAdminMeDto implements PlatformAdminMe {
+  @ApiPropertyOptional({ enum: ['SUPER_ADMIN', 'ADMIN', 'OPERATOR'] }) readonly role?: PlatformAdminRole;
   @ApiProperty({ format: 'uuid' }) readonly userId!: string;
   @ApiProperty() readonly fullName!: string;
   @ApiProperty({ description: 'The session was opened with a password and not yet confirmed with an SMS code' }) readonly smsConfirmationRequired!: boolean;

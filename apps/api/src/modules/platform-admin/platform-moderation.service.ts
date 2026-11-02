@@ -1,3 +1,4 @@
+import { isPrimaryOwner } from '../../platform/security/platform-role-policy.js';
 import { Injectable } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import type { PasswordResetRequiredBody, PlatformModerationResult } from '@taskin/contracts';
@@ -11,7 +12,7 @@ import type { PlatformAdmin } from './platform-admin.guard.js';
 import { PlatformAuditWriter } from './platform-audit.writer.js';
 import { summary, USER_COLUMNS, type UserRow } from './platform-users.service.js';
 
-type Target = Pick<typeof users.$inferSelect, 'id' | 'status' | 'isPlatformAdmin' | 'passwordResetRequired' | 'deletedAt'>;
+type Target = Pick<typeof users.$inferSelect, 'id' | 'status' | 'isPlatformAdmin' | 'passwordResetRequired' | 'deletedAt' | 'phone'>;
 
 /**
  * Phase 2 of the platform admin: acting on an account. Suspending stops it at once: the status
@@ -123,6 +124,7 @@ export class PlatformModerationService {
     const [target] = await unit.tx
       .select({
         id: users.id,
+        phone: users.phone,
         status: users.status,
         isPlatformAdmin: users.isPlatformAdmin,
         passwordResetRequired: users.passwordResetRequired,
@@ -132,6 +134,7 @@ export class PlatformModerationService {
       .where(eq(users.id, userId))
       .for('update');
     if (!target || target.deletedAt || target.status === 'deleted') throw ApiError.notFound('The user');
+    if (isPrimaryOwner(target.phone)) throw new ApiError('ADMIN_TARGET_PROTECTED');
     return target;
   }
 

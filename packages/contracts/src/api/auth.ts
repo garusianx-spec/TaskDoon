@@ -61,6 +61,7 @@ export interface OtpVerifyBody {
 
 export type OtpVerifyResult =
   | { readonly status: 'signed_in'; readonly session: AuthSession }
+  | { readonly status: 'admin_setup_required'; readonly temporaryToken: string; readonly expiresInSeconds: number }
   | { readonly status: 'password_required'; readonly temporaryToken: string; readonly expiresInSeconds: number }
   | {
       readonly status: 'signup_required';

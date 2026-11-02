@@ -96,7 +96,8 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "password_required"
+                            "password_required",
+                            "admin_setup_required"
                           ]
                         },
                         "temporaryToken": {
@@ -131,6 +132,56 @@
           }
         },
         "summary": "Check the code: signs in, or returns a sign-up token for a new number",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/admin/setup/request": {
+      "post": {
+        "operationId": "Auth_requestAdminSetup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminRecoveryRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Send the pending administrator setup code to the assigned recovery email after OTP proof",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/admin/setup/complete": {
+      "post": {
+        "operationId": "Auth_completeAdminSetup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminRecoveryCompleteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Complete phone/email/password setup without issuing a session",
         "tags": [
           "auth"
         ]
@@ -6433,6 +6484,144 @@
         ]
       }
     },
+    "/api/v1/admin/users/roles": {
+      "get": {
+        "operationId": "AdminRoles_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdministrativeUserDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List administrative users (SUPER_ADMIN only)",
+        "tags": [
+          "platform-admin-roles"
+        ]
+      },
+      "post": {
+        "operationId": "AdminRoles_assign",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignAdminRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministrativeUserDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Provision or elevate an account, requiring phone, email and password setup",
+        "tags": [
+          "platform-admin-roles"
+        ]
+      }
+    },
+    "/api/v1/admin/users/roles/{id}": {
+      "patch": {
+        "operationId": "AdminRoles_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdminRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministrativeUserDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change administrative role or suspend/resume access",
+        "tags": [
+          "platform-admin-roles"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminRoles_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoke administrative privileges and all existing sessions",
+        "tags": [
+          "platform-admin-roles"
+        ]
+      }
+    },
     "/api/v1/admin/me": {
       "get": {
         "operationId": "PlatformAdminProbe_me",
@@ -8019,25 +8208,6 @@
           "code"
         ]
       },
-      "AdminPasswordDto": {
-        "type": "object",
-        "properties": {
-          "temporaryToken": {
-            "type": "string"
-          },
-          "password": {
-            "type": "string",
-            "format": "password"
-          },
-          "deviceLabel": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "temporaryToken",
-          "password"
-        ]
-      },
       "AdminRecoveryRequestDto": {
         "type": "object",
         "properties": {
@@ -8067,6 +8237,25 @@
           "temporaryToken",
           "code",
           "newPassword"
+        ]
+      },
+      "AdminPasswordDto": {
+        "type": "object",
+        "properties": {
+          "temporaryToken": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          },
+          "deviceLabel": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "temporaryToken",
+          "password"
         ]
       },
       "EmailVerificationRequestDto": {
@@ -13187,9 +13376,111 @@
           "message"
         ]
       },
+      "AdministrativeUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "ADMIN",
+              "OPERATOR"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PENDING_SETUP",
+              "SUSPENDED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "protected": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "phone",
+          "email",
+          "role",
+          "status",
+          "createdAt",
+          "protected"
+        ]
+      },
+      "AssignAdminRoleDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "recoveryEmail": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "OPERATOR"
+            ]
+          }
+        },
+        "required": [
+          "phone",
+          "fullName",
+          "recoveryEmail",
+          "role"
+        ]
+      },
+      "UpdateAdminRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "OPERATOR"
+            ]
+          },
+          "suspended": {
+            "type": "boolean"
+          }
+        }
+      },
       "PlatformAdminMeDto": {
         "type": "object",
         "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "ADMIN",
+              "OPERATOR"
+            ]
+          },
           "userId": {
             "type": "string",
             "format": "uuid"

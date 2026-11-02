@@ -448,6 +448,7 @@ tasks.type issue_type not null default 'task'::issue_type
 tasks.updated_at timestamp with time zone not null default now()
 tasks.version integer not null default 1
 tasks.workspace_id uuid not null
+users.admin_setup_required boolean not null default false
 users.avatar_key text
 users.avatar_tone avatar_tone not null default 'brand'::avatar_tone
 users.created_at timestamp with time zone not null default now()
@@ -464,7 +465,9 @@ users.password_changed_at timestamp with time zone
 users.password_hash text
 users.password_reset_required boolean not null default false
 users.phone text not null
-users.phone_verified_at timestamp with time zone not null
+users.phone_verified_at timestamp with time zone
+users.platform_admin_role text
+users.platform_admin_status text not null default 'ACTIVE'::text
 users.security_version integer not null default 1
 users.status user_status not null default 'active'::user_status
 users.time_zone text not null default 'Asia/Tehran'::text
@@ -546,7 +549,7 @@ auth_challenges auth_challenges_created_at_not_null: NOT NULL created_at
 auth_challenges auth_challenges_expires_at_not_null: NOT NULL expires_at
 auth_challenges auth_challenges_id_not_null: NOT NULL id
 auth_challenges auth_challenges_pkey: PRIMARY KEY (id)
-auth_challenges auth_challenges_purpose: CHECK ((purpose = ANY (ARRAY['admin_login'::text, 'admin_recovery'::text, 'email_verify'::text])))
+auth_challenges auth_challenges_purpose: CHECK ((purpose = ANY (ARRAY['admin_login'::text, 'admin_recovery'::text, 'email_verify'::text, 'admin_setup'::text, 'admin_setup_email'::text])))
 auth_challenges auth_challenges_purpose_not_null: NOT NULL purpose
 auth_challenges auth_challenges_security_version_not_null: NOT NULL security_version
 auth_challenges auth_challenges_token_hash_not_null: NOT NULL token_hash
@@ -1072,6 +1075,7 @@ tasks tasks_version_not_null: NOT NULL version
 tasks tasks_workspace_id_not_null: NOT NULL workspace_id
 tasks tasks_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 tasks tasks_ws_id_uq: UNIQUE (workspace_id, id)
+users users_admin_setup_required_not_null: NOT NULL admin_setup_required
 users users_avatar_tone_not_null: NOT NULL avatar_tone
 users users_created_at_not_null: NOT NULL created_at
 users users_failed_password_attempts_not_null: NOT NULL failed_password_attempts
@@ -1083,8 +1087,10 @@ users users_locale_not_null: NOT NULL locale
 users users_password_reset_required_not_null: NOT NULL password_reset_required
 users users_phone_e164: CHECK ((phone ~ '^\+[1-9][0-9]{7,14}$'::text))
 users users_phone_not_null: NOT NULL phone
-users users_phone_verified_at_not_null: NOT NULL phone_verified_at
 users users_pkey: PRIMARY KEY (id)
+users users_platform_admin_role: CHECK (((platform_admin_role IS NULL) OR (platform_admin_role = ANY (ARRAY['SUPER_ADMIN'::text, 'ADMIN'::text, 'OPERATOR'::text]))))
+users users_platform_admin_status: CHECK ((platform_admin_status = ANY (ARRAY['ACTIVE'::text, 'PENDING_SETUP'::text, 'SUSPENDED'::text])))
+users users_platform_admin_status_not_null: NOT NULL platform_admin_status
 users users_security_version_not_null: NOT NULL security_version
 users users_status_not_null: NOT NULL status
 users users_time_zone_not_null: NOT NULL time_zone
@@ -1425,6 +1431,7 @@ subtasks subtasks_touch -> touch_updated_at
 system_broadcasts system_broadcasts_touch_updated_at -> touch_updated_at
 tasks tasks_sync_status -> sync_task_status
 tasks tasks_touch -> touch_updated_at
+users protect_primary_platform_owner -> protect_primary_platform_owner
 users users_touch -> touch_updated_at
 workflows workflows_touch -> touch_updated_at
 workspace_members workspace_members_touch -> touch_updated_at
@@ -1446,6 +1453,7 @@ app.notify_outbox() invoker
 app.projects_due_for_purge(p_days integer, p_limit integer) security definer
 app.protect_locked_role_permissions() invoker
 app.protect_locked_roles() invoker
+app.protect_primary_platform_owner() invoker
 app.scheduled_messages_due(p_limit integer) security definer
 app.search_note_ids(p_pattern text) security definer
 app.search_task_ids(p_pattern text) security definer

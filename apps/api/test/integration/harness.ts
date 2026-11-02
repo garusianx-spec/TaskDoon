@@ -259,6 +259,8 @@ export async function signIn(t: TestApp, phone = randomPhone(), fullName = 'کا
     if (completed.status !== 200) throw new Error(`admin/password ${completed.status}: ${JSON.stringify(completed.body)}`);
     session = completed.body as AuthSession;
     setCookie = completed.headers['set-cookie'];
+  } else if (result.status === 'admin_setup_required') {
+    throw new Error('Pending administrative accounts must complete phone/email/password setup explicitly.');
   } else {
     const signup = await client.post('/api/v1/auth/signup').send({ signupToken: result.signupToken, fullName });
     if (signup.status !== 201) throw new Error(`signup ${signup.status}: ${JSON.stringify(signup.body)}`);

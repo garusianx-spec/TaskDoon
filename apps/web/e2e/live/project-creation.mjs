@@ -9,15 +9,34 @@ const collection = (response, method, resource) => response.request().method() =
   && new RegExp(`^/api/v1/workspaces/[^/]+/${resource}$`).test(new URL(response.url()).pathname)
   && response.ok();
 
-export async function verifyProjectCreation(page, { projectName, guestName, runId }) {
+export async function verifyProjectCreation(page, options) {
+  // Keep server persistence reads independent of Chromium response-body handles. Reloads
+  // can revalidate with 304 or invalidate a prior document's CDP body even after network idle.
+  const requests = new Map();
+  const remember = request => {
+    const url = new URL(request.url());
+    const resource = /^\/api\/v1\/workspaces\/[^/]+\/(members|departments|projects|conversations)$/.exec(url.pathname)?.[1];
+    if (resource && request.method() === 'GET' && url.origin === new URL(page.url()).origin) requests.set(resource, request);
+  };
+  const readCollection = async resource => {
+    const request = requests.get(resource);
+    if (!request) throw new Error(`No authenticated browser request for ${resource}`);
+    const headers = await request.allHeaders();
+    if (!headers.authorization) throw new Error(`Missing browser authorization for ${resource}`);
+    const response = await page.request.get(request.url(), { headers: { authorization: headers.authorization, accept: 'application/json' } });
+    if (response.status() !== 200) throw new Error(`Fresh ${resource} read returned ${response.status()}`);
+    return response.json();
+  };
+  page.on('request', remember);
+  try { await verifyFreshProjectCreation(page, { ...options, readCollection }); }
+  finally { page.off('request', remember); }
+}
+
+async function verifyFreshProjectCreation(page, { projectName, guestName, runId, readCollection }) {
   await page.getByRole('navigation', { name: 'ناوبری اصلی' }).waitFor();
   await page.waitForLoadState('networkidle');
-  // Consume bodies as responses arrive; a reload can invalidate an earlier page's CDP body ID.
-  const membersRead = page.waitForResponse((response) => collection(response, 'GET', 'members')).then(response => response.json());
-  const departmentsRead = page.waitForResponse((response) => collection(response, 'GET', 'departments')).then(response => response.json());
   await page.reload({ waitUntil: 'networkidle' });
-  const members = await membersRead;
-  const departments = await departmentsRead;
+  const [members, departments] = await Promise.all([readCollection('members'), readCollection('departments')]);
   const guest = members.find((member) => member.fullName === guestName);
   const product = departments.find((department) => department.name === 'محصول');
   const engineering = departments.find((department) => department.name === 'مهندسی و توسعه');
@@ -58,17 +77,14 @@ export async function verifyProjectCreation(page, { projectName, guestName, runI
   check(created.memberIds?.includes(guest.userId) && new Set(created.memberIds).size === created.memberIds.length, 'the server creates project memberships without duplicates');
   await dialog.waitFor({ state: 'detached' });
   await page.waitForURL('**/tasks');
-  // Finish the create-triggered reads before registering reads for the reload. Otherwise a
-  // response from the old document can match and lose its CDP body during navigation.
+  // Let create-triggered synchronization settle before verifying a full reload.
   await page.waitForLoadState('networkidle');
 
-  const projectsRead = page.waitForResponse((result) => collection(result, 'GET', 'projects')).then(response => response.json());
-  const conversationsRead = page.waitForResponse((result) => collection(result, 'GET', 'conversations')).then(response => response.json());
   await page.reload({ waitUntil: 'networkidle' });
-  const persisted = (await projectsRead).find((project) => project.id === created.id);
+  const persisted = (await readCollection('projects')).find((project) => project.id === created.id);
   check(persisted?.departmentIds?.length === 3 && expectedDepartments.every((id) => persisted.departmentIds.includes(id)), 'all selected departments survive a server reload');
   check(persisted?.memberIds?.includes(guest.userId), 'the selected project member survives a server reload');
-  const channels = (await conversationsRead).filter((conversation) => conversation.projectId === created.id);
+  const channels = (await readCollection('conversations')).filter((conversation) => conversation.projectId === created.id);
   check(channels.length === 1 && channels[0].membershipMode === 'project_synced', 'the database stores exactly one project-synced companion channel');
   check(channels.length === 1 && channels[0].memberIds.includes(guest.userId), 'the selected member also belongs to the project companion channel');
 

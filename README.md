@@ -129,6 +129,12 @@ session. Forgotten admin passwords require a recovery code delivered to a previo
 profile email. See [the Phase 1 flow](docs/product/admin-conditional-password-phase1.md) for
 the additive migration, email verification and regression checks.
 
+The **مدیریت دسترسی‌ها و مدیران** section at `/admin/roles` is available only to
+`SUPER_ADMIN`. It provisions or elevates `ADMIN`/`OPERATOR` accounts through a
+phone/email/password setup flow and supports role changes, suspension and
+revocation with immediate session invalidation. The initial owner is protected.
+See [administrative role management](docs/product/admin-role-management-phase2.md).
+
 - **Flag an account** from the server: `npm run platform-admin -w @taskin/api -- grant 09121234567`. Use `revoke` to remove the flag and `list` to see who has it. It needs `DATABASE_MIGRATOR_URL`.
 - **Database role.** The API reads across tenants only through the read-only
   `taskin_platform_admin` role on its own pool: set `DATABASE_PLATFORM_ADMIN_URL` (the Compose

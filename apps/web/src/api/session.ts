@@ -16,7 +16,7 @@ export interface LiveSession {
 }
 
 export interface AdminPasswordChallenge {
-  readonly status: 'password_required';
+  readonly status: 'password_required' | 'admin_setup_required';
   readonly temporaryToken: string;
   readonly expiresInSeconds: number;
 }
@@ -61,7 +61,7 @@ export const session = {
   async verifyCode(challengeId: string, code: string): Promise<{ readonly signupToken: string } | AdminPasswordChallenge | LiveSession> {
     const result = await http.post<OtpVerifyResult>('/auth/otp/verify', { challengeId, code, deviceLabel: deviceLabel() }, { authenticated: false });
     if (result.status === 'signup_required') return { signupToken: result.signupToken };
-    if (result.status === 'password_required') {
+    if (result.status === 'password_required' || result.status === 'admin_setup_required') {
       end();
       return result;
     }
@@ -71,6 +71,14 @@ export const session = {
   /** Completes the second factor. A temporary challenge is never an API credential. */
   async completeAdminPassword(temporaryToken: string, password: string): Promise<LiveSession> {
     return adopt(await http.post<AuthSession>('/auth/admin/password', { temporaryToken, password, deviceLabel: deviceLabel() }, { authenticated: false }));
+  },
+
+  requestAdminSetup(temporaryToken: string): Promise<void> {
+    return http.post<void>('/auth/admin/setup/request', { temporaryToken }, { authenticated: false });
+  },
+  async completeAdminSetup(temporaryToken: string, code: string, newPassword: string): Promise<void> {
+    await http.post<void>('/auth/admin/setup/complete', { temporaryToken, code, newPassword }, { authenticated: false });
+    end();
   },
 
   requestAdminRecovery(temporaryToken: string): Promise<void> {

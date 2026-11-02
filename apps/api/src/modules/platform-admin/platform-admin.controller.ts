@@ -115,6 +115,7 @@ export class PlatformAdminProbeController {
     const age = Math.floor(Date.now() / 1000) - (principal.stepUpAt ?? 0);
     return {
       userId: admin.userId,
+      role: admin.role,
       fullName: admin.fullName,
       smsConfirmationRequired: !principal.amr.includes('otp'),
       stepUpRequired: !principal.stepUpAt || age > this.config.env.STEP_UP_TTL_SECONDS,

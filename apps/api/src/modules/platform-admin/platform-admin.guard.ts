@@ -6,12 +6,15 @@ import { users } from '../../platform/db/schema/all.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { AuthenticatedRequest } from '../../platform/http/request.js';
+import { platformRole } from '../../platform/security/platform-role-policy.js';
+import type { PlatformAdminRole } from '@taskin/contracts';
 import { RequireStepUp } from '../auth/guards.js';
 
 /** The verified platform admin of this request. */
 export interface PlatformAdmin {
   readonly userId: string;
   readonly fullName: string;
+  readonly role?: PlatformAdminRole;
 }
 
 type AdminRequest = Request & AuthenticatedRequest & { platformAdmin?: PlatformAdmin };
@@ -31,12 +34,12 @@ export class PlatformAdminGuard implements CanActivate {
     if (!auth) throw new ApiError('UNAUTHENTICATED');
     const [row] = await this.uow.run({ workspaceId: null, userId: auth.userId }, ({ tx }) =>
       tx
-        .select({ fullName: users.fullName, isPlatformAdmin: users.isPlatformAdmin, status: users.status, deletedAt: users.deletedAt })
+        .select({ fullName: users.fullName, isPlatformAdmin: users.isPlatformAdmin, phone: users.phone, platformAdminRole: users.platformAdminRole, platformAdminStatus: users.platformAdminStatus, status: users.status, deletedAt: users.deletedAt })
         .from(users)
         .where(eq(users.id, auth.userId)),
     );
-    if (!row?.isPlatformAdmin || row.status !== 'active' || row.deletedAt) throw ApiError.notFound('The page');
-    request.platformAdmin = { userId: auth.userId, fullName: row.fullName };
+    if (!row?.isPlatformAdmin || row.status !== 'active' || row.platformAdminStatus !== 'ACTIVE' || row.deletedAt) throw ApiError.notFound('The page');
+    request.platformAdmin = { userId: auth.userId, fullName: row.fullName, role: platformRole(row) ?? 'ADMIN' };
     return true;
   }
 }
