@@ -1,4 +1,4 @@
-import 'server-only';
+﻿import 'server-only';
 import { cache } from 'react';
 import type { Metadata } from 'next';
 import type { PublishedSiteDocument, SiteDocumentKind } from '@taskin/contracts';
@@ -12,7 +12,7 @@ export const publicSiteFetch = cache(async <T,>(path: string): Promise<T | null>
     cache: 'no-store', signal: AbortSignal.timeout(10_000), headers: { Accept: 'application/json' },
   });
   if (response.status === 404) return null;
-  if (!response.ok) throw new Error('محتوای وب‌سایت موقتاً در دسترس نیست. لطفاً دوباره تلاش کنید.');
+  if (!response.ok) return null;
   // Nest/Express may serialize a missing nullable lookup as an empty 200 response.
   const body = await response.text();
   return body.trim() ? JSON.parse(body) as T : null;
@@ -45,7 +45,7 @@ export function siteOrigin(settings: Record<string, unknown>): string {
 }
 
 export async function siteMetadata(document: PublishedSiteDocument | null): Promise<Metadata> {
-  if (!document) return { title: 'صفحه پیدا نشد', robots: { index: false, follow: false } };
+  if (!document) return { title: 'ØµÙØ­Ù‡ Ù¾ÛŒØ¯Ø§ Ù†Ø´Ø¯', robots: { index: false, follow: false } };
   const settings = await getSiteSettings();
   const origin = siteOrigin(settings);
   const path = sitePath(document) ?? '/';
@@ -63,7 +63,7 @@ export async function siteMetadata(document: PublishedSiteDocument | null): Prom
     alternates: { canonical }, robots: { index: !document.seo.noIndex, follow: true },
     openGraph: {
       type: document.kind === 'article' ? 'article' : 'website', locale: 'fa_IR',
-      siteName: asText(settings.siteName, 'تسک‌دون'), url: canonical,
+      siteName: asText(settings.siteName, 'ØªØ³Ú©â€ŒØ¯ÙˆÙ†'), url: canonical,
       title: document.seo.ogTitle || title, description: document.seo.ogDescription || description,
       ...(image ? { images: [{ url: image, alt: document.title }] } : {}),
       ...(document.kind === 'article' ? { publishedTime: document.publishedAt, modifiedTime: document.updatedAt } : {}),
@@ -85,3 +85,4 @@ export function safeCanonical(value: unknown, origin: string, path: string): str
   }
   return new URL(path, origin).href;
 }
+
