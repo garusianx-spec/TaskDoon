@@ -13,6 +13,7 @@ import { BroadcastsController } from './modules/broadcasts/broadcasts.controller
 import { ChatController } from './modules/chat/chat.controller.js';
 import { SchedulingController } from './modules/chat/scheduling.controller.js';
 import { DomainModule } from './modules/domain.module.js';
+import { SiteModule } from './modules/site/site.module.js';
 import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { MeController } from './modules/users/me.controller.js';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module.js';
@@ -56,6 +57,7 @@ class HttpApiModule {
       imports: [
         DomainModule,
         PlatformAdminModule,
+        SiteModule,
         ThrottlerModule.forRootAsync({
           inject: [RedisClients, AppConfig],
           useFactory: (redis: RedisClients, config: AppConfig) => ({

@@ -2,7 +2,7 @@
   "name": "@taskin/web",
   "version": "0.1.0",
   "private": true,
-  "description": "Taskin web app \u2014 Next.js, RTL, Jalali",
+  "description": "Taskin web app — Next.js, RTL, Jalali",
   "scripts": {
     "build:deps": "tsc -b ../../packages/contracts ../../packages/jalali ../../packages/text",
     "predev": "npm run build:deps",
@@ -26,7 +26,11 @@
     "test:broadcasts": "node --test e2e/unit/broadcasts.test.mjs",
     "test:e2e:live:broadcasts": "node e2e/live/broadcasts.mjs",
     "test:e2e:live:admin-auth": "node e2e/live/admin-conditional-auth.mjs",
-    "test:e2e:live:admin-roles": "node e2e/live/admin-role-management.mjs"
+    "test:e2e:live:admin-roles": "node e2e/live/admin-role-management.mjs",
+    "test:e2e:site": "node e2e/live/site.mjs",
+    "test:e2e:marketing-auth": "node e2e/live/marketing-auth.mjs",
+    "test:e2e:auth-ui": "node e2e/auth/states.mjs",
+    "test:e2e:a11y": "node e2e/auth/accessibility.mjs"
   },
   "dependencies": {
     "@taskin/contracts": "0.1.0",
@@ -38,6 +42,7 @@
     "socket.io-client": "4.8.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@eslint/eslintrc": "^3.2.0",
     "@types/node": "22.20.4",
     "@types/react": "19.0.2",

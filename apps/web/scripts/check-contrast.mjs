@@ -29,13 +29,13 @@ const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body
 const accents = [...new Set(blocks.map((b) => /^\[data-accent='(\w+)'\]$/.exec(b.selector)?.[1]).filter(Boolean))];
 
 function tokensFor(mode, accent) {
-  const applies = (selector) =>
+  const appliesOne = (selector) =>
     selector === ':root' ||
     (selector === "[data-theme='dark']" && mode === 'dark') ||
     selector === '[data-accent]' ||
     selector === `[data-accent='${accent}']`;
   const merged = {};
-  for (const block of blocks) if (applies(block.selector)) Object.assign(merged, block.declarations);
+  for (const block of blocks) if (block.selector.split(',').some(selector => appliesOne(selector.trim()))) Object.assign(merged, block.declarations);
   return merged;
 }
 

@@ -5,10 +5,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { completePasswordReset } from '@/admin/api';
 import { problemMessage } from '@/api/messages';
 import { AuthCard } from '@/components/auth/AuthCard';
-import { Button, Input } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { AuthFormError, AuthInput as Input, PasswordInput } from '@/components/auth/AuthFields';
 import { LockIcon } from '@/components/icons';
 
 type State = { readonly kind: 'reading' } | { readonly kind: 'missing' } | { readonly kind: 'form'; readonly token: string } | { readonly kind: 'done' };
+type Feedback = { readonly target: 'code' | 'password' | 'repeat' | 'form'; readonly message: string };
 
 /**
  * The link in a password reset SMS or email, or a code an operator handed over: the person
@@ -20,8 +22,9 @@ export default function ResetPasswordPage() {
   const [manualCode, setManualCode] = useState('');
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Feedback | null>(null);
   const [busy, setBusy] = useState(false);
+  const errorFor = (target: Feedback['target']) => error?.target === target ? error.message : undefined;
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token');
@@ -31,17 +34,18 @@ export default function ResetPasswordPage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (busy) return;
     const token = state.kind === 'form' ? state.token : manualCode.trim();
     if (!token) {
-      setError('کد بازنشانی را وارد کنید.');
+      setError({ target: 'code', message: 'کد بازنشانی را وارد کنید.' });
       return;
     }
     if (password.length < 8) {
-      setError('رمز عبور دست‌کم ۸ نویسه باشد، با حروف و عدد یا نماد.');
+      setError({ target: 'password', message: 'رمز عبور دست‌کم ۸ نویسه باشد، با حروف و عدد یا نماد.' });
       return;
     }
     if (password !== repeat) {
-      setError('تکرار رمز عبور با خود آن یکی نیست.');
+      setError({ target: 'repeat', message: 'تکرار رمز عبور با خود آن یکی نیست.' });
       return;
     }
     setBusy(true);
@@ -52,7 +56,7 @@ export default function ResetPasswordPage() {
       setRepeat('');
       setState({ kind: 'done' });
     } catch (failure) {
-      setError(problemMessage(failure));
+      setError({ target: 'form', message: problemMessage(failure) });
     } finally {
       setBusy(false);
     }
@@ -81,35 +85,35 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthCard labelledBy="reset-title" title="گذاشتن رمز عبور تازه" description="دست‌کم ۸ نویسه، با حروف و عدد یا نماد. این کد فقط یک بار کار می‌کند.">
-      <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)} noValidate>
+      <form aria-busy={busy} className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)} noValidate><fieldset disabled={busy} className="auth-fields">
         {state.kind === 'missing' && (
-          <Input label="کد بازنشانی" name="code" dir="ltr" autoComplete="off" value={manualCode} onChange={(event) => setManualCode(event.target.value)} />
+          <Input label="کد بازنشانی" name="code" dir="ltr" autoComplete="off" value={manualCode} onChange={(event) => { setManualCode(event.target.value); setError(null); }} error={errorFor('code')} />
         )}
-        <Input
+        <PasswordInput
           label="رمز عبور تازه"
           name="new-password"
-          type="password"
           dir="ltr"
           autoComplete="new-password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => { setPassword(event.target.value); setError(null); }}
           iconStart={<LockIcon size={18} />}
+          error={errorFor('password')}
         />
-        <Input
+        <PasswordInput
           label="تکرار رمز عبور"
           name="repeat-password"
-          type="password"
           dir="ltr"
           autoComplete="new-password"
           value={repeat}
-          onChange={(event) => setRepeat(event.target.value)}
+          onChange={(event) => { setRepeat(event.target.value); setError(null); }}
           iconStart={<LockIcon size={18} />}
-          error={error ?? undefined}
+          error={errorFor('repeat')}
         />
+        <AuthFormError message={errorFor('form')} />
         <Button type="submit" fullWidth size="lg" loading={busy}>
           ذخیره رمز عبور
         </Button>
-      </form>
+      </fieldset></form>
     </AuthCard>
   );
 }

@@ -23,7 +23,8 @@
  * two at runtime (see ThemeProvider) so there is a single source of truth in the DOM.
  */
 
-:root {
+:root,
+.public-surface {
   /* ---------- Layer 1: neutral ramp (Untitled UI Gray, light) ---------- */
   --gray-25: 252 252 253;   /* #FCFCFD */
   --gray-50: 249 250 251;   /* #F9FAFB */

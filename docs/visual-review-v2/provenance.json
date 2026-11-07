@@ -1,0 +1,479 @@
+{
+  "capturedOn": "2026-11-07",
+  "integrationBase": "1275687a8678f213530e5ad2eefe9efde2caec41",
+  "runtimeSource": {
+    "paths": [
+      "apps/web/src",
+      "apps/web/public",
+      "apps/web/package.json",
+      "apps/web/next.config.mjs",
+      "apps/web/tailwind.config.ts",
+      "apps/api/src",
+      "apps/api/db/migrations",
+      "apps/api/package.json",
+      "packages",
+      "package-lock.json"
+    ],
+    "algorithm": "SHA-256 of git ls-files --stage -z for the listed paths, using the committed index",
+    "sha256": "e60d145b05813c16f554d22219fed52486d46837a1cd4241f6997ca6e8f88437"
+  },
+  "after": {
+    "origin": "http://localhost:3000",
+    "browser": "Chrome 156.0.8078.80",
+    "node": "v22.23.3",
+    "next": "15.5.25",
+    "buildId": "c0a74d7da9bfa90ea9c497dbb22451075d0247b3b5c9808d29f28ef9a5bcaa7b",
+    "commands": [
+      "npm run test:e2e:marketing-auth",
+      "npm run test:e2e:auth-ui"
+    ],
+    "notes": "Full pages include decoded images. Hero captures are untouched viewport images. Journey images clip the real rendered section at the submitted task state."
+  },
+  "before": {
+    "origin": "https://taskdoone.ir/",
+    "sourceRevision": null
+  },
+  "captures": [
+    {
+      "path": "docs/visual-review-v2/before/production-home-desktop.png",
+      "source": "public production reference",
+      "width": 1440,
+      "height": 6743,
+      "sha256": "d5dca57413dce7170053fad941f4572243b5c4d179c507b869ed19b78fe5a485"
+    },
+    {
+      "path": "docs/visual-review-v2/before/production-home-mobile.png",
+      "source": "public production reference",
+      "width": 390,
+      "height": 8610,
+      "sha256": "bfc73c457ffd2a2d1281eac8a9aeb6d6565ff3866a21bd6a31e11b47663bf755"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/about-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 2465,
+      "sha256": "0a2c37268aa40dc6ffdffbe708dc19b47efb0ecc77db89aa00bc7e7b8c338edf"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/about-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 3282,
+      "sha256": "4e67d9ba7333ca3be0682bc9806af4cacf0a621d9dfe5051590585f5ffa886db"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/blog-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 1202,
+      "sha256": "471244af19bcc2cbef5a7c5da9cb4a1f2aba0e1004fe11b61806b29c5f425d8a"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/blog-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 1629,
+      "sha256": "fd5f170053118e4902adc3eecf7d278b356e002f32259bac09a2ee0f5b0514ee"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/contact-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 2521,
+      "sha256": "d6a83aff394db031e2a3b38f083fc141aed0844ab1ee32e764286f72484bfcee"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/contact-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 3326,
+      "sha256": "ab90ce4da65ca7ee723b030a641971a9f22d42755a37269dd619c9389bc32e5c"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/demo-request-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 2589,
+      "sha256": "de486ad28f49433b89f4b20d79c103df02711528837ed9c1f0c2ca962285a620"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/demo-request-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 3453,
+      "sha256": "9995443dba1cc91545c80c9306af26a0c090579d419bc0d5bce2c10a6a8682b1"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/faq-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 2365,
+      "sha256": "7f8a49529724c55fcd0b883225fd2dfb213fd3777906b2e0d98edaf3126b4de8"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/faq-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 2852,
+      "sha256": "b33778ca67232529a2ee6ea598faf2936cafb5724c2b8b7ef4b08be7e9b7f9fe"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/feature-detail-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 3309,
+      "sha256": "28d195f2d5d875c5ae858b5f8fb6081e208b1f66e9247d162c906b4de01b6504"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/feature-detail-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 4728,
+      "sha256": "432ebd9521b4d3c6755b04b68c81a524b2d105871ba7c3367a6f91960fdde613"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/features-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 3424,
+      "sha256": "d7db4f35f65bd830c49f7d9745efccb0e90a99832210898e506207e5d1f9498b"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/features-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 5320,
+      "sha256": "fafd4cdf80e95d40ca77c072f55d29f5615403303d4f4ef85438802ecb4912a2"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/help-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 1202,
+      "sha256": "8cafa4e28b3c3d63d9d5d7cf51174a9a6ea292eb07308d6ea6cd86e113a23ea0"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/help-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 1629,
+      "sha256": "29a8c12cf45a4e3e0715b0a5bcd5f62b159978addee54324a499b400d875c7c2"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/home-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 9675,
+      "sha256": "15bbb3707e53716d97811d0a414046ee4a8223c28024bda7ae6607f2a07cd5a1"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/home-hero-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "c0044943229b008335585adb7aba7a8696aa9f3cdefbe80af544ae91b9c2efdc"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/home-hero-laptop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1280,
+      "height": 720,
+      "sha256": "9369b6f93a4ba3a402149a76fb2862288ed7dc19aa14b9d2bc5d9700d1171099"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/home-hero-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 844,
+      "sha256": "28427043ef655398d6fa2461753810a022af51209b3fcfe11120cfe36c3752fa"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/home-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 11315,
+      "sha256": "5baa0cc6152c907a7353d10b5c1b448b2fec16b753ec11481d7a197b6cf46d25"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/journey-project-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 1029,
+      "sha256": "343a7e26ecb018c71bbe2f0f607427a4f242cc20c0a2fe1e9054dbc81b685233"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/journey-project-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 1110,
+      "sha256": "f9fb463cda889ebaa8542a4d6ba0b72ab7d52c12fc144bfa8e6c4fdc007ef8e6"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/pricing-desktop.png",
+      "source": "local standalone and real published CMS",
+      "width": 1440,
+      "height": 4174,
+      "sha256": "e891231450a96090c424c00e641dd9e82d75e7bc56d3eb618492b563fbece33f"
+    },
+    {
+      "path": "docs/visual-review-v2/marketing/pricing-mobile.png",
+      "source": "local standalone and real published CMS",
+      "width": 390,
+      "height": 5810,
+      "sha256": "22dfb14338b3f47124ddf10bca57b85448c451d32162f99873f8b7fcff329f4d"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/entry-desktop.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "dd6ad5dc02f106bcde7b5e433ec4ce745f633efc0ebdaf5fb4a6b4286bc8b312"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/entry-mobile.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 390,
+      "height": 844,
+      "sha256": "3506357102f100396d7961fcd9088b94169c952752ff3e8c19951a25e9851fcd"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/first-workspace-desktop.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 1440,
+      "height": 1145,
+      "sha256": "c7ef4426c9851bf7e0ac460ee680d596d78cbd406b9a653dc796cc16c2cfa119"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/first-workspace-mobile.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 390,
+      "height": 1076,
+      "sha256": "0a8bb82b4bc92adfefe6bf0d04557df1da1672dfebed41c6ab422f529cce599c"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-offline-desktop.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "301af4c3e68399099697d7d782513140772cd452ad7abf49857447a30589a4b1"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-offline-mobile.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 390,
+      "height": 844,
+      "sha256": "81b9dc7caeeebf173f687e68a7b3d83f56cebbad85b6ad79e01cd74b530fe149"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-otp-expired-desktop.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "5591130e6b5341874171c8c5f780c98e269ffedc17c0901805f87a14a2a453c2"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-otp-expired-mobile.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 390,
+      "height": 844,
+      "sha256": "248a902127a86dde937c6b8e1da85c6e05c7403bdf50b73b32ad21eba37bc649"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-password-phone-error-desktop.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "5c0320911a8f8e2a75ebb674e67032f792c41c86fbab1d8a677645bd98ed7c33"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-password-phone-error-mobile.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 390,
+      "height": 848,
+      "sha256": "711bd7b18d62982f2479f02f5d7c9b2581e3533096f8a55d9837735ac8c65cb2"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-rate-limited-desktop.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "bad0f6b897195944634885608d1aaede432e91b6a88dda07fe2a0b5c825b379e"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-rate-limited-mobile.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 390,
+      "height": 844,
+      "sha256": "60425467f5dd6e6a604ed70e76e8f7df744f576cd76a706693677034604acacf"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-recovery-field-error-desktop.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "bfd007fe58e65507a273997c77d498900ab140c2863a89abdf2c6d8603a9f89a"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-recovery-field-error-mobile.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 390,
+      "height": 920,
+      "sha256": "83d6651a5e14b5097499c1296ff52e5be03371642b8d507b40cf45a8122f49c7"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-suspended-desktop.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "805e94de836f1722daf38f19c906552d8d4d924662155d5bcb637b847809e9ba"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/fixture-suspended-mobile.png",
+      "source": "isolated auth UI fixture on local standalone",
+      "width": 390,
+      "height": 844,
+      "sha256": "652d2130ed5ee74b01f4b9ee3b57d2cdac6b0074400fea8d9c8c374ae9b6c344"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/forgot-password-desktop.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "126f4163d6815736896984c55a44842d0589ca5036e7e7cfb4b6d6a104f6debc"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/forgot-password-mobile.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 390,
+      "height": 844,
+      "sha256": "6aa8542e4047f6f2cf9e601ed8428834e76d28bb2d19c54b4ebfe3886afe7f66"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/otp-desktop.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "2e4024ba5050694e9d1bd92339535e0c94ce4448a48e53fc2d7fd3f6600fc071"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/otp-invalid-desktop.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "5d51f33f478a6e29686fb87feaae066f39135d610cd1fb05c409857de365a604"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/otp-invalid-mobile.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 390,
+      "height": 844,
+      "sha256": "953029d2fc76ce31839e16be81cf012287d1e0b8281db3b29a931d6dbef7f8c8"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/otp-mobile.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 390,
+      "height": 844,
+      "sha256": "75739b0c589989b4d1a6748c61ed3d6dd638ad7bb0e2f0abb32a03a62988af3a"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/password-desktop.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "ae8c08d2a0a34af3f939353462a69576b00300612698b4a97579a26331bf37f6"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/password-mobile.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 390,
+      "height": 844,
+      "sha256": "47922c45f0c64997ef0ace00c8703ae7173336dd780d261c52beaf7dcefcab97"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/password-recovery-desktop.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "1d3154999520d355fd9ceb96d3bdd0815ced95d8555a359e45b98616dcda0942"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/password-recovery-mobile.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 390,
+      "height": 890,
+      "sha256": "be39c10ddda5c7fe5afd377f7c7a70a7fc25e43ef57f4112885e4ead17b53b69"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/signup-desktop.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "91c7a240aec930a3068b3925f4e67cfb2f35a62d892164ea90c3c32ef247346b"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/signup-mobile.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 390,
+      "height": 844,
+      "sha256": "dadae16666ed2d7bd9d4242edea3c24ab4043fcfd0550ce85fa3b0a53b0cd2a7"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/token-recovery-desktop.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "07c879654e88a6eaffec6f95e176f09a33cbe18216325c40a2f6550e6e9fb518"
+    },
+    {
+      "path": "docs/visual-review-v2/authentication/token-recovery-mobile.png",
+      "source": "local standalone and console-SMS auth API",
+      "width": 390,
+      "height": 844,
+      "sha256": "f569d3afcef84d0ac9bae76c070a3495f2fdf415046b1c05c4c219782f376a10"
+    },
+    {
+      "path": "apps/web/public/marketing/calendar.png",
+      "source": "production-mode workspace demo with synthetic data",
+      "width": 1440,
+      "height": 960,
+      "sha256": "1796e52f4dff762e202f56b9d943b8470ff1ac09463c7f3e9d3cd7030578a4e4"
+    },
+    {
+      "path": "apps/web/public/marketing/chat.png",
+      "source": "production-mode workspace demo with synthetic data",
+      "width": 1440,
+      "height": 960,
+      "sha256": "4f86ccddd5fbfaada40cd64e5e263e90921f8f4c5c83d427e2fd0d05af91e030"
+    },
+    {
+      "path": "apps/web/public/marketing/feed.png",
+      "source": "production-mode workspace demo with synthetic data",
+      "width": 1440,
+      "height": 960,
+      "sha256": "a0c810b250234209b8ac8c13977f3821b874bfd2b904ec2bb1867d0b33036fee"
+    },
+    {
+      "path": "apps/web/public/marketing/kanban.png",
+      "source": "production-mode workspace demo with synthetic data",
+      "width": 1440,
+      "height": 960,
+      "sha256": "d08d455f41890e0a698200847c7d6bfdda1fb3a76326701e4159775e7e8e47d9"
+    },
+    {
+      "path": "apps/web/public/marketing/notes.png",
+      "source": "production-mode workspace demo with synthetic data",
+      "width": 1440,
+      "height": 960,
+      "sha256": "3530438c08ed9efe3a7f4b798924990ec32094f21c95ab4672e222698ef2376b"
+    },
+    {
+      "path": "apps/web/public/marketing/tasks.png",
+      "source": "production-mode workspace demo with synthetic data",
+      "width": 1440,
+      "height": 960,
+      "sha256": "fc4d9b4025a6025a3af5a0bf81035290151c656770d864a2aace1b696ea7d1cf"
+    }
+  ]
+}
