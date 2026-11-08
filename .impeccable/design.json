@@ -1,0 +1,593 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-07T17:49:51.107Z",
+  "title": "Design System: TaskDoon",
+  "extensions": {
+    "colorMeta": {
+      "indigo": {
+        "role": "primary",
+        "displayName": "TaskDoon Indigo",
+        "tonalRamp": [
+          "rgb(31 33 99)",
+          "rgb(45 50 130)",
+          "rgb(45 49 166)",
+          "rgb(53 56 205)",
+          "rgb(97 114 243)",
+          "rgb(164 188 253)",
+          "rgb(199 215 254)",
+          "rgb(238 244 255)"
+        ]
+      },
+      "indigo-hover": {
+        "role": "primary",
+        "displayName": "Deep Indigo",
+        "tonalRamp": [
+          "rgb(31 33 99)",
+          "rgb(45 50 130)",
+          "rgb(45 49 166)",
+          "rgb(53 56 205)",
+          "rgb(97 114 243)",
+          "rgb(164 188 253)",
+          "rgb(199 215 254)",
+          "rgb(238 244 255)"
+        ]
+      },
+      "indigo-pressed": {
+        "role": "primary",
+        "displayName": "Pressed Indigo",
+        "tonalRamp": [
+          "rgb(31 33 99)",
+          "rgb(45 50 130)",
+          "rgb(45 49 166)",
+          "rgb(53 56 205)",
+          "rgb(97 114 243)",
+          "rgb(164 188 253)",
+          "rgb(199 215 254)",
+          "rgb(238 244 255)"
+        ]
+      },
+      "indigo-deep": {
+        "role": "primary",
+        "displayName": "Midnight Indigo",
+        "tonalRamp": [
+          "rgb(31 33 99)",
+          "rgb(45 50 130)",
+          "rgb(45 49 166)",
+          "rgb(53 56 205)",
+          "rgb(97 114 243)",
+          "rgb(164 188 253)",
+          "rgb(199 215 254)",
+          "rgb(238 244 255)"
+        ]
+      },
+      "indigo-ring": {
+        "role": "primary",
+        "displayName": "Indigo Focus Ring",
+        "tonalRamp": [
+          "rgb(31 33 99)",
+          "rgb(45 50 130)",
+          "rgb(45 49 166)",
+          "rgb(53 56 205)",
+          "rgb(97 114 243)",
+          "rgb(164 188 253)",
+          "rgb(199 215 254)",
+          "rgb(238 244 255)"
+        ]
+      },
+      "indigo-line": {
+        "role": "primary",
+        "displayName": "Indigo Selection Line",
+        "tonalRamp": [
+          "rgb(31 33 99)",
+          "rgb(45 50 130)",
+          "rgb(45 49 166)",
+          "rgb(53 56 205)",
+          "rgb(97 114 243)",
+          "rgb(164 188 253)",
+          "rgb(199 215 254)",
+          "rgb(238 244 255)"
+        ]
+      },
+      "indigo-mist": {
+        "role": "primary",
+        "displayName": "Indigo Mist",
+        "tonalRamp": [
+          "rgb(31 33 99)",
+          "rgb(45 50 130)",
+          "rgb(45 49 166)",
+          "rgb(53 56 205)",
+          "rgb(97 114 243)",
+          "rgb(164 188 253)",
+          "rgb(199 215 254)",
+          "rgb(238 244 255)"
+        ]
+      },
+      "indigo-tint": {
+        "role": "primary",
+        "displayName": "Pale Indigo",
+        "tonalRamp": [
+          "rgb(31 33 99)",
+          "rgb(45 50 130)",
+          "rgb(45 49 166)",
+          "rgb(53 56 205)",
+          "rgb(97 114 243)",
+          "rgb(164 188 253)",
+          "rgb(199 215 254)",
+          "rgb(238 244 255)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "White Surface",
+        "tonalRamp": [
+          "rgb(12 17 29)",
+          "rgb(16 24 40)",
+          "rgb(24 34 48)",
+          "rgb(52 64 84)",
+          "rgb(102 112 133)",
+          "rgb(208 213 221)",
+          "rgb(242 244 247)",
+          "rgb(252 252 253)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Cool Gray Canvas",
+        "tonalRamp": [
+          "rgb(12 17 29)",
+          "rgb(16 24 40)",
+          "rgb(24 34 48)",
+          "rgb(52 64 84)",
+          "rgb(102 112 133)",
+          "rgb(208 213 221)",
+          "rgb(242 244 247)",
+          "rgb(252 252 253)"
+        ]
+      },
+      "sunken": {
+        "role": "neutral",
+        "displayName": "Cool Gray Inset",
+        "tonalRamp": [
+          "rgb(12 17 29)",
+          "rgb(16 24 40)",
+          "rgb(24 34 48)",
+          "rgb(52 64 84)",
+          "rgb(102 112 133)",
+          "rgb(208 213 221)",
+          "rgb(242 244 247)",
+          "rgb(252 252 253)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Cool Gray Boundary",
+        "tonalRamp": [
+          "rgb(12 17 29)",
+          "rgb(16 24 40)",
+          "rgb(24 34 48)",
+          "rgb(52 64 84)",
+          "rgb(102 112 133)",
+          "rgb(208 213 221)",
+          "rgb(242 244 247)",
+          "rgb(252 252 253)"
+        ]
+      },
+      "divider": {
+        "role": "neutral",
+        "displayName": "Soft Gray Divider",
+        "tonalRamp": [
+          "rgb(12 17 29)",
+          "rgb(16 24 40)",
+          "rgb(24 34 48)",
+          "rgb(52 64 84)",
+          "rgb(102 112 133)",
+          "rgb(208 213 221)",
+          "rgb(242 244 247)",
+          "rgb(252 252 253)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Charcoal Ink",
+        "tonalRamp": [
+          "rgb(12 17 29)",
+          "rgb(16 24 40)",
+          "rgb(24 34 48)",
+          "rgb(52 64 84)",
+          "rgb(102 112 133)",
+          "rgb(208 213 221)",
+          "rgb(242 244 247)",
+          "rgb(252 252 253)"
+        ]
+      },
+      "ink-secondary": {
+        "role": "neutral",
+        "displayName": "Slate Ink",
+        "tonalRamp": [
+          "rgb(12 17 29)",
+          "rgb(16 24 40)",
+          "rgb(24 34 48)",
+          "rgb(52 64 84)",
+          "rgb(102 112 133)",
+          "rgb(208 213 221)",
+          "rgb(242 244 247)",
+          "rgb(252 252 253)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Muted Slate",
+        "tonalRamp": [
+          "rgb(12 17 29)",
+          "rgb(16 24 40)",
+          "rgb(24 34 48)",
+          "rgb(52 64 84)",
+          "rgb(102 112 133)",
+          "rgb(208 213 221)",
+          "rgb(242 244 247)",
+          "rgb(252 252 253)"
+        ]
+      },
+      "ink-disabled": {
+        "role": "neutral",
+        "displayName": "Disabled Slate",
+        "tonalRamp": [
+          "rgb(12 17 29)",
+          "rgb(16 24 40)",
+          "rgb(24 34 48)",
+          "rgb(52 64 84)",
+          "rgb(102 112 133)",
+          "rgb(208 213 221)",
+          "rgb(242 244 247)",
+          "rgb(252 252 253)"
+        ]
+      },
+      "progress-ink": {
+        "role": "tertiary",
+        "displayName": "Progress Amber",
+        "tonalRamp": [
+          "oklch(18% 0.114 40.6)",
+          "rgb(122 46 14)",
+          "rgb(181 71 8)",
+          "rgb(220 104 3)",
+          "rgb(247 144 9)",
+          "rgb(254 223 137)",
+          "rgb(254 240 199)",
+          "rgb(255 250 235)"
+        ]
+      },
+      "progress-fill": {
+        "role": "tertiary",
+        "displayName": "Progress Amber Fill",
+        "tonalRamp": [
+          "oklch(18% 0.114 40.6)",
+          "rgb(122 46 14)",
+          "rgb(181 71 8)",
+          "rgb(220 104 3)",
+          "rgb(247 144 9)",
+          "rgb(254 223 137)",
+          "rgb(254 240 199)",
+          "rgb(255 250 235)"
+        ]
+      },
+      "progress-line": {
+        "role": "tertiary",
+        "displayName": "Progress Amber Line",
+        "tonalRamp": [
+          "oklch(18% 0.114 40.6)",
+          "rgb(122 46 14)",
+          "rgb(181 71 8)",
+          "rgb(220 104 3)",
+          "rgb(247 144 9)",
+          "rgb(254 223 137)",
+          "rgb(254 240 199)",
+          "rgb(255 250 235)"
+        ]
+      },
+      "done-ink": {
+        "role": "tertiary",
+        "displayName": "Done Green",
+        "tonalRamp": [
+          "oklch(18% 0.081 159.8)",
+          "rgb(5 76 48)",
+          "rgb(2 122 72)",
+          "rgb(3 152 85)",
+          "rgb(18 183 106)",
+          "rgb(166 244 197)",
+          "rgb(209 250 223)",
+          "rgb(236 253 243)"
+        ]
+      },
+      "done-fill": {
+        "role": "tertiary",
+        "displayName": "Done Green Fill",
+        "tonalRamp": [
+          "oklch(18% 0.081 159.8)",
+          "rgb(5 76 48)",
+          "rgb(2 122 72)",
+          "rgb(3 152 85)",
+          "rgb(18 183 106)",
+          "rgb(166 244 197)",
+          "rgb(209 250 223)",
+          "rgb(236 253 243)"
+        ]
+      },
+      "done-line": {
+        "role": "tertiary",
+        "displayName": "Done Green Line",
+        "tonalRamp": [
+          "oklch(18% 0.081 159.8)",
+          "rgb(5 76 48)",
+          "rgb(2 122 72)",
+          "rgb(3 152 85)",
+          "rgb(18 183 106)",
+          "rgb(166 244 197)",
+          "rgb(209 250 223)",
+          "rgb(236 253 243)"
+        ]
+      },
+      "error-ink": {
+        "role": "tertiary",
+        "displayName": "Error Red Ink",
+        "tonalRamp": [
+          "oklch(18% 0.118 31.5)",
+          "rgb(122 39 26)",
+          "rgb(180 35 24)",
+          "rgb(217 45 32)",
+          "rgb(240 68 56)",
+          "rgb(254 205 202)",
+          "rgb(254 228 226)",
+          "rgb(254 243 242)"
+        ]
+      },
+      "error-line": {
+        "role": "tertiary",
+        "displayName": "Invalid Field Red",
+        "tonalRamp": [
+          "oklch(18% 0.118 31.5)",
+          "rgb(122 39 26)",
+          "rgb(180 35 24)",
+          "rgb(217 45 32)",
+          "rgb(240 68 56)",
+          "rgb(254 205 202)",
+          "rgb(254 228 226)",
+          "rgb(254 243 242)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Marketing Display",
+        "purpose": "The homepage hero headline."
+      },
+      "headline": {
+        "displayName": "Marketing Headline",
+        "purpose": "Headings for homepage sections."
+      },
+      "auth-heading": {
+        "displayName": "Account Entry Heading",
+        "purpose": "The title for each account-entry step."
+      },
+      "title": {
+        "displayName": "Content Title",
+        "purpose": "Short outcome titles on the homepage."
+      },
+      "body": {
+        "displayName": "Public Body",
+        "purpose": "Base text for public marketing and account entry."
+      },
+      "label": {
+        "displayName": "Compact Label",
+        "purpose": "Small status badges."
+      },
+      "button": {
+        "displayName": "Marketing Action",
+        "purpose": "Standard marketing call-to-action labels."
+      },
+      "auth-button": {
+        "displayName": "Account Entry Action",
+        "purpose": "Full-width form submit labels."
+      },
+      "field-value": {
+        "displayName": "Account Entry Field Value",
+        "purpose": "Text entered in account forms."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-xs",
+        "value": "0 1px 2px 0 rgb(16 24 40 / 0.05)",
+        "purpose": "Shared buttons and fields on the public light surface."
+      },
+      {
+        "name": "auth-sample",
+        "value": "0 24px 48px -24px rgb(var(--brand-900) / .7)",
+        "purpose": "The desktop workspace sample on the indigo auth panel."
+      }
+    ],
+    "motion": [
+      {
+        "name": "marketing-action",
+        "value": "background .16s ease-out, color .16s ease-out",
+        "purpose": "Color feedback on marketing CTAs."
+      },
+      {
+        "name": "journey-in",
+        "value": ".24s ease-out",
+        "purpose": "The selected walkthrough panel enters from opacity .65 and translateY(6px) when motion is allowed."
+      },
+      {
+        "name": "auth-enter",
+        "value": ".35s ease-out both",
+        "purpose": "The entry form appears from opacity .65 and translateY(8px) when motion is allowed."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "Global animation and transition duration cap under reduced motion. The journey and auth entrances and auth sample tilt are disabled."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "auth-compact",
+        "value": "390px"
+      },
+      {
+        "name": "auth-logo-compact",
+        "value": "480px"
+      },
+      {
+        "name": "mobile-preview",
+        "value": "600px"
+      },
+      {
+        "name": "stacked-home-and-auth",
+        "value": "800px"
+      },
+      {
+        "name": "compact-desktop-hero-height",
+        "value": "800px"
+      },
+      {
+        "name": "collapsed-marketing-navigation",
+        "value": "900px"
+      },
+      {
+        "name": "homepage-grid-tightening",
+        "value": "1050px"
+      },
+      {
+        "name": "auth-sample-and-marketing-header-tightening",
+        "value": "1100px"
+      },
+      {
+        "name": "wide-auth-layout",
+        "value": "1700px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Marketing Primary CTA",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Filled indigo for the primary public action.",
+      "html": "<div class=\"ds-button-primary-surface\" lang=\"fa\" dir=\"rtl\"><a class=\"ds-primary\" href=\"/feed\">شروع همکاری<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 12H4\"/><path d=\"m10 6-6 6 6 6\"/></svg></a></div>",
+      "css": ".ds-button-primary-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --bg-canvas: 249 250 251; --ring-brand: 97 114 243; --bg-brand-solid: 53 56 205; --bg-brand-solid-hover: 45 49 166; --fg-on-brand: 255 255 255; --brand-600: 53 56 205; --brand-800: 45 50 130; }\n.ds-primary { display: inline-flex; box-sizing: border-box; min-height: 48px; align-items: center; justify-content: center; gap: 12px; padding: 12px 22px; border: 1px solid transparent; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 600; line-height: 1.6; text-decoration: none; transition: background .16s ease-out, color .16s ease-out; }\n.ds-primary { background: rgb(var(--bg-brand-solid)); color: rgb(var(--fg-on-brand)); }\n.ds-primary:hover { background: rgb(var(--bg-brand-solid-hover)); }\n.ds-primary:active { background: rgb(var(--brand-800)); }\n.ds-primary:focus-visible { outline: 2px solid rgb(var(--brand-600)); outline-offset: 4px; box-shadow: 0 0 0 2px rgb(var(--bg-canvas)), 0 0 0 4px rgb(var(--ring-brand)); }\n@media (prefers-reduced-motion: reduce) { .ds-primary { transition-duration: .01ms !important; } }"
+    },
+    {
+      "name": "Marketing Secondary CTA",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outlined companion action for a public CTA pair.",
+      "html": "<div class=\"ds-button-secondary-surface\" lang=\"fa\" dir=\"rtl\"><a class=\"ds-secondary\" href=\"#home-workflow\">مسیر یک کار را ببینید</a></div>",
+      "css": ".ds-button-secondary-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --bg-canvas: 249 250 251; --ring-brand: 97 114 243; --bg-surface: 255 255 255; --border-primary: 208 213 221; --fg-secondary: 52 64 84; --bg-hover: 249 250 251; --fg-primary: 16 24 40; --brand-600: 53 56 205; }\n.ds-secondary { display: inline-flex; box-sizing: border-box; min-height: 48px; align-items: center; justify-content: center; gap: 12px; padding: 12px 22px; border: 1px solid transparent; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 600; line-height: 1.6; text-decoration: none; transition: background .16s ease-out, color .16s ease-out; }\n.ds-secondary { border-color: rgb(var(--border-primary)); background: rgb(var(--bg-surface)); color: rgb(var(--fg-secondary)); }\n.ds-secondary:hover { background: rgb(var(--bg-hover)); color: rgb(var(--fg-primary)); }\n.ds-secondary:focus-visible { outline: 2px solid rgb(var(--brand-600)); outline-offset: 4px; box-shadow: 0 0 0 2px rgb(var(--bg-canvas)), 0 0 0 4px rgb(var(--ring-brand)); }\n@media (prefers-reduced-motion: reduce) { .ds-secondary { transition-duration: .01ms !important; } }"
+    },
+    {
+      "name": "Account Entry Submit",
+      "kind": "button",
+      "refersTo": "button-auth-submit",
+      "description": "Full-width primary action for the current form step.",
+      "html": "<div class=\"ds-button-auth-submit-surface\" lang=\"fa\" dir=\"rtl\"><button class=\"ds-auth-submit\" type=\"button\">دریافت کد ورود</button></div>",
+      "css": ".ds-button-auth-submit-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --bg-canvas: 249 250 251; --ring-brand: 97 114 243; --bg-brand-solid: 53 56 205; --bg-brand-solid-hover: 45 49 166; --fg-on-brand: 255 255 255; --brand-600: 53 56 205; --bg-disabled: 242 244 247; --fg-disabled: 152 162 179; --shadow-xs: 0 1px 2px 0 rgb(16 24 40 / 0.05); }\n.ds-auth-submit { display: inline-flex; box-sizing: border-box; min-height: 50px; width: 100%; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; border: 1px solid transparent; border-radius: 10px; background: rgb(var(--bg-brand-solid)); color: rgb(var(--fg-on-brand)); font: 600 15px/24px IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; box-shadow: var(--shadow-xs); transition: color 150ms cubic-bezier(.4, 0, .2, 1), background-color 150ms cubic-bezier(.4, 0, .2, 1); }\n.ds-auth-submit:hover, .ds-auth-submit:active { background: rgb(var(--bg-brand-solid-hover)); }\n.ds-auth-submit:disabled { background: rgb(var(--bg-disabled)); color: rgb(var(--fg-disabled)); box-shadow: none; cursor: not-allowed; }\n.ds-auth-submit:focus-visible { outline: 2px solid rgb(var(--brand-600)); outline-offset: 4px; box-shadow: 0 0 0 2px rgb(var(--bg-canvas)), 0 0 0 4px rgb(var(--ring-brand)), var(--shadow-xs); }\n@media (prefers-reduced-motion: reduce) { .ds-auth-submit { transition-duration: .01ms !important; } }"
+    },
+    {
+      "name": "Account Entry Link Button",
+      "kind": "button",
+      "refersTo": "button-auth-link",
+      "description": "An alternate entry or recovery action within the form.",
+      "html": "<div class=\"ds-button-auth-link-surface\" lang=\"fa\" dir=\"rtl\"><button class=\"ds-auth-link\" type=\"button\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5.5 11.5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-7Z\"/><path d=\"M8 9.5V7.5a4 4 0 1 1 8 0v2\"/><path d=\"M12 14v3\"/></svg>ورود با رمز عبور</button></div>",
+      "css": ".ds-button-auth-link-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --bg-canvas: 249 250 251; --ring-brand: 97 114 243; --fg-brand: 53 56 205; --brand-600: 53 56 205; --fg-disabled: 152 162 179; }\n.ds-auth-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 4px; padding: 0; border: 1px solid transparent; background: transparent; color: rgb(var(--fg-brand)); font: 600 14px/24px IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; text-underline-offset: 4px; transition: color 150ms cubic-bezier(.4, 0, .2, 1); }\n.ds-auth-link:hover { text-decoration: underline; }\n.ds-auth-link:disabled { color: rgb(var(--fg-disabled)); cursor: not-allowed; }\n.ds-auth-link:focus-visible { outline: 2px solid rgb(var(--brand-600)); outline-offset: 4px; box-shadow: 0 0 0 2px rgb(var(--bg-canvas)), 0 0 0 4px rgb(var(--ring-brand)); }\n@media (prefers-reduced-motion: reduce) { .ds-auth-link { transition-duration: .01ms !important; } }"
+    },
+    {
+      "name": "Account Entry Phone Field",
+      "kind": "input",
+      "refersTo": "auth-phone-field",
+      "description": "The LTR telephone field shows a Persian label, hint and linked validation message.",
+      "html": "<div class=\"ds-auth-phone-field-surface\" lang=\"fa\" dir=\"rtl\"><div class=\"ds-phone\"><label for=\"ds-phone-value\">شماره موبایل</label><div class=\"ds-phone-control\"><span class=\"ds-phone-symbol\" aria-hidden=\"true\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 4.5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-15Z\"/><path d=\"M11 18h2\"/></svg></span><input id=\"ds-phone-value\" name=\"phone\" type=\"tel\" dir=\"ltr\" autocomplete=\"tel\" inputmode=\"tel\" maxlength=\"24\" value=\"۰۹۱۲\" placeholder=\"۰۹۱۲ ۱۲۳ ۴۵۶۷\" aria-invalid=\"true\" aria-describedby=\"ds-phone-error ds-phone-hint\"><bdi class=\"ds-phone-prefix\" dir=\"ltr\">+98</bdi></div><p class=\"ds-phone-hint\" id=\"ds-phone-hint\">با صفر آغاز کنید یا شماره را با کد ۹۸+ وارد کنید.</p><p class=\"ds-phone-error\" id=\"ds-phone-error\" role=\"alert\">شماره موبایل معتبر نیست؛ مثلاً ۰۹۱۲۱۲۳۴۵۶۷.</p></div></div>",
+      "css": ".ds-auth-phone-field-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --bg-surface: 255 255 255; --fg-primary: 16 24 40; --fg-secondary: 52 64 84; --fg-tertiary: 102 112 133; --fg-quaternary: 152 162 179; --fg-disabled: 152 162 179; --bg-disabled: 242 244 247; --border-primary: 208 213 221; --brand-600: 53 56 205; --ring-brand: 97 114 243; --error-600: 217 45 32; --error-700: 180 35 24; --shadow-xs: 0 1px 2px 0 rgb(16 24 40 / 0.05); }\n.ds-phone { display: grid; gap: 6px; max-width: 400px; }\n.ds-phone label { color: rgb(var(--fg-secondary)); font-size: 14px; font-weight: 500; line-height: 22px; }\n.ds-phone-control { position: relative; display: flex; align-items: center; }\n.ds-phone-symbol { position: absolute; display: flex; inset-inline-start: 12px; color: rgb(var(--fg-quaternary)); pointer-events: none; }\n.ds-phone-prefix { position: absolute; inset-inline-end: 12px; color: rgb(var(--fg-secondary)); font-size: 12px; line-height: 20px; pointer-events: none; }\n.ds-phone input { box-sizing: border-box; width: 100%; height: 50px; padding: 0 40px 0 64px; border: 1px solid rgb(var(--border-primary)); border-radius: 10px; background: rgb(var(--bg-surface)); color: rgb(var(--fg-primary)); font: 400 16px/24px IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; box-shadow: var(--shadow-xs); transition: color 150ms cubic-bezier(.4, 0, .2, 1), border-color 150ms cubic-bezier(.4, 0, .2, 1); }\n.ds-phone input::placeholder { color: rgb(var(--fg-tertiary)); opacity: 1; }\n.ds-phone input:focus-visible { border-color: rgb(var(--brand-600)); box-shadow: 0 0 0 2px rgb(var(--ring-brand)), var(--shadow-xs); }\n.ds-phone input[aria-invalid=\"true\"] { border-color: rgb(var(--error-600)); }\n.ds-phone input:disabled { background: rgb(var(--bg-disabled)); color: rgb(var(--fg-disabled)); cursor: not-allowed; }\n.ds-phone-hint { margin: 0; color: rgb(var(--fg-tertiary)); font-size: 12px; line-height: 20px; }\n.ds-phone-error { margin: 0; color: rgb(var(--error-700)); font-size: 13px; line-height: 1.9; }\n.ds-phone input:focus-visible { outline: 2px solid rgb(var(--brand-600)); outline-offset: 0; }\n@media (prefers-reduced-motion: reduce) { .ds-phone input { transition-duration: .01ms !important; } }"
+    },
+    {
+      "name": "Marketing Navigation",
+      "kind": "nav",
+      "refersTo": "marketing-nav-link",
+      "description": "Desktop navigation with an underlined current page.",
+      "html": "<div class=\"ds-marketing-nav-link-surface\" lang=\"fa\" dir=\"rtl\"><nav class=\"ds-nav\" aria-label=\"ناوبری اصلی\"><a href=\"/\" aria-current=\"page\">خانه</a><a href=\"/features\">امکانات</a><a href=\"/faq\">سوالات متداول</a></nav></div>",
+      "css": ".ds-marketing-nav-link-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --bg-canvas: 249 250 251; --ring-brand: 97 114 243; --fg-secondary: 52 64 84; --fg-brand: 53 56 205; --brand-600: 53 56 205; }\n.ds-nav { display: flex; align-items: center; justify-content: center; gap: 24px; }\n.ds-nav a { box-sizing: border-box; min-height: 44px; padding-block: 14px; color: rgb(var(--fg-secondary)); font-size: 13px; text-decoration: none; text-underline-offset: 5px; }\n.ds-nav a:hover, .ds-nav a[aria-current=\"page\"] { color: rgb(var(--fg-brand)); }\n.ds-nav a[aria-current=\"page\"] { text-decoration: underline; text-decoration-thickness: 2px; }\n.ds-nav a:focus-visible { outline: 2px solid rgb(var(--brand-600)); outline-offset: 4px; box-shadow: 0 0 0 2px rgb(var(--bg-canvas)), 0 0 0 4px rgb(var(--ring-brand)); }"
+    },
+    {
+      "name": "Selected Product Preview Tab",
+      "kind": "custom",
+      "refersTo": "preview-tab-selected",
+      "description": "The selected desktop preview tab uses a pale indigo fill and border.",
+      "html": "<div class=\"ds-preview-tab-selected-surface\" lang=\"fa\" dir=\"rtl\"><div class=\"ds-preview-tabs\" role=\"tablist\" aria-label=\"بخش‌های محصول\"><button class=\"ds-preview-tab\" type=\"button\" role=\"tab\" id=\"ds-preview-tab\" aria-selected=\"true\" aria-controls=\"ds-preview-panel\">پروژه و وظایف</button></div><div class=\"ds-preview-panel\" id=\"ds-preview-panel\" role=\"tabpanel\" aria-labelledby=\"ds-preview-tab\" tabindex=\"0\">پروژه، مسئول هر کار و وضعیت انجام را کنار هم ببینید.</div></div>",
+      "css": ".ds-preview-tab-selected-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --bg-canvas: 249 250 251; --ring-brand: 97 114 243; --fg-secondary: 52 64 84; --bg-hover: 249 250 251; --bg-brand-subtle: 238 244 255; --brand-200: 199 215 254; --fg-brand: 53 56 205; --brand-600: 53 56 205; --fg-tertiary: 102 112 133; }\n.ds-preview-tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }\n.ds-preview-tab { box-sizing: border-box; min-height: 44px; border: 1px solid transparent; border-radius: 8px; padding: 10px 18px; color: rgb(var(--fg-secondary)); background: transparent; font: inherit; font-size: 13px; }\n.ds-preview-tab:hover { background: rgb(var(--bg-hover)); }\n.ds-preview-tab[aria-selected=\"true\"] { background: rgb(var(--bg-brand-subtle)); border-color: rgb(var(--brand-200)); color: rgb(var(--fg-brand)); font-weight: 600; }\n.ds-preview-panel { margin-top: 16px; text-align: center; color: rgb(var(--fg-tertiary)); font-size: 13px; line-height: 2; }\n.ds-preview-tab:focus-visible { outline: 2px solid rgb(var(--brand-600)); outline-offset: 4px; box-shadow: 0 0 0 2px rgb(var(--bg-canvas)), 0 0 0 4px rgb(var(--ring-brand)); }\n.ds-preview-panel:focus-visible { outline: 2px solid rgb(var(--brand-600)); outline-offset: 4px; box-shadow: 0 0 0 2px rgb(var(--bg-canvas)), 0 0 0 4px rgb(var(--ring-brand)); }"
+    },
+    {
+      "name": "In-Progress Badge",
+      "kind": "chip",
+      "refersTo": "status-badge-progress",
+      "description": "Amber status text and dot inside a softly tinted pill.",
+      "html": "<div class=\"ds-status-badge-progress-surface\" lang=\"fa\" dir=\"rtl\"><span class=\"ds-progress-badge\"><span class=\"ds-progress-dot\" aria-hidden=\"true\"></span>در حال انجام</span></div>",
+      "css": ".ds-status-badge-progress-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --status-progress: 181 71 8; --status-progress-bg: 255 250 235; --status-progress-border: 254 223 137; }\n.ds-progress-badge { display: inline-flex; box-sizing: border-box; align-items: center; height: 20px; gap: 4px; padding-inline: 6px; border: 1px solid rgb(var(--status-progress-border)); border-radius: 9999px; color: rgb(var(--status-progress)); background: rgb(var(--status-progress-bg)); font-size: 11px; font-weight: 500; line-height: 18px; white-space: nowrap; }\n.ds-progress-dot { flex: 0 0 6px; height: 6px; border-radius: 9999px; background: rgb(var(--status-progress)); }"
+    },
+    {
+      "name": "Done Badge",
+      "kind": "chip",
+      "refersTo": "status-badge-done",
+      "description": "Green status text and dot for a completed task.",
+      "html": "<div class=\"ds-status-badge-done-surface\" lang=\"fa\" dir=\"rtl\"><span class=\"ds-done-badge\"><span class=\"ds-done-dot\" aria-hidden=\"true\"></span>انجام‌شده</span></div>",
+      "css": ".ds-status-badge-done-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --status-done: 2 122 72; --status-done-bg: 236 253 243; --status-done-border: 166 244 197; }\n.ds-done-badge { display: inline-flex; box-sizing: border-box; align-items: center; height: 20px; gap: 4px; padding-inline: 6px; border: 1px solid rgb(var(--status-done-border)); border-radius: 9999px; color: rgb(var(--status-done)); background: rgb(var(--status-done-bg)); font-size: 11px; font-weight: 500; line-height: 18px; white-space: nowrap; }\n.ds-done-dot { flex: 0 0 6px; height: 6px; border-radius: 9999px; background: rgb(var(--status-done)); }"
+    },
+    {
+      "name": "Sample Task",
+      "kind": "card",
+      "refersTo": "sample-task",
+      "description": "The shared demo task shows a state, title, Jalali date and assignee together.",
+      "html": "<div class=\"ds-sample-task-surface\" lang=\"fa\" dir=\"rtl\"><article class=\"ds-task\"><div class=\"ds-task-top\"><span class=\"ds-task-badge\"><span class=\"ds-task-dot\" aria-hidden=\"true\"></span>در حال انجام</span><span>محصول</span></div><h3>بازبینی صفحهٔ معرفی محصول</h3><p>جمع‌بندی بازخوردها و آماده‌سازی نسخهٔ نهایی</p><div class=\"ds-task-bottom\"><span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3.5 8.5a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3v-9Z\"/><path d=\"M8 3.5v4M16 3.5v4\"/><path d=\"M3.5 10.5h17\"/><path d=\"M8 14.5h.01M12 14.5h.01M16 14.5h.01\"/></svg>۲۴ آبان</span><span class=\"ds-task-avatar\" role=\"img\" aria-label=\"سارا احمدی، مسئول نمونه\">سا</span></div></article></div>",
+      "css": ".ds-sample-task-surface { color-scheme: light; font: 400 16px/1.85 IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif; --status-progress: 181 71 8; --status-progress-bg: 255 250 235; --status-progress-border: 254 223 137; --bg-surface: 255 255 255; --border-secondary: 234 236 240; --fg-primary: 16 24 40; --fg-tertiary: 102 112 133; --brand-100: 224 234 255; --brand-700: 45 49 166; }\n.ds-task { min-width: 0; padding: 16px; border: 1px solid rgb(var(--border-secondary)); border-radius: 10px; background: rgb(var(--bg-surface)); color: rgb(var(--fg-primary)); }\n.ds-task-top, .ds-task-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }\n.ds-task-top > span:last-child { color: rgb(var(--fg-tertiary)); font-size: 10px; }\n.ds-task h3 { margin: 16px 0 0; font-size: 13px; font-weight: 600; line-height: 1.9; }\n.ds-task p { margin: 6px 0 0; color: rgb(var(--fg-tertiary)); font-size: 11px; line-height: 1.9; }\n.ds-task-bottom { margin-top: 18px; }\n.ds-task-bottom > span:first-child { display: inline-flex; align-items: center; gap: 5px; color: rgb(var(--fg-tertiary)); font-size: 10px; }\n.ds-task-avatar { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 9999px; background: rgb(var(--brand-100)); color: rgb(var(--brand-700)); font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .04); }\n.ds-task-badge { display: inline-flex; box-sizing: border-box; align-items: center; height: 20px; gap: 4px; padding-inline: 6px; border: 1px solid rgb(var(--status-progress-border)); border-radius: 9999px; color: rgb(var(--status-progress)); background: rgb(var(--status-progress-bg)); font-size: 11px; font-weight: 500; line-height: 18px; white-space: nowrap; }\n.ds-task-dot { flex: 0 0 6px; height: 6px; border-radius: 9999px; background: rgb(var(--status-progress)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Shared Workspace",
+    "overview": "TaskDoon's public surfaces bring the product into view through familiar Persian type, crisp white panels and purposeful indigo. A task shows its status, owner and date together. That same visual language carries through the website, the interactive demonstration and account entry.\n\nPublic pages use generous space for reading and put real workspace detail inside bounded previews. Account entry uses the same type, controls and colors at a tighter scale, with a single form as the main task.",
+    "keyCharacteristics": [
+      "Persian-first reading order with IRANYekanX and deliberate direction for numeric fields.",
+      "White and cool-gray planes, fine borders and indigo for actions and selection.",
+      "Real product captures and interactive samples with synthetic data.",
+      "A light public presentation scoped to marketing and account entry."
+    ],
+    "rules": [
+      {
+        "name": "The Public Surface Rule",
+        "body": "Apply light and indigo through `.public-surface[data-theme=\"light\"][data-accent=\"indigo\"]`. The wrapper scopes both `color-scheme` and semantic tokens. `ThemeProvider` owns the saved workspace theme and applies mode and accent at the document root.",
+        "section": "colors"
+      },
+      {
+        "name": "The Semantic Status Rule",
+        "body": "Pair `--status-progress`, `--status-done` and `--status-blocked` with their matching background and border tokens and a readable status label. Use `--error-600` for invalid auth field borders and `--error-700` for the accompanying Persian message.",
+        "section": "colors"
+      },
+      {
+        "name": "The Persian Reading Order Rule",
+        "body": "Let `lang=\"fa\"` and `dir=\"rtl\"` set the reading order. Use logical alignment and isolate phone numbers, codes and password entry in LTR fields. Keep Persian and Latin digits usable in phone and OTP entry and use tabular figures for the OTP.",
+        "section": "typography"
+      },
+      {
+        "name": "The Borders First Rule",
+        "body": "Define product frames and task cards with a surface fill and a one-pixel semantic border. Use shadows for the shared control treatment and for lifting the auth sample.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use semantic colors for interactive and status states and pair status color with a readable Persian label.",
+      "Do preserve visible focus, native form labels and logical RTL navigation through previews and account entry.",
+      "Do use synthetic data from the demo build for screenshots and visibly label interactive samples."
+    ],
+    "donts": [
+      "Don't apply the public theme to the document root or store it as a workspace preference.",
+      "Don't shrink a desktop screenshot to serve as the mobile product demonstration.",
+      "Don't use real workspace data in public product previews."
+    ]
+  }
+}

@@ -90,7 +90,9 @@ async function copyMigrationDependencies(destination) {
       await copyDependency(dependency, directory);
     }
   }
-  for (const dependency of ['pg', 'drizzle-orm']) {
+  // CMS defaults are validated before seeding. Include their locked validation closure and
+  // Nest's runtime peers; the HTTP daemon and the rest of the application stay out of this job.
+  for (const dependency of ['pg', 'drizzle-orm', 'zod', '@nestjs/common', 'reflect-metadata', 'rxjs']) {
     await copyDependency(dependency, join(source, 'apps/api'));
   }
   console.log('Migration dependency closure: ' + visited.size + ' locked production packages.');

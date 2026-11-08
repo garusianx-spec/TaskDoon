@@ -103,7 +103,8 @@ try {
   check(!await targetContext.cookies().then(values => values.some(value => value.name.endsWith('taskin_rt'))), 'pending setup issues no authenticated cookie');
   await target.getByRole('button', { name: 'ارسال کد راه‌اندازی ایمیل' }).click();
   await target.getByLabel('کد راه‌اندازی ایمیل').fill(await mailCode());
-  await target.getByLabel('رمز مدیر جدید').fill(password); await target.getByLabel('تکرار رمز مدیر').fill(password);
+  await target.getByLabel('رمز مدیر جدید', { exact: true }).fill(password);
+  await target.getByLabel('تکرار رمز مدیر', { exact: true }).fill(password);
   await target.getByRole('button', { name: 'فعال‌سازی دسترسی مدیریت' }).click();
   check(await visible(target.getByText('دسترسی مدیریت فعال شد. با کد پیامکی تازه و رمز مدیر وارد شوید.')), 'verified email and password setup requires a fresh sign-in');
   await page.getByRole('button', { name: 'بازخوانی', exact: true }).click();

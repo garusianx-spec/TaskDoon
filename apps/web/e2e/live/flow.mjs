@@ -117,7 +117,7 @@ try {
   await signIn(owner, ownerPhone, ownerName);
   check(await visible(owner.getByRole('heading', { name: `${ownerName}، خوش آمدید` }), 15_000), 'a new account is asked for its first workspace');
   await owner.getByRole('textbox', { name: 'نام فضای کاری' }).fill(workspaceName);
-  await owner.getByLabel('رمز مدیر').fill('Taskin-2026!');
+  await owner.getByLabel('رمز مدیر', { exact: true }).fill('Taskin-2026!');
   await owner.getByRole('button', { name: 'ساخت فضای کاری' }).click();
   check(await visible(railOf(owner), 20_000), 'the workspace loads after it is created');
   check(await visible(owner.getByText(workspaceName).first()), `the new workspace «${workspaceName}» is the active one`);

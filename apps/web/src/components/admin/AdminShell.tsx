@@ -16,6 +16,7 @@ const SECTIONS = [
   { href: '/admin/conversations', label: 'رصد پیام‌ها و گروه‌ها', icon: MessagesIcon },
   { href: '/admin/workspaces', label: 'ورک‌اسپیس‌ها و نقش‌ها', icon: BriefcaseIcon },
   { href: '/admin/roles', label: 'مدیریت دسترسی‌ها و مدیران', icon: ShieldIcon },
+  { href: '/admin/site', label: 'مدیریت وب‌سایت', icon: ChartIcon },
   { href: '/admin/audit', label: 'گزارش بازرسی', icon: ShieldIcon },
 ] as const;
 
@@ -40,10 +41,12 @@ export function AdminShell({ children }: { readonly children: ReactNode }) {
         <nav aria-label="بخش‌های پنل مدیریت" className="-mx-1 flex gap-1 overflow-x-auto lg:mx-0 lg:flex-col lg:overflow-visible">
           {SECTIONS.filter(section => section.href !== '/admin/roles' || admin.role === 'SUPER_ADMIN').map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
+            // The CMS layout imports public preview CSS. Load it when an admin opens the CMS.
             return (
               <Link
                 key={href}
                 href={href}
+                prefetch={href === '/admin/site' ? false : undefined}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-body-sm font-medium transition-colors',

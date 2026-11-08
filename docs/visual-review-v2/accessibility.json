@@ -1,0 +1,277 @@
+{
+  "tool": "@axe-core/playwright 4.14.0",
+  "scope": "public pages and listed auth states; OTP uses an isolated UI fixture",
+  "reports": [
+    {
+      "label": "/",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": [
+        "color-contrast"
+      ]
+    },
+    {
+      "label": "/",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": [
+        "color-contrast"
+      ]
+    },
+    {
+      "label": "/features",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/features",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/features/task-management",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/features/task-management",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/pricing",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": [
+        "aria-prohibited-attr",
+        "color-contrast"
+      ]
+    },
+    {
+      "label": "/pricing",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": [
+        "aria-prohibited-attr",
+        "color-contrast"
+      ]
+    },
+    {
+      "label": "/about",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/about",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/contact",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/contact",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/faq",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/faq",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/blog",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/blog",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/help",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/help",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/demo-request",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/demo-request",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/feed",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/feed",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/reset-password",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "/reset-password",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "password-login",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "password-login",
+      "viewport": {
+        "width": 390,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "forgot-password",
+      "viewport": {
+        "width": 390,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "otp-ui-fixture",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    },
+    {
+      "label": "otp-ui-fixture",
+      "viewport": {
+        "width": 390,
+        "height": 1000
+      },
+      "violations": [],
+      "needsManualReview": []
+    }
+  ]
+}

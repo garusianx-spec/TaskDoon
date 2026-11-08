@@ -260,11 +260,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [standard, admin-auth]
+        scenario: [standard, admin-auth, marketing-auth]
     env:
       COMPOSE_FILE: infra/docker-compose.yml:infra/ci/compose.yml
       COMPOSE_PROJECT_NAME: taskdoon-ci-live
       BASE_URL: http://localhost:3000
+      SITE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -300,6 +301,23 @@ jobs:
       - name: Two people, one workspace (sign-in, invitation, tasks, chat, notifications, sign-out)
         if: matrix.scenario == 'standard'
         run: npm run test:e2e:live
+      - name: Marketing and authentication against the real test API
+        if: matrix.scenario == 'marketing-auth'
+        run: npm run test:e2e:marketing-auth
+        env:
+          TASKDOON_E2E_ISOLATED: '1'
+      - name: Isolated authentication UI failure and timing states
+        if: matrix.scenario == 'marketing-auth'
+        run: npm run test:e2e:auth-ui
+      - name: Public pages and authentication WCAG checks
+        if: matrix.scenario == 'marketing-auth'
+        run: npm run test:e2e:a11y
+      - name: CMS publication, draft isolation and real public forms
+        if: matrix.scenario == 'marketing-auth'
+        run: npm run test:e2e:site
+        env:
+          TASKDOON_E2E_ISOLATED: '1'
+          DATABASE_MIGRATOR_URL: postgres://taskin_migrator:taskin_migrator@127.0.0.1:5432/taskin
       # The hardened daemon excludes operator CLIs and owner credentials. The unchanged
       # suites default to the separately built host CLI, with test-only owner credentials.
       - name: Platform super admin (directory, sessions, messages, reset code, audit)
