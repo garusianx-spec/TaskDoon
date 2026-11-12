@@ -28,6 +28,14 @@ import { setDirectory } from '@/store/directory';
 import { LiveStore, type LiveStatus } from '@/store/live/live-store';
 import { LiveGate } from '@/features/auth/components/LiveGate';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
+import { operationConfirmation, type ConfirmedOperation } from '@/store/confirmed-operation';
+
+interface OperationToast {
+  readonly id: number;
+  readonly text: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+}
 
 interface WorkspaceContextValue {
   readonly state: WorkspaceState;
@@ -37,6 +45,9 @@ interface WorkspaceContextValue {
   readonly createProject: (draft: ProjectDraft, commandId: string) => Promise<string>;
   readonly saveProfile: (fullName: string, profile: ProfileSettings) => Promise<void>;
   readonly saveNote: (noteId: string) => Promise<void>;
+  readonly confirmOperation: (operation: ConfirmedOperation, commandId?: string) => Promise<void>;
+  readonly operationToast: OperationToast | null;
+  readonly dismissOperationToast: (id: number) => void;
   readonly currentUser: User;
   readonly activeWorkspace: Workspace;
   /** True when the signed-in member is the active workspace's Owner. */
@@ -67,6 +78,8 @@ let liveStore: LiveStore | null = null;
  */
 export function WorkspaceProvider({ children }: { readonly children: ReactNode }) {
   const [state, setState] = useState<WorkspaceState>(INITIAL_WORKSPACE_STATE);
+  const [toast, setToast] = useState<OperationToast | null>(null);
+  const toastId = useRef(0);
   // The latest state, updated synchronously, so consecutive dispatches in one event build on each
   // other and the live store sees exactly the states before and after each action.
   const stateRef = useRef(state);
@@ -101,6 +114,33 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     [apply, live],
   );
 
+  const showOperationToast = useCallback((text: string) => {
+    const { activeWorkspaceId, meId } = stateRef.current;
+    setToast({ id: ++toastId.current, text, workspaceId: activeWorkspaceId, userId: meId });
+  }, []);
+
+  const dismissOperationToast = useCallback((id: number) => {
+    setToast((current) => (current?.id === id ? null : current));
+  }, []);
+
+  const confirmOperation = useCallback(
+    async (operation: ConfirmedOperation, commandId?: string) => {
+      const before = stateRef.current;
+      const text = operationConfirmation(operation, before);
+      if (live) await live.confirmOperation(operation, commandId);
+      else {
+        const { prev, next } = apply(operation);
+        if (prev === next) return;
+      }
+      const current = stateRef.current;
+      if (current.activeWorkspaceId !== before.activeWorkspaceId || current.meId !== before.meId) {
+        throw new Error('The workspace changed');
+      }
+      if (text) showOperationToast(text);
+    },
+    [apply, live, showOperationToast],
+  );
+
   const createTask = useCallback(
     async (draft: TaskDraft, files: readonly File[] = [], commandId?: string) => {
       const previousInspector = stateRef.current.inspector;
@@ -124,10 +164,10 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
         });
       }
       apply({ type: 'open-task', taskId: id });
-      apply({ type: 'sync/merge', patch: { announcement: `وظیفه «${draft.title}» ایجاد شد.` } });
+      showOperationToast(`وظیفه «${draft.title}» با موفقیت ایجاد شد.`);
       return id;
     },
-    [apply, dispatch, live],
+    [apply, dispatch, live, showOperationToast],
   );
 
   const saveTask = useCallback(
@@ -162,22 +202,22 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
       if (live) await live.saveProfile(fullName.trim(), profile);
       else {
         apply({ type: 'update-display-name', fullName });
-        apply({ type: 'update-profile', profile });
+        apply({ type: 'sync/merge', patch: { profile } });
       }
+      showOperationToast('پروفایل شما به‌روزرسانی شد.');
     },
-    [apply, live],
+    [apply, live, showOperationToast],
   );
 
   const saveNote = useCallback(
     async (noteId: string) => {
       if (live) await live.flushNote(noteId);
-      apply({
-        type: 'sync/merge',
-        patch: { announcement: 'یادداشت ذخیره شد. آماده نوشتن یادداشت تازه هستید.' },
-      });
     },
-    [apply, live],
+    [live],
   );
+
+  const operationToast =
+    toast?.workspaceId === state.activeWorkspaceId && toast.userId === state.meId ? toast : null;
 
   const liveStatus = useSyncExternalStore(
     useCallback((listener: () => void) => live?.subscribe(listener) ?? (() => undefined), [live]),
@@ -249,6 +289,9 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
             createProject,
             saveProfile,
             saveNote,
+            confirmOperation,
+            operationToast,
+            dismissOperationToast,
             currentUser,
             activeWorkspace,
             isWorkspaceOwner: activeWorkspace.ownerId === currentUser.id,
@@ -268,6 +311,9 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
       createProject,
       saveProfile,
       saveNote,
+      confirmOperation,
+      operationToast,
+      dismissOperationToast,
       currentUser,
       activeWorkspace,
       unreadFor,

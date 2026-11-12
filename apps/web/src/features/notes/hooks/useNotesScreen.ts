@@ -22,7 +22,7 @@ function replacementOf(before: readonly Note[], after: readonly Note[], id: stri
 }
 
 export function useNotesScreen() {
-  const { state, dispatch, saveNote } = useWorkspace();
+  const { state, dispatch, saveNote, confirmOperation } = useWorkspace();
   const { openTaskComposer } = useOverlays();
   const [categoryId, setCategoryId] = useState<string>('all');
   const [color, setColor] = useState<TagTone | null>(null);
@@ -135,6 +135,7 @@ export function useNotesScreen() {
     state,
     dispatch,
     saveNote,
+    confirmOperation,
     categoryId,
     setCategoryId,
     color,

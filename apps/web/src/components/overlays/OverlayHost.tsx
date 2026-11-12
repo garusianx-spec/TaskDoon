@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { CreateTaskModal } from '@/features/tasks/components/CreateTaskModal';
@@ -22,8 +22,6 @@ import { DeleteWorkspaceModal } from '@/features/workspace/components/DeleteWork
 import { nextLocalId } from '@/store/ids';
 import { userById } from '@/store/selectors';
 import { useOverlays } from '@/components/overlays/context';
-import { IconButton } from '@/components/ui';
-import { CheckCircleIcon, CloseIcon } from '@/components/icons';
 
 /**
  * Renders every app-level dialog exactly once, at the root, bound to the global overlay
@@ -39,18 +37,17 @@ export function OverlayHost() {
     createTask,
     createProject,
     saveProfile,
+    confirmOperation,
     currentUser,
     activeWorkspace,
     isWorkspaceOwner,
   } = useWorkspace();
-  const [taskNotice, setTaskNotice] = useState<string | null>(null);
-  useEffect(() => {
-    if (!taskNotice) return;
-    const timer = setTimeout(() => setTaskNotice(null), 6000);
-    return () => clearTimeout(timer);
-  }, [taskNotice]);
   const { active, open, close } = useOverlays();
   const live = useLive();
+  const liveStore = live?.store;
+  const loadTrash = useCallback(async () => {
+    await liveStore?.loadProjectTrash();
+  }, [liveStore]);
   const hasPassword = live?.status.user?.hasPassword ?? false;
 
   const goTo = (href: string) => {
@@ -92,27 +89,8 @@ export function OverlayHost() {
         onSubmit={async (draft, files, commandId) => {
           await createTask(draft, files, commandId);
           close();
-          setTaskNotice(`وظیفه «${draft.title}» با موفقیت ایجاد شد.`);
         }}
       />
-
-      {taskNotice && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-toast flex justify-center px-4 sm:bottom-6">
-          <div
-            role="status"
-            className="pointer-events-auto flex max-w-lg items-start gap-2.5 rounded-xl border border-secondary bg-surface p-3 shadow-lg"
-          >
-            <CheckCircleIcon size={20} className="mt-0.5 shrink-0 text-status-done" />
-            <p className="min-w-0 flex-1 break-words text-body-sm text-fg-primary">{taskNotice}</p>
-            <IconButton
-              label="بستن پیام موفقیت"
-              icon={<CloseIcon size={16} />}
-              size="xs"
-              onClick={() => setTaskNotice(null)}
-            />
-          </div>
-        </div>
-      )}
 
       <ProjectLimitDialog
         open={active?.kind === 'project-composer' && atProjectLimit}
@@ -139,8 +117,9 @@ export function OverlayHost() {
       <ProjectDeleteDialog
         project={isWorkspaceOwner ? deletingProject : null}
         onClose={close}
-        onConfirm={() => {
-          if (deletingProject) dispatch({ type: 'delete-project', projectId: deletingProject.id });
+        onConfirm={async () => {
+          if (deletingProject)
+            await confirmOperation({ type: 'delete-project', projectId: deletingProject.id });
           close();
         }}
       />
@@ -149,7 +128,8 @@ export function OverlayHost() {
         open={isWorkspaceOwner && active?.kind === 'project-trash'}
         entries={state.projectTrash}
         onClose={close}
-        onRestore={(projectId) => dispatch({ type: 'restore-project', projectId })}
+        {...(liveStore ? { onLoad: loadTrash } : {})}
+        onRestore={(projectId) => confirmOperation({ type: 'restore-project', projectId })}
       />
 
       <NewConversationModal
@@ -157,8 +137,8 @@ export function OverlayHost() {
         currentUserId={currentUser.id}
         conversations={state.conversations}
         onClose={close}
-        onSubmit={(draft) => {
-          dispatch({ type: 'create-conversation', draft, authorId: currentUser.id });
+        onSubmit={async (draft, commandId) => {
+          await confirmOperation({ type: 'create-conversation', draft, authorId: currentUser.id }, commandId);
           close();
           goTo('/chats');
         }}
@@ -169,8 +149,8 @@ export function OverlayHost() {
         initialDate={active?.kind === 'event-composer' ? active.date : null}
         currentUserId={currentUser.id}
         onClose={close}
-        onSubmit={(draft) => {
-          dispatch({ type: 'create-calendar-event', draft });
+        onSubmit={async (draft, commandId) => {
+          await confirmOperation({ type: 'create-calendar-event', draft }, commandId);
           close();
           goTo('/calendar');
         }}
@@ -243,7 +223,6 @@ export function OverlayHost() {
         onSave={async (fullName, profile) => {
           await saveProfile(fullName, profile);
           close();
-          setTaskNotice('پروفایل شما به‌روزرسانی شد.');
         }}
       />
 
@@ -272,8 +251,8 @@ export function OverlayHost() {
         open={active?.kind === 'working-hours'}
         hours={state.workingHours}
         onClose={close}
-        onSave={(hours) => {
-          dispatch({ type: 'update-working-hours', hours });
+        onSave={async (hours) => {
+          await confirmOperation({ type: 'update-working-hours', hours });
           close();
         }}
       />

@@ -9,6 +9,7 @@ import { NavRail } from '@/components/layout/NavRail';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { OperationSuccessToast } from '@/components/layout/OperationSuccessToast';
 import { Drawer } from '@/components/ui';
 import { TaskInspector } from '@/features/tasks/components/TaskInspector';
 import type { TaskSourceView } from '@/features/tasks/types/inspector';
@@ -220,7 +221,9 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
       {/* Agile tracking: a task reached Done while still blocked (a warning; the move stands). */}
       <BlockedDoneNotice />
 
-      {/* Single live region for non-visual state changes (board moves, task creation). */}
+      <OperationSuccessToast />
+
+      {/* Non-visual state changes such as board moves. Operation toasts announce themselves. */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {state.announcement}
       </div>

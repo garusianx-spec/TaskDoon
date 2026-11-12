@@ -37,10 +37,7 @@ export function TaskSidebarContainer({
       {...(isWorkspaceOwner
         ? {
             onDeleteProject: (projectId: string) => open({ kind: 'project-delete', projectId }),
-            onOpenTrash: () => {
-              dispatch({ type: 'load-project-trash' });
-              open({ kind: 'project-trash' });
-            },
+            onOpenTrash: () => open({ kind: 'project-trash' }),
           }
         : {})}
     />

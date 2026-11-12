@@ -170,7 +170,7 @@ export interface Task {
   readonly reviewerId: string | null;
   /** ISO-8601 Gregorian; rendered as Jalali everywhere in the UI. */
   readonly startDate: string;
-  readonly dueDate: string;
+  readonly dueDate: string | null;
   readonly createdAt: string;
   readonly subtasks: readonly Subtask[];
   readonly attachments: readonly Attachment[];

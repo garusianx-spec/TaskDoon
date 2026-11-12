@@ -23,6 +23,7 @@ export function NotesPage() {
     state,
     dispatch,
     saveNote,
+    confirmOperation,
     categoryId,
     setCategoryId,
     color,
@@ -179,9 +180,12 @@ export function NotesPage() {
                 startNote(selected.categoryId);
                 setSaveNotice('یادداشت ذخیره شد. یادداشت تازه‌ای بنویسید.');
               }}
-              onDelete={() => {
+              onDelete={async () => {
+                const origin = currentEditor.current;
                 const next = visible.find((note) => note.id !== selected.id);
-                dispatch({ type: 'delete-note', noteId: selected.id });
+                await confirmOperation({ type: 'delete-note', noteId: selected.id });
+                if (currentEditor.current.identity && currentEditor.current.identity !== origin.identity)
+                  return;
                 setSelectedId(next?.id ?? null);
                 setMobileEditorOpen(false);
               }}

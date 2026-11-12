@@ -77,18 +77,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 export interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'> {
   readonly label?: string;
   readonly hint?: string;
+  readonly error?: string;
   readonly className?: string;
   readonly containerClassName?: string;
   readonly hideLabel?: boolean;
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { label, hint, className, containerClassName, hideLabel = false, id, ...rest },
+  { label, hint, error, className, containerClassName, hideLabel = false, id, ...rest },
   ref,
 ) {
   const generatedId = useNamespacedId('textarea-');
   const textareaId = id ?? generatedId;
   const hintId = `${textareaId}-hint`;
+  const errorId = `${textareaId}-error`;
 
   return (
     <div className={cn('flex flex-col gap-1.5', containerClassName)}>
@@ -103,21 +105,27 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       <textarea
         ref={ref}
         id={textareaId}
-        aria-describedby={hint ? hintId : undefined}
+        aria-describedby={error ? errorId : hint ? hintId : undefined}
+        aria-invalid={error ? true : undefined}
         className={cn(
           'min-h-20 w-full resize-y rounded-lg border border-primary bg-surface px-3.5 py-2.5 text-body leading-6 text-fg-primary shadow-xs transition-colors',
           'placeholder:text-fg-placeholder',
           'focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-0',
           'disabled:cursor-not-allowed disabled:bg-muted disabled:text-fg-disabled',
+          error && 'border-error-300 focus-visible:ring-error-500 focus-visible:border-error-500',
           className,
         )}
         {...rest}
       />
-      {hint && (
+      {error ? (
+        <p id={errorId} className="text-caption text-status-blocked" role="alert">
+          {error}
+        </p>
+      ) : hint ? (
         <p id={hintId} className="text-caption text-fg-tertiary">
           {hint}
         </p>
-      )}
+      ) : null}
     </div>
   );
 });

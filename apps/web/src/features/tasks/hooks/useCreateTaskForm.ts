@@ -26,6 +26,7 @@ export function useCreateTaskForm({
   const [files, setFiles] = useState<readonly File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [deadlineError, setDeadlineError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const submitting = useRef(false);
   const submission = useRef<{ signature: string; files: readonly File[]; commandId: string } | null>(null);
@@ -37,17 +38,20 @@ export function useCreateTaskForm({
     () => {
       const initial = draft ?? taskDraft();
       const projectId = fixedProjectId ?? initial.projectId;
+      const sourceConversion = initial.sourceMessageId !== null || initial.sourceNoteId !== null;
+      const initialToday = today();
       setForm({
         ...initial,
         projectId,
         boardColumnId: projectId === initial.projectId ? initial.boardColumnId : null,
-        startDate: initial.startDate ?? today(),
-        dueDate: initial.dueDate ?? today(),
+        startDate: initial.startDate ?? initialToday,
+        dueDate: initial.dueDate ?? (sourceConversion ? initialToday : null),
       });
       setTouched(false);
       setFiles([]);
       setFileError(null);
       setSubmitError(null);
+      setDeadlineError(null);
       submission.current = null;
     },
     draft,
@@ -114,7 +118,7 @@ export function useCreateTaskForm({
     }
     const startDate = form.startDate ?? today();
     if (form.dueDate && form.dueDate < startDate) {
-      setSubmitError('مهلت انجام باید در روز شروع یا پس از آن باشد. یکی از تاریخ‌ها را اصلاح کنید.');
+      setDeadlineError('مهلت انجام باید در روز شروع یا پس از آن باشد. یکی از تاریخ‌ها را اصلاح کنید.');
       return;
     }
     submitting.current = true;
@@ -125,7 +129,6 @@ export function useCreateTaskForm({
         projectId,
         title: form.title.trim(),
         startDate,
-        dueDate: form.dueDate ?? today(),
       };
       const signature = JSON.stringify(submitted);
       if (submission.current?.signature !== signature || submission.current.files !== files) {
@@ -155,6 +158,8 @@ export function useCreateTaskForm({
     fileError,
     submitError,
     setSubmitError,
+    deadlineError,
+    setDeadlineError,
     saving,
     titleRef,
     fromMessage,

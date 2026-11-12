@@ -94,11 +94,13 @@ export function TaskInspectorFields({
             onChange={(startDate) => onPatch({ startDate })}
           />
         </Field>
-        <Field label="مهلت انجام">
+        <Field label="مهلت انجام (اختیاری)">
           <JalaliDatePicker
             label="انتخاب مهلت انجام"
+            emptyLabel="بدون مهلت"
             value={task.dueDate}
             onChange={(dueDate) => onPatch({ dueDate })}
+            onClear={() => onPatch({ dueDate: null })}
           />
         </Field>
       </div>

@@ -271,7 +271,6 @@ export type WorkspaceAction =
   | { readonly type: 'delete-project'; readonly projectId: string }
   | { readonly type: 'restore-project'; readonly projectId: string }
   /** The trash view opened: the live app reads it from the server. */
-  | { readonly type: 'load-project-trash' }
   /** Out of the workspace; what they wrote stays. `password`: the owner's or admin's step-up (live). */
   | { readonly type: 'remove-member'; readonly userId: string; readonly password?: string }
   | { readonly type: 'delete-note-category'; readonly categoryId: string }
@@ -484,7 +483,7 @@ export interface TaskPatch {
   readonly priority?: Task['priority'];
   readonly assigneeIds?: readonly string[];
   readonly reviewerId?: string | null;
-  readonly dueDate?: string;
+  readonly dueDate?: string | null;
   readonly startDate?: string;
   readonly title?: string;
   readonly description?: string;
@@ -906,7 +905,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         assigneeIds: draft.assigneeIds,
         reviewerId: null,
         startDate,
-        dueDate: draft.dueDate ?? startDate,
+        dueDate: draft.dueDate,
         createdAt: nowIso(),
         subtasks: draft.subtaskTitles.map((title) => ({
           id: nextId('s'),
@@ -1195,7 +1194,6 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         scheduledMessages: state.scheduledMessages.filter((entry) => entry.id !== action.scheduledId),
-        announcement: 'پیام زمان‌بندی‌شده لغو شد.',
       };
 
     case 'send-scheduled-now': {
@@ -1221,7 +1219,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     }
 
     case 'update-working-hours':
-      return { ...state, workingHours: action.hours, announcement: 'ساعات کاری و پاسخ خودکار ذخیره شد.' };
+      return { ...state, workingHours: action.hours };
 
     case 'focus-message':
       return {
@@ -1314,7 +1312,6 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         ...state,
         calendarEvents: [...state.calendarEvents, event],
         calendarFocusDate: event.date,
-        announcement: `«${event.title}» در تقویم ثبت شد.`,
       };
     }
 
@@ -1420,7 +1417,6 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
           state.inspector.kind === 'task' && taskIds.has(state.inspector.taskId)
             ? { kind: 'none' }
             : state.inspector,
-        announcement: `پروژه «${project.name}» به سطل زباله رفت و تا ${toPersianDigits(PROJECT_TRASH_DAYS)} روز بازیابی‌پذیر است.`,
       };
     }
 
@@ -1435,12 +1431,8 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         boardColumns: stash ? [...state.boardColumns, ...stash.boardColumns] : state.boardColumns,
         conversations: state.conversations,
         projectTrash: state.projectTrash.filter((trashed) => trashed !== entry),
-        announcement: `پروژه «${entry.project.name}» بازیابی شد.`,
       };
     }
-
-    case 'load-project-trash':
-      return state;
 
     case 'remove-member': {
       const user = state.users.find((entry) => entry.id === action.userId);
@@ -1509,7 +1501,6 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         notes: state.notes.filter((entry) => entry.id !== action.noteId),
-        announcement: `یادداشت «${note.title || 'بدون عنوان'}» حذف شد.`,
       };
     }
 

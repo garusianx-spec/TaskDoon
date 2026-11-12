@@ -1,9 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { formatJalali, toISODate, toPersianDigits } from '@taskin/jalali';
 import { truncate } from '@/lib/format';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { FormError } from '@/components/shared/FormError';
 import { Button, Input, Modal } from '@/components/ui';
 import { ClockIcon } from '@/components/icons';
 import { JalaliDatePicker } from '@/components/shared/JalaliDatePicker';
@@ -28,6 +30,14 @@ function defaultSlot(now: Date): Date {
   const at = new Date(now.getTime() + 3600_000);
   at.setMinutes(Math.ceil(at.getMinutes() / 5) * 5, 0, 0);
   return at;
+}
+
+function validateSlot(at: Date | null, now: number): string | null {
+  if (!at) return 'تاریخ و ساعت ارسال را کامل کنید.';
+  const lead = at.getTime() - now;
+  if (lead < MIN_LEAD_MS) return 'زمان ارسال باید دست‌کم یک دقیقه بعد از اکنون باشد.';
+  if (lead > MAX_AHEAD_MS) return 'زمان ارسال حداکثر تا یک سال بعد است.';
+  return null;
 }
 
 interface Preset {
@@ -61,12 +71,15 @@ export function ScheduleMessageDialog({
   /** The drafted message, shown so it is clear what is being scheduled. */
   readonly text: string;
   readonly onClose: () => void;
-  readonly onConfirm: (at: Date) => void;
+  readonly onConfirm: (at: Date, commandId: string) => Promise<void>;
 }) {
   const [date, setDate] = useState(() => toISODate(defaultSlot(new Date())));
   const [time, setTime] = useState(() => hhmm(defaultSlot(new Date())));
   const [touched, setTouched] = useState(false);
   const [openedAt, setOpenedAt] = useState(() => new Date());
+  const [checkedAt, setCheckedAt] = useState(0);
+  const errorId = useId();
+  const submission = useFormSubmission();
 
   useResetOnOpen(open, () => {
     const now = new Date();
@@ -75,43 +88,56 @@ export function ScheduleMessageDialog({
     setTime(hhmm(slot));
     setTouched(false);
     setOpenedAt(now);
+    setCheckedAt(now.getTime());
+    submission.reset();
   });
 
   const at = useMemo(() => instantOf(date, time), [date, time]);
   const shortcuts = useMemo(() => presets(openedAt), [openedAt]);
-  const lead = at ? at.getTime() - Date.now() : Number.NaN;
-  const error = !at
-    ? 'تاریخ و ساعت ارسال را کامل کنید.'
-    : lead < MIN_LEAD_MS
-      ? 'زمان ارسال باید دست‌کم یک دقیقه بعد از اکنون باشد.'
-      : lead > MAX_AHEAD_MS
-        ? 'زمان ارسال حداکثر تا یک سال بعد است.'
-        : null;
+  const error = validateSlot(at, checkedAt);
+  const visibleError = touched ? error : null;
 
-  const submit = () => {
+  const close = () => {
+    if (!submission.isPending()) onClose();
+  };
+  const submit = async () => {
+    if (submission.isPending()) return;
+    const now = Date.now();
+    setCheckedAt(now);
     setTouched(true);
-    if (error || !at) return;
-    onConfirm(at);
+    if (!at || validateSlot(at, now)) return;
+    await submission.submit(
+      { text, scheduledAt: at.toISOString() },
+      (commandId) => onConfirm(at, commandId),
+      'پیام زمان‌بندی نشد. دوباره تلاش کنید.',
+    );
   };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       size="sm"
       title="زمان‌بندی ارسال پیام"
       description={truncate(text, 120)}
       icon={<ClockIcon size={20} />}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <FormError message={submission.error} className="basis-full" />
+          <Button variant="secondary" onClick={close} disabled={submission.saving}>
             انصراف
           </Button>
-          <Button onClick={submit}>زمان‌بندی ارسال</Button>
+          <Button onClick={() => void submit()} loading={submission.saving}>
+            {submission.saving ? 'در حال ثبت…' : 'زمان‌بندی ارسال'}
+          </Button>
         </>
       }
     >
-      <div className="flex flex-col gap-4">
+      <fieldset
+        className="flex min-w-0 flex-col gap-4"
+        disabled={submission.saving}
+        aria-busy={submission.saving || undefined}
+      >
         <div role="group" aria-label="زمان‌های پیشنهادی" className="flex flex-wrap gap-2">
           {shortcuts.map((preset) => (
             <Button
@@ -138,20 +164,28 @@ export function ScheduleMessageDialog({
             dir="ltr"
             step={60}
             value={time}
+            required
+            aria-invalid={visibleError ? true : undefined}
+            aria-describedby={visibleError ? errorId : undefined}
+            onBlur={() => {
+              setCheckedAt(Date.now());
+              setTouched(true);
+            }}
+            onFocus={() => setTouched(false)}
             onChange={(event) => setTime(event.target.value)}
           />
         </div>
+        {visibleError && (
+          <p id={errorId} role="alert" className="text-caption text-status-blocked">
+            {visibleError}
+          </p>
+        )}
         {at && !error && (
           <p className="text-body-sm text-fg-secondary" aria-live="polite">
             {`ارسال در ${formatJalali(at, 'full')}`}
           </p>
         )}
-        {touched && error && (
-          <p role="alert" className="text-caption text-status-blocked">
-            {error}
-          </p>
-        )}
-      </div>
+      </fieldset>
     </Modal>
   );
 }

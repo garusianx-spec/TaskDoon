@@ -240,7 +240,7 @@ export function taskFromCard(card: TaskCard, columns: readonly BoardColumn[], pr
     reviewerId: card.reviewerId,
     startDate: card.startDate,
     // The screens always show a deadline; a task without one sits on its start date.
-    dueDate: card.dueDate ?? card.startDate,
+    dueDate: card.dueDate,
     createdAt: card.createdAt,
     subtasks: previous?.subtasks ?? [],
     attachments: previous?.attachments ?? [],

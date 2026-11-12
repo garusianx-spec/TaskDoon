@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { CalendarEventKind } from '@taskin/contracts';
+import { useMemo, useRef, useState } from 'react';
+import type { CalendarEventDraft, CalendarEventKind } from '@taskin/contracts';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { toISODate, toPersianDigits } from '@taskin/jalali';
 import type { CalendarEventModalProps } from '@/features/calendar/components/CalendarEventModal';
 
@@ -43,12 +44,17 @@ export function useCalendarEventForm({
 }: Pick<CalendarEventModalProps, 'open' | 'initialDate' | 'currentUserId' | 'onSubmit'>) {
   const [form, setForm] = useState<FormState>(() => blankForm(toISODate(new Date()), currentUserId));
   const [touched, setTouched] = useState(false);
+  const [titleTouched, setTitleTouched] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const submission = useFormSubmission();
 
   useResetOnOpen(
     open,
     () => {
       setForm(blankForm(initialDate ?? toISODate(new Date()), currentUserId));
       setTouched(false);
+      setTitleTouched(false);
+      submission.reset();
     },
     initialDate,
   );
@@ -58,18 +64,26 @@ export function useCalendarEventForm({
 
   const endSlots = useMemo(() => TIME_SLOTS.filter((slot) => slot > form.startTime), [form.startTime]);
 
-  const titleError = touched && form.title.trim().length === 0 ? 'عنوان رویداد الزامی است.' : undefined;
+  const titleError = (titleTouched || touched) && !form.title.trim() ? 'عنوان رویداد را بنویسید.' : undefined;
   const projectError =
     touched && form.kind === 'milestone' && form.projectId === NO_PROJECT
       ? 'نقطه عطف باید به یک پروژه تعلق داشته باشد.'
       : undefined;
 
-  const submit = () => {
-    setTouched(true);
-    if (form.title.trim().length === 0) return;
-    if (form.kind === 'milestone' && form.projectId === NO_PROJECT) return;
+  const invalidTime = form.kind === 'meeting' && form.endTime <= form.startTime;
+  const timeError = touched && invalidTime ? 'ساعت پایان باید بعد از ساعت شروع باشد.' : undefined;
 
-    onSubmit({
+  const submit = async () => {
+    if (submission.isPending()) return;
+    setTouched(true);
+    if (!form.title.trim()) {
+      titleRef.current?.focus();
+      setTitleTouched(true);
+      return;
+    }
+    if (invalidTime || (form.kind === 'milestone' && form.projectId === NO_PROJECT)) return;
+
+    const draft: CalendarEventDraft = {
       kind: form.kind,
       title: form.title.trim(),
       date: form.date,
@@ -78,11 +92,29 @@ export function useCalendarEventForm({
       projectId: form.projectId === NO_PROJECT ? null : form.projectId,
       attendeeIds: form.kind === 'meeting' ? form.attendeeIds : [currentUserId],
       description: form.description.trim(),
-    });
+    };
+    await submission.submit(
+      draft,
+      (commandId) => onSubmit(draft, commandId),
+      'رویداد ثبت نشد. دوباره تلاش کنید.',
+    );
   };
 
   const slotOptions = (slots: readonly string[]) =>
     slots.map((slot) => ({ value: slot, label: toPersianDigits(slot) }));
 
-  return { form, setForm, setTouched, set, endSlots, titleError, projectError, submit, slotOptions };
+  return {
+    form,
+    setForm,
+    setTitleTouched,
+    titleRef,
+    set,
+    endSlots,
+    titleError,
+    projectError,
+    timeError,
+    submit,
+    slotOptions,
+    submission,
+  };
 }

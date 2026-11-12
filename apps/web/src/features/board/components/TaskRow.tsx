@@ -79,7 +79,9 @@ export function TaskRow({ task, columns, selected, onOpen, onToggleComplete }: T
       </td>
       <td className="px-4 py-3 numeric">
         <div className="flex flex-col">
-          <span className="text-body-sm text-fg-primary">{formatJalali(task.dueDate, 'medium')}</span>
+          <span className="text-body-sm text-fg-primary">
+            {task.dueDate ? formatJalali(task.dueDate, 'medium') : deadline.text}
+          </span>
           {/*
             `describeDeadline` falls back to the plain date for completed and
             far-off work, which would just repeat the line above. Only the

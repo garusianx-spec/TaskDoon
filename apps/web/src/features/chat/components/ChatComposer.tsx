@@ -23,7 +23,7 @@ export interface ChatComposerProps {
    * «زمان‌بندی ارسال» (Phase 3.2): the draft goes out at `at` instead of now. Offered by the clock
    * button beside «ارسال پیام», and by right-clicking (or long-pressing) «ارسال پیام» itself.
    */
-  readonly onSchedule?: (text: string, at: Date) => void;
+  readonly onSchedule?: (text: string, at: Date, commandId: string) => Promise<void>;
 }
 
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
@@ -279,11 +279,11 @@ export function ChatComposer({
           open={scheduling}
           text={draft.trim()}
           onClose={() => setScheduling(false)}
-          onConfirm={(at) => {
+          onConfirm={async (at, commandId) => {
             const text = draft.trim();
-            setScheduling(false);
             if (!text) return;
-            onSchedule(text, at);
+            await onSchedule(text, at, commandId);
+            setScheduling(false);
             clear();
           }}
         />

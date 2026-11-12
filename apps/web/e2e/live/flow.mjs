@@ -26,6 +26,7 @@ import { check, eventually, finish, launch, out, visible, watchConsole } from '.
 import { verifyProjectCreation } from './project-creation.mjs';
 import { verifyProfileNavNotes } from './profile-nav-notes.mjs';
 import { verifySettings } from './settings.mjs';
+import { verifyFormFeedback } from './forms-feedback.mjs';
 
 /** The API accepts its cookie routes (refresh, sign-out) only from its web origin: PUBLIC_WEB_ORIGIN or CORS_ORIGINS. */
 const base = process.env.BASE_URL ?? 'http://localhost:3000';
@@ -213,11 +214,18 @@ try {
     'the owner can assign the new member',
   );
   await dialog.getByRole('checkbox', { name: guestName }).click();
+  const taskCreated = owner.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      /^\/api\/v1\/workspaces\/[^/]+\/tasks$/.test(new URL(response.url()).pathname) &&
+      response.ok(),
+  );
   await dialog.getByRole('button', { name: 'ایجاد وظیفه' }).click();
   // Phase 1 keeps the composer open until persistence finishes, then opens details.
   // The optimistic board card can appear before that transition; an early Escape
   // is ignored while saving and leaves the final modal covering the checkbox.
   await dialog.waitFor({ state: 'hidden' });
+  check((await (await taskCreated).json()).dueDate === null, 'a regular task is stored with no deadline');
   const ownerTaskDetails = owner.getByRole('dialog', { name: 'جزئیات وظیفه', exact: true });
   await ownerTaskDetails.waitFor();
   check(
@@ -255,6 +263,19 @@ try {
     'the completion is stored: still done after a reload',
   );
   await owner.screenshot({ path: `${out}/live_board.png` });
+  await owner
+    .getByRole('region', { name: 'ستون انجام شد' })
+    .getByRole('group', { name: new RegExp(taskTitle) })
+    .click();
+  await ownerTaskDetails.waitFor();
+  check(
+    (
+      await ownerTaskDetails.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true }).textContent()
+    ).includes('بدون مهلت'),
+    'the task still has no deadline in its details after reload',
+  );
+  await ownerTaskDetails.getByRole('button', { name: 'بستن پنل جزئیات', exact: true }).click();
+  await ownerTaskDetails.waitFor({ state: 'hidden' });
 
   /* ------------------------------------------------ chat: live delivery, typing, receipts, reactions */
 
@@ -674,6 +695,10 @@ try {
   await hours.getByLabel('متن پاسخ خودکار').fill(awayText);
   await hours.getByRole('button', { name: 'ذخیره' }).click();
   await hours.waitFor({ state: 'detached' });
+  check(
+    await visible(guest.getByRole('status').filter({ hasText: 'ساعات کاری و پاسخ خودکار ذخیره شد.' })),
+    'working hours show one confirmed success message',
+  );
   await guest.reload();
   hours = await openHours(guest);
   check(
@@ -772,6 +797,10 @@ try {
   check(
     await eventually(async () => (await waitingItems.filter({ hasText: dropped }).count()) === 0, 10_000),
     '«لغو / حذف» takes it off the list',
+  );
+  check(
+    await visible(owner.getByRole('status').filter({ hasText: 'ارسال زمان‌بندی‌شده لغو شد.' })),
+    'cancellation shows its confirmed success message',
   );
   await owner.keyboard.press('Escape');
   if (timedToday) {
@@ -919,9 +948,14 @@ try {
   await tree.getByRole('button', { name: /^حذف پروژه پروژه (5|۵)$/ }).click();
   dialog = owner.getByRole('dialog', { name: /^حذف پروژه «پروژه (5|۵)»$/ });
   await dialog.getByRole('button', { name: 'انتقال به سطل زباله' }).click();
+  await dialog.waitFor({ state: 'hidden' });
   check(
     await eventually(async () => (await lastProject.count()) === 0, 10_000),
     'the owner moves a project to the trash: it leaves the tree',
+  );
+  check(
+    await visible(owner.getByRole('status').filter({ hasText: 'به سطل زباله منتقل شد.' })),
+    'project trash shows its confirmed success message',
   );
   await owner.getByRole('button', { name: 'آرشیو / سطل زباله' }).click();
   dialog = owner.getByRole('dialog', { name: 'آرشیو / سطل زباله' });
@@ -940,6 +974,10 @@ try {
     '«بازیابی» brings it back into the tree',
   );
   check(await visible(dialog.getByText('سطل زباله خالی است')), 'the trash is empty again');
+  check(
+    await visible(owner.getByRole('status').filter({ hasText: /پروژهٔ .* بازیابی شد\./ })),
+    'project restore shows its confirmed success message',
+  );
   await owner.keyboard.press('Escape');
 
   /* ------------------------------------------------ Phase 3.1: a removed member keeps their history */
@@ -1018,6 +1056,7 @@ try {
     ),
     'its icon is the uploaded picture, served from storage',
   );
+  await verifyFormFeedback(owner, base, runId);
 } catch (error) {
   // A step that cannot run is a failure too; the console problems below usually say why.
   check(false, `the flow stopped: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`);

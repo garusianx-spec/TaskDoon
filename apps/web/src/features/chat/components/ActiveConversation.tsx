@@ -15,7 +15,7 @@ interface ChatContentProps {
 
 /** Split out so the composer hook resolves inside the `AppShell` provider. */
 export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatContentProps) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, confirmOperation } = useWorkspace();
   const live = useLive();
   const clearFocus = useCallback(() => dispatch({ type: 'clear-message-focus' }), [dispatch]);
   const { openTaskComposer } = useOverlays();
@@ -83,21 +83,24 @@ export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatCon
       scheduled={state.scheduledMessages.filter(
         (entry) => entry.conversationId === conversation.id && entry.authorId === currentUserId,
       )}
-      onSchedule={(text, replyToId, at) =>
-        dispatch({
-          type: 'schedule-message',
-          scheduledId: nextLocalId('sched'),
-          conversationId: conversation.id,
-          authorId: currentUserId,
-          text,
-          replyToId,
-          scheduledAt: at.toISOString(),
-        })
+      onSchedule={(text, replyToId, at, commandId) =>
+        confirmOperation(
+          {
+            type: 'schedule-message',
+            scheduledId: nextLocalId('sched'),
+            conversationId: conversation.id,
+            authorId: currentUserId,
+            text,
+            replyToId,
+            scheduledAt: at.toISOString(),
+          },
+          commandId,
+        )
       }
       onSendScheduledNow={(scheduledId) =>
         dispatch({ type: 'send-scheduled-now', scheduledId, messageId: nextLocalId('m') })
       }
-      onCancelScheduled={(scheduledId) => dispatch({ type: 'cancel-scheduled-message', scheduledId })}
+      onCancelScheduled={(scheduledId) => confirmOperation({ type: 'cancel-scheduled-message', scheduledId })}
       {...(live ? { onTyping: (active: boolean) => live.store.typing(conversation.id, active) } : {})}
     />
   );

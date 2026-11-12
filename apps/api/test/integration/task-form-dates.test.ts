@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type {
+  CalendarView,
+  CalendarEventView,
   ConvertMessageResult,
   ConvertNoteResult,
   NoteView,
@@ -15,7 +17,7 @@ import {
   type TestApp,
 } from './harness.js';
 import { createConversation, sendRest } from './chat-helpers.js';
-import { createProject, expectStatus, wsPath } from './work-helpers.js';
+import { createProject, createTask, expectStatus, wsPath } from './work-helpers.js';
 
 describe('task composer start dates across conversion routes', () => {
   let t: TestApp;
@@ -29,6 +31,56 @@ describe('task composer start dates across conversion routes', () => {
   });
   afterAll(async () => {
     await t?.close();
+  });
+
+  it('persists an empty deadline and only lists dated tasks in the calendar range', async () => {
+    const base = wsPath(workspace.id);
+    const startDate = '2026-08-02';
+    const dueDate = '2026-08-06';
+    const undated = await createTask(t, owner, workspace.id, {
+      projectId: project.id,
+      startDate,
+      dueDate: null,
+    });
+    const dated = await createTask(t, owner, workspace.id, { projectId: project.id, startDate, dueDate });
+    expect(undated.dueDate).toBeNull();
+
+    const read = await t.http().get(`${base}/tasks/${undated.id}`).set(bearer(owner));
+    expectStatus(read, 200);
+    expect(read.body).toMatchObject({ startDate, dueDate: null });
+    const list = await t.http().get(`${base}/tasks?projectId=${project.id}`).set(bearer(owner));
+    expectStatus(list, 200);
+    expect(list.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: undated.id, dueDate: null }),
+        expect.objectContaining({ id: dated.id, dueDate }),
+      ]),
+    );
+    const calendar = await t
+      .http()
+      .get(`${base}/calendar?from=${startDate}&to=${dueDate}`)
+      .set(bearer(owner));
+    expectStatus(calendar, 200);
+    expect((calendar.body as CalendarView).deadlines.map((entry) => entry.taskId)).toEqual([dated.id]);
+  });
+
+  it('returns the same stored calendar event when the original response is retried', async () => {
+    const base = wsPath(workspace.id);
+    const key = idempotencyKey();
+    const date = '2026-09-14';
+    const body = { kind: 'reminder', title: 'Retry a calendar submission', date, startTime: '10:00' };
+    const submit = () =>
+      t.http().post(`${base}/calendar/events`).set(bearer(owner)).set('Idempotency-Key', key).send(body);
+    const first = await submit();
+    expectStatus(first, 201);
+    const replay = await submit();
+    expectStatus(replay, 201);
+    expect((replay.body as CalendarEventView).id).toBe((first.body as CalendarEventView).id);
+    const calendar = await t.http().get(`${base}/calendar?from=${date}&to=${date}`).set(bearer(owner));
+    expectStatus(calendar, 200);
+    expect((calendar.body as CalendarView).events.filter((event) => event.title === body.title)).toHaveLength(
+      1,
+    );
   });
 
   it('creates and replays a message conversion with its chosen historical start and due dates', async () => {

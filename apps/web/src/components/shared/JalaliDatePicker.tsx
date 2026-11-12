@@ -20,7 +20,11 @@ import { CalendarIcon, ChevronBackwardIcon, ChevronForwardIcon } from '@/compone
 export interface JalaliDatePickerProps {
   readonly value: string | null;
   readonly onChange: (iso: string) => void;
+  readonly onClear?: () => void;
   readonly label: string;
+  readonly emptyLabel?: string;
+  readonly describedBy?: string;
+  readonly invalid?: boolean;
   readonly timeZone?: string;
   readonly disabled?: boolean;
 }
@@ -35,7 +39,11 @@ export interface JalaliDatePickerProps {
 export function JalaliDatePicker({
   value,
   onChange,
+  onClear,
   label,
+  emptyLabel = 'انتخاب تاریخ',
+  describedBy,
+  invalid,
   timeZone,
   disabled = false,
 }: JalaliDatePickerProps) {
@@ -80,7 +88,7 @@ export function JalaliDatePicker({
       label={label}
       align="start"
       className="w-full min-w-0"
-      panelClassName="w-[22rem] min-w-0 p-3"
+      panelClassName="w-[22rem] min-w-0 px-1.5 py-3 scrollbar-thin sm:px-3"
       constrainToViewport
       onOpenChange={(open) => {
         if (!open) return;
@@ -91,15 +99,17 @@ export function JalaliDatePicker({
         <button
           type="button"
           aria-label={label}
+          aria-describedby={describedBy}
           disabled={disabled}
           className={cn(
-            'flex h-10 w-full items-center gap-2 rounded-lg border border-primary bg-surface px-3 text-start text-body-sm shadow-xs transition-colors',
+            'flex h-11 w-full items-center gap-2 rounded-lg border border-primary bg-surface px-3 text-start text-body-sm shadow-xs transition-colors sm:h-10',
             'hover:bg-hover disabled:cursor-not-allowed disabled:bg-muted disabled:text-fg-disabled',
+            invalid && 'border-error-300',
           )}
         >
           <CalendarIcon size={18} className="shrink-0 text-fg-quaternary" />
           <span className="flex-1 truncate font-medium text-fg-primary numeric">
-            {value ? formatJalali(fromISODate(value), 'medium') : 'انتخاب تاریخ'}
+            {value ? formatJalali(fromISODate(value), 'medium') : emptyLabel}
           </span>
         </button>
       }
@@ -217,6 +227,19 @@ export function JalaliDatePicker({
             >
               امروز
             </Button>
+            {onClear && value && (
+              <Button
+                size="sm"
+                variant="tertiary"
+                fullWidth
+                onClick={() => {
+                  onClear();
+                  close();
+                }}
+              >
+                حذف مهلت
+              </Button>
+            )}
             <Button size="sm" variant="tertiary" fullWidth onClick={close}>
               تایید
             </Button>

@@ -65,6 +65,7 @@ import { setFileResolver, type FileDisposition } from '@/store/files';
 import { session } from '@/features/auth/api/session';
 import { DEFAULT_PERMISSION_MATRIX, DEPARTMENTS } from '@/data/reference';
 import { LIVE_EMPTY_STATE } from '@/store/initial-state';
+import type { ConfirmedOperation } from '@/store/confirmed-operation';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 import { broadcastJitter, broadcastTimerDelay } from '@/lib/broadcasts';
 import type {
@@ -172,7 +173,6 @@ export class LiveStore {
    */
   private readonly subtaskAdds = new Map<string, Promise<void>>();
   /** Phase 3.2: schedules made here and not yet acknowledged, by client id → their local id. */
-  private readonly scheduling = new Map<string, string>();
   /**
    * «ارسال فوری» in flight, by the schedule's client id → the local copy of its message. The
    * server broadcasts the message to this member's socket too; it replaces the copy in place.
@@ -533,8 +533,11 @@ export class LiveStore {
           users: users.length > 0 ? users : [meToUser(me.user)],
           departments,
           formerUsers,
-          // Read from the server when «آرشیو / سطل زباله» opens.
-          projectTrash: [],
+          // The archive reads its own endpoint. A same-workspace realtime resync can overlap that read.
+          projectTrash:
+            quiet && state.activeWorkspaceId === w && state.meId === me.user.id && view.ownerId === me.user.id
+              ? state.projectTrash
+              : [],
           projects: projects
             .filter((project) => !project.archived)
             .map((project) => projectFromView(project, departmentName)),
@@ -720,6 +723,79 @@ export class LiveStore {
   /* ================================================================ changes */
 
   /** Sends one reducer action's change to the API. `prev` and `next` are the states around it. */
+  /** Form operations leave the existing workspace state in place until their write succeeds. */
+  async confirmOperation(operation: ConfirmedOperation, commandId?: string): Promise<void> {
+    const workspaceId = this.workspaceId;
+    const userId = this.getState().meId;
+    if (!workspaceId || this.status.phase !== 'ready') throw new Error('Workspace is not ready');
+    const current = () => this.workspaceId === workspaceId && this.getState().meId === userId;
+
+    try {
+      switch (operation.type) {
+        case 'create-calendar-event': {
+          const view = await api.calendar.create(workspaceId, operation.draft, commandId);
+          if (!current()) return;
+          const event = eventFromView(view);
+          this.apply({ type: 'sync/upsert-event', event });
+          this.apply({ type: 'sync/merge', patch: { calendarFocusDate: event.date } });
+          return;
+        }
+        case 'create-conversation':
+          await this.createConversation(workspaceId, userId, operation.draft, commandId, current);
+          return;
+        case 'delete-project': {
+          const projectId = await this.serverId(operation.projectId);
+          await api.projects.remove(workspaceId, projectId);
+          if (!current()) return;
+          this.apply({ ...operation, projectId });
+          return;
+        }
+        case 'restore-project':
+          await api.projects.restore(workspaceId, operation.projectId);
+          if (!current()) return;
+          this.apply(operation);
+          // The restored board, tasks and companion channel come back from the server.
+          void this.load(workspaceId, true);
+          return;
+        case 'schedule-message': {
+          const view = await api.scheduled.create(
+            workspaceId,
+            await this.serverId(operation.conversationId),
+            {
+              clientMsgId: commandId ?? newIdempotencyKey(),
+              kind: 'text',
+              text: operation.text,
+              scheduledAt: operation.scheduledAt,
+              ...(operation.replyToId ? { replyToId: await this.serverId(operation.replyToId) } : {}),
+            },
+          );
+          if (current() && view.status === 'pending') {
+            this.apply({ type: 'sync/upsert-scheduled', scheduled: scheduledFromView(view) });
+            this.apply({ type: 'announce', message: 'پیام زمان‌بندی شد و در زمان انتخاب‌شده ارسال می‌شود.' });
+          }
+          return;
+        }
+        case 'cancel-scheduled-message':
+          await api.scheduled.cancel(workspaceId, operation.scheduledId);
+          if (current()) this.apply({ type: 'sync/remove-scheduled', scheduledId: operation.scheduledId });
+          return;
+        case 'update-working-hours': {
+          const hours = workingHoursFromView(await api.workingHours.put(workspaceId, operation.hours));
+          if (current()) this.apply({ type: 'sync/merge', patch: { workingHours: hours } });
+          return;
+        }
+        case 'delete-note':
+          await this.deleteNote(workspaceId, operation.noteId, current);
+          return;
+      }
+    } catch (error) {
+      if (current() && (isProblem(error, 'UNAUTHENTICATED') || isProblem(error, 'SESSION_REVOKED'))) {
+        this.fail(error);
+      }
+      throw error;
+    }
+  }
+
   effect(action: WorkspaceAction, prev: WorkspaceState, next: WorkspaceState): void {
     if (this.status.phase !== 'ready') return;
     switch (action.type) {
@@ -952,32 +1028,6 @@ export class LiveStore {
           this.createProject(action.draft, undefined, action.projectId),
         ).catch(() => undefined);
         return;
-      case 'create-conversation':
-        this.createConversation(action.draft, prev, next);
-        return;
-      case 'delete-project':
-        this.run(
-          async () => {
-            await api.projects.remove(this.workspaceId, await this.serverId(action.projectId));
-            // Its channel went with it: the server archived it.
-            await this.refreshProjectTrash();
-          },
-          () => this.load(this.workspaceId, true),
-        );
-        return;
-      case 'restore-project':
-        this.run(
-          async () => {
-            await api.projects.restore(this.workspaceId, action.projectId);
-            // Its tasks, board and channel come back from the server.
-            await this.load(this.workspaceId, true);
-          },
-          () => this.load(this.workspaceId, true),
-        );
-        return;
-      case 'load-project-trash':
-        void this.refreshProjectTrash();
-        return;
       case 'remove-member':
         this.run(
           async () => {
@@ -991,49 +1041,9 @@ export class LiveStore {
       case 'send-message':
         this.sendMessage(action.conversationId, action.text, action.replyToId, prev, next);
         return;
-      case 'schedule-message': {
-        const clientMsgId = crypto.randomUUID();
-        this.scheduling.set(clientMsgId, action.scheduledId);
-        this.track(
-          action.scheduledId,
-          async () => {
-            const view = await api.scheduled.create(
-              this.workspaceId,
-              await this.serverId(action.conversationId),
-              {
-                clientMsgId,
-                kind: 'text',
-                text: action.text,
-                scheduledAt: action.scheduledAt,
-                ...(action.replyToId ? { replyToId: await this.serverId(action.replyToId) } : {}),
-              },
-            );
-            this.scheduling.delete(clientMsgId);
-            this.apply({
-              type: 'sync/upsert-scheduled',
-              scheduled: scheduledFromView(view),
-              replaceId: action.scheduledId,
-            });
-            return view.id;
-          },
-          () => {
-            this.scheduling.delete(clientMsgId);
-            this.apply({ type: 'sync/remove-scheduled', scheduledId: action.scheduledId });
-          },
-        );
-        return;
-      }
-      case 'cancel-scheduled-message':
-        this.run(
-          async () => api.scheduled.cancel(this.workspaceId, await this.serverId(action.scheduledId)),
-          () => this.refreshScheduled(),
-        );
-        return;
       case 'send-scheduled-now': {
         const scheduled = prev.scheduledMessages.find((entry) => entry.id === action.scheduledId);
-        const clientMsgId =
-          scheduled?.clientMsgId ??
-          [...this.scheduling].find(([, localId]) => localId === action.scheduledId)?.[0];
+        const clientMsgId = scheduled?.clientMsgId;
         if (clientMsgId) this.sendingNow.set(clientMsgId, action.messageId);
         this.run(
           async () => {
@@ -1062,15 +1072,6 @@ export class LiveStore {
         );
         return;
       }
-      case 'update-working-hours':
-        this.run(
-          async () => {
-            const view = await api.workingHours.put(this.workspaceId, action.hours);
-            this.apply({ type: 'sync/merge', patch: { workingHours: workingHoursFromView(view) } });
-          },
-          () => this.refreshWorkingHours(),
-        );
-        return;
       case 'toggle-reaction':
         void this.react(action.messageId, action.emoji, next);
         return;
@@ -1100,24 +1101,6 @@ export class LiveStore {
           () => this.load(this.workspaceId, true),
         );
         return;
-      case 'create-calendar-event': {
-        const local = next.calendarEvents.find(
-          (event) => !prev.calendarEvents.some((entry) => entry.id === event.id),
-        );
-        if (!local) return;
-        this.run(
-          async () => {
-            const created = await api.calendar.create(this.workspaceId, {
-              ...action.draft,
-              projectId: action.draft.projectId,
-              attendeeIds: action.draft.attendeeIds,
-            });
-            this.apply({ type: 'sync/upsert-event', event: eventFromView(created), replaceId: local.id });
-          },
-          () => this.load(this.workspaceId, true),
-        );
-        return;
-      }
       case 'create-note':
         // A blank note stays on this page: it reaches the server with its first words (`update-note`).
         return;
@@ -1125,7 +1108,6 @@ export class LiveStore {
         if (this.isNoteDraft(action.noteId)) this.createNote(action.noteId);
         else this.scheduleNote(action.noteId);
         return;
-      case 'delete-note':
       case 'discard-note':
         clearTimeout(this.noteTimers.get(action.noteId));
         this.noteTimers.delete(action.noteId);
@@ -1826,43 +1808,50 @@ export class LiveStore {
 
   /* ---------------------------------------------------------------- chat */
 
-  private createConversation(draft: ConversationDraft, prev: WorkspaceState, next: WorkspaceState): void {
-    const local = next.conversations.find(
-      (conversation) => !prev.conversations.some((entry) => entry.id === conversation.id),
-    );
-    if (!local) return; // An existing direct chat was reopened.
-    const me = next.meId;
+  private async createConversation(
+    workspaceId: string,
+    me: string,
+    draft: ConversationDraft,
+    commandId: string | undefined,
+    current: () => boolean,
+  ): Promise<void> {
     const others = draft.memberIds.filter((id) => id !== me);
-    this.track(local.id, async () => {
-      const detail =
-        draft.kind === 'direct'
-          ? await api.conversations.create(this.workspaceId, { kind: 'direct', userId: others[0] ?? me })
-          : await api.conversations.create(this.workspaceId, {
-              kind: 'group',
-              title: draft.title,
-              topic: draft.topic,
-              tone: draft.tone,
-              memberIds: others,
-            });
-      this.cursorsFrom(detail);
-      this.lastSeq.set(detail.id, detail.lastSeq);
-      const selected = this.getState().activeConversationId === local.id;
-      this.apply({
-        type: 'sync/upsert-conversation',
-        conversation: this.conversationFrom(detail),
-        replaceId: local.id,
-        select: selected,
-      });
-      // The optimistic "group created" line is replaced by the server's history.
-      for (const message of this.getState().messages.filter(
-        (entry) => entry.conversationId === detail.id && isLocal(entry.id),
-      )) {
-        this.apply({ type: 'sync/remove-message', messageId: message.id });
-      }
-      this.historyLoaded.delete(detail.id);
-      void this.ensureHistory(detail.id);
-      return detail.id;
+    const existing =
+      draft.kind === 'direct' &&
+      this.getState().conversations.find(
+        (conversation) =>
+          conversation.kind === 'direct' &&
+          conversation.memberIds.length === draft.memberIds.length &&
+          draft.memberIds.every((id) => conversation.memberIds.includes(id)),
+      );
+    if (existing) {
+      this.apply({ type: 'select-conversation', conversationId: existing.id });
+      this.apply({ type: 'announce', message: `گفتگو با ${existing.title} از قبل وجود داشت و باز شد.` });
+      void this.ensureHistory(existing.id);
+      this.markRead(existing.id);
+      return;
+    }
+    const detail = await api.conversations.create(
+      workspaceId,
+      draft.kind === 'direct'
+        ? { kind: 'direct', userId: others[0] ?? me }
+        : { kind: 'group', title: draft.title, topic: draft.topic, tone: draft.tone, memberIds: others },
+      commandId,
+    );
+    if (!current()) return;
+    this.cursorsFrom(detail);
+    this.lastSeq.set(detail.id, detail.lastSeq);
+    this.apply({
+      type: 'sync/upsert-conversation',
+      conversation: this.conversationFrom(detail),
+      select: true,
     });
+    this.apply({
+      type: 'announce',
+      message:
+        draft.kind === 'direct' ? `گفتگو با ${draft.title} ایجاد شد.` : `گروه «${draft.title}» ایجاد شد.`,
+    });
+    void this.ensureHistory(detail.id);
   }
 
   private sendMessage(
@@ -2184,12 +2173,28 @@ export class LiveStore {
     }
     if (workspaceId !== this.workspaceId || this.getState().meId !== userId)
       throw new Error('The workspace changed.');
-    this.apply({ type: 'update-profile', profile });
+    this.apply({ type: 'sync/merge', patch: { profile } });
   }
 
   /** A new note not yet sent: nothing of it exists on the server. */
   private isNoteDraft(noteId: string): boolean {
     return isLocal(noteId) && !this.pending.has(noteId);
+  }
+
+  private async deleteNote(workspaceId: string, noteId: string, current: () => boolean): Promise<void> {
+    const queuedSave = this.noteTimers.get(noteId);
+    clearTimeout(queuedSave);
+    this.noteTimers.delete(noteId);
+    try {
+      if (!this.isNoteDraft(noteId)) {
+        noteId = await this.serverId(noteId);
+        await api.notes.remove(workspaceId, noteId);
+      }
+      if (current()) this.apply({ type: 'delete-note', noteId });
+    } catch (error) {
+      if (queuedSave && current()) this.scheduleNote(noteId);
+      throw error;
+    }
   }
 
   /**
@@ -2369,34 +2374,29 @@ export class LiveStore {
     });
   }
 
-  /** «آرشیو / سطل زباله»: the owner's view of deleted projects, as the server keeps them. */
   private async refreshScheduled(): Promise<void> {
-    const scheduled = await api.scheduled.list(this.workspaceId);
+    const workspaceId = this.workspaceId;
+    const scheduled = await api.scheduled.list(workspaceId);
+    if (this.workspaceId !== workspaceId) return;
     this.apply({ type: 'sync/merge', patch: { scheduledMessages: scheduled.map(scheduledFromView) } });
   }
 
-  private async refreshWorkingHours(): Promise<void> {
-    const hours = await api.workingHours.get(this.workspaceId);
-    this.apply({ type: 'sync/merge', patch: { workingHours: workingHoursFromView(hours) } });
-  }
-
-  private async refreshProjectTrash(): Promise<void> {
+  /** «آرشیو / سطل زباله»: the owner's view of deleted projects, as the server keeps them. */
+  async loadProjectTrash(): Promise<void> {
+    const workspaceId = this.workspaceId;
     if (
       !this.getState().workspaces.some(
-        (workspace) => workspace.id === this.workspaceId && workspace.ownerId === this.getState().meId,
+        (workspace) => workspace.id === workspaceId && workspace.ownerId === this.getState().meId,
       )
     )
       return;
     const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
-    try {
-      const trashed = await api.projects.trash(this.workspaceId);
-      this.apply({
-        type: 'sync/project-trash',
-        entries: trashed.map((entry) => trashedProjectFromView(entry, departmentName)),
-      });
-    } catch (error) {
-      this.fail(error);
-    }
+    const trashed = await api.projects.trash(workspaceId);
+    if (this.workspaceId !== workspaceId) return;
+    this.apply({
+      type: 'sync/project-trash',
+      entries: trashed.map((entry) => trashedProjectFromView(entry, departmentName)),
+    });
   }
 
   private async refreshProjects(): Promise<void> {
@@ -2488,12 +2488,10 @@ export class LiveStore {
         // One of this member's schedules, from any of their devices (or the server's worker).
         const data = event('scheduled:updated');
         if (!data) return;
-        const localId = this.scheduling.get(data.clientMsgId);
         if (data.status === 'pending') {
           this.apply({
             type: 'sync/upsert-scheduled',
             scheduled: scheduledFromView(data),
-            ...(localId ? { replaceId: localId } : {}),
           });
           return;
         }

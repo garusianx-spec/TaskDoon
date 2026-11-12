@@ -192,7 +192,10 @@ export function useGanttTimeline(tasks: readonly Task[]) {
       tasks
         .map((task) => {
           const startOffset = daysBetween(parseISODate(windowStart), parseISODate(task.startDate));
-          const endOffset = daysBetween(parseISODate(windowStart), parseISODate(task.dueDate));
+          const endOffset = daysBetween(
+            parseISODate(windowStart),
+            parseISODate(task.dueDate ?? task.startDate),
+          );
           // Clip to the visible window; skip tasks entirely outside it.
           const from = Math.max(0, startOffset);
           const to = Math.min(WINDOW_DAYS - 1, endOffset);

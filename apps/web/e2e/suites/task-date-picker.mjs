@@ -1,4 +1,4 @@
-import { base, check, eventually, finish, launch, visible, watchConsole } from '../lib/harness.mjs';
+import { base, check, eventually, finish, launch, out, visible, watchConsole } from '../lib/harness.mjs';
 
 const browser = await launch();
 const page = await (
@@ -50,12 +50,32 @@ async function contained(panel) {
 
 try {
   await page.goto(`${base}/tasks`, { waitUntil: 'networkidle' });
-  for (const width of [375, 1280]) {
-    await page.setViewportSize({ width, height: 900 });
+  for (const width of [360, 390, 1280]) {
+    await page.setViewportSize({ width, height: width === 360 ? 800 : 900 });
     await openComposer();
     const composer = page.getByRole('dialog', { name: 'تعریف وظیفه جدید', exact: true });
     check(await visible(composer), `${width}px: task form opens`);
     await composer.getByLabel('عنوان وظیفه', { exact: true }).fill('بررسی تقویم وظیفه');
+    const deadline = composer.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true });
+    check((await deadline.textContent()).includes('بدون مهلت'), `${width}px: a new deadline starts empty`);
+    check(await page.locator('html').evaluate((element) => element.dir === 'rtl'), `${width}px: Persian RTL`);
+    if (width < 640) {
+      const submit = composer.getByRole('button', { name: 'ایجاد وظیفه', exact: true });
+      check(
+        await submit.evaluate((element) => element.getBoundingClientRect().height >= 44),
+        `${width}px: the submit action has a 44px touch target`,
+      );
+      const more = composer.getByRole('button', { name: 'جزئیات بیشتر' });
+      check(
+        (await more.getAttribute('aria-expanded')) === 'false',
+        `${width}px: secondary fields start collapsed`,
+      );
+      if (width === 360)
+        await page.screenshot({ path: `${out}/phase2-task-form-360.png`, animations: 'disabled' });
+      await more.focus();
+      await page.keyboard.press('Enter');
+      check((await more.getAttribute('aria-expanded')) === 'true', `${width}px: keyboard opens the details`);
+    }
 
     for (const label of ['انتخاب تاریخ شروع', 'انتخاب مهلت انجام']) {
       const trigger = composer.getByRole('button', { name: label, exact: true });
@@ -75,11 +95,19 @@ try {
         await eventually(() => contained(panel)),
         `${width}px: ${label} fits viewport and modal without horizontal scrolling`,
       );
+      if (width === 390 && label === 'انتخاب مهلت انجام') {
+        await page.screenshot({ path: `${out}/phase2-jalali-deadline-390.png`, animations: 'disabled' });
+      }
       check(
-        await grid
-          .getByRole('gridcell')
-          .first()
-          .evaluate((element) => element.clientHeight >= 44 && element.getBoundingClientRect().width >= 43),
+        await eventually(() =>
+          grid
+            .getByRole('gridcell')
+            .first()
+            .evaluate((element) => {
+              const { width, height } = element.getBoundingClientRect();
+              return width >= 44 && height >= 44;
+            }),
+        ),
         `${width}px: calendar days remain readable touch targets`,
       );
 
@@ -142,6 +170,13 @@ try {
   check(
     (await panel.locator(`[data-date="${todayIso}"]`).getAttribute('aria-selected')) === 'true',
     'Today selects the same civil date highlighted by the calendar',
+  );
+  await panel.getByRole('button', { name: 'حذف مهلت' }).click();
+  check(
+    (await composer.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true }).textContent()).includes(
+      'بدون مهلت',
+    ),
+    'an explicitly selected deadline can be cleared',
   );
 } catch (error) {
   check(false, `calendar flow stopped: ${error.message}`);

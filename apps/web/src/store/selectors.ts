@@ -67,7 +67,7 @@ export function filterTasks(tasks: readonly Task[], filter: TaskFilter): readonl
         if (!task.starred) return false;
         break;
       case 'due-soon': {
-        if (task.status === 'done') return false;
+        if (task.status === 'done' || task.dueDate === null) return false;
         const delta = daysBetween(today, parseISODate(task.dueDate));
         if (delta > 3) return false;
         break;
@@ -101,7 +101,7 @@ export const subtaskProgress = (task: Task): { readonly done: number; readonly t
 export const attachmentCount = (task: Task): number => task.summary?.attachments ?? task.attachments.length;
 
 export const isOverdue = (task: Task, now: Date = new Date()): boolean =>
-  task.status !== 'done' && daysBetween(now, parseISODate(task.dueDate)) < 0;
+  task.dueDate !== null && task.status !== 'done' && daysBetween(now, parseISODate(task.dueDate)) < 0;
 
 /* ------------------------------ Board ------------------------------ */
 
@@ -181,6 +181,7 @@ export function calendarItemsByDate(
   // `dueDate` is already a local `YYYY-MM-DD`; keying on it directly avoids the UTC shift a
   // Date round-trip would introduce west of Greenwich.
   for (const task of tasks) {
+    if (task.dueDate === null) continue;
     push({ kind: 'deadline', id: `deadline-${task.id}`, date: task.dueDate.slice(0, 10), task });
   }
   for (const event of events) {
