@@ -22,6 +22,11 @@ export function siteMediaHref(value: unknown): string | null {
   return href && (href.startsWith('/') || /^https?:\/\//.test(href)) ? href : null;
 }
 
+/** Keep authored query strings out of the image optimizer without changing the media URL. */
+export function shouldOptimizeSiteImage(src: string): boolean {
+  return src.startsWith('/') && !src.startsWith('//') && !src.includes('?');
+}
+
 export function sitePath(document: Pick<PublishedSiteDocument, 'kind' | 'slug'>): string | null {
   const slug = document.slug.split('/').map(encodeURIComponent).join('/');
   switch (document.kind) {

@@ -18,7 +18,6 @@ const nextConfig = {
   generateBuildId: async () => containerBuildId(),
   // The dev-tools badge sits bottom-left, over the composer's send button in this RTL layout.
   devIndicators: false,
-  eslint: { dirs: ['src'] },
   // Workspace packages ship compiled ES2022; let SWC bring them to the app's browser targets.
   transpilePackages: ['@taskin/contracts', '@taskin/jalali', '@taskin/text'],
   // The lockfile lives at the monorepo root; trace server files from there, not from apps/web.

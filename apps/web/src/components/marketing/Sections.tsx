@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import type { PublishedSiteDocument, SiteSection, SiteMediaRef, SiteItem } from '@taskin/contracts';
-import { asText, siteDate, siteMediaHref, sitePath } from '@/lib/site-utils';
+import { asText, shouldOptimizeSiteImage, siteDate, siteMediaHref, sitePath } from '@/lib/site-utils';
 import { Arrow, SiteLink } from './SiteLink';
 import { ProductPreview } from './ProductPreview';
 import { FaqList } from './FaqList';
@@ -10,7 +10,7 @@ import { HomeSection } from './HomeSections';
 
 export function MarketingMedia({ media, priority = false, framed = false }: { media: SiteMediaRef; priority?: boolean; framed?: boolean }) {
   if (!siteMediaHref(media.src)) return null;
-  const image = <Image src={media.src} alt={media.alt} width={media.width ?? 1440} height={media.height ?? 1000} sizes="(max-width: 768px) 95vw, 1120px" priority={priority} unoptimized={!media.src.startsWith('/')} className="marketing-product-image" />;
+  const image = <Image src={media.src} alt={media.alt} width={media.width ?? 1440} height={media.height ?? 1000} sizes="(max-width: 768px) 95vw, 1120px" preload={priority} unoptimized={!shouldOptimizeSiteImage(media.src)} className="marketing-product-image" />;
   return framed ? <div className="marketing-screen-frame"><div className="marketing-screen-toolbar" aria-hidden="true"><span /><span /><span /><div>TaskDoon</div></div>{image}</div> : image;
 }
 

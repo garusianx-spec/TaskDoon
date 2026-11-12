@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 import type { PublishedSiteDocument, SiteMediaRef, SiteSection } from '@taskin/contracts';
-import { asText, siteDate, siteMediaHref, sitePath } from '@/lib/site-utils';
+import { asText, shouldOptimizeSiteImage, siteDate, siteMediaHref, sitePath } from '@/lib/site-utils';
 import { ArrowLeftIcon, ShieldIcon, PeopleIcon, CalendarIcon } from '@/components/icons';
 import { SiteLink } from './SiteLink';
 import { FaqList } from './FaqList';
@@ -17,7 +17,7 @@ const FEATURE_PREVIEWS = new Map([
 ]);
 
 function Media({ media, priority = false }: { media: SiteMediaRef; priority?: boolean }) {
-  return siteMediaHref(media.src) ? <Image src={media.src} alt={media.alt} width={media.width ?? 1440} height={media.height ?? 960} sizes="(max-width: 768px) 94vw, 1160px" priority={priority} unoptimized={!media.src.startsWith('/')} /> : null;
+  return siteMediaHref(media.src) ? <Image src={media.src} alt={media.alt} width={media.width ?? 1440} height={media.height ?? 960} sizes="(max-width: 768px) 94vw, 1160px" preload={priority} unoptimized={!shouldOptimizeSiteImage(media.src)} /> : null;
 }
 function Actions({ section }: { section: SiteSection }) {
   return <div className="marketing-actions home-actions">{section.cta && <SiteLink href={section.cta.href} className="marketing-button marketing-button-primary">{section.cta.label}<ArrowLeftIcon size={18} /></SiteLink>}{section.secondaryCta && <SiteLink href={section.secondaryCta.href} className="marketing-button marketing-button-secondary">{section.secondaryCta.label}</SiteLink>}</div>;
