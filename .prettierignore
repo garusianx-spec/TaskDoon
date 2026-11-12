@@ -1,0 +1,16 @@
+.local/
+.devops-tools/
+.husky/_/
+**/.next/
+**/dist/
+**/coverage/
+apps/web/e2e/out/
+outputs/
+work/
+
+# npm and the schema generators own these files.
+package-lock.json
+apps/api/openapi.json
+apps/api/db/migrations/
+apps/api/db/schema.snapshot.txt
+docs/devops/image-layers.json
