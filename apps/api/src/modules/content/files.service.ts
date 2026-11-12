@@ -1,7 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { and, eq, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
-import type { AttachmentView, CompleteUploadBody, CreateUploadBody, FileLink, UploadPlan, UploadView } from '@taskin/contracts';
+import type {
+  AttachmentView,
+  CompleteUploadBody,
+  CreateUploadBody,
+  FileLink,
+  UploadPlan,
+  UploadView,
+} from '@taskin/contracts';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import type { Tx } from '../../platform/db/database.js';
 import { EFFECTIVE_LIMITS } from '../../platform/db/plan-limits.js';
@@ -70,46 +77,57 @@ export class FilesService {
     const fileName = cleanFileName(body.fileName);
     const contentType = body.contentType.trim().toLowerCase() || 'application/octet-stream';
 
-    const row = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
-      const [plan] = await tx
-        .select({ maxFileBytes: sql<number>`(${EFFECTIVE_LIMITS} ->> 'maxFileBytes')::bigint`, storageBytes: sql<number>`(${EFFECTIVE_LIMITS} ->> 'storageBytes')::bigint` })
-        .from(workspaces)
-        .innerJoin(plans, eq(plans.id, workspaces.planId))
-        .where(eq(workspaces.id, member.workspaceId));
-      if (!plan) throw ApiError.notFound('The workspace');
-      if (body.size > Number(plan.maxFileBytes)) throw new ApiError('PLAN_LIMIT_REACHED', `Files on this plan can be at most ${plan.maxFileBytes} bytes.`);
-      // Reserve the bytes in one conditional statement: concurrent uploads cannot both fit.
-      const reserved = await tx.execute(sql`
+    const row = await this.uow.run(
+      { workspaceId: member.workspaceId, userId: member.userId },
+      async ({ tx }) => {
+        const [plan] = await tx
+          .select({
+            maxFileBytes: sql<number>`(${EFFECTIVE_LIMITS} ->> 'maxFileBytes')::bigint`,
+            storageBytes: sql<number>`(${EFFECTIVE_LIMITS} ->> 'storageBytes')::bigint`,
+          })
+          .from(workspaces)
+          .innerJoin(plans, eq(plans.id, workspaces.planId))
+          .where(eq(workspaces.id, member.workspaceId));
+        if (!plan) throw ApiError.notFound('The workspace');
+        if (body.size > Number(plan.maxFileBytes))
+          throw new ApiError(
+            'PLAN_LIMIT_REACHED',
+            `Files on this plan can be at most ${plan.maxFileBytes} bytes.`,
+          );
+        // Reserve the bytes in one conditional statement: concurrent uploads cannot both fit.
+        const reserved = await tx.execute(sql`
         update workspaces set storage_reserved_bytes = storage_reserved_bytes + ${body.size}
         where id = ${member.workspaceId} and storage_used_bytes + storage_reserved_bytes + ${body.size} <= ${Number(plan.storageBytes)}
         returning id`);
-      if (reserved.rows.length === 0) throw new ApiError('PLAN_LIMIT_REACHED', 'The workspace’s storage is full.');
-      const id = uuidv7();
-      const [created] = await tx
-        .insert(attachments)
-        .values({
-          id,
+        if (reserved.rows.length === 0)
+          throw new ApiError('PLAN_LIMIT_REACHED', 'The workspace’s storage is full.');
+        const id = uuidv7();
+        const [created] = await tx
+          .insert(attachments)
+          .values({
+            id,
+            workspaceId: member.workspaceId,
+            uploaderId: member.userId,
+            bucket: this.storage.bucket,
+            // Under the workspace's prefix, so a purge deletes it with everything else.
+            objectKey: `ws/${member.workspaceId}/att/${id}`,
+            fileName,
+            mimeType: contentType,
+            kind: kindOfMime(contentType, fileName),
+            sizeBytes: body.size,
+          })
+          .returning();
+        if (!created) throw new Error('attachment insert returned nothing');
+        await this.audit.write(tx, {
+          action: 'file.upload.start',
           workspaceId: member.workspaceId,
-          uploaderId: member.userId,
-          bucket: this.storage.bucket,
-          // Under the workspace's prefix, so a purge deletes it with everything else.
-          objectKey: `ws/${member.workspaceId}/att/${id}`,
-          fileName,
-          mimeType: contentType,
-          kind: kindOfMime(contentType, fileName),
-          sizeBytes: body.size,
-        })
-        .returning();
-      if (!created) throw new Error('attachment insert returned nothing');
-      await this.audit.write(tx, {
-        action: 'file.upload.start',
-        workspaceId: member.workspaceId,
-        resourceType: 'attachment',
-        resourceId: created.id,
-        changes: { after: { fileName, size: body.size, contentType } },
-      });
-      return created;
-    });
+          resourceType: 'attachment',
+          resourceId: created.id,
+          changes: { after: { fileName, size: body.size, contentType } },
+        });
+        return created;
+      },
+    );
 
     let plan: UploadPlan;
     try {
@@ -126,11 +144,16 @@ export class FilesService {
    * A bad upload is deleted and its reservation released (422). A good one is scanned (the worker
    * marks it ready) and its bytes move from reserved to used.
    */
-  async complete(member: MembershipContext, attachmentId: string, body: CompleteUploadBody): Promise<AttachmentView> {
+  async complete(
+    member: MembershipContext,
+    attachmentId: string,
+    body: CompleteUploadBody,
+  ): Promise<AttachmentView> {
     const row = await this.pending(member, attachmentId);
     const claimed = row.mimeType;
     if (row.multipartUploadId) {
-      if (!body.parts?.length) throw ApiError.validation([{ field: 'parts', message: 'a multipart upload needs its parts' }]);
+      if (!body.parts?.length)
+        throw ApiError.validation([{ field: 'parts', message: 'a multipart upload needs its parts' }]);
       try {
         await this.storage.completeMultipart(row.objectKey, row.multipartUploadId, body.parts);
       } catch {
@@ -155,33 +178,49 @@ export class FilesService {
     }
 
     const accepted = sniffed;
-    const updated = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
-      const [done] = await tx
-        .update(attachments)
-        .set({ status: 'scanning', mimeType: accepted.mime, kind: accepted.kind, multipartUploadId: null })
-        .where(and(eq(attachments.workspaceId, member.workspaceId), eq(attachments.id, attachmentId), eq(attachments.status, 'pending')))
-        .returning();
-      if (!done) throw new ApiError('CONFLICT', 'The upload was already completed or cancelled.');
-      await tx.execute(sql`
+    const updated = await this.uow.run(
+      { workspaceId: member.workspaceId, userId: member.userId },
+      async ({ tx }) => {
+        const [done] = await tx
+          .update(attachments)
+          .set({ status: 'scanning', mimeType: accepted.mime, kind: accepted.kind, multipartUploadId: null })
+          .where(
+            and(
+              eq(attachments.workspaceId, member.workspaceId),
+              eq(attachments.id, attachmentId),
+              eq(attachments.status, 'pending'),
+            ),
+          )
+          .returning();
+        if (!done) throw new ApiError('CONFLICT', 'The upload was already completed or cancelled.');
+        await tx.execute(sql`
         update workspaces set storage_reserved_bytes = greatest(storage_reserved_bytes - ${row.sizeBytes}, 0),
                               storage_used_bytes = storage_used_bytes + ${row.sizeBytes}
         where id = ${member.workspaceId}`);
-      await this.audit.write(tx, {
-        action: 'file.upload.complete',
-        workspaceId: member.workspaceId,
-        resourceType: 'attachment',
-        resourceId: attachmentId,
-        changes: { claimed, sniffed: accepted.mime, size: row.sizeBytes },
-      });
-      await this.outbox.add(tx, { type: 'file.uploaded', aggregateType: 'attachment', aggregateId: attachmentId, workspaceId: member.workspaceId, payload: { attachmentId } });
-      return done;
-    });
+        await this.audit.write(tx, {
+          action: 'file.upload.complete',
+          workspaceId: member.workspaceId,
+          resourceType: 'attachment',
+          resourceId: attachmentId,
+          changes: { claimed, sniffed: accepted.mime, size: row.sizeBytes },
+        });
+        await this.outbox.add(tx, {
+          type: 'file.uploaded',
+          aggregateType: 'attachment',
+          aggregateId: attachmentId,
+          workspaceId: member.workspaceId,
+          payload: { attachmentId },
+        });
+        return done;
+      },
+    );
     return attachmentView(updated);
   }
 
   async abort(member: MembershipContext, attachmentId: string): Promise<void> {
     const row = await this.pending(member, attachmentId);
-    if (row.multipartUploadId) await this.storage.abortMultipart(row.objectKey, row.multipartUploadId).catch(() => undefined);
+    if (row.multipartUploadId)
+      await this.storage.abortMultipart(row.objectKey, row.multipartUploadId).catch(() => undefined);
     await this.storage.delete(row.objectKey).catch(() => undefined);
     await this.release(member, row, 'deleted', 'aborted');
   }
@@ -197,22 +236,42 @@ export class FilesService {
    * `inline` (images, audio, video) lets the page show or play it; everything else downloads.
    * Downloads are audited; inline views (thumbnails, playback) are not.
    */
-  async link(member: MembershipContext, attachmentId: string, wanted: FileLink['disposition']): Promise<FileLink> {
+  async link(
+    member: MembershipContext,
+    attachmentId: string,
+    wanted: FileLink['disposition'],
+  ): Promise<FileLink> {
     if (!this.abilities.forMember(member).can('view', 'File')) throw ApiError.forbidden();
-    const row = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
-      const [file] = await tx
-        .select()
-        .from(attachments)
-        .where(and(eq(attachments.workspaceId, member.workspaceId), eq(attachments.id, attachmentId), sql`${attachments.deletedAt} is null`));
-      if (!file || file.status !== 'ready') throw ApiError.notFound('The file');
-      const readable =
-        file.uploaderId === member.userId || (await this.visibleThroughTask(tx, member, attachmentId)) || (await this.visibleThroughMessage(tx, member, attachmentId));
-      if (!readable) throw ApiError.notFound('The file');
-      if (wanted === 'attachment' || !INLINE_KINDS.has(file.kind)) {
-        await this.audit.write(tx, { action: 'file.download', workspaceId: member.workspaceId, resourceType: 'attachment', resourceId: attachmentId });
-      }
-      return file;
-    });
+    const row = await this.uow.run(
+      { workspaceId: member.workspaceId, userId: member.userId },
+      async ({ tx }) => {
+        const [file] = await tx
+          .select()
+          .from(attachments)
+          .where(
+            and(
+              eq(attachments.workspaceId, member.workspaceId),
+              eq(attachments.id, attachmentId),
+              sql`${attachments.deletedAt} is null`,
+            ),
+          );
+        if (!file || file.status !== 'ready') throw ApiError.notFound('The file');
+        const readable =
+          file.uploaderId === member.userId ||
+          (await this.visibleThroughTask(tx, member, attachmentId)) ||
+          (await this.visibleThroughMessage(tx, member, attachmentId));
+        if (!readable) throw ApiError.notFound('The file');
+        if (wanted === 'attachment' || !INLINE_KINDS.has(file.kind)) {
+          await this.audit.write(tx, {
+            action: 'file.download',
+            workspaceId: member.workspaceId,
+            resourceType: 'attachment',
+            resourceId: attachmentId,
+          });
+        }
+        return file;
+      },
+    );
     const disposition = wanted === 'inline' && INLINE_KINDS.has(row.kind) ? 'inline' : 'attachment';
     const ttl = disposition === 'inline' ? INLINE_TTL_SECONDS : DOWNLOAD_TTL_SECONDS;
     const url = await this.storage.presignGet(row.objectKey, ttl, row.fileName, row.mimeType, disposition);
@@ -225,7 +284,13 @@ export class FilesService {
       await tx
         .update(attachments)
         .set({ status: 'ready', readyAt: sql`now()` })
-        .where(and(eq(attachments.workspaceId, workspaceId), eq(attachments.id, attachmentId), eq(attachments.status, 'scanning')));
+        .where(
+          and(
+            eq(attachments.workspaceId, workspaceId),
+            eq(attachments.id, attachmentId),
+            eq(attachments.status, 'scanning'),
+          ),
+        );
     });
   }
 
@@ -235,22 +300,43 @@ export class FilesService {
    */
   async collectGarbage(limit = 200): Promise<{ stale: number; unlinked: number }> {
     const due = await this.uow.run({ workspaceId: null, userId: null }, ({ tx }) =>
-      tx.execute<{ workspace_id: string; attachment_id: string; reason: 'stale_upload' | 'unlinked' }>(sql`select * from app.attachments_due_for_gc(${limit})`),
+      tx.execute<{ workspace_id: string; attachment_id: string; reason: 'stale_upload' | 'unlinked' }>(
+        sql`select * from app.attachments_due_for_gc(${limit})`,
+      ),
     );
     const counts = { stale: 0, unlinked: 0 };
     for (const entry of due.rows) {
       const row = await this.uow.run({ workspaceId: entry.workspace_id, userId: null }, async ({ tx }) => {
-        const [file] = await tx.select().from(attachments).where(and(eq(attachments.workspaceId, entry.workspace_id), eq(attachments.id, entry.attachment_id)));
+        const [file] = await tx
+          .select()
+          .from(attachments)
+          .where(
+            and(eq(attachments.workspaceId, entry.workspace_id), eq(attachments.id, entry.attachment_id)),
+          );
         return file;
       });
       if (!row) continue;
-      if (row.multipartUploadId) await this.storage.abortMultipart(row.objectKey, row.multipartUploadId).catch(() => undefined);
-      await this.storage.delete(row.objectKey).catch((error: unknown) => this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'deleting a file failed'));
+      if (row.multipartUploadId)
+        await this.storage.abortMultipart(row.objectKey, row.multipartUploadId).catch(() => undefined);
+      await this.storage
+        .delete(row.objectKey)
+        .catch((error: unknown) =>
+          this.logger.warn(
+            { error: error instanceof Error ? error.message : String(error) },
+            'deleting a file failed',
+          ),
+        );
       await this.uow.run({ workspaceId: entry.workspace_id, userId: null }, async ({ tx }) => {
         const [gone] = await tx
           .update(attachments)
           .set({ status: 'deleted', deletedAt: sql`now()` })
-          .where(and(eq(attachments.workspaceId, entry.workspace_id), eq(attachments.id, entry.attachment_id), sql`${attachments.deletedAt} is null`))
+          .where(
+            and(
+              eq(attachments.workspaceId, entry.workspace_id),
+              eq(attachments.id, entry.attachment_id),
+              sql`${attachments.deletedAt} is null`,
+            ),
+          )
           .returning({ status: attachments.status });
         if (!gone) return;
         await tx.execute(
@@ -260,7 +346,14 @@ export class FilesService {
               ? sql`select 1`
               : sql`update workspaces set storage_used_bytes = greatest(storage_used_bytes - ${row.sizeBytes}, 0) where id = ${entry.workspace_id}`,
         );
-        await this.audit.write(tx, { action: 'file.gc', workspaceId: entry.workspace_id, actorUserId: null, resourceType: 'attachment', resourceId: entry.attachment_id, changes: { reason: entry.reason } });
+        await this.audit.write(tx, {
+          action: 'file.gc',
+          workspaceId: entry.workspace_id,
+          actorUserId: null,
+          resourceType: 'attachment',
+          resourceId: entry.attachment_id,
+          changes: { reason: entry.reason },
+        });
       });
       counts[entry.reason === 'stale_upload' ? 'stale' : 'unlinked'] += 1;
     }
@@ -282,7 +375,10 @@ export class FilesService {
     }
     const uploadId = await this.storage.createMultipart(row.objectKey, contentType);
     await this.uow.run({ workspaceId: row.workspaceId, userId: row.uploaderId }, ({ tx }) =>
-      tx.update(attachments).set({ multipartUploadId: uploadId }).where(and(eq(attachments.workspaceId, row.workspaceId), eq(attachments.id, row.id))),
+      tx
+        .update(attachments)
+        .set({ multipartUploadId: uploadId })
+        .where(and(eq(attachments.workspaceId, row.workspaceId), eq(attachments.id, row.id))),
     );
     const count = Math.ceil(row.sizeBytes / PART_BYTES);
     const parts = await Promise.all(
@@ -300,23 +396,43 @@ export class FilesService {
       tx
         .select()
         .from(attachments)
-        .where(and(eq(attachments.workspaceId, member.workspaceId), eq(attachments.id, attachmentId), eq(attachments.uploaderId, member.userId))),
+        .where(
+          and(
+            eq(attachments.workspaceId, member.workspaceId),
+            eq(attachments.id, attachmentId),
+            eq(attachments.uploaderId, member.userId),
+          ),
+        ),
     );
     if (!row) throw ApiError.notFound('The upload');
-    if (row.status !== 'pending') throw new ApiError('CONFLICT', 'The upload was already completed or cancelled.');
+    if (row.status !== 'pending')
+      throw new ApiError('CONFLICT', 'The upload was already completed or cancelled.');
     return row;
   }
 
   /** Ends a pending upload without keeping it, releasing its reservation. */
-  private async release(member: MembershipContext, row: AttachmentRow, status: 'deleted' | 'rejected', reason: string = status): Promise<void> {
+  private async release(
+    member: MembershipContext,
+    row: AttachmentRow,
+    status: 'deleted' | 'rejected',
+    reason: string = status,
+  ): Promise<void> {
     await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const [ended] = await tx
         .update(attachments)
         .set({ status, ...(status === 'deleted' ? { deletedAt: sql`now()` } : {}) })
-        .where(and(eq(attachments.workspaceId, member.workspaceId), eq(attachments.id, row.id), eq(attachments.status, 'pending')))
+        .where(
+          and(
+            eq(attachments.workspaceId, member.workspaceId),
+            eq(attachments.id, row.id),
+            eq(attachments.status, 'pending'),
+          ),
+        )
         .returning({ id: attachments.id });
       if (!ended) return;
-      await tx.execute(sql`update workspaces set storage_reserved_bytes = greatest(storage_reserved_bytes - ${row.sizeBytes}, 0) where id = ${member.workspaceId}`);
+      await tx.execute(
+        sql`update workspaces set storage_reserved_bytes = greatest(storage_reserved_bytes - ${row.sizeBytes}, 0) where id = ${member.workspaceId}`,
+      );
       await this.audit.write(tx, {
         action: status === 'rejected' ? 'file.upload.reject' : 'file.upload.abort',
         workspaceId: member.workspaceId,
@@ -328,7 +444,11 @@ export class FilesService {
   }
 
   /** Sent in a live message of a conversation the caller can read (a member, or a public channel). */
-  private async visibleThroughMessage(tx: Tx, member: MembershipContext, attachmentId: string): Promise<boolean> {
+  private async visibleThroughMessage(
+    tx: Tx,
+    member: MembershipContext,
+    attachmentId: string,
+  ): Promise<boolean> {
     if (!messageGrant(member, 'view')) return false;
     const result = await tx.execute<{ kind: string; is_private: boolean; is_member: boolean }>(sql`
       select c.kind, c.is_private,
@@ -338,17 +458,28 @@ export class FilesService {
       from messages m
       join conversations c on c.workspace_id = m.workspace_id and c.id = m.conversation_id
       where m.workspace_id = ${member.workspaceId} and m.attachment_id = ${attachmentId} and m.deleted_at is null`);
-    return result.rows.some((row) => row.is_member || (row.kind === 'channel' && !row.is_private && publicChannelVisible(member)));
+    return result.rows.some(
+      (row) => row.is_member || (row.kind === 'channel' && !row.is_private && publicChannelVisible(member)),
+    );
   }
 
-  private async visibleThroughTask(tx: Tx, member: MembershipContext, attachmentId: string): Promise<boolean> {
-    const result = await tx.execute<{ visibility: 'workspace' | 'private'; role: 'lead' | 'contributor' | 'viewer' | null }>(sql`
+  private async visibleThroughTask(
+    tx: Tx,
+    member: MembershipContext,
+    attachmentId: string,
+  ): Promise<boolean> {
+    const result = await tx.execute<{
+      visibility: 'workspace' | 'private';
+      role: 'lead' | 'contributor' | 'viewer' | null;
+    }>(sql`
       select p.visibility, (select pm.role from project_members pm where pm.project_id = p.id and pm.user_id = ${member.userId}) as role
       from task_attachments ta
       join tasks t on t.workspace_id = ta.workspace_id and t.id = ta.task_id and t.deleted_at is null
       join projects p on p.workspace_id = t.workspace_id and p.id = t.project_id and p.deleted_at is null
       where ta.workspace_id = ${member.workspaceId} and ta.attachment_id = ${attachmentId}`);
-    return result.rows.some((row) => projectActions(member, { visibility: row.visibility, role: row.role }).includes('view'));
+    return result.rows.some((row) =>
+      projectActions(member, { visibility: row.visibility, role: row.role }).includes('view'),
+    );
   }
 
   /** 60 upload plans per user per hour (RFC §5). Fails open: a Redis outage must not stop work. */
@@ -363,6 +494,7 @@ export class FilesService {
     } catch {
       return;
     }
-    if (count > UPLOADS_PER_HOUR) throw ApiError.rateLimited(ttl > 0 ? ttl : 3600, 'Too many uploads this hour.');
+    if (count > UPLOADS_PER_HOUR)
+      throw ApiError.rateLimited(ttl > 0 ? ttl : 3600, 'Too many uploads this hour.');
   }
 }

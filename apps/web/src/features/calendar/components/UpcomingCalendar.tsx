@@ -2,26 +2,19 @@
 
 import { useMemo } from 'react';
 import { type CalendarItem } from '@/store/selectors';
-import {
-addDays,daysBetween,
-formatJalali,
-fromISODate,toISODate
-} from '@taskin/jalali';
+import { addDays, daysBetween, formatJalali, fromISODate, toISODate } from '@taskin/jalali';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import {
-ItemIcon,
-itemKindLabel,
-itemTimeLabel,
-itemTitle,
-itemTone,
+  ItemIcon,
+  itemKindLabel,
+  itemTimeLabel,
+  itemTitle,
+  itemTone,
 } from '@/features/calendar/components/calendar-item';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import {
-CalendarIcon
-} from '@/components/icons';
-
+import { CalendarIcon } from '@/components/icons';
 
 /** How far ahead the side panel looks. */
 const UPCOMING_DAYS = 14;
@@ -39,7 +32,8 @@ export function UpcomingPanel({ itemsByDate, today, onOpenTask }: UpcomingPanelP
   const overdue = useMemo(() => {
     const list: CalendarItem[] = [];
     for (const [date, items] of itemsByDate) {
-      if (daysBetween(today, fromISODate(date)) < 0) list.push(...items.filter((item) => item.kind === 'deadline'));
+      if (daysBetween(today, fromISODate(date)) < 0)
+        list.push(...items.filter((item) => item.kind === 'deadline'));
     }
     return list.sort((a, b) => a.date.localeCompare(b.date));
   }, [itemsByDate, today]);
@@ -91,7 +85,7 @@ export function UpcomingPanel({ itemsByDate, today, onOpenTask }: UpcomingPanelP
       ) : (
         days.map((day) => (
           <section key={day.date} aria-label={relativeDay(day.date)} className="flex flex-col gap-2">
-            <h3 className="numeric text-caption font-semibold text-fg-secondary">{relativeDay(day.date)}</h3>
+            <h3 className="text-caption font-semibold text-fg-secondary numeric">{relativeDay(day.date)}</h3>
             <ul className="flex flex-col gap-1.5">
               {day.items.map((item) => (
                 <UpcomingRow key={item.id} item={item} today={today} onOpenTask={onOpenTask} />
@@ -112,17 +106,23 @@ interface UpcomingRowProps {
 }
 
 function UpcomingRow({ item, today, onOpenTask, showDate = false }: UpcomingRowProps) {
-  const meta = [itemKindLabel(item), itemTimeLabel(item), showDate ? formatJalali(item.date, 'day-month') : null]
+  const meta = [
+    itemKindLabel(item),
+    itemTimeLabel(item),
+    showDate ? formatJalali(item.date, 'day-month') : null,
+  ]
     .filter(Boolean)
     .join('، ');
   const content = (
     <>
-      <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', itemTone(item, today))}>
+      <span
+        className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', itemTone(item, today))}
+      >
         <ItemIcon item={item} size={15} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-body-sm font-semibold text-fg-primary">{itemTitle(item)}</span>
-        <span className="numeric truncate text-micro text-fg-tertiary">{meta}</span>
+        <span className="truncate text-micro text-fg-tertiary numeric">{meta}</span>
       </span>
     </>
   );
@@ -133,7 +133,11 @@ function UpcomingRow({ item, today, onOpenTask, showDate = false }: UpcomingRowP
   return (
     <li>
       {item.kind === 'deadline' ? (
-        <button type="button" onClick={() => onOpenTask(item.task.id)} className={cn(className, 'hover:border-brand')}>
+        <button
+          type="button"
+          onClick={() => onOpenTask(item.task.id)}
+          className={cn(className, 'hover:border-brand')}
+        >
           {content}
         </button>
       ) : (

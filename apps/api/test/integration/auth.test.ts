@@ -28,7 +28,13 @@ describe('M1 checklist: authentication', () => {
   });
 
   const refresh = (session: Session, extra: Record<string, string> = {}) =>
-    t.http().post('/api/v1/auth/refresh').set('Cookie', session.cookies).set('X-CSRF-Token', session.csrf).set('Origin', ORIGIN).set(extra);
+    t
+      .http()
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', session.cookies)
+      .set('X-CSRF-Token', session.csrf)
+      .set('Origin', ORIGIN)
+      .set(extra);
 
   describe('OTP sign-in', () => {
     it('signs a new number up, then signs it in', async () => {
@@ -63,7 +69,11 @@ describe('M1 checklist: authentication', () => {
     it('rejects numbers that are not Iranian mobiles', async () => {
       for (const phone of ['02188776655', '+4915112345678', '12345']) {
         const response = await t.http().post('/api/v1/auth/otp/request').send({ phone });
-        expect({ phone, status: response.status, code: response.body.code }).toEqual({ phone, status: 400, code: 'VALIDATION_FAILED' });
+        expect({ phone, status: response.status, code: response.body.code }).toEqual({
+          phone,
+          status: 400,
+          code: 'VALIDATION_FAILED',
+        });
       }
     });
 
@@ -74,11 +84,23 @@ describe('M1 checklist: authentication', () => {
       const wrong = code === '000000' ? '111111' : '000000';
       const codes: string[] = [];
       for (let attempt = 1; attempt <= 5; attempt += 1) {
-        const response = await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: challenge.challengeId, code: wrong });
+        const response = await t
+          .http()
+          .post('/api/v1/auth/otp/verify')
+          .send({ challengeId: challenge.challengeId, code: wrong });
         codes.push(response.body.code);
       }
-      expect(codes).toEqual(['OTP_INVALID', 'OTP_INVALID', 'OTP_INVALID', 'OTP_INVALID', 'OTP_ATTEMPTS_EXCEEDED']);
-      const right = await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: challenge.challengeId, code });
+      expect(codes).toEqual([
+        'OTP_INVALID',
+        'OTP_INVALID',
+        'OTP_INVALID',
+        'OTP_INVALID',
+        'OTP_ATTEMPTS_EXCEEDED',
+      ]);
+      const right = await t
+        .http()
+        .post('/api/v1/auth/otp/verify')
+        .send({ challengeId: challenge.challengeId, code });
       expect(right.status).toBe(429);
       expect(right.body.code).toBe('OTP_ATTEMPTS_EXCEEDED');
     });
@@ -87,15 +109,24 @@ describe('M1 checklist: authentication', () => {
       const phone = randomPhone();
       const challenge = await requestOtp(t, phone);
       const code = lastCode(t, phone);
-      expect((await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: challenge.challengeId, code })).status).toBe(200);
-      const replay = await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: challenge.challengeId, code });
+      expect(
+        (await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: challenge.challengeId, code }))
+          .status,
+      ).toBe(200);
+      const replay = await t
+        .http()
+        .post('/api/v1/auth/otp/verify')
+        .send({ challengeId: challenge.challengeId, code });
       expect(replay.body.code).toBe('OTP_EXPIRED');
     });
 
     it('enforces the resend cooldown per number', async () => {
       const phone = randomPhone();
       await requestOtp(t, phone);
-      const again = await t.http().post('/api/v1/auth/otp/request').send({ phone: localForm(phone) });
+      const again = await t
+        .http()
+        .post('/api/v1/auth/otp/request')
+        .send({ phone: localForm(phone) });
       expect(again.status).toBe(429);
       expect(again.body.code).toBe('RATE_LIMITED');
       expect(Number(again.headers['retry-after'])).toBeGreaterThan(0);
@@ -106,7 +137,15 @@ describe('M1 checklist: authentication', () => {
       const statuses: number[] = [];
       for (let attempt = 1; attempt <= 6; attempt += 1) {
         await t.redis.del(`${t.env.REDIS_PREFIX}:otp:send:phone:${phone}:cooldown`);
-        statuses.push((await t.http().post('/api/v1/auth/otp/request').set('X-Forwarded-For', `198.51.100.${attempt}`).send({ phone: localForm(phone) })).status);
+        statuses.push(
+          (
+            await t
+              .http()
+              .post('/api/v1/auth/otp/request')
+              .set('X-Forwarded-For', `198.51.100.${attempt}`)
+              .send({ phone: localForm(phone) })
+          ).status,
+        );
       }
       expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
     });
@@ -114,7 +153,15 @@ describe('M1 checklist: authentication', () => {
     it('allows twenty codes per IP address per hour', async () => {
       const statuses: number[] = [];
       for (let attempt = 1; attempt <= 21; attempt += 1) {
-        statuses.push((await t.http().post('/api/v1/auth/otp/request').set('X-Forwarded-For', '192.0.2.77').send({ phone: localForm(randomPhone()) })).status);
+        statuses.push(
+          (
+            await t
+              .http()
+              .post('/api/v1/auth/otp/request')
+              .set('X-Forwarded-For', '192.0.2.77')
+              .send({ phone: localForm(randomPhone()) })
+          ).status,
+        );
       }
       expect(statuses.slice(0, 20).every((status) => status === 200)).toBe(true);
       expect(statuses[20]).toBe(429);
@@ -123,9 +170,14 @@ describe('M1 checklist: authentication', () => {
     it('redeems a sign-up token only once', async () => {
       const phone = randomPhone();
       const challenge = await requestOtp(t, phone);
-      const verify = await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: challenge.challengeId, code: lastCode(t, phone) });
+      const verify = await t
+        .http()
+        .post('/api/v1/auth/otp/verify')
+        .send({ challengeId: challenge.challengeId, code: lastCode(t, phone) });
       const { signupToken } = verify.body as { signupToken: string };
-      expect((await t.http().post('/api/v1/auth/signup').send({ signupToken, fullName: 'نخستین' })).status).toBe(201);
+      expect(
+        (await t.http().post('/api/v1/auth/signup').send({ signupToken, fullName: 'نخستین' })).status,
+      ).toBe(201);
       const replay = await t.http().post('/api/v1/auth/signup').send({ signupToken, fullName: 'دومین' });
       expect(replay.body.code).toBe('SIGNUP_TOKEN_INVALID');
     });
@@ -134,13 +186,17 @@ describe('M1 checklist: authentication', () => {
   describe('access tokens', () => {
     it('needs a token, and a valid one', async () => {
       expect((await t.http().get('/api/v1/me')).body.code).toBe('UNAUTHENTICATED');
-      expect((await t.http().get('/api/v1/me').set('Authorization', 'Bearer not.a.jwt')).body.code).toBe('AUTH_INVALID');
+      expect((await t.http().get('/api/v1/me').set('Authorization', 'Bearer not.a.jwt')).body.code).toBe(
+        'AUTH_INVALID',
+      );
     });
 
     it('dies with the user’s security version', async () => {
       const session = await signIn(t);
       expect((await t.http().get('/api/v1/me').set(bearer(session))).status).toBe(200);
-      await t.admin.query('update users set security_version = security_version + 1 where id = $1', [session.userId]);
+      await t.admin.query('update users set security_version = security_version + 1 where id = $1', [
+        session.userId,
+      ]);
       await t.redis.del(`${t.env.REDIS_PREFIX}:user:standing:${session.userId}`);
       const after = await t.http().get('/api/v1/me').set(bearer(session));
       expect(after.status).toBe(401);
@@ -183,17 +239,31 @@ describe('M1 checklist: authentication', () => {
       // The legitimate holder's newer token is dead too, and so is every access token.
       expect((await refresh(session)).body.code).toBe('SESSION_REVOKED');
       expect((await t.http().get('/api/v1/me').set(bearer(session))).body.code).toBe('SESSION_REVOKED');
-      const { rows } = await t.admin.query(`select revoke_reason from auth_sessions where id = $1`, [session.sessionId]);
+      const { rows } = await t.admin.query(`select revoke_reason from auth_sessions where id = $1`, [
+        session.sessionId,
+      ]);
       expect(rows[0]?.revoke_reason).toBe('reuse_detected');
-      const alert = await t.admin.query(`select payload from outbox_events where event_type = 'notification.sms' and aggregate_id = $1`, [session.userId]);
+      const alert = await t.admin.query(
+        `select payload from outbox_events where event_type = 'notification.sms' and aggregate_id = $1`,
+        [session.userId],
+      );
       expect(alert.rows.some((row) => row.payload.template === 'alert')).toBe(true);
     });
 
     it('needs the CSRF header and our origin', async () => {
       const session = await signIn(t);
-      const noHeader = await t.http().post('/api/v1/auth/refresh').set('Cookie', session.cookies).set('Origin', ORIGIN);
+      const noHeader = await t
+        .http()
+        .post('/api/v1/auth/refresh')
+        .set('Cookie', session.cookies)
+        .set('Origin', ORIGIN);
       expect(noHeader.body.code).toBe('CSRF_FAILED');
-      const wrongHeader = await t.http().post('/api/v1/auth/refresh').set('Cookie', session.cookies).set('X-CSRF-Token', 'forged').set('Origin', ORIGIN);
+      const wrongHeader = await t
+        .http()
+        .post('/api/v1/auth/refresh')
+        .set('Cookie', session.cookies)
+        .set('X-CSRF-Token', 'forged')
+        .set('Origin', ORIGIN);
       expect(wrongHeader.body.code).toBe('CSRF_FAILED');
       const foreign = await refresh(session, { Origin: 'https://evil.example' });
       expect(foreign.body.code).toBe('CSRF_FAILED');
@@ -202,7 +272,9 @@ describe('M1 checklist: authentication', () => {
 
     it('sets the refresh cookie HttpOnly, Secure, SameSite=Strict and scoped to /api/v1/auth', async () => {
       const response = await refresh(await signIn(t));
-      const cookie = (response.headers['set-cookie'] as unknown as string[]).find((value) => value.startsWith('__Secure-taskin_rt='));
+      const cookie = (response.headers['set-cookie'] as unknown as string[]).find((value) =>
+        value.startsWith('__Secure-taskin_rt='),
+      );
       expect(cookie).toMatch(/HttpOnly/);
       expect(cookie).toMatch(/Secure/);
       expect(cookie).toMatch(/SameSite=Strict/);
@@ -219,8 +291,12 @@ describe('M1 checklist: authentication', () => {
       expect(list.body).toHaveLength(2);
       expect(list.body.find((s: { current: boolean }) => s.current).id).toBe(laptop.sessionId);
 
-      expect((await t.http().delete(`/api/v1/auth/sessions/${laptop.sessionId}`).set(bearer(laptop))).status).toBe(409);
-      expect((await t.http().delete(`/api/v1/auth/sessions/${phoneSession.sessionId}`).set(bearer(laptop))).status).toBe(204);
+      expect(
+        (await t.http().delete(`/api/v1/auth/sessions/${laptop.sessionId}`).set(bearer(laptop))).status,
+      ).toBe(409);
+      expect(
+        (await t.http().delete(`/api/v1/auth/sessions/${phoneSession.sessionId}`).set(bearer(laptop))).status,
+      ).toBe(204);
       expect((await t.http().get('/api/v1/me').set(bearer(phoneSession))).body.code).toBe('SESSION_REVOKED');
       expect((await t.http().get('/api/v1/me').set(bearer(laptop))).status).toBe(200);
     });
@@ -230,13 +306,20 @@ describe('M1 checklist: authentication', () => {
       const keep = await signIn(t, phone);
       const others = [await signIn(t, phone), await signIn(t, phone)];
       expect((await t.http().delete('/api/v1/auth/sessions?others=true').set(bearer(keep))).status).toBe(204);
-      for (const other of others) expect((await t.http().get('/api/v1/me').set(bearer(other))).status).toBe(401);
+      for (const other of others)
+        expect((await t.http().get('/api/v1/me').set(bearer(other))).status).toBe(401);
       expect((await t.http().get('/api/v1/me').set(bearer(keep))).status).toBe(200);
     });
 
     it('logs out: the access token and the refresh cookie both die', async () => {
       const session = await signIn(t);
-      const out = await t.http().post('/api/v1/auth/logout').set(bearer(session)).set('Cookie', session.cookies).set('X-CSRF-Token', session.csrf).set('Origin', ORIGIN);
+      const out = await t
+        .http()
+        .post('/api/v1/auth/logout')
+        .set(bearer(session))
+        .set('Cookie', session.cookies)
+        .set('X-CSRF-Token', session.csrf)
+        .set('Origin', ORIGIN);
       expect(out.status).toBe(204);
       expect((await t.http().get('/api/v1/me').set(bearer(session))).body.code).toBe('SESSION_REVOKED');
       expect((await refresh(session)).body.code).toBe('SESSION_REVOKED');
@@ -247,7 +330,11 @@ describe('M1 checklist: authentication', () => {
     it('requires a step-up for sensitive routes', async () => {
       const { owner, workspace } = await ownerWithWorkspace(t);
       const plain = await signIn(t, owner.phone);
-      const response = await t.http().delete(`/api/v1/workspaces/${workspace.id}`).set(bearer(plain)).send({ confirmName: workspace.name });
+      const response = await t
+        .http()
+        .delete(`/api/v1/workspaces/${workspace.id}`)
+        .set(bearer(plain))
+        .send({ confirmName: workspace.name });
       expect(response.status).toBe(401);
       expect(response.body.code).toBe('STEP_UP_REQUIRED');
     });
@@ -255,7 +342,11 @@ describe('M1 checklist: authentication', () => {
     it('refuses weak passwords', async () => {
       const session = await signIn(t);
       for (const newPassword of ['short1', 'onlyletters', '12345678901']) {
-        const response = await t.http().post('/api/v1/auth/password').set(bearer(session)).send({ newPassword });
+        const response = await t
+          .http()
+          .post('/api/v1/auth/password')
+          .set(bearer(session))
+          .send({ newPassword });
         expect(response.body.code).toMatch(/PASSWORD_TOO_WEAK|VALIDATION_FAILED/);
       }
     });
@@ -265,11 +356,23 @@ describe('M1 checklist: authentication', () => {
       const session = await withAdminPassword(t, await signIn(t, phone));
       const other = await signIn(t, phone);
       const fresh = await signIn(t, phone);
-      const without = await t.http().post('/api/v1/auth/password').set(bearer(fresh)).send({ newPassword: 'Another-Pass-9' });
+      const without = await t
+        .http()
+        .post('/api/v1/auth/password')
+        .set(bearer(fresh))
+        .send({ newPassword: 'Another-Pass-9' });
       expect(without.body.code).toBe('STEP_UP_REQUIRED');
-      const wrong = await t.http().post('/api/v1/auth/password').set(bearer(fresh)).send({ currentPassword: 'nope-nope-1', newPassword: 'Another-Pass-9' });
+      const wrong = await t
+        .http()
+        .post('/api/v1/auth/password')
+        .set(bearer(fresh))
+        .send({ currentPassword: 'nope-nope-1', newPassword: 'Another-Pass-9' });
       expect(wrong.body.code).toBe('PASSWORD_INVALID');
-      const ok = await t.http().post('/api/v1/auth/password').set(bearer(fresh)).send({ currentPassword: STRONG_PASSWORD, newPassword: 'Another-Pass-9' });
+      const ok = await t
+        .http()
+        .post('/api/v1/auth/password')
+        .set(bearer(fresh))
+        .send({ currentPassword: STRONG_PASSWORD, newPassword: 'Another-Pass-9' });
       expect(ok.status).toBe(204);
       expect((await t.http().get('/api/v1/me').set(bearer(other))).status).toBe(401);
       expect((await t.http().get('/api/v1/me').set(bearer(session))).status).toBe(401);
@@ -280,13 +383,28 @@ describe('M1 checklist: authentication', () => {
       const session = await withAdminPassword(t, await signIn(t));
       const codes: string[] = [];
       for (let attempt = 1; attempt <= 10; attempt += 1) {
-        codes.push((await t.http().post('/api/v1/auth/step-up').set(bearer(session)).send({ password: 'wrong-password-1' })).body.code);
+        codes.push(
+          (
+            await t
+              .http()
+              .post('/api/v1/auth/step-up')
+              .set(bearer(session))
+              .send({ password: 'wrong-password-1' })
+          ).body.code,
+        );
       }
       expect(codes.slice(0, 9).every((code) => code === 'PASSWORD_INVALID')).toBe(true);
       expect(codes[9]).toBe('ACCOUNT_LOCKED');
-      const right = await t.http().post('/api/v1/auth/step-up').set(bearer(session)).send({ password: STRONG_PASSWORD });
+      const right = await t
+        .http()
+        .post('/api/v1/auth/step-up')
+        .set(bearer(session))
+        .send({ password: STRONG_PASSWORD });
       expect(right.status).toBe(423);
-      const alert = await t.admin.query(`select payload from outbox_events where event_type = 'notification.sms' and aggregate_id = $1`, [session.userId]);
+      const alert = await t.admin.query(
+        `select payload from outbox_events where event_type = 'notification.sms' and aggregate_id = $1`,
+        [session.userId],
+      );
       expect(alert.rows.map((row) => row.payload.template)).toContain('alert');
       const failures = await t.admin.query<{ action: string; count: string }>(
         `select action, count(*) from audit_logs where actor_user_id = $1 and action in ('auth.password.failed', 'auth.password.locked') group by action order by action`,

@@ -1,4 +1,11 @@
-import { applyDecorators, type CanActivate, createParamDecorator, type ExecutionContext, Injectable, UseGuards } from '@nestjs/common';
+import {
+  applyDecorators,
+  type CanActivate,
+  createParamDecorator,
+  type ExecutionContext,
+  Injectable,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { eq } from 'drizzle-orm';
 import type { Request } from 'express';
@@ -34,12 +41,30 @@ export class PlatformAdminGuard implements CanActivate {
     if (!auth) throw new ApiError('UNAUTHENTICATED');
     const [row] = await this.uow.run({ workspaceId: null, userId: auth.userId }, ({ tx }) =>
       tx
-        .select({ fullName: users.fullName, isPlatformAdmin: users.isPlatformAdmin, phone: users.phone, platformAdminRole: users.platformAdminRole, platformAdminStatus: users.platformAdminStatus, status: users.status, deletedAt: users.deletedAt })
+        .select({
+          fullName: users.fullName,
+          isPlatformAdmin: users.isPlatformAdmin,
+          phone: users.phone,
+          platformAdminRole: users.platformAdminRole,
+          platformAdminStatus: users.platformAdminStatus,
+          status: users.status,
+          deletedAt: users.deletedAt,
+        })
         .from(users)
         .where(eq(users.id, auth.userId)),
     );
-    if (!row?.isPlatformAdmin || row.status !== 'active' || row.platformAdminStatus !== 'ACTIVE' || row.deletedAt) throw ApiError.notFound('The page');
-    request.platformAdmin = { userId: auth.userId, fullName: row.fullName, role: platformRole(row) ?? 'ADMIN' };
+    if (
+      !row?.isPlatformAdmin ||
+      row.status !== 'active' ||
+      row.platformAdminStatus !== 'ACTIVE' ||
+      row.deletedAt
+    )
+      throw ApiError.notFound('The page');
+    request.platformAdmin = {
+      userId: auth.userId,
+      fullName: row.fullName,
+      role: platformRole(row) ?? 'ADMIN',
+    };
     return true;
   }
 }
@@ -60,13 +85,16 @@ export class PlatformAdminSmsGuard implements CanActivate {
 }
 
 /** Platform admin, an SMS-confirmed session, and a password step-up within the last 15 minutes (in that order). */
-export const PlatformAdminOnly = () => applyDecorators(ApiBearerAuth(), UseGuards(PlatformAdminGuard, PlatformAdminSmsGuard), RequireStepUp());
+export const PlatformAdminOnly = () =>
+  applyDecorators(ApiBearerAuth(), UseGuards(PlatformAdminGuard, PlatformAdminSmsGuard), RequireStepUp());
 
 /** Platform admin, without the step-up: only the `/admin/me` probe. */
 export const PlatformAdminProbe = () => applyDecorators(ApiBearerAuth(), UseGuards(PlatformAdminGuard));
 
-export const CurrentPlatformAdmin = createParamDecorator((_: unknown, execution: ExecutionContext): PlatformAdmin => {
-  const admin = execution.switchToHttp().getRequest<AdminRequest>().platformAdmin;
-  if (!admin) throw new ApiError('UNAUTHENTICATED');
-  return admin;
-});
+export const CurrentPlatformAdmin = createParamDecorator(
+  (_: unknown, execution: ExecutionContext): PlatformAdmin => {
+    const admin = execution.switchToHttp().getRequest<AdminRequest>().platformAdmin;
+    if (!admin) throw new ApiError('UNAUTHENTICATED');
+    return admin;
+  },
+);

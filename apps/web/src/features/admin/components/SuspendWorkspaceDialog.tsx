@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import type { PlatformWorkspaceModerationResult,PlatformWorkspaceSummary } from '@taskin/contracts';
+import type { PlatformWorkspaceModerationResult, PlatformWorkspaceSummary } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { problemMessage } from '@/lib/api-problem';
-import { Button,Modal,Textarea } from '@/components/ui';
-import { CheckCircleIcon,LockIcon } from '@/components/icons';
+import { Button, Modal, Textarea } from '@/components/ui';
+import { CheckCircleIcon, LockIcon } from '@/components/icons';
 
 const MIN_REASON = 3;
 
@@ -43,7 +43,13 @@ export function SuspendWorkspaceDialog({
     setBusy(true);
     setError(null);
     try {
-      onDone(await call(() => (suspend ? adminApi.suspendWorkspace(workspace.id, reason.trim()) : adminApi.unsuspendWorkspace(workspace.id, reason.trim() || undefined))));
+      onDone(
+        await call(() =>
+          suspend
+            ? adminApi.suspendWorkspace(workspace.id, reason.trim())
+            : adminApi.unsuspendWorkspace(workspace.id, reason.trim() || undefined),
+        ),
+      );
     } catch (failure) {
       setError(problemMessage(failure));
     } finally {
@@ -60,14 +66,21 @@ export function SuspendWorkspaceDialog({
       icon={suspend ? <LockIcon size={20} /> : <CheckCircleIcon size={20} />}
       title={suspend ? `تعلیق ${workspace.name}` : `رفع تعلیق ${workspace.name}`}
       description={
-        suspend ? 'فضای کاری فوراً برای همه اعضا بسته می‌شود تا تعلیق برداشته شود.' : 'فضای کاری دوباره برای همه اعضایش باز می‌شود.'
+        suspend
+          ? 'فضای کاری فوراً برای همه اعضا بسته می‌شود تا تعلیق برداشته شود.'
+          : 'فضای کاری دوباره برای همه اعضایش باز می‌شود.'
       }
       footer={
         <>
           <Button variant="secondary" onClick={close} disabled={busy}>
             انصراف
           </Button>
-          <Button variant={suspend ? 'destructive' : 'primary'} loading={busy} disabled={!ready} onClick={() => void confirm()}>
+          <Button
+            variant={suspend ? 'destructive' : 'primary'}
+            loading={busy}
+            disabled={!ready}
+            onClick={() => void confirm()}
+          >
             {suspend ? 'تعلیق فضای کاری' : 'رفع تعلیق'}
           </Button>
         </>
@@ -77,18 +90,25 @@ export function SuspendWorkspaceDialog({
         {suspend ? (
           <ul className="flex list-disc flex-col gap-1 ps-5 text-body-sm text-fg-secondary">
             <li>
-              همه اعضا ({toPersianDigits(workspace.memberCount)} نفر) به وظایف، گفتگوها و فایل‌های این فضای کاری دسترسی ندارند و پیام «این فضای کاری معلق شده است» را می‌بینند.
+              همه اعضا ({toPersianDigits(workspace.memberCount)} نفر) به وظایف، گفتگوها و فایل‌های این فضای
+              کاری دسترسی ندارند و پیام «این فضای کاری معلق شده است» را می‌بینند.
             </li>
             <li>حساب کاربری اعضا و فضاهای کاری دیگرشان دست‌نخورده می‌ماند.</li>
             <li>دعوت‌نامه‌ها و پیام‌های زمان‌بندی‌شده تا رفع تعلیق کار نمی‌کنند.</li>
             <li>این اقدام با دلیل آن در گزارش بازرسی ثبت می‌شود.</li>
           </ul>
         ) : (
-          <p className="text-body-sm text-fg-secondary">پیام‌های زمان‌بندی‌شده‌ای که در زمان تعلیق رسیدند ارسال نشده‌اند و باید دوباره زمان‌بندی شوند.</p>
+          <p className="text-body-sm text-fg-secondary">
+            پیام‌های زمان‌بندی‌شده‌ای که در زمان تعلیق رسیدند ارسال نشده‌اند و باید دوباره زمان‌بندی شوند.
+          </p>
         )}
         <Textarea
           label={suspend ? 'دلیل تعلیق' : 'توضیح (اختیاری)'}
-          hint={suspend ? `الزامی، دست‌کم ${toPersianDigits(MIN_REASON)} نویسه؛ در گزارش بازرسی ثبت می‌شود.` : 'در گزارش بازرسی ثبت می‌شود.'}
+          hint={
+            suspend
+              ? `الزامی، دست‌کم ${toPersianDigits(MIN_REASON)} نویسه؛ در گزارش بازرسی ثبت می‌شود.`
+              : 'در گزارش بازرسی ثبت می‌شود.'
+          }
           rows={3}
           maxLength={500}
           required={suspend}
@@ -97,7 +117,10 @@ export function SuspendWorkspaceDialog({
           data-autofocus
         />
         {error && (
-          <p role="alert" className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked">
+          <p
+            role="alert"
+            className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked"
+          >
             {error}
           </p>
         )}

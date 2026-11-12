@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect,useMemo,useRef,useState } from 'react';
-import type { Note,TagTone } from '@taskin/contracts';
-import { newNoteCategory,reconcileNoteCategory } from '@/features/notes/lib/note-form';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Note, TagTone } from '@taskin/contracts';
+import { newNoteCategory, reconcileNoteCategory } from '@/features/notes/lib/note-form';
 import { useWorkspace } from '@/store/WorkspaceProvider';
-import { filterNotes,noteCategoryLabel } from '@/store/selectors';
+import { filterNotes, noteCategoryLabel } from '@/store/selectors';
 import { taskDraft } from '@/store/drafts';
 import { nextLocalId } from '@/store/ids';
-import { notePreview,splitForTask,stripInline } from '@taskin/text';
+import { notePreview, splitForTask, stripInline } from '@taskin/text';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 
 /**
@@ -42,12 +42,16 @@ export function useNotesScreen() {
   const [mobileEditorOpen, setMobileEditorOpen] = useState(false);
 
   const { notes, noteCategories: categories } = state;
-  const [seenCategories, setSeenCategories] = useState({ workspaceId: state.activeWorkspaceId, items: categories });
+  const [seenCategories, setSeenCategories] = useState({
+    workspaceId: state.activeWorkspaceId,
+    items: categories,
+  });
   if (seenCategories.items !== categories || seenCategories.workspaceId !== state.activeWorkspaceId) {
     setSeenCategories({ workspaceId: state.activeWorkspaceId, items: categories });
-    const nextFilter = seenCategories.workspaceId === state.activeWorkspaceId
-      ? reconcileNoteCategory(seenCategories.items, categories, categoryId)
-      : 'all';
+    const nextFilter =
+      seenCategories.workspaceId === state.activeWorkspaceId
+        ? reconcileNoteCategory(seenCategories.items, categories, categoryId)
+        : 'all';
     if (nextFilter !== categoryId) setCategoryId(nextFilter);
   }
   // The note «یادداشت جدید» just started: kept only once it has words in it.
@@ -65,7 +69,10 @@ export function useNotesScreen() {
       if (draftId === selectedId) setDraftId(stored);
     }
   }
-  const visible = useMemo(() => filterNotes(notes, { categoryId, color, search }), [notes, categoryId, color, search]);
+  const visible = useMemo(
+    () => filterNotes(notes, { categoryId, color, search }),
+    [notes, categoryId, color, search],
+  );
   const selected = notes.find((note) => note.id === selectedId) ?? visible[0];
   const editorIdentity = selected ? (editorKeys[selected.id] ?? selected.id) : null;
   const currentEditor = useRef({ workspaceId: state.activeWorkspaceId, identity: editorIdentity });
@@ -75,7 +82,8 @@ export function useNotesScreen() {
   const discardBlankDraft = (keep?: string) => {
     if (!draftId || draftId === keep) return;
     const draft = notes.find((note) => note.id === draftId);
-    if (draft && !draft.title.trim() && !draft.body.trim()) dispatch({ type: 'discard-note', noteId: draftId });
+    if (draft && !draft.title.trim() && !draft.body.trim())
+      dispatch({ type: 'discard-note', noteId: draftId });
     setDraftId(null);
   };
   // Leaving the notebook altogether counts too.
@@ -123,5 +131,37 @@ export function useNotesScreen() {
 
   const heading = categoryId === 'all' ? 'همه یادداشت‌ها' : noteCategoryLabel(categories, categoryId);
 
-  return { state, dispatch, saveNote, categoryId, setCategoryId, color, setColor, search, setSearch, searchOpen, setSearchOpen, saveNotice, setSaveNotice, setSelectedId, mobileSidebarOpen, setMobileSidebarOpen, mobileEditorOpen, setMobileEditorOpen, notes, categories, editorKeys, visible, selected, currentEditor, discardBlankDraft, select, changeCategory, startNote, createNote, convertToTask, heading };
+  return {
+    state,
+    dispatch,
+    saveNote,
+    categoryId,
+    setCategoryId,
+    color,
+    setColor,
+    search,
+    setSearch,
+    searchOpen,
+    setSearchOpen,
+    saveNotice,
+    setSaveNotice,
+    setSelectedId,
+    mobileSidebarOpen,
+    setMobileSidebarOpen,
+    mobileEditorOpen,
+    setMobileEditorOpen,
+    notes,
+    categories,
+    editorKeys,
+    visible,
+    selected,
+    currentEditor,
+    discardBlankDraft,
+    select,
+    changeCategory,
+    startNote,
+    createNote,
+    convertToTask,
+    heading,
+  };
 }

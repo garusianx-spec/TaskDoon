@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect,useRef,useState,type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { toLatinDigits } from '@taskin/text';
 import { toPersianDigits } from '@taskin/jalali';
 import { problemMessage } from '@/lib/api-problem';
 import { session } from '@/features/auth/api/session';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { AuthCard } from '@/features/auth/components/AuthCard';
-import { Button,Input } from '@/components/ui';
-import { KeyIcon,LockIcon } from '@/components/icons';
-
+import { Button, Input } from '@/components/ui';
+import { KeyIcon, LockIcon } from '@/components/icons';
 
 /**
  * A session opened with a password shows the phone too before the panel opens: a code texted to
@@ -17,7 +16,11 @@ import { KeyIcon,LockIcon } from '@/components/icons';
  */
 export function SmsConfirmPrompt({ name }: { readonly name: string }) {
   const { steppedUp, signOut } = useAdmin();
-  const [challenge, setChallenge] = useState<{ readonly challengeId: string; readonly codeLength: number; readonly resendAt: number } | null>(null);
+  const [challenge, setChallenge] = useState<{
+    readonly challengeId: string;
+    readonly codeLength: number;
+    readonly resendAt: number;
+  } | null>(null);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,7 +43,11 @@ export function SmsConfirmPrompt({ name }: { readonly name: string }) {
     try {
       const sent = await session.requestConfirmCode();
       setCode('');
-      setChallenge({ challengeId: sent.challengeId, codeLength: sent.codeLength, resendAt: Date.now() + sent.resendInSeconds * 1000 });
+      setChallenge({
+        challengeId: sent.challengeId,
+        codeLength: sent.codeLength,
+        resendAt: Date.now() + sent.resendInSeconds * 1000,
+      });
     } catch (failure) {
       setError(problemMessage(failure));
     } finally {
@@ -86,7 +93,13 @@ export function SmsConfirmPrompt({ name }: { readonly name: string }) {
             iconStart={<KeyIcon size={18} />}
             error={error ?? undefined}
           />
-          <Button type="submit" fullWidth size="lg" loading={busy} disabled={toLatinDigits(code).trim().length !== challenge.codeLength}>
+          <Button
+            type="submit"
+            fullWidth
+            size="lg"
+            loading={busy}
+            disabled={toLatinDigits(code).trim().length !== challenge.codeLength}
+          >
             تأیید
           </Button>
           <Button variant="link" type="button" disabled={wait > 0 || busy} onClick={() => void send()}>

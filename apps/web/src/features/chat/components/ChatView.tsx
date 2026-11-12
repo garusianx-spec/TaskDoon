@@ -1,19 +1,15 @@
 'use client';
 
-import { useEffect,useState,type DragEvent } from 'react';
-import type { Message,TaskDraft } from '@taskin/contracts';
+import { useEffect, useState, type DragEvent } from 'react';
+import type { Message, TaskDraft } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
 import { truncate } from '@/lib/format';
-import {
-messageById,
-messagePreview,
-userById
-} from '@/store/selectors';
+import { messageById, messagePreview, userById } from '@/store/selectors';
 import { taskDraft } from '@/store/drafts';
-import { ChatComposer,MAX_FILE_BYTES } from '@/features/chat/components/ChatComposer';
+import { ChatComposer, MAX_FILE_BYTES } from '@/features/chat/components/ChatComposer';
 import { AttachmentPreviewModal } from '@/features/chat/components/AttachmentPreviewModal';
 import { MessageActionSheet } from '@/features/chat/components/MessageActionSheet';
-import { ScheduledMessagesBar,ScheduledMessagesModal } from '@/features/chat/components/ScheduledMessages';
+import { ScheduledMessagesBar, ScheduledMessagesModal } from '@/features/chat/components/ScheduledMessages';
 import { type ChatViewProps } from '@/features/chat/types/chat-view';
 
 import { ConversationHeader } from '@/features/chat/components/ConversationHeader';
@@ -61,7 +57,8 @@ export function ChatView({
   // Files picked or dropped, waiting in the preview until they are sent (or dropped again).
   const [queued, setQueued] = useState<readonly File[]>([]);
   const [dragging, setDragging] = useState(false);
-  const draggingFiles = (event: DragEvent<HTMLElement>) => !conversation.archived && onAttach !== undefined && event.dataTransfer.types.includes('Files');
+  const draggingFiles = (event: DragEvent<HTMLElement>) =>
+    !conversation.archived && onAttach !== undefined && event.dataTransfer.types.includes('Files');
   const replyTarget = replyToId ? messageById(messages, replyToId) : undefined;
   const replyPreview = replyTarget
     ? {
@@ -101,7 +98,9 @@ export function ChatView({
         if (!draggingFiles(event)) return;
         event.preventDefault();
         setDragging(false);
-        const dropped = [...event.dataTransfer.files].filter((file) => file.size > 0 && file.size <= MAX_FILE_BYTES);
+        const dropped = [...event.dataTransfer.files].filter(
+          (file) => file.size > 0 && file.size <= MAX_FILE_BYTES,
+        );
         if (dropped.length > 0) setQueued((current) => [...current, ...dropped]);
       }}
     >
@@ -113,18 +112,41 @@ export function ChatView({
           فایل‌ها را اینجا رها کنید
         </div>
       )}
-      <ConversationHeader conversation={conversation} onOpenDetails={onOpenDetails} onBack={onBack} timeline={timeline} />
+      <ConversationHeader
+        conversation={conversation}
+        onOpenDetails={onOpenDetails}
+        onBack={onBack}
+        timeline={timeline}
+      />
 
-      <ConversationTimeline conversation={conversation} messages={messages} currentUserId={currentUserId} onToggleReaction={onToggleReaction} onOpenTask={onOpenTask} onResend={onResend} onDiscard={onDiscard} onReply={setReplyToId} onConvert={(target) => onConvertToTask(buildDraft(target))} onLongPress={setSheetMessage} timeline={timeline} />
+      <ConversationTimeline
+        conversation={conversation}
+        messages={messages}
+        currentUserId={currentUserId}
+        onToggleReaction={onToggleReaction}
+        onOpenTask={onOpenTask}
+        onResend={onResend}
+        onDiscard={onDiscard}
+        onReply={setReplyToId}
+        onConvert={(target) => onConvertToTask(buildDraft(target))}
+        onLongPress={setSheetMessage}
+        timeline={timeline}
+      />
 
       {/* Live only: the line keeps its height, so the thread does not jump when someone types. */}
       {onTyping && (
-        <p aria-live="polite" data-testid="typing-indicator" className="h-5 shrink-0 truncate bg-surface px-4 text-caption text-fg-tertiary">
+        <p
+          aria-live="polite"
+          data-testid="typing-indicator"
+          className="h-5 shrink-0 truncate bg-surface px-4 text-caption text-fg-tertiary"
+        >
           {typingLine(typingNames)}
         </p>
       )}
 
-      {!conversation.archived && scheduled.length > 0 && <ScheduledMessagesBar count={scheduled.length} onOpen={() => setScheduledOpen(true)} />}
+      {!conversation.archived && scheduled.length > 0 && (
+        <ScheduledMessagesBar count={scheduled.length} onOpen={() => setScheduledOpen(true)} />
+      )}
       {!conversation.archived && onSendScheduledNow && onCancelScheduled && (
         <ScheduledMessagesModal
           open={scheduledOpen && scheduled.length > 0}
@@ -135,29 +157,42 @@ export function ChatView({
         />
       )}
 
-      {conversation.archived ? <p role="status" className="border-t border-secondary p-4 text-body-sm text-fg-secondary">این گفتگو برای همیشه بایگانی شده و فقط خواندنی است.</p> : <ChatComposer
-        conversationTitle={conversation.title}
-        replyPreview={replyPreview}
-        onCancelReply={() => setReplyToId(null)}
-        {...(onTyping ? { onTyping } : {})}
-        {...(onAttach ? { onAttach: (files: readonly File[]) => setQueued((current) => [...current, ...files]) } : {})}
-        {...(onVoice ? { onVoice } : {})}
-        onSend={(text) => {
-          onSend(text, replyToId);
-          setReplyToId(null);
-        }}
-        {...(onSchedule
-          ? {
-              onSchedule: (text: string, at: Date) => {
-                onSchedule(text, replyToId, at);
-                setReplyToId(null);
-              },
-            }
-          : {})}
-      />}
+      {conversation.archived ? (
+        <p role="status" className="border-t border-secondary p-4 text-body-sm text-fg-secondary">
+          این گفتگو برای همیشه بایگانی شده و فقط خواندنی است.
+        </p>
+      ) : (
+        <ChatComposer
+          conversationTitle={conversation.title}
+          replyPreview={replyPreview}
+          onCancelReply={() => setReplyToId(null)}
+          {...(onTyping ? { onTyping } : {})}
+          {...(onAttach
+            ? { onAttach: (files: readonly File[]) => setQueued((current) => [...current, ...files]) }
+            : {})}
+          {...(onVoice ? { onVoice } : {})}
+          onSend={(text) => {
+            onSend(text, replyToId);
+            setReplyToId(null);
+          }}
+          {...(onSchedule
+            ? {
+                onSchedule: (text: string, at: Date) => {
+                  onSchedule(text, replyToId, at);
+                  setReplyToId(null);
+                },
+              }
+            : {})}
+        />
+      )}
 
       {onAttach && !conversation.archived && (
-        <AttachmentPreviewModal files={queued} onFilesChange={setQueued} onSend={onAttach} maxBytes={MAX_FILE_BYTES} />
+        <AttachmentPreviewModal
+          files={queued}
+          onFilesChange={setQueued}
+          onSend={onAttach}
+          maxBytes={MAX_FILE_BYTES}
+        />
       )}
 
       <MessageActionSheet

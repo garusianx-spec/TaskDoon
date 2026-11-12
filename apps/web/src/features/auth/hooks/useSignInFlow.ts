@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect,useRef,useState,type FormEvent } from 'react';
-import { normaliseIranMobile,toLatinDigits } from '@taskin/text';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { normaliseIranMobile, toLatinDigits } from '@taskin/text';
 import { toPersianDigits } from '@taskin/jalali';
 import { session } from '@/features/auth/api/session';
 import { ApiProblem } from '@/lib/api-client';
 import { problemMessage } from '@/lib/api-problem';
 import type { LiveStore } from '@/store/live/live-store';
 import { challengeTiming } from '@/features/auth/lib/auth-input';
-import type { ErrorTarget,Step } from '@/features/auth/types/sign-in';
+import type { ErrorTarget, Step } from '@/features/auth/types/sign-in';
 import { MIN_PASSWORD } from '@/features/auth/lib/auth-input';
 
 export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, adminPanel: boolean) {
@@ -18,7 +18,9 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
-  const [feedback, setFeedback] = useState<{ readonly target: ErrorTarget; readonly message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ readonly target: ErrorTarget; readonly message: string } | null>(
+    null,
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   /** Signed out because the account was suspended: said once, above the first step. */
@@ -30,7 +32,7 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
   const setError = (message: string | null, target: ErrorTarget = 'form') => {
     setFeedback(message ? { message, target } : null);
   };
-  const errorFor = (target: ErrorTarget) => feedback?.target === target ? feedback.message : undefined;
+  const errorFor = (target: ErrorTarget) => (feedback?.target === target ? feedback.message : undefined);
   const formError = errorFor('form');
 
   const activeChallenge = 'challengeId' in step ? step.challengeId : null;
@@ -39,13 +41,23 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
   }, [step.kind, activeChallenge]);
 
   useEffect(() => {
-    if (step.kind !== 'code' && step.kind !== 'reset' && step.kind !== 'admin-password' && step.kind !== 'admin-recovery' && step.kind !== 'admin-setup') return;
+    if (
+      step.kind !== 'code' &&
+      step.kind !== 'reset' &&
+      step.kind !== 'admin-password' &&
+      step.kind !== 'admin-recovery' &&
+      step.kind !== 'admin-setup'
+    )
+      return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [step.kind]);
 
   useEffect(() => {
-    if ((step.kind === 'admin-password' || step.kind === 'admin-recovery' || step.kind === 'admin-setup') && now >= step.expiresAt) {
+    if (
+      (step.kind === 'admin-password' || step.kind === 'admin-recovery' || step.kind === 'admin-setup') &&
+      now >= step.expiresAt
+    ) {
       setStep({ kind: 'phone' });
       setPassword('');
       setRepeat('');
@@ -77,11 +89,16 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
       if (verifyingSms && (failureCode === 'OTP_EXPIRED' || failureCode === 'OTP_ATTEMPTS_EXCEEDED')) {
         const expiredAt = Date.now();
         setNow(expiredAt);
-        setStep(previous => previous.kind === 'code' || previous.kind === 'reset'
-          ? { ...previous, expiresAt: expiredAt, exhausted: failureCode === 'OTP_ATTEMPTS_EXCEEDED' }
-          : previous);
+        setStep((previous) =>
+          previous.kind === 'code' || previous.kind === 'reset'
+            ? { ...previous, expiresAt: expiredAt, exhausted: failureCode === 'OTP_ATTEMPTS_EXCEEDED' }
+            : previous,
+        );
       } else {
-        setError(problemMessage(failure), verifyingSms && failureCode === 'OTP_INVALID' ? 'code' : deliveryError);
+        setError(
+          problemMessage(failure),
+          verifyingSms && failureCode === 'OTP_INVALID' ? 'code' : deliveryError,
+        );
       }
     } finally {
       pendingRef.current = false;
@@ -90,12 +107,20 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
   };
 
   const requestCode = (mobile: string) =>
-    attempt(async () => {
-      const challenge = await session.requestCode(mobile);
-      setCode('');
-      setNow(Date.now());
-      setStep({ kind: 'code', phone: mobile, challengeId: challenge.challengeId, ...challengeTiming(challenge, Date.now()) });
-    }, step.kind === 'code' ? 'resend' : 'form');
+    attempt(
+      async () => {
+        const challenge = await session.requestCode(mobile);
+        setCode('');
+        setNow(Date.now());
+        setStep({
+          kind: 'code',
+          phone: mobile,
+          challengeId: challenge.challengeId,
+          ...challengeTiming(challenge, Date.now()),
+        });
+      },
+      step.kind === 'code' ? 'resend' : 'form',
+    );
 
   const onPhone = (event: FormEvent) => {
     event.preventDefault();
@@ -110,8 +135,14 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
   const onCode = (event: FormEvent) => {
     event.preventDefault();
     if (step.kind !== 'code' || busy) return;
-    if (Date.now() >= step.expiresAt) { setNow(Date.now()); return; }
-    if (toLatinDigits(code).trim().length !== step.codeLength) { setError(`کد ${toPersianDigits(step.codeLength)} رقمی را کامل وارد کنید.`, 'code'); return; }
+    if (Date.now() >= step.expiresAt) {
+      setNow(Date.now());
+      return;
+    }
+    if (toLatinDigits(code).trim().length !== step.codeLength) {
+      setError(`کد ${toPersianDigits(step.codeLength)} رقمی را کامل وارد کنید.`, 'code');
+      return;
+    }
     void attempt(async () => {
       const result = await session.verifyCode(step.challengeId, toLatinDigits(code).trim());
       if ('signupToken' in result) {
@@ -123,9 +154,20 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
         setCode('');
         setPassword('');
         setNow(Date.now());
-        setStep(result.status === 'admin_setup_required'
-          ? { kind: 'admin-setup', temporaryToken: result.temporaryToken, expiresAt: Date.now() + result.expiresInSeconds * 1000, sent: false }
-          : { kind: 'admin-password', temporaryToken: result.temporaryToken, expiresAt: Date.now() + result.expiresInSeconds * 1000 });
+        setStep(
+          result.status === 'admin_setup_required'
+            ? {
+                kind: 'admin-setup',
+                temporaryToken: result.temporaryToken,
+                expiresAt: Date.now() + result.expiresInSeconds * 1000,
+                sent: false,
+              }
+            : {
+                kind: 'admin-password',
+                temporaryToken: result.temporaryToken,
+                expiresAt: Date.now() + result.expiresInSeconds * 1000,
+              },
+        );
       } else await store.signedIn();
     });
   };
@@ -194,12 +236,20 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
   };
 
   const requestReset = (mobile: string) =>
-    attempt(async () => {
-      const challenge = await session.requestPasswordReset(mobile);
-      setCode('');
-      setNow(Date.now());
-      setStep({ kind: 'reset', phone: mobile, challengeId: challenge.challengeId, ...challengeTiming(challenge, Date.now()) });
-    }, step.kind === 'reset' ? 'resend' : 'form');
+    attempt(
+      async () => {
+        const challenge = await session.requestPasswordReset(mobile);
+        setCode('');
+        setNow(Date.now());
+        setStep({
+          kind: 'reset',
+          phone: mobile,
+          challengeId: challenge.challengeId,
+          ...challengeTiming(challenge, Date.now()),
+        });
+      },
+      step.kind === 'reset' ? 'resend' : 'form',
+    );
 
   const onForgot = (event: FormEvent) => {
     event.preventDefault();
@@ -214,13 +264,19 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
   const onReset = (event: FormEvent) => {
     event.preventDefault();
     if (step.kind !== 'reset' || busy) return;
-    if (Date.now() >= step.expiresAt) { setNow(Date.now()); return; }
+    if (Date.now() >= step.expiresAt) {
+      setNow(Date.now());
+      return;
+    }
     if (toLatinDigits(code).trim().length !== step.codeLength) {
       setError(`کد ${toPersianDigits(step.codeLength)} رقمی پیامک‌شده را وارد کنید.`, 'code');
       return;
     }
     if (password.length < MIN_PASSWORD) {
-      setError(`رمز عبور تازه دست‌کم ${toPersianDigits(MIN_PASSWORD)} نویسه باشد، با حروف و عدد یا نماد.`, 'password');
+      setError(
+        `رمز عبور تازه دست‌کم ${toPersianDigits(MIN_PASSWORD)} نویسه باشد، با حروف و عدد یا نماد.`,
+        'password',
+      );
       return;
     }
     if (password !== repeat) {
@@ -245,10 +301,16 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
     event.preventDefault();
     if (busy || step.kind !== 'admin-setup') return;
     if (!step.sent) {
-      void attempt(async () => { await session.requestAdminSetup(step.temporaryToken); setStep({ ...step, sent: true }); });
+      void attempt(async () => {
+        await session.requestAdminSetup(step.temporaryToken);
+        setStep({ ...step, sent: true });
+      });
       return;
     }
-    if (password !== repeat) { setError('تکرار رمز عبور با خود آن یکی نیست.', 'repeat'); return; }
+    if (password !== repeat) {
+      setError('تکرار رمز عبور با خود آن یکی نیست.', 'repeat');
+      return;
+    }
     void attempt(async () => {
       await session.completeAdminSetup(step.temporaryToken, code.trim(), password);
       goTo({ kind: 'phone' });
@@ -264,7 +326,42 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
     });
   };
 
-  return { step, phone, setPhone, code, setCode, name, setName, password, setPassword, repeat, setRepeat, notice, busy, suspended, now, fieldRef, setError, errorFor, formError, goTo, requestCode, onPhone, onCode, onAdminSetup, onAdminPassword, onAdminRecovery, requestAdminRecovery, onName, onPassword, requestReset, onForgot, onReset, invited: store.invited, adminPanel };
+  return {
+    step,
+    phone,
+    setPhone,
+    code,
+    setCode,
+    name,
+    setName,
+    password,
+    setPassword,
+    repeat,
+    setRepeat,
+    notice,
+    busy,
+    suspended,
+    now,
+    fieldRef,
+    setError,
+    errorFor,
+    formError,
+    goTo,
+    requestCode,
+    onPhone,
+    onCode,
+    onAdminSetup,
+    onAdminPassword,
+    onAdminRecovery,
+    requestAdminRecovery,
+    onName,
+    onPassword,
+    requestReset,
+    onForgot,
+    onReset,
+    invited: store.invited,
+    adminPanel,
+  };
 }
 
 export type SignInFlow = ReturnType<typeof useSignInFlow>;

@@ -3,17 +3,10 @@
 import type { Conversation } from '@taskin/contracts';
 import type { ConversationDraft } from '@/store/workspace-reducer';
 import { formatCount } from '@/lib/format';
-import {
-Badge,
-Button,
-Checkbox,
-Input,
-Modal,
-SegmentedControl
-} from '@/components/ui';
+import { Badge, Button, Checkbox, Input, Modal, SegmentedControl } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { MessagesIcon,PeopleIcon,SearchIcon,UserIcon } from '@/components/icons';
-import { DirectPicker,PersonSummary } from '@/features/chat/components/ConversationPersonPicker';
+import { MessagesIcon, PeopleIcon, SearchIcon, UserIcon } from '@/components/icons';
+import { DirectPicker, PersonSummary } from '@/features/chat/components/ConversationPersonPicker';
 import { useNewConversationForm } from '@/features/chat/hooks/useNewConversationForm';
 
 export interface NewConversationModalProps {
@@ -23,9 +16,6 @@ export interface NewConversationModalProps {
   readonly onClose: () => void;
   readonly onSubmit: (draft: ConversationDraft) => void;
 }
-
-
-
 
 /**
  * Start a one-to-one conversation or a team group. A direct chat with someone you already
@@ -38,8 +28,28 @@ export function NewConversationModal({
   onClose,
   onSubmit,
 }: NewConversationModalProps) {
-  const { mode, setMode, query, setQuery, directId, setDirectId, memberIds, setMemberIds, groupName, setGroupName, topic, setTopic, setTouched, colleagues, existingDirect, directError, nameError, membersError, submit, selectedDirect } = useNewConversationForm({ open, currentUserId, conversations, onSubmit });
-
+  const {
+    mode,
+    setMode,
+    query,
+    setQuery,
+    directId,
+    setDirectId,
+    memberIds,
+    setMemberIds,
+    groupName,
+    setGroupName,
+    topic,
+    setTopic,
+    setTouched,
+    colleagues,
+    existingDirect,
+    directError,
+    nameError,
+    membersError,
+    submit,
+    selectedDirect,
+  } = useNewConversationForm({ open, currentUserId, conversations, onSubmit });
 
   return (
     <Modal
@@ -139,7 +149,10 @@ export function NewConversationModal({
               hasExisting={existingDirect}
             />
           ) : (
-            <ul className="flex max-h-72 flex-col gap-1.5 overflow-y-auto scrollbar-thin" aria-label="انتخاب اعضای گروه">
+            <ul
+              className="flex max-h-72 flex-col gap-1.5 overflow-y-auto scrollbar-thin"
+              aria-label="انتخاب اعضای گروه"
+            >
               {colleagues.map((user) => {
                 const checked = memberIds.includes(user.id);
                 return (

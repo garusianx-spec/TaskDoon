@@ -6,8 +6,16 @@ import ts from 'typescript';
 
 // Run the browser-independent source itself, without adding a test framework to the web app.
 const source = readFileSync(new URL('../../src/lib/broadcasts.ts', import.meta.url), 'utf8');
-const javascript = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.ESNext } }).outputText;
-const { broadcastJitter, broadcastTimerDelay, broadcastDismissalKey, isBroadcastDismissed, dismissBroadcast } = await import(`data:text/javascript;base64,${Buffer.from(javascript).toString('base64')}`);
+const javascript = ts.transpileModule(source, {
+  compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.ESNext },
+}).outputText;
+const {
+  broadcastJitter,
+  broadcastTimerDelay,
+  broadcastDismissalKey,
+  isBroadcastDismissed,
+  dismissBroadcast,
+} = await import(`data:text/javascript;base64,${Buffer.from(javascript).toString('base64')}`);
 const now = '2026-10-07T12:00:00.000Z';
 const later = (ms) => new Date(Date.parse(now) + ms).toISOString();
 
@@ -33,7 +41,10 @@ test('refresh jitter stays within 0–5 seconds', () => {
 
 test('info/warning dismissals persist locally; critical dismissals remain in the session', () => {
   const stores = { local: new Map(), session: new Map() };
-  const access = (kind) => ({ getItem: (key) => stores[kind].get(key) ?? null, setItem: (key, value) => stores[kind].set(key, value) });
+  const access = (kind) => ({
+    getItem: (key) => stores[kind].get(key) ?? null,
+    setItem: (key, value) => stores[kind].set(key, value),
+  });
   for (const level of ['info', 'warning', 'critical']) {
     const item = { id: level, level, updatedAt: now };
     assert.equal(isBroadcastDismissed(item, access), false);
@@ -47,7 +58,9 @@ test('info/warning dismissals persist locally; critical dismissals remain in the
 });
 
 test('browser storage refusal does not throw or hide an undismissed notice', () => {
-  const refused = () => { throw new Error('storage refused'); };
+  const refused = () => {
+    throw new Error('storage refused');
+  };
   const item = { id: 'notice', level: 'critical', updatedAt: now };
   assert.equal(isBroadcastDismissed(item, refused), false);
   assert.doesNotThrow(() => dismissBroadcast(item, refused));
@@ -56,19 +69,33 @@ test('browser storage refusal does not throw or hide an undismissed notice', () 
 /** Exercise the actual client request boundary against the strict broadcast query contract. */
 async function broadcastRequests() {
   const httpSource = readFileSync(new URL('../../src/lib/api-client.ts', import.meta.url), 'utf8');
-  const compiledHttp = ts.transpileModule(httpSource, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.ESNext } }).outputText;
+  const compiledHttp = ts.transpileModule(httpSource, {
+    compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.ESNext },
+  }).outputText;
   const httpUrl = 'data:text/javascript;base64,' + Buffer.from(compiledHttp).toString('base64');
-  const apiSource = readFileSync(new URL('../../src/features/admin/api/admin-api.ts', import.meta.url), 'utf8');
-  const compiledApi = ts.transpileModule(apiSource, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.ESNext } }).outputText;
+  const apiSource = readFileSync(
+    new URL('../../src/features/admin/api/admin-api.ts', import.meta.url),
+    'utf8',
+  );
+  const compiledApi = ts.transpileModule(apiSource, {
+    compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.ESNext },
+  }).outputText;
   const seam = /import \{ http, query \} from ['"]@\/lib\/api-client['"];?/;
   assert.match(compiledApi, seam);
-  const stubbed = compiledApi.replace(seam, 'import { query } from ' + JSON.stringify(httpUrl) + '; const http = { get: async (url) => url };');
+  const stubbed = compiledApi.replace(
+    seam,
+    'import { query } from ' + JSON.stringify(httpUrl) + '; const http = { get: async (url) => url };',
+  );
   return (await import('data:text/javascript;base64,' + Buffer.from(stubbed).toString('base64'))).adminApi;
 }
 
 test('broadcast list sends current/all status and never sends includeArchived to the strict DTO', async () => {
   const api = await broadcastRequests();
-  for (const [filters, status] of [[undefined, 'current'], [{ includeArchived: false }, 'current'], [{ includeArchived: true }, 'all']]) {
+  for (const [filters, status] of [
+    [undefined, 'current'],
+    [{ includeArchived: false }, 'current'],
+    [{ includeArchived: true }, 'all'],
+  ]) {
     const url = new URL(await api.broadcasts(filters), 'https://client.test');
     assert.equal(url.pathname, '/admin/broadcasts');
     assert.equal(url.searchParams.get('status'), status);
@@ -104,7 +131,12 @@ function broadcastPageHarness() {
       useState(initial) {
         const slot = index++;
         if (!(slot in slots)) slots[slot] = typeof initial === 'function' ? initial() : initial;
-        return [slots[slot], (next) => { slots[slot] = typeof next === 'function' ? next(slots[slot]) : next; }];
+        return [
+          slots[slot],
+          (next) => {
+            slots[slot] = typeof next === 'function' ? next(slots[slot]) : next;
+          },
+        ];
       },
       useRef(initial) {
         const slot = index++;
@@ -115,50 +147,109 @@ function broadcastPageHarness() {
     },
     'react/jsx-runtime': { jsx: element, jsxs: element, Fragment: 'Fragment' },
     '@taskin/jalali': { toPersianDigits: String },
-    '@/features/admin/api/admin-api': { adminApi: { broadcasts: async (filters) => {
-      requests.push({ ...filters });
-      assert.ok(responses.length > 0, 'every request needs a controlled reply');
-      return responses.shift();
-    } } },
-    '@/features/admin/hooks/AdminSession': { useAdmin: () => ({ call: (operation) => operation(), generation: adminGeneration }) },
+    '@/features/admin/api/admin-api': {
+      adminApi: {
+        broadcasts: async (filters) => {
+          requests.push({ ...filters });
+          assert.ok(responses.length > 0, 'every request needs a controlled reply');
+          return responses.shift();
+        },
+      },
+    },
+    '@/features/admin/hooks/AdminSession': {
+      useAdmin: () => ({ call: (operation) => operation(), generation: adminGeneration }),
+    },
     '@/features/admin/lib/format': { dateTimeLabel: String },
-    '@/features/admin/hooks/use-admin-load': { useAdminLoad: (_key, nextLoader) => { loader = nextLoader; return load; } },
+    '@/features/admin/hooks/use-admin-load': {
+      useAdminLoad: (_key, nextLoader) => {
+        loader = nextLoader;
+        return load;
+      },
+    },
     '@/lib/api-problem': { problemMessage: String },
     '@/features/admin/components/AdminUi': { Loaded: 'Loaded', Panel: 'Panel', TD: '', TH: '' },
     '@/components/shared/DataTable': { DataTable: 'DataTable', TableFrame: 'TableFrame' },
     '@/features/admin/components/BroadcastDialog': { BroadcastDialog: 'BroadcastDialog' },
-    '@/components/layout/BroadcastStrip': { BROADCAST_LEVEL_LABELS: { info: 'info', warning: 'warning', critical: 'critical' } },
+    '@/components/layout/BroadcastStrip': {
+      BROADCAST_LEVEL_LABELS: { info: 'info', warning: 'warning', critical: 'critical' },
+    },
     '@/components/ui': { Badge: 'Badge', Button: 'Button', Input: 'Input', Modal: 'Modal' },
     '@/components/icons': { AddIcon: 'AddIcon', RefreshIcon: 'RefreshIcon', SearchIcon: 'SearchIcon' },
   };
-  const pageSource = readFileSync(new URL('../../src/app/(admin)/admin/broadcasts/page.tsx', import.meta.url), 'utf8');
-  const compiled = ts.transpileModule(pageSource, { compilerOptions: {
-    target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
-  } }).outputText;
-  const context = { exports: {}, require: (name) => {
-    assert.ok(name in modules, `unexpected module: ${name}`);
-    return modules[name];
-  } };
+  const pageSource = readFileSync(
+    new URL('../../src/app/(admin)/admin/broadcasts/page.tsx', import.meta.url),
+    'utf8',
+  );
+  const compiled = ts.transpileModule(pageSource, {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2021,
+      module: ts.ModuleKind.CommonJS,
+      jsx: ts.JsxEmit.ReactJSX,
+    },
+  }).outputText;
+  const context = {
+    exports: {},
+    require: (name) => {
+      assert.ok(name in modules, `unexpected module: ${name}`);
+      return modules[name];
+    },
+  };
   runInNewContext(compiled, context);
   const nodes = (node) => {
     if (Array.isArray(node)) return node.flatMap(nodes);
     if (!node || typeof node !== 'object') return [];
-    const children = node.type === 'Loaded' ? (load.data ? node.props.children(load.data) : null) : node.props.children;
+    const children =
+      node.type === 'Loaded' ? (load.data ? node.props.children(load.data) : null) : node.props.children;
     return [node, ...nodes(children)];
   };
-  const render = () => { index = 0; return nodes(context.exports.default()); };
+  const render = () => {
+    index = 0;
+    return nodes(context.exports.default());
+  };
   return {
-    load, requests, responses, render,
-    async firstPage(reply) { responses.push(reply); load.data = await loader(); load.loading = false; },
-    stepUp() { adminGeneration += 1; },
-    pagination: (tree) => tree.find((node) => node.type === 'Button' && /نمایش بیشتر|همه اطلاعیه‌ها|در حال بازخوانی/.test(node.props.children)),
+    load,
+    requests,
+    responses,
+    render,
+    async firstPage(reply) {
+      responses.push(reply);
+      load.data = await loader();
+      load.loading = false;
+    },
+    stepUp() {
+      adminGeneration += 1;
+    },
+    pagination: (tree) =>
+      tree.find(
+        (node) =>
+          node.type === 'Button' && /نمایش بیشتر|همه اطلاعیه‌ها|در حال بازخوانی/.test(node.props.children),
+      ),
     filter: (tree) => tree.find((node) => node.type === 'input' && node.props.type === 'checkbox'),
     refresh: (tree) => tree.find((node) => node.type === 'Button' && node.props.children === 'بازخوانی'),
-    rowMessages: (tree) => tree.filter((node) => node.type === 'p' && typeof node.props.children === 'string').map((node) => node.props.children),
+    rowMessages: (tree) =>
+      tree
+        .filter((node) => node.type === 'p' && typeof node.props.children === 'string')
+        .map((node) => node.props.children),
   };
 }
 
-const listReply = (message, nextCursor) => ({ items: [{ id: message, message, level: 'info', isActive: true, startsAt: now, expiresAt: null, createdAt: now, createdByName: 'admin', archivedAt: null, updatedAt: now }], nextCursor });
+const listReply = (message, nextCursor) => ({
+  items: [
+    {
+      id: message,
+      message,
+      level: 'info',
+      isActive: true,
+      startsAt: now,
+      expiresAt: null,
+      createdAt: now,
+      createdByName: 'admin',
+      archivedAt: null,
+      updatedAt: now,
+    },
+  ],
+  nextCursor,
+});
 const settlePage = () => new Promise((resolve) => setImmediate(resolve));
 
 test('broadcast pagination rejects retained cursors before filter and refresh loading effects', async () => {
@@ -202,7 +293,11 @@ test('broadcast pagination drops superseded replies and appends only to its orig
   await page.firstPage(listReply('first', 'cursor-one'));
   let tree = page.render();
   let resolveOld;
-  page.responses.push(new Promise((resolve) => { resolveOld = resolve; }));
+  page.responses.push(
+    new Promise((resolve) => {
+      resolveOld = resolve;
+    }),
+  );
   page.pagination(tree).props.onClick();
   page.refresh(tree).props.onClick();
   page.render();

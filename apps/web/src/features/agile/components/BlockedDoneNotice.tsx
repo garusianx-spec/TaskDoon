@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { IconButton } from '@/components/ui';
-import { CloseIcon,WarningIcon } from '@/components/icons';
+import { CloseIcon, WarningIcon } from '@/components/icons';
 
 /** How long the warning stays up (it can always be closed sooner). */
 const NOTICE_MS = 8_000;
@@ -34,7 +34,13 @@ export function BlockedDoneNotice() {
         <p className="flex-1 text-body-sm leading-6 text-fg-primary">
           {`«${notice.title}» به «انجام شد» رفت، ولی هنوز منتظر ${notice.blockerCodes.join('، ')} است که تمام نشده.`}
         </p>
-        <IconButton label="بستن هشدار" icon={<CloseIcon size={16} />} size="xs" variant="ghost" onClick={() => dispatch({ type: 'dismiss-blocked-notice' })} />
+        <IconButton
+          label="بستن هشدار"
+          icon={<CloseIcon size={16} />}
+          size="xs"
+          variant="ghost"
+          onClick={() => dispatch({ type: 'dismiss-blocked-notice' })}
+        />
       </div>
     </div>
   );

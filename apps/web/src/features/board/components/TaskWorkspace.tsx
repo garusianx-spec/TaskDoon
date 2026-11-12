@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo,useState } from 'react';
-import type { IssueType,Task,TaskViewMode } from '@taskin/contracts';
+import { useMemo, useState } from 'react';
+import type { IssueType, Task, TaskViewMode } from '@taskin/contracts';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { projectColumns } from '@/store/selectors';
 import { BUILT_IN_COLUMNS } from '@/data/reference';
@@ -16,11 +16,18 @@ import { SwipeableTaskRow } from '@/features/tasks/components/SwipeableTaskRow';
 import { PostponeSheet } from '@/features/tasks/components/PostponeSheet';
 import { BacklogView } from '@/features/agile/components/BacklogView';
 import { IssueTypeIcon } from '@/features/agile/components/IssueTypeIcon';
-import { ISSUE_TYPES,isBacklog,issueTypeOf } from '@/features/agile/lib/agile';
-import { Badge,Button,ExpandableSearch,SegmentedControl,Select } from '@/components/ui';
+import { ISSUE_TYPES, isBacklog, issueTypeOf } from '@/features/agile/lib/agile';
+import { Badge, Button, ExpandableSearch, SegmentedControl, Select } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { AddIcon,BacklogIcon,FilterIcon,GanttIcon,KanbanIcon,ListIcon,TaskSquareIcon } from '@/components/icons';
-
+import {
+  AddIcon,
+  BacklogIcon,
+  FilterIcon,
+  GanttIcon,
+  KanbanIcon,
+  ListIcon,
+  TaskSquareIcon,
+} from '@/components/icons';
 
 interface TaskWorkspaceProps {
   readonly tasks: readonly Task[];
@@ -40,7 +47,8 @@ export function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }
   // and their columns are not edited.
   const boardProjectId = state.projectFilterId;
   const boardColumns = boardProjectId ? projectColumns(state.boardColumns, boardProjectId) : BUILT_IN_COLUMNS;
-  const columnsEditable = boardProjectId !== null && state.boardColumns.some((column) => column.projectId === boardProjectId);
+  const columnsEditable =
+    boardProjectId !== null && state.boardColumns.some((column) => column.projectId === boardProjectId);
   const openTask = (taskId: string) => dispatch({ type: 'open-task', taskId });
   const toggleComplete = (taskId: string, completed: boolean) =>
     dispatch({ type: 'set-task-completed', taskId, completed });
@@ -49,7 +57,9 @@ export function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }
   // itself, so the board gets exactly what it always did.
   const ofType = (task: Task) => typeFilter === 'all' || issueTypeOf(task) === typeFilter;
   const boardTasks = useMemo(() => {
-    const kept = tasks.filter((task) => !isBacklog(task) && (typeFilter === 'all' || issueTypeOf(task) === typeFilter));
+    const kept = tasks.filter(
+      (task) => !isBacklog(task) && (typeFilter === 'all' || issueTypeOf(task) === typeFilter),
+    );
     return kept.length === tasks.length ? tasks : kept;
   }, [tasks, typeFilter]);
   const backlogTasks = tasks.filter((task) => isBacklog(task) && ofType(task));
@@ -61,7 +71,7 @@ export function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-secondary bg-surface px-4 py-3">
         <div className="flex min-w-0 flex-col">
           <h1 className="text-heading-sm font-bold text-fg-primary">پروژه‌ها و وظایف</h1>
-          <span className="numeric text-caption text-fg-tertiary">
+          <span className="text-caption text-fg-tertiary numeric">
             {`${formatCount(view === 'backlog' ? backlogTasks.length : boardTasks.length)} وظیفه در نمای فعلی`}
           </span>
         </div>
@@ -84,7 +94,11 @@ export function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }
               onValueChange={setTypeFilter}
               options={[
                 { value: 'all' as const, label: 'همه نوع‌ها' },
-                ...ISSUE_TYPES.map((entry) => ({ value: entry.id, label: entry.label, icon: <IssueTypeIcon type={entry.id} showTask decorative size={15} /> })),
+                ...ISSUE_TYPES.map((entry) => ({
+                  value: entry.id,
+                  label: entry.label,
+                  icon: <IssueTypeIcon type={entry.id} showTask decorative size={15} />,
+                })),
               ]}
             />
           </div>
@@ -140,7 +154,8 @@ export function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }
               )
             }
             onAddColumn={(title, tone) => {
-              if (boardProjectId) dispatch({ type: 'add-board-column', projectId: boardProjectId, title, tone });
+              if (boardProjectId)
+                dispatch({ type: 'add-board-column', projectId: boardProjectId, title, tone });
             }}
             onRenameColumn={(columnId, title) => dispatch({ type: 'rename-board-column', columnId, title })}
             onRemoveColumn={(columnId, disposition) =>
@@ -171,7 +186,12 @@ export function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }
               dispatch({ type: 'announce', message: `وظیفه «${task.title}» به بورد منتقل شد.` });
             }}
             onCreate={() =>
-              openTaskComposer(taskDraft({ projectId: state.projectFilterId ?? tasks[0]?.projectId ?? taskDraft().projectId, isBacklog: true }))
+              openTaskComposer(
+                taskDraft({
+                  projectId: state.projectFilterId ?? tasks[0]?.projectId ?? taskDraft().projectId,
+                  isBacklog: true,
+                }),
+              )
             }
           />
         )}
@@ -181,7 +201,7 @@ export function TaskWorkspace({ tasks, view, onViewChange, onOpenMobileFilters }
         Mobile: a single swipeable list. Board columns do not fit a 375px viewport, so the
         board's semantics move into per-row gestures instead of a horizontal scroller.
       */}
-      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-3 md:hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 scrollbar-thin md:hidden">
         {boardTasks.length === 0 ? (
           <EmptyState
             icon={<TaskSquareIcon size={26} />}

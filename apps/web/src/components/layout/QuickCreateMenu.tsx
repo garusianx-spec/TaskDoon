@@ -28,7 +28,10 @@ export function QuickCreateMenu({ close }: { readonly close: () => void }) {
       >
         گفتگوی جدید
       </MenuItem>
-      <MenuItem onSelect={run(() => open({ kind: 'event-composer', date: null }))} icon={<CalendarIcon size={18} />}>
+      <MenuItem
+        onSelect={run(() => open({ kind: 'event-composer', date: null }))}
+        icon={<CalendarIcon size={18} />}
+      >
         رویداد تقویم
       </MenuItem>
       <MenuItem onSelect={run(() => open({ kind: 'invite-member' }))} icon={<UserAddIcon size={18} />}>

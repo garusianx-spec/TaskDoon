@@ -1,15 +1,13 @@
 'use client';
 
-import type {
-PermissionMatrix
-} from '@taskin/contracts';
-import { DEPARTMENTS,ROLES } from '@/data/reference';
+import type { PermissionMatrix } from '@taskin/contracts';
+import { DEPARTMENTS, ROLES } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
-import { Badge,Button,Modal } from '@/components/ui';
+import { Badge, Button, Modal } from '@/components/ui';
 import { PermissionMatrixTable } from '@/features/workspace/components/roles/PermissionMatrixTable';
 import { RoleList } from '@/features/workspace/components/roles/RoleList';
-import { BriefcaseIcon,InfoCircleIcon,KeyIcon,RefreshIcon,ShieldIcon } from '@/components/icons';
+import { BriefcaseIcon, InfoCircleIcon, KeyIcon, RefreshIcon, ShieldIcon } from '@/components/icons';
 import { SettingRow } from '@/features/workspace/components/roles/PermissionSettingRow';
 import { useRolePermissions } from '@/features/workspace/hooks/useRolePermissions';
 
@@ -38,8 +36,20 @@ export function RolePermissionsModal({
 }: RolePermissionsModalProps) {
   const form = useRolePermissions({ open, permissions });
   if (!form) return null;
-  const { staged, activeRole, setActiveRole, scopedDepartments, setScopedDepartments, role, dirty, setCell, setModuleRow, setActionColumn, setWholeRole, applyDepartmentBaseline } = form;
-
+  const {
+    staged,
+    activeRole,
+    setActiveRole,
+    scopedDepartments,
+    setScopedDepartments,
+    role,
+    dirty,
+    setCell,
+    setModuleRow,
+    setActionColumn,
+    setWholeRole,
+    applyDepartmentBaseline,
+  } = form;
 
   return (
     <Modal
@@ -89,12 +99,7 @@ export function RolePermissionsModal({
               <KeyIcon size={16} variant="twotone" className="text-fg-tertiary" />
               سلسله‌مراتب نقش‌ها
             </h3>
-            <RoleList
-              roles={ROLES}
-              activeRole={activeRole}
-              onSelect={setActiveRole}
-              permissions={staged}
-            />
+            <RoleList roles={ROLES} activeRole={activeRole} onSelect={setActiveRole} permissions={staged} />
           </section>
 
           <section className="rounded-xl border border-secondary bg-sunken p-3">
@@ -103,8 +108,8 @@ export function RolePermissionsModal({
               اعمال گروهی بر دپارتمان
             </h3>
             <p className="mb-2.5 text-micro leading-5 text-fg-tertiary">
-              دپارتمان‌های مورد نظر را انتخاب و سپس دسترسی «مشاهده» را برای همه نقش‌های قابل ویرایش
-              فعال یا غیرفعال کنید.
+              دپارتمان‌های مورد نظر را انتخاب و سپس دسترسی «مشاهده» را برای همه نقش‌های قابل ویرایش فعال یا
+              غیرفعال کنید.
             </p>
 
             <div className="mb-3 flex flex-wrap gap-1.5">
@@ -123,7 +128,7 @@ export function RolePermissionsModal({
                       )
                     }
                     className={cn(
-                      'numeric inline-flex items-center gap-1 rounded-full border px-2 py-1 text-micro font-medium transition-colors',
+                      'inline-flex items-center gap-1 rounded-full border px-2 py-1 text-micro font-medium transition-colors numeric',
                       selected
                         ? 'border-brand bg-brand-subtle text-fg-brand'
                         : 'border-secondary bg-surface text-fg-tertiary hover:bg-hover',
@@ -161,8 +166,8 @@ export function RolePermissionsModal({
           <section className="flex items-start gap-2 rounded-xl border border-secondary bg-surface p-3">
             <InfoCircleIcon size={18} variant="twotone" className="mt-0.5 shrink-0 text-fg-brand" />
             <p className="text-micro leading-5 text-fg-tertiary">
-              نقش «مالک سازمان» همیشه دسترسی کامل دارد و قابل ویرایش نیست. برای انتقال مالکیت از
-              بخش تنظیمات سازمان اقدام کنید.
+              نقش «مالک سازمان» همیشه دسترسی کامل دارد و قابل ویرایش نیست. برای انتقال مالکیت از بخش تنظیمات
+              سازمان اقدام کنید.
             </p>
           </section>
         </aside>

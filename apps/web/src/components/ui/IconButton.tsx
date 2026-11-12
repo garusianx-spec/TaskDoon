@@ -1,13 +1,15 @@
 'use client';
 
-import { forwardRef,type ButtonHTMLAttributes,type ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export type IconButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 export type IconButtonVariant = 'ghost' | 'secondary' | 'primary' | 'subtle';
 
-export interface IconButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'children'> {
+export interface IconButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'className' | 'children'
+> {
   /** Required: an icon-only control must carry its own accessible name. */
   readonly label: string;
   readonly icon: ReactNode;

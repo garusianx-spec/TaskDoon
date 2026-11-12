@@ -37,7 +37,9 @@ export class PlatformAuditWriter {
 
   async record(admin: PlatformAdmin, entry: PlatformAuditEntry, unit?: Unit): Promise<void> {
     if (unit) return this.write(unit, admin, entry);
-    await this.uow.run({ workspaceId: entry.workspaceId ?? null, userId: admin.userId }, (own) => this.write(own, admin, entry));
+    await this.uow.run({ workspaceId: entry.workspaceId ?? null, userId: admin.userId }, (own) =>
+      this.write(own, admin, entry),
+    );
   }
 
   private async write(unit: Unit, admin: PlatformAdmin, entry: PlatformAuditEntry): Promise<void> {

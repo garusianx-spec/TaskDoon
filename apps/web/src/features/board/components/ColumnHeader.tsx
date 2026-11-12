@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect,useRef,useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BoardColumn } from '@taskin/contracts';
 import { formatCount } from '@/lib/format';
-import { Badge,IconButton,Input,Popover,Tooltip } from '@/components/ui';
-import { MenuItem,MenuList } from '@/components/ui/Menu';
+import { Badge, IconButton, Input, Popover, Tooltip } from '@/components/ui';
+import { MenuItem, MenuList } from '@/components/ui/Menu';
 import { ColumnDot } from '@/features/board/components/ColumnDot';
-import { AddIcon,EditIcon,MoreHorizontalIcon,TrashIcon } from '@/components/icons';
-
+import { AddIcon, EditIcon, MoreHorizontalIcon, TrashIcon } from '@/components/icons';
 
 interface ColumnHeaderProps {
   readonly column: BoardColumn;
@@ -51,7 +50,8 @@ export function ColumnHeader({
   const commit = () => {
     const title = draft.trim();
     if (!title) return setError('نام ستون را وارد کنید.');
-    if (existingTitles.some((existing) => existing.trim() === title)) return setError('ستونی با این نام وجود دارد.');
+    if (existingTitles.some((existing) => existing.trim() === title))
+      return setError('ستونی با این نام وجود دارد.');
     onRename(title);
     requestAnimationFrame(() => menuTriggerRef.current?.focus());
   };

@@ -18,7 +18,13 @@ import {
   Req,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import type { Observable } from 'rxjs';
 import type {
@@ -38,8 +44,20 @@ import type {
   PlatformWorkspaceDetail,
   PlatformWorkspacePage,
 } from '@taskin/contracts';
-import type { SystemBroadcastPage, SystemBroadcastView, PlatformMetrics, PlatformHealth, PlatformOutboxHealth } from '@taskin/contracts';
-import { BroadcastQueryDto, CreateBroadcastDto, UpdateBroadcastDto, SystemBroadcastPageDto, SystemBroadcastViewDto } from '../broadcasts/broadcasts.dto.js';
+import type {
+  SystemBroadcastPage,
+  SystemBroadcastView,
+  PlatformMetrics,
+  PlatformHealth,
+  PlatformOutboxHealth,
+} from '@taskin/contracts';
+import {
+  BroadcastQueryDto,
+  CreateBroadcastDto,
+  UpdateBroadcastDto,
+  SystemBroadcastPageDto,
+  SystemBroadcastViewDto,
+} from '../broadcasts/broadcasts.dto.js';
 import { PlatformBroadcastsService } from './platform-broadcasts.service.js';
 import { PlatformHealthService } from './platform-health.service.js';
 import { PlatformMetricsDto, PlatformHealthDto, PlatformOutboxHealthDto } from './platform-health.dto.js';
@@ -80,7 +98,12 @@ import {
   UnsuspendWorkspaceDto,
   WorkspaceLimitsDto,
 } from './platform-admin.dto.js';
-import { CurrentPlatformAdmin, type PlatformAdmin, PlatformAdminOnly, PlatformAdminProbe } from './platform-admin.guard.js';
+import {
+  CurrentPlatformAdmin,
+  type PlatformAdmin,
+  PlatformAdminOnly,
+  PlatformAdminProbe,
+} from './platform-admin.guard.js';
 import { PlatformAdminUnitOfWork } from './admin-unit-of-work.js';
 import { PlatformConversationsService } from './platform-conversations.service.js';
 import { PlatformModerationService } from './platform-moderation.service.js';
@@ -109,9 +132,15 @@ export class PlatformAdminProbeController {
 
   @PlatformAdminProbe()
   @Get('me')
-  @ApiOperation({ summary: 'Platform admin probe: 404 for everyone else; needs neither the SMS confirmation nor the step-up' })
+  @ApiOperation({
+    summary:
+      'Platform admin probe: 404 for everyone else; needs neither the SMS confirmation nor the step-up',
+  })
   @ApiOkResponse({ type: PlatformAdminMeDto })
-  async me(@CurrentPlatformAdmin() admin: PlatformAdmin, @CurrentAuth() principal: AuthPrincipal): Promise<PlatformAdminMe> {
+  async me(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @CurrentAuth() principal: AuthPrincipal,
+  ): Promise<PlatformAdminMe> {
     const age = Math.floor(Date.now() / 1000) - (principal.stepUpAt ?? 0);
     return {
       userId: admin.userId,
@@ -148,21 +177,31 @@ export class PlatformAdminController {
   @Get('broadcasts')
   @ApiOperation({ summary: 'Platform broadcasts, including inactive and optionally archived entries' })
   @ApiOkResponse({ type: SystemBroadcastPageDto })
-  listBroadcasts(@CurrentPlatformAdmin() admin: PlatformAdmin, @Query() query: BroadcastQueryDto): Promise<SystemBroadcastPage> {
+  listBroadcasts(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Query() query: BroadcastQueryDto,
+  ): Promise<SystemBroadcastPage> {
     return this.broadcasts.list(admin, query);
   }
 
   @Post('broadcasts')
   @ApiOperation({ summary: 'Create a platform announcement (audited and delivered through the outbox)' })
   @ApiCreatedResponse({ type: SystemBroadcastViewDto })
-  createBroadcast(@CurrentPlatformAdmin() admin: PlatformAdmin, @Body() body: CreateBroadcastDto): Promise<SystemBroadcastView> {
+  createBroadcast(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Body() body: CreateBroadcastDto,
+  ): Promise<SystemBroadcastView> {
     return this.broadcasts.create(admin, body);
   }
 
   @Patch('broadcasts/:broadcastId')
   @ApiOperation({ summary: 'Edit or activate a platform announcement' })
   @ApiOkResponse({ type: SystemBroadcastViewDto })
-  updateBroadcast(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('broadcastId', ParseUUIDPipe) id: string, @Body() body: UpdateBroadcastDto): Promise<SystemBroadcastView> {
+  updateBroadcast(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('broadcastId', ParseUUIDPipe) id: string,
+    @Body() body: UpdateBroadcastDto,
+  ): Promise<SystemBroadcastView> {
     return this.broadcasts.update(admin, id, body);
   }
 
@@ -170,7 +209,10 @@ export class PlatformAdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Soft archive a platform announcement' })
   @ApiNoContentResponse()
-  archiveBroadcast(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('broadcastId', ParseUUIDPipe) id: string): Promise<void> {
+  archiveBroadcast(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('broadcastId', ParseUUIDPipe) id: string,
+  ): Promise<void> {
     return this.broadcasts.archive(admin, id);
   }
 
@@ -200,14 +242,20 @@ export class PlatformAdminController {
   @Get('users')
   @ApiOperation({ summary: 'User directory: filter by name, phone, email, status and platform role' })
   @ApiOkResponse({ type: PlatformUserPageDto })
-  listUsers(@CurrentPlatformAdmin() admin: PlatformAdmin, @Query() query: PlatformUserQueryDto): Promise<PlatformUserPage> {
+  listUsers(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Query() query: PlatformUserQueryDto,
+  ): Promise<PlatformUserPage> {
     return this.users.list(admin, query);
   }
 
   @Get('users/:userId')
   @ApiOperation({ summary: 'A person: profile, workspaces, exact workspace roles and project memberships' })
   @ApiOkResponse({ type: PlatformUserDetailDto })
-  user(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('userId', ParseUUIDPipe) userId: string): Promise<PlatformUserDetail> {
+  user(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ): Promise<PlatformUserDetail> {
     return this.users.detail(admin, userId);
   }
 
@@ -226,7 +274,10 @@ export class PlatformAdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'End one session now (its tokens and sockets stop working)' })
   @ApiNoContentResponse()
-  revokeSession(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('sessionId', ParseUUIDPipe) sessionId: string): Promise<void> {
+  revokeSession(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+  ): Promise<void> {
     return this.users.revokeSession(admin, sessionId);
   }
 
@@ -234,12 +285,17 @@ export class PlatformAdminController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'End every session of a person' })
   @ApiOkResponse({ type: PlatformSessionsRevokedDto })
-  revokeAll(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('userId', ParseUUIDPipe) userId: string): Promise<PlatformSessionsRevoked> {
+  revokeAll(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ): Promise<PlatformSessionsRevoked> {
     return this.users.revokeAll(admin, userId);
   }
 
   @Post('users/:userId/password-reset')
-  @ApiOperation({ summary: 'Issue a single-use password reset code: sent as a link, or shown once to hand over' })
+  @ApiOperation({
+    summary: 'Issue a single-use password reset code: sent as a link, or shown once to hand over',
+  })
   @ApiCreatedResponse({ type: PasswordResetIssuedDto })
   issuePasswordReset(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
@@ -253,7 +309,10 @@ export class PlatformAdminController {
 
   @Post('users/:userId/suspend')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Suspend an account: it stops working at once, every session ends (not for platform admins or oneself)' })
+  @ApiOperation({
+    summary:
+      'Suspend an account: it stops working at once, every session ends (not for platform admins or oneself)',
+  })
   @ApiOkResponse({ type: PlatformModerationResultDto })
   suspend(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
@@ -276,7 +335,9 @@ export class PlatformAdminController {
   }
 
   @Put('users/:userId/password-reset-required')
-  @ApiOperation({ summary: 'Require (or stop requiring) a new password; requiring it signs every session out by default' })
+  @ApiOperation({
+    summary: 'Require (or stop requiring) a new password; requiring it signs every session out by default',
+  })
   @ApiOkResponse({ type: PlatformModerationResultDto })
   setPasswordResetRequired(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
@@ -291,7 +352,10 @@ export class PlatformAdminController {
   @Get('users/:userId/conversations')
   @ApiOperation({ summary: 'Every conversation a person is or was in, across workspaces' })
   @ApiOkResponse({ type: PlatformConversationViewDto, isArray: true })
-  userConversations(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('userId', ParseUUIDPipe) userId: string): Promise<PlatformConversationView[]> {
+  userConversations(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ): Promise<PlatformConversationView[]> {
     return this.conversations.ofUser(admin, userId);
   }
 
@@ -333,14 +397,20 @@ export class PlatformAdminController {
   @Get('workspaces')
   @ApiOperation({ summary: 'Every workspace' })
   @ApiOkResponse({ type: PlatformWorkspacePageDto })
-  listWorkspaces(@CurrentPlatformAdmin() admin: PlatformAdmin, @Query() query: PlatformWorkspaceQueryDto): Promise<PlatformWorkspacePage> {
+  listWorkspaces(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Query() query: PlatformWorkspaceQueryDto,
+  ): Promise<PlatformWorkspacePage> {
     return this.workspaces.list(admin, query);
   }
 
   @Get('workspaces/:workspaceId')
   @ApiOperation({ summary: 'A workspace: roles with their permission matrix, and members with their roles' })
   @ApiOkResponse({ type: PlatformWorkspaceDetailDto })
-  workspace(@CurrentPlatformAdmin() admin: PlatformAdmin, @Param('workspaceId', ParseUUIDPipe) workspaceId: string): Promise<PlatformWorkspaceDetail> {
+  workspace(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+  ): Promise<PlatformWorkspaceDetail> {
     return this.workspaces.detail(admin, workspaceId);
   }
 
@@ -348,7 +418,9 @@ export class PlatformAdminController {
 
   @Post('workspaces/:workspaceId/suspend')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Suspend a workspace: every member is refused (WORKSPACE_SUSPENDED) until it is lifted' })
+  @ApiOperation({
+    summary: 'Suspend a workspace: every member is refused (WORKSPACE_SUSPENDED) until it is lifted',
+  })
   @ApiOkResponse({ type: PlatformWorkspaceModerationResultDto })
   suspendWorkspace(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
@@ -372,7 +444,9 @@ export class PlatformAdminController {
 
   @Post('workspaces/:workspaceId/transfer-ownership')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Emergency override: make an active member the owner (the previous owner becomes an admin)' })
+  @ApiOperation({
+    summary: 'Emergency override: make an active member the owner (the previous owner becomes an admin)',
+  })
   @ApiOkResponse({ type: PlatformWorkspaceModerationResultDto })
   transferWorkspaceOwnership(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
@@ -396,7 +470,10 @@ export class PlatformAdminController {
   @Get('audit')
   @ApiOperation({ summary: 'The platform audit log: who looked at what, from where' })
   @ApiOkResponse({ type: PlatformAuditPageDto })
-  audit(@CurrentPlatformAdmin() admin: PlatformAdmin, @Query() query: PlatformAuditQueryDto): Promise<PlatformAuditPage> {
+  audit(
+    @CurrentPlatformAdmin() admin: PlatformAdmin,
+    @Query() query: PlatformAuditQueryDto,
+  ): Promise<PlatformAuditPage> {
     return this.workspaces.audit(admin, query);
   }
 }

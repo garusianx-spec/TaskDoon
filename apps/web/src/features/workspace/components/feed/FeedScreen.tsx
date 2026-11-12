@@ -1,28 +1,28 @@
 'use client';
 
-import { useMemo,useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ActivityKind } from '@taskin/contracts';
 import { useWorkspace } from '@/store/WorkspaceProvider';
-import { isOverdue,subtaskProgress,userById } from '@/store/selectors';
+import { isOverdue, subtaskProgress, userById } from '@/store/selectors';
 import { describeDeadline } from '@taskin/jalali';
-import { formatCount,formatPercent } from '@/lib/format';
-import { statusLabel,statusTone } from '@/data/reference';
+import { formatCount, formatPercent } from '@/lib/format';
+import { statusLabel, statusTone } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { AppShell } from '@/components/layout/AppShell';
-import { TaskCompleteCheckbox,completedTitleClass } from '@/features/tasks/components/TaskCompleteCheckbox';
+import { TaskCompleteCheckbox, completedTitleClass } from '@/features/tasks/components/TaskCompleteCheckbox';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
-import { Avatar,Badge,Button,ProgressBar,RelativeTime } from '@/components/ui';
+import { Avatar, Badge, Button, ProgressBar, RelativeTime } from '@/components/ui';
 import {
-AddIcon,
-CheckCircleIcon,
-ClockIcon,
-DocumentIcon,
-MessagesIcon,
-TaskSquareIcon,
-UserAddIcon,
-WarningIcon,
+  AddIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  DocumentIcon,
+  MessagesIcon,
+  TaskSquareIcon,
+  UserAddIcon,
+  WarningIcon,
 } from '@/components/icons';
-import { TodayLabel,SummaryCard } from '@/features/workspace/components/feed/FeedSummary';
+import { TodayLabel, SummaryCard } from '@/features/workspace/components/feed/FeedSummary';
 
 const ACTIVITY_ICONS: Readonly<Record<ActivityKind, typeof TaskSquareIcon>> = {
   'task-assigned': TaskSquareIcon,
@@ -72,7 +72,7 @@ function FeedContent() {
     myTasks.length === 0 ? 0 : ((myTasks.length - openTasks.length) / myTasks.length) * 100;
 
   return (
-    <div className="scrollbar-thin h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto scrollbar-thin">
       <header className="border-b border-secondary bg-surface px-4 py-5 sm:px-6">
         <div className="mx-auto flex max-w-5xl flex-col gap-1">
           <p className="text-caption text-fg-tertiary">{activeWorkspace.name}</p>
@@ -128,7 +128,7 @@ function FeedContent() {
             tone={completionRate >= 70 ? 'done' : 'brand'}
             showFraction={false}
           />
-          <p className="numeric mt-2 text-caption text-fg-tertiary">
+          <p className="mt-2 text-caption text-fg-tertiary numeric">
             {`${formatCount(myTasks.length - openTasks.length)} از ${formatCount(myTasks.length)} وظیفه انجام شده است.`}
           </p>
         </section>
@@ -227,7 +227,12 @@ function FeedContent() {
                     className="flex items-start gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-hover"
                   >
                     {actor && (
-                      <Avatar name={actor.fullName} initials={actor.initials} tone={actor.avatarTone} size="sm" />
+                      <Avatar
+                        name={actor.fullName}
+                        initials={actor.initials}
+                        tone={actor.avatarTone}
+                        size="sm"
+                      />
                     )}
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <p className="text-body-sm text-fg-secondary">
@@ -235,7 +240,7 @@ function FeedContent() {
                         {` ${ACTIVITY_VERBS[item.kind]}`}
                       </p>
                       <p className="truncate text-caption font-medium text-fg-primary">{item.targetTitle}</p>
-                      <p className="numeric truncate text-micro text-fg-tertiary">
+                      <p className="truncate text-micro text-fg-tertiary numeric">
                         {`${item.context}، `}
                         <RelativeTime iso={item.createdAt} />
                       </p>

@@ -1,12 +1,12 @@
 'use client';
 
-import { forwardRef,type ButtonHTMLAttributes } from 'react';
+import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import type { CalendarEventKind } from '@taskin/contracts';
 import type { CalendarItem } from '@/store/selectors';
 import { calendarEventKindLabel } from '@/data/reference';
 import { cn } from '@/lib/utils';
-import { daysBetween,fromISODate,toPersianDigits } from '@taskin/jalali';
-import { CalendarIcon,FlagIcon,MilestoneIcon,NotificationIcon } from '@/components/icons';
+import { daysBetween, fromISODate, toPersianDigits } from '@taskin/jalali';
+import { CalendarIcon, FlagIcon, MilestoneIcon, NotificationIcon } from '@/components/icons';
 
 /** Visual grammar shared by the month grid, the day summary and the upcoming list. */
 export const EVENT_ICONS: Readonly<Record<CalendarEventKind, typeof CalendarIcon>> = {
@@ -70,7 +70,10 @@ export function itemDotClass(item: CalendarItem, today: Date): string {
   }
 }
 
-export interface CalendarBadgeProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'children'> {
+export interface CalendarBadgeProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'className' | 'children'
+> {
   readonly item: CalendarItem;
   readonly today: Date;
 }

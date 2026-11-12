@@ -30,10 +30,15 @@ test('invalid configuration fails closed before any subprocess starts', () => {
     assert.throws(() => validateConfiguration(env), {
       message: 'Invalid Coolify deployment configuration.',
     });
-    assert.deepEqual(triggerCoolify({
-      env,
-      spawn() { assert.fail('An invalid configuration must not spawn curl.'); },
-    }), { ok: false, reason: 'configuration' });
+    assert.deepEqual(
+      triggerCoolify({
+        env,
+        spawn() {
+          assert.fail('An invalid configuration must not spawn curl.');
+        },
+      }),
+      { ok: false, reason: 'configuration' },
+    );
   }
 });
 
@@ -52,28 +57,48 @@ test('curl receives secrets only through escaped stdin, with bounded safe option
   assert.equal(command, 'curl');
   assert.equal(args[0], '--disable');
   for (const [option, value] of [
-    ['--config', '-'], ['--request', 'POST'], ['--proto', '=https'],
-    ['--proto-redir', '=https'], ['--connect-timeout', '10'],
-    ['--max-time', '30'], ['--retry', '3'], ['--retry-max-time', '120'],
-    ['--output', '/dev/null'], ['--write-out', '%{http_code}'],
+    ['--config', '-'],
+    ['--request', 'POST'],
+    ['--proto', '=https'],
+    ['--proto-redir', '=https'],
+    ['--connect-timeout', '10'],
+    ['--max-time', '30'],
+    ['--retry', '3'],
+    ['--retry-max-time', '120'],
+    ['--output', '/dev/null'],
+    ['--write-out', '%{http_code}'],
   ]) {
     assert.equal(args[args.indexOf(option) + 1], value);
   }
-  for (const option of ['--silent', '--fail', '--globoff', '--tlsv1.2',
-    '--no-location', '--no-netrc', '--retry-connrefused']) {
+  for (const option of [
+    '--silent',
+    '--fail',
+    '--globoff',
+    '--tlsv1.2',
+    '--no-location',
+    '--no-netrc',
+    '--retry-connrefused',
+  ]) {
     assert.ok(args.includes(option));
   }
-  for (const unsafe of ['--location', '--location-trusted', '--insecure',
-    '--retry-all-errors', '--verbose', '--trace']) {
+  for (const unsafe of [
+    '--location',
+    '--location-trusted',
+    '--insecure',
+    '--retry-all-errors',
+    '--verbose',
+    '--trace',
+  ]) {
     assert.ok(!args.includes(unsafe));
   }
   assert.ok(!args.join(' ').includes(url));
   assert.ok(!args.join(' ').includes(escapedToken));
   assert.equal(options.env.COOLIFY_WEBHOOK_URL, undefined);
   assert.equal(options.env.COOLIFY_API_TOKEN, undefined);
-  assert.equal(options.input,
-    'url = "' + url + '"\n' +
-    'header = "Authorization: Bearer secret\\"quoted\\\\token"\n');
+  assert.equal(
+    options.input,
+    'url = "' + url + '"\n' + 'header = "Authorization: Bearer secret\\"quoted\\\\token"\n',
+  );
   assert.deepEqual(options.stdio, ['pipe', 'pipe', 'ignore']);
   assert.equal(options.shell, false);
   assert.equal(options.timeout, 155_000);
@@ -83,17 +108,33 @@ test('curl receives secrets only through escaped stdin, with bounded safe option
 
 test('only a completed 2xx curl request is accepted', () => {
   for (const code of ['200', '201', '202', '204', '299']) {
-    assert.deepEqual(triggerCoolify({
-      env: credentials,
-      spawn: () => ({ status: 0, stdout: code }),
-    }), { ok: true, httpStatus: Number(code) });
+    assert.deepEqual(
+      triggerCoolify({
+        env: credentials,
+        spawn: () => ({ status: 0, stdout: code }),
+      }),
+      { ok: true, httpStatus: Number(code) },
+    );
   }
-  for (const code of ['000', '199', '301', '401', '429', '500', '200\n' + token,
-    '200200', '{"status":200}', '']) {
-    assert.deepEqual(triggerCoolify({
-      env: credentials,
-      spawn: () => ({ status: 0, stdout: code }),
-    }), { ok: false, reason: 'http' });
+  for (const code of [
+    '000',
+    '199',
+    '301',
+    '401',
+    '429',
+    '500',
+    '200\n' + token,
+    '200200',
+    '{"status":200}',
+    '',
+  ]) {
+    assert.deepEqual(
+      triggerCoolify({
+        env: credentials,
+        spawn: () => ({ status: 0, stdout: code }),
+      }),
+      { ok: false, reason: 'http' },
+    );
   }
   for (const response of [
     undefined,
@@ -101,13 +142,23 @@ test('only a completed 2xx curl request is accepted', () => {
     { status: 0, stdout: '200', error: new Error(token) },
     { status: null, stdout: '200', signal: 'SIGKILL' },
   ]) {
-    assert.deepEqual(triggerCoolify({
-      env: credentials, spawn: () => response,
-    }), { ok: false, reason: 'transport' });
+    assert.deepEqual(
+      triggerCoolify({
+        env: credentials,
+        spawn: () => response,
+      }),
+      { ok: false, reason: 'transport' },
+    );
   }
-  assert.deepEqual(triggerCoolify({
-    env: credentials, spawn() { throw new Error(url + token); },
-  }), { ok: false, reason: 'transport' });
+  assert.deepEqual(
+    triggerCoolify({
+      env: credentials,
+      spawn() {
+        throw new Error(url + token);
+      },
+    }),
+    { ok: false, reason: 'transport' },
+  );
 });
 
 test('CLI logs safe outcomes and never repeats subprocess errors or response bodies', () => {

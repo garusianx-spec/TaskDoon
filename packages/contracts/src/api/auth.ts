@@ -61,8 +61,16 @@ export interface OtpVerifyBody {
 
 export type OtpVerifyResult =
   | { readonly status: 'signed_in'; readonly session: AuthSession }
-  | { readonly status: 'admin_setup_required'; readonly temporaryToken: string; readonly expiresInSeconds: number }
-  | { readonly status: 'password_required'; readonly temporaryToken: string; readonly expiresInSeconds: number }
+  | {
+      readonly status: 'admin_setup_required';
+      readonly temporaryToken: string;
+      readonly expiresInSeconds: number;
+    }
+  | {
+      readonly status: 'password_required';
+      readonly temporaryToken: string;
+      readonly expiresInSeconds: number;
+    }
   | {
       readonly status: 'signup_required';
       /** Proves the phone was verified; exchange it at `POST /auth/signup` within its lifetime. */
@@ -129,9 +137,13 @@ export interface AdminPasswordBody {
   readonly password: string;
   readonly deviceLabel?: string;
 }
-export interface AdminRecoveryRequestBody { readonly temporaryToken: string }
+export interface AdminRecoveryRequestBody {
+  readonly temporaryToken: string;
+}
 export interface AdminRecoveryCompleteBody extends AdminRecoveryRequestBody {
   readonly code: string;
   readonly newPassword: string;
 }
-export interface EmailVerificationConfirmBody { readonly code: string }
+export interface EmailVerificationConfirmBody {
+  readonly code: string;
+}

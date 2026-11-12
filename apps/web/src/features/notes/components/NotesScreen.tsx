@@ -7,12 +7,9 @@ import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
 import { NotesSidebar } from '@/features/notes/components/NotesSidebar';
 import { NoteEditor } from '@/features/notes/components/NoteEditor';
-import { Button,ExpandableSearch,IconButton } from '@/components/ui';
+import { Button, ExpandableSearch, IconButton } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import {
-AddIcon,FilterIcon,
-NotebookIcon
-} from '@/components/icons';
+import { AddIcon, FilterIcon, NotebookIcon } from '@/components/icons';
 import { NoteListItem } from '@/features/notes/components/NoteListItem';
 import { useNotesScreen } from '@/features/notes/hooks/useNotesScreen';
 
@@ -22,8 +19,39 @@ import { useNotesScreen } from '@/features/notes/hooks/useNotesScreen';
  * editor in the workspace.
  */
 export function NotesPage() {
-  const { state, dispatch, saveNote, categoryId, setCategoryId, color, setColor, search, setSearch, searchOpen, setSearchOpen, saveNotice, setSaveNotice, setSelectedId, mobileSidebarOpen, setMobileSidebarOpen, mobileEditorOpen, setMobileEditorOpen, notes, categories, editorKeys, visible, selected, currentEditor, discardBlankDraft, select, changeCategory, startNote, createNote, convertToTask, heading } = useNotesScreen();
-
+  const {
+    state,
+    dispatch,
+    saveNote,
+    categoryId,
+    setCategoryId,
+    color,
+    setColor,
+    search,
+    setSearch,
+    searchOpen,
+    setSearchOpen,
+    saveNotice,
+    setSaveNotice,
+    setSelectedId,
+    mobileSidebarOpen,
+    setMobileSidebarOpen,
+    mobileEditorOpen,
+    setMobileEditorOpen,
+    notes,
+    categories,
+    editorKeys,
+    visible,
+    selected,
+    currentEditor,
+    discardBlankDraft,
+    select,
+    changeCategory,
+    startNote,
+    createNote,
+    convertToTask,
+    heading,
+  } = useNotesScreen();
 
   return (
     <AppShell
@@ -64,9 +92,13 @@ export function NotesPage() {
               {/* The title yields its room to the search field while a search is open. */}
               <div className={cn('min-w-0 flex-1 flex-col', searchOpen ? 'hidden' : 'flex')}>
                 <h1 className="truncate text-heading-sm font-bold text-fg-primary">{heading}</h1>
-                <span className="numeric text-caption text-fg-tertiary">{`${formatCount(visible.length)} یادداشت`}</span>
+                <span className="text-caption text-fg-tertiary numeric">{`${formatCount(visible.length)} یادداشت`}</span>
               </div>
-              <div role="toolbar" aria-label="اقدام‌های یادداشت" className={cn('flex items-center gap-1.5', searchOpen && 'flex-1')}>
+              <div
+                role="toolbar"
+                aria-label="اقدام‌های یادداشت"
+                className={cn('flex items-center gap-1.5', searchOpen && 'flex-1')}
+              >
                 <ExpandableSearch
                   label="جستجو در یادداشت‌ها"
                   placeholder="عنوان یا متن…"
@@ -107,16 +139,28 @@ export function NotesPage() {
               }
             />
           ) : (
-            <ul className="scrollbar-thin flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+            <ul className="flex flex-1 flex-col gap-1 overflow-y-auto p-2 scrollbar-thin">
               {visible.map((note) => (
-                <NoteListItem key={note.id} note={note} active={note.id === selected?.id} onSelect={() => select(note.id)} />
+                <NoteListItem
+                  key={note.id}
+                  note={note}
+                  active={note.id === selected?.id}
+                  onSelect={() => select(note.id)}
+                />
               ))}
             </ul>
           )}
         </section>
 
         <div className={cn('min-h-0 min-w-0 flex-1 flex-col', mobileEditorOpen ? 'flex' : 'hidden lg:flex')}>
-          {saveNotice && <p role="status" className="border-b border-secondary bg-sunken px-4 py-2 text-caption text-fg-secondary">{saveNotice}</p>}
+          {saveNotice && (
+            <p
+              role="status"
+              className="border-b border-secondary bg-sunken px-4 py-2 text-caption text-fg-secondary"
+            >
+              {saveNotice}
+            </p>
+          )}
           {selected ? (
             <NoteEditor
               key={editorKeys[selected.id] ?? selected.id}
@@ -127,7 +171,11 @@ export function NotesPage() {
               onSave={async () => {
                 const origin = currentEditor.current;
                 await saveNote(selected.id);
-                if (origin.workspaceId !== currentEditor.current.workspaceId || origin.identity !== currentEditor.current.identity) return;
+                if (
+                  origin.workspaceId !== currentEditor.current.workspaceId ||
+                  origin.identity !== currentEditor.current.identity
+                )
+                  return;
                 startNote(selected.categoryId);
                 setSaveNotice('یادداشت ذخیره شد. یادداشت تازه‌ای بنویسید.');
               }}

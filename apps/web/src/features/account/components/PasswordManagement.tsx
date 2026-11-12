@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import type { User } from '@taskin/contracts';
-import { formatJalali,toPersianDigits } from '@taskin/jalali';
+import { formatJalali, toPersianDigits } from '@taskin/jalali';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
-import { Button,Input } from '@/components/ui';
-import { CheckCircleIcon,EyeIcon,EyeSlashIcon,KeyIcon } from '@/components/icons';
+import { Button, Input } from '@/components/ui';
+import { CheckCircleIcon, EyeIcon, EyeSlashIcon, KeyIcon } from '@/components/icons';
 import { PasswordStrengthMeter } from '@/features/account/components/PasswordStrengthMeter';
 
 interface PasswordManagementProps {
@@ -23,7 +23,13 @@ export interface PasswordManagementSession {
 
 const MIN_LENGTH = 8;
 
-export function PasswordManagement({ open, user, passwordChangedAt, onPasswordChanged, live }: PasswordManagementProps) {
+export function PasswordManagement({
+  open,
+  user,
+  passwordChangedAt,
+  onPasswordChanged,
+  live,
+}: PasswordManagementProps) {
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -61,7 +67,8 @@ export function PasswordManagement({ open, user, passwordChangedAt, onPasswordCh
     setTouched(true);
     setSaved(false);
     setServerError(null);
-    if ((needsCurrent && !current) || next.length < MIN_LENGTH || next === current || confirm !== next) return;
+    if ((needsCurrent && !current) || next.length < MIN_LENGTH || next === current || confirm !== next)
+      return;
     if (live) {
       setBusy(true);
       const failure = await live.onChangePassword(needsCurrent ? current : null, next);
@@ -93,86 +100,93 @@ export function PasswordManagement({ open, user, passwordChangedAt, onPasswordCh
   );
 
   return (
-  <section aria-labelledby="security-password" className="flex flex-col gap-3">
-    <div className="flex flex-wrap items-baseline gap-2">
-      <h3 id="security-password" className="flex items-center gap-2 text-title-sm font-semibold text-fg-primary">
-        <KeyIcon size={18} className="text-fg-quaternary" />
-        {live ? (live.hasPassword ? 'تغییر رمز مدیر' : 'تعیین رمز مدیر') : 'تغییر رمز عبور'}
-      </h3>
-      {!live && (
-        <span className="numeric text-micro text-fg-tertiary">
-          {`آخرین تغییر: ${formatJalali(passwordChangedAt, 'medium')}`}
-        </span>
-      )}
-    </div>
-    {live && (
-      <p className="text-caption text-fg-tertiary">
-        ورود مدیران پلتفرم با کد پیامکی و سپس این رمز تکمیل می‌شود. مالکان و مدیران برای کارهای حساس، مانند حذف
-        فضای کاری یا تغییر دسترسی‌ها، این رمز را دوباره وارد می‌کنند. با تغییر رمز، نشست‌های دیگر شما بسته می‌شوند.
-      </p>
-    )}
-
-    <form
-      className="flex flex-col gap-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void submitPassword();
-      }}
-    >
-      {/* Lets password managers associate the fields with this account. */}
-      <input type="text" autoComplete="username" value={user.email || user.phone} readOnly hidden />
-      {needsCurrent && (
-        <Input
-          label="رمز عبور فعلی"
-          type={inputType}
-          autoComplete="current-password"
-          dir="ltr"
-          value={current}
-          onChange={(event) => setCurrent(event.target.value)}
-          error={currentError}
-          iconEnd={revealToggle}
-        />
-      )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input
-          label="رمز عبور جدید"
-          type={inputType}
-          autoComplete="new-password"
-          dir="ltr"
-          value={next}
-          onChange={(event) => setNext(event.target.value)}
-          error={nextError}
-        />
-        <Input
-          label="تکرار رمز عبور جدید"
-          type={inputType}
-          autoComplete="new-password"
-          dir="ltr"
-          value={confirm}
-          onChange={(event) => setConfirm(event.target.value)}
-          error={confirmError}
-        />
-      </div>
-
-      <PasswordStrengthMeter password={next} minimumLength={MIN_LENGTH} />
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" size="sm" loading={busy}>
-          {live && !live.hasPassword ? 'ذخیره رمز مدیر' : 'به‌روزرسانی رمز عبور'}
-        </Button>
-        {serverError && (
-          <span role="alert" className="text-caption font-medium text-status-blocked">
-            {serverError}
-          </span>
-        )}
-        {saved && (
-          <span role="status" className="inline-flex items-center gap-1.5 text-caption font-medium text-status-done">
-            <CheckCircleIcon size={16} />
-            رمز عبور با موفقیت تغییر کرد.
+    <section aria-labelledby="security-password" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline gap-2">
+        <h3
+          id="security-password"
+          className="flex items-center gap-2 text-title-sm font-semibold text-fg-primary"
+        >
+          <KeyIcon size={18} className="text-fg-quaternary" />
+          {live ? (live.hasPassword ? 'تغییر رمز مدیر' : 'تعیین رمز مدیر') : 'تغییر رمز عبور'}
+        </h3>
+        {!live && (
+          <span className="text-micro text-fg-tertiary numeric">
+            {`آخرین تغییر: ${formatJalali(passwordChangedAt, 'medium')}`}
           </span>
         )}
       </div>
-    </form>
-  </section>
+      {live && (
+        <p className="text-caption text-fg-tertiary">
+          ورود مدیران پلتفرم با کد پیامکی و سپس این رمز تکمیل می‌شود. مالکان و مدیران برای کارهای حساس، مانند
+          حذف فضای کاری یا تغییر دسترسی‌ها، این رمز را دوباره وارد می‌کنند. با تغییر رمز، نشست‌های دیگر شما
+          بسته می‌شوند.
+        </p>
+      )}
+
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submitPassword();
+        }}
+      >
+        {/* Lets password managers associate the fields with this account. */}
+        <input type="text" autoComplete="username" value={user.email || user.phone} readOnly hidden />
+        {needsCurrent && (
+          <Input
+            label="رمز عبور فعلی"
+            type={inputType}
+            autoComplete="current-password"
+            dir="ltr"
+            value={current}
+            onChange={(event) => setCurrent(event.target.value)}
+            error={currentError}
+            iconEnd={revealToggle}
+          />
+        )}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input
+            label="رمز عبور جدید"
+            type={inputType}
+            autoComplete="new-password"
+            dir="ltr"
+            value={next}
+            onChange={(event) => setNext(event.target.value)}
+            error={nextError}
+          />
+          <Input
+            label="تکرار رمز عبور جدید"
+            type={inputType}
+            autoComplete="new-password"
+            dir="ltr"
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+            error={confirmError}
+          />
+        </div>
+
+        <PasswordStrengthMeter password={next} minimumLength={MIN_LENGTH} />
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" size="sm" loading={busy}>
+            {live && !live.hasPassword ? 'ذخیره رمز مدیر' : 'به‌روزرسانی رمز عبور'}
+          </Button>
+          {serverError && (
+            <span role="alert" className="text-caption font-medium text-status-blocked">
+              {serverError}
+            </span>
+          )}
+          {saved && (
+            <span
+              role="status"
+              className="inline-flex items-center gap-1.5 text-caption font-medium text-status-done"
+            >
+              <CheckCircleIcon size={16} />
+              رمز عبور با موفقیت تغییر کرد.
+            </span>
+          )}
+        </div>
+      </form>
+    </section>
   );
 }

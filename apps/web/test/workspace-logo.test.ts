@@ -1,4 +1,4 @@
-import { afterEach,describe,expect,it,vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceView } from '@taskin/contracts';
 import { api } from '@/api/endpoints';
 import { workspaceFromView } from '@/api/mappers';
@@ -16,22 +16,40 @@ const view: WorkspaceView = {
   iconUrl,
   planId: 'free',
   limits: { maxMembers: 10, storageBytes: 100, maxFileBytes: 10, messageHistoryDays: null, maxProjects: 5 },
-  settings: { timeZone: 'Asia/Tehran', weekStart: 'saturday', weekend: ['friday'], systemMessageOnConvert: true, allowedEmailDomains: [] },
+  settings: {
+    timeZone: 'Asia/Tehran',
+    weekStart: 'saturday',
+    weekend: ['friday'],
+    systemMessageOnConvert: true,
+    allowedEmailDomains: [],
+  },
   createdAt: '2026-10-15T00:00:00.000Z',
 };
 
 function loadedWorkspace() {
   let state = DEMO_WORKSPACE_STATE;
   const store = new LiveStore();
-  Object.assign(store, { workspaceId: existing.id, status: { ...store.current, phase: 'ready', user: { id: state.meId } } });
-  store.attach(() => state, (action) => { state = workspaceReducer(state, action); });
+  Object.assign(store, {
+    workspaceId: existing.id,
+    status: { ...store.current, phase: 'ready', user: { id: state.meId } },
+  });
+  store.attach(
+    () => state,
+    (action) => {
+      state = workspaceReducer(state, action);
+    },
+  );
   return { store, getState: () => state };
 }
 
 function issueTicket() {
   return vi.spyOn(api.files, 'iconTicket').mockResolvedValue({
-    key: 'tmp/icons/member/logo', url: 'https://storage.example.test/upload', fields: { key: 'tmp/icons/member/logo' },
-    maxBytes: 1024 * 1024, contentTypes: ['image/png', 'image/jpeg', 'image/webp'], expiresInSeconds: 600,
+    key: 'tmp/icons/member/logo',
+    url: 'https://storage.example.test/upload',
+    fields: { key: 'tmp/icons/member/logo' },
+    maxBytes: 1024 * 1024,
+    contentTypes: ['image/png', 'image/jpeg', 'image/webp'],
+    expiresInSeconds: 600,
   });
 }
 
@@ -46,7 +64,9 @@ describe('workspace logo updates', () => {
     expect(workspaceIconError(new File(['raster'], 'logo.jpg'))).toBeUndefined();
     expect(workspaceIconError(new File(['vector'], 'logo.svg', { type: 'image/svg+xml' }))).toBeDefined();
     expect(workspaceIconError(new File([], 'logo.png', { type: 'image/png' }))).toBeDefined();
-    expect(workspaceIconError(new File([new Uint8Array(1024 * 1024 + 1)], 'logo.png', { type: 'image/png' }))).toBeDefined();
+    expect(
+      workspaceIconError(new File([new Uint8Array(1024 * 1024 + 1)], 'logo.png', { type: 'image/png' })),
+    ).toBeDefined();
   });
 
   it('uploads before claiming the key and adopts the canonical workspace response', async () => {
@@ -68,10 +88,15 @@ describe('workspace logo updates', () => {
   it('leaves the workspace alone when storage rejects the upload and removes via an explicit null', async () => {
     const { store, getState } = loadedWorkspace();
     const ticket = issueTicket();
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 403 })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 403 })),
+    );
     const update = vi.spyOn(api.workspaces, 'update').mockResolvedValue({ ...view, iconUrl: null });
 
-    await expect(store.saveWorkspaceIcon(existing.id, image)).rejects.toMatchObject({ code: 'UPLOAD_INVALID' });
+    await expect(store.saveWorkspaceIcon(existing.id, image)).rejects.toMatchObject({
+      code: 'UPLOAD_INVALID',
+    });
     expect(update).not.toHaveBeenCalled();
     expect(getState()).toBe(DEMO_WORKSPACE_STATE);
 

@@ -22,7 +22,10 @@ import { OTP_LENGTH } from './otp.service.js';
 /* Request bodies: validated DTO classes that implement the shared contract interfaces. */
 
 export class OtpRequestDto implements OtpRequestBody {
-  @ApiProperty({ example: '0912 123 4567', description: 'Any written form of an Iranian mobile number, Persian digits included' })
+  @ApiProperty({
+    example: '0912 123 4567',
+    description: 'Any written form of an Iranian mobile number, Persian digits included',
+  })
   @IsString()
   @Length(10, 24)
   readonly phone!: string;
@@ -48,7 +51,10 @@ export class OtpVerifyDto implements OtpVerifyBody {
 const OTP_CODE = new RegExp(`^[0-9]{${OTP_LENGTH}}$`);
 
 export class PasswordSignInDto implements PasswordSignInBody {
-  @ApiProperty({ example: '0912 123 4567', description: 'Any written form of an Iranian mobile number, Persian digits included' })
+  @ApiProperty({
+    example: '0912 123 4567',
+    description: 'Any written form of an Iranian mobile number, Persian digits included',
+  })
   @IsString()
   @Length(10, 24)
   readonly phone!: string;
@@ -151,7 +157,8 @@ export class MeUserDto implements MeUser {
   @ApiProperty({ example: '+989121234567' }) readonly phone!: string;
   @ApiProperty({ type: String, nullable: true }) readonly email!: string | null;
   @ApiProperty() readonly fullName!: string;
-  @ApiProperty({ enum: ['brand', 'teal', 'violet', 'amber', 'rose', 'slate'] }) readonly avatarTone!: AvatarTone;
+  @ApiProperty({ enum: ['brand', 'teal', 'violet', 'amber', 'rose', 'slate'] })
+  readonly avatarTone!: AvatarTone;
   @ApiProperty({ example: 'fa-IR' }) readonly locale!: string;
   @ApiProperty({ example: 'Asia/Tehran' }) readonly timeZone!: string;
   @ApiProperty() readonly hasPassword!: boolean;

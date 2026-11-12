@@ -6,16 +6,16 @@ Platform broadcasts are independent of workspaces. Their table deliberately has 
 
 All routes below use the /api/v1 prefix. The existing platform-admin, SMS-confirmation and password step-up guards protect every admin operation. Public broadcasts require authentication.
 
-| Route | Behavior |
-|---|---|
-| GET /broadcasts/active | Current announcements, nextChangeAt and fresh serverNow; no operator fields |
-| GET /admin/broadcasts | Keyset pagination, limit 1–100; status current, archived or all |
-| POST /admin/broadcasts | Create with message, severity and optional visibility window |
-| PATCH /admin/broadcasts/:broadcastId | Edit schedule, severity, message or activation |
-| DELETE /admin/broadcasts/:broadcastId | Idempotent soft archive; disables the announcement |
-| GET /admin/metrics | Aggregate counts and live storage usage; Redis cache for 60 seconds |
-| GET /admin/health | Independent two-second DB, admin pool, Redis Core/RT and S3 probes; passive SMS status |
-| GET /admin/health/outbox | Pending count/oldest age, queue counts and sanitized recent failures |
+| Route                                 | Behavior                                                                               |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| GET /broadcasts/active                | Current announcements, nextChangeAt and fresh serverNow; no operator fields            |
+| GET /admin/broadcasts                 | Keyset pagination, limit 1–100; status current, archived or all                        |
+| POST /admin/broadcasts                | Create with message, severity and optional visibility window                           |
+| PATCH /admin/broadcasts/:broadcastId  | Edit schedule, severity, message or activation                                         |
+| DELETE /admin/broadcasts/:broadcastId | Idempotent soft archive; disables the announcement                                     |
+| GET /admin/metrics                    | Aggregate counts and live storage usage; Redis cache for 60 seconds                    |
+| GET /admin/health                     | Independent two-second DB, admin pool, Redis Core/RT and S3 probes; passive SMS status |
+| GET /admin/health/outbox              | Pending count/oldest age, queue counts and sanitized recent failures                   |
 
 Broadcast text is trimmed, 1–500 characters. Expiration must follow the start. Archived rows cannot be edited. Broadcast writes, platform audit entries and system.broadcast outbox events commit atomically. Audit metadata records changed fields and schedule without copying announcement text. Archive retries do not create duplicate effects.
 

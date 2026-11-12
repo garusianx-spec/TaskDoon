@@ -30,7 +30,9 @@ export default async function setup(project: TestProject): Promise<() => Promise
   return async () => {
     const cleanup = new pg.Client({ connectionString: adminUrl() });
     await cleanup.connect();
-    const { rows } = await cleanup.query<{ datname: string }>(`select datname from pg_database where datname like 'taskin_test_%'`);
+    const { rows } = await cleanup.query<{ datname: string }>(
+      `select datname from pg_database where datname like 'taskin_test_%'`,
+    );
     for (const { datname } of rows) await cleanup.query(`drop database if exists ${datname} with (force)`);
     await cleanup.end();
   };

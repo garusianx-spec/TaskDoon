@@ -1,21 +1,21 @@
 'use client';
 
 import {
-cloneElement,
-useCallback,
-useEffect,
-useLayoutEffect,
-useMemo,
-useRef,
-useState,
-type ReactElement,
-type ReactNode,
-type RefObject,
+  cloneElement,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
 } from 'react';
 import { cn } from '@/lib/utils';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useNamespacedId } from '@/hooks/useId';
-import { constrainedPopoverPosition,constrainedPopoverVerticalPosition } from '@/lib/popover-position';
+import { constrainedPopoverPosition, constrainedPopoverVerticalPosition } from '@/lib/popover-position';
 
 export type PopoverPlacement = 'top' | 'bottom';
 export type PopoverAlign = 'start' | 'end' | 'center';
@@ -70,7 +70,10 @@ export function Popover({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const panelId = useNamespacedId('popover-');
   const [position, setPosition] = useState<{
-    readonly left: number; readonly top: number; readonly maxWidth: number; readonly maxHeight: number;
+    readonly left: number;
+    readonly top: number;
+    readonly maxWidth: number;
+    readonly maxHeight: number;
   } | null>(null);
 
   const setOpen = useCallback(
@@ -152,22 +155,34 @@ export function Popover({
         anchorLeft: triggerRect.left,
         anchorRight: triggerRect.right,
         panelWidth: panel.offsetWidth,
-        boundaryLeft, boundaryRight, align,
+        boundaryLeft,
+        boundaryRight,
+        align,
         direction: getComputedStyle(trigger).direction === 'rtl' ? 'rtl' : 'ltr',
       });
       const vertical = constrainedPopoverVerticalPosition({
-        anchorTop: triggerRect.top, anchorBottom: triggerRect.bottom,
+        anchorTop: triggerRect.top,
+        anchorBottom: triggerRect.bottom,
         panelHeight: panel.scrollHeight + panel.offsetHeight - panel.clientHeight,
-        boundaryTop, boundaryBottom, placement,
+        boundaryTop,
+        boundaryBottom,
+        placement,
       });
       // The trigger normally fills its anchor, but keep offsets correct for narrower triggers.
       const adjusted = {
-        ...next, ...vertical,
+        ...next,
+        ...vertical,
         left: next.left + triggerRect.left - anchorRect.left,
         top: vertical.top + triggerRect.top - anchorRect.top,
       };
-      setPosition((current) => current?.left === adjusted.left && current.top === adjusted.top
-        && current.maxWidth === adjusted.maxWidth && current.maxHeight === adjusted.maxHeight ? current : adjusted);
+      setPosition((current) =>
+        current?.left === adjusted.left &&
+        current.top === adjusted.top &&
+        current.maxWidth === adjusted.maxWidth &&
+        current.maxHeight === adjusted.maxHeight
+          ? current
+          : adjusted,
+      );
     };
     update();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
@@ -194,14 +209,18 @@ export function Popover({
   return (
     <div
       className={cn('relative inline-flex', className)}
-      onKeyDown={open && constrainToViewport ? (event) => {
-        if (event.key !== 'Escape') return;
-        // Focus can still be on the trigger before the popup's autofocus frame runs.
-        // Consume Escape from either surface before an enclosing modal sees it.
-        event.preventDefault();
-        event.stopPropagation();
-        close();
-      } : undefined}
+      onKeyDown={
+        open && constrainToViewport
+          ? (event) => {
+              if (event.key !== 'Escape') return;
+              // Focus can still be on the trigger before the popup's autofocus frame runs.
+              // Consume Escape from either surface before an enclosing modal sees it.
+              event.preventDefault();
+              event.stopPropagation();
+              close();
+            }
+          : undefined
+      }
     >
       {cloneElement(trigger, {
         ref: triggerRef,
@@ -217,10 +236,19 @@ export function Popover({
           role={haspopup === 'menu' ? 'menu' : 'dialog'}
           aria-label={label}
           tabIndex={-1}
-          style={constrainToViewport ? {
-            left: position?.left ?? 0, right: 'auto', top: position?.top ?? 0, bottom: 'auto',
-            maxWidth: position?.maxWidth, maxHeight: position?.maxHeight, overflowY: 'auto',
-          } : undefined}
+          style={
+            constrainToViewport
+              ? {
+                  left: position?.left ?? 0,
+                  right: 'auto',
+                  top: position?.top ?? 0,
+                  bottom: 'auto',
+                  maxWidth: position?.maxWidth,
+                  maxHeight: position?.maxHeight,
+                  overflowY: 'auto',
+                }
+              : undefined
+          }
           className={cn(
             'surface-floating absolute z-popover min-w-56 animate-scale-in p-1.5 outline-none',
             placement === 'bottom' ? 'top-[calc(100%+0.5rem)]' : 'bottom-[calc(100%+0.5rem)]',

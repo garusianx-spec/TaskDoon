@@ -34,19 +34,31 @@ describe('configuration', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(InvalidConfigError);
       const problems = (error as InvalidConfigError).problems.join('\n');
-      for (const key of ['DATABASE_URL', 'REDIS_CORE_URL', 'OTP_PEPPER', 'APP_ENCRYPTION_KEY']) expect(problems).toContain(key);
+      for (const key of ['DATABASE_URL', 'REDIS_CORE_URL', 'OTP_PEPPER', 'APP_ENCRYPTION_KEY'])
+        expect(problems).toContain(key);
     }
   });
 
   it('refuses development shortcuts in production', () => {
-    const result = envSchema.safeParse({ ...BASE_ENV, NODE_ENV: 'production', SMS_PROVIDERS: 'console', COOKIE_SECURE: 'false' });
+    const result = envSchema.safeParse({
+      ...BASE_ENV,
+      NODE_ENV: 'production',
+      SMS_PROVIDERS: 'console',
+      COOKIE_SECURE: 'false',
+    });
     expect(result.success).toBe(false);
     const paths = result.error?.issues.map((issue) => issue.path.join('.'));
     expect(paths).toEqual(expect.arrayContaining(['SMS_PROVIDERS', 'JWT_PRIVATE_JWKS', 'COOKIE_SECURE']));
   });
 
   it('always allows the web app’s own origin', () => {
-    const config = new AppConfig(envSchema.parse({ ...BASE_ENV, CORS_ORIGINS: 'https://admin.taskin.ir', PUBLIC_WEB_ORIGIN: 'https://app.taskin.ir/' }));
+    const config = new AppConfig(
+      envSchema.parse({
+        ...BASE_ENV,
+        CORS_ORIGINS: 'https://admin.taskin.ir',
+        PUBLIC_WEB_ORIGIN: 'https://app.taskin.ir/',
+      }),
+    );
     expect(config.allowedOrigins).toEqual(['https://admin.taskin.ir', 'https://app.taskin.ir']);
   });
 });
@@ -83,7 +95,9 @@ describe('request correlation', () => {
   });
 
   it('takes the trace id from a valid traceparent', () => {
-    expect(traceIdFrom('00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01')).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
+    expect(traceIdFrom('00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01')).toBe(
+      '4bf92f3577b34da6a3ce929d0e0e4736',
+    );
     expect(traceIdFrom('00-00000000000000000000000000000000-00f067aa0ba902b7-01')).toMatch(/^[0-9a-f]{32}$/);
     expect(traceIdFrom('garbage')).toMatch(/^[0-9a-f]{32}$/);
   });
@@ -92,7 +106,13 @@ describe('request correlation', () => {
 describe('redaction', () => {
   it('drops secrets and masks phone numbers and emails in audit changes', () => {
     expect(
-      redactChanges({ phone: '+989121234567', email: 'sara@rahnama.ir', token: 'abc', nested: { passwordHash: 'x', name: 'سارا' }, addresses: ['+989121234567'] }),
+      redactChanges({
+        phone: '+989121234567',
+        email: 'sara@rahnama.ir',
+        token: 'abc',
+        nested: { passwordHash: 'x', name: 'سارا' },
+        addresses: ['+989121234567'],
+      }),
     ).toEqual({
       phone: '+98912***4567',
       email: 's***@rahnama.ir',
@@ -106,14 +126,18 @@ describe('redaction', () => {
 
 describe('idempotency fingerprints', () => {
   it('ignore key order and undefined fields', () => {
-    expect(canonicalJson({ b: 1, a: { d: 2, c: [3, { f: 4, e: 5 }] }, x: undefined })).toBe(canonicalJson({ a: { c: [3, { e: 5, f: 4 }], d: 2 }, b: 1 }));
+    expect(canonicalJson({ b: 1, a: { d: 2, c: [3, { f: 4, e: 5 }] }, x: undefined })).toBe(
+      canonicalJson({ a: { c: [3, { e: 5, f: 4 }], d: 2 }, b: 1 }),
+    );
     expect(canonicalJson({ a: 1 })).not.toBe(canonicalJson({ a: '1' }));
   });
 });
 
 describe('input checks', () => {
   it('sniffs images by their magic numbers, not their names', () => {
-    expect(sniffImage(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]))?.type).toBe('image/png');
+    expect(sniffImage(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]))?.type).toBe(
+      'image/png',
+    );
     expect(sniffImage(Buffer.from([0xff, 0xd8, 0xff, 0xe0]))?.type).toBe('image/jpeg');
     expect(sniffImage(Buffer.from('RIFF\0\0\0\0WEBPVP8 ', 'latin1'))?.type).toBe('image/webp');
     expect(sniffImage(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'))).toBeNull();
@@ -121,7 +145,12 @@ describe('input checks', () => {
 
   it('tells an audio-only WebM (a browser voice note) from a video', () => {
     const ebml = [0x1a, 0x45, 0xdf, 0xa3];
-    const webm = (codecs: string) => Buffer.concat([Buffer.from(ebml), Buffer.from(`\x42\x86webm Tracks ${codecs}`, 'latin1'), Buffer.alloc(64, 0)]);
+    const webm = (codecs: string) =>
+      Buffer.concat([
+        Buffer.from(ebml),
+        Buffer.from(`\x42\x86webm Tracks ${codecs}`, 'latin1'),
+        Buffer.alloc(64, 0),
+      ]);
     expect(sniff(webm('A_OPUS'), 'voice.webm')).toEqual({ mime: 'audio/webm', kind: 'audio' });
     expect(sniff(webm('V_VP9 A_OPUS'), 'clip.webm')).toEqual({ mime: 'video/webm', kind: 'video' });
     expect(sniff(webm(''), 'unknown.webm')).toEqual({ mime: 'video/webm', kind: 'video' });
@@ -135,19 +164,35 @@ describe('input checks', () => {
   });
 
   it('accepts Iranian mobile numbers in any written form, and nothing else', () => {
-    for (const input of ['09121234567', '+98 912 123 4567', '0098-912-123-4567', '۰۹۱۲۱۲۳۴۵۶۷', '٠٩١٢١٢٣٤٥٦٧', '9121234567']) {
+    for (const input of [
+      '09121234567',
+      '+98 912 123 4567',
+      '0098-912-123-4567',
+      '۰۹۱۲۱۲۳۴۵۶۷',
+      '٠٩١٢١٢٣٤٥٦٧',
+      '9121234567',
+    ]) {
       expect({ input, e164: toIranMobileE164(input) }).toEqual({ input, e164: '+989121234567' });
     }
-    for (const input of ['02188776655', '+4915112345678', '0912123', 'hello']) expect(toIranMobileE164(input)).toBeNull();
+    for (const input of ['02188776655', '+4915112345678', '0912123', 'hello'])
+      expect(toIranMobileE164(input)).toBeNull();
     expect(toLocalMobile('+989121234567')).toBe('09121234567');
   });
 });
 
 describe('problem details', () => {
-  const pg = (code: string) => ({ name: 'DrizzleQueryError', message: 'insert … params: secret', cause: { code, severity: 'ERROR' } });
+  const pg = (code: string) => ({
+    name: 'DrizzleQueryError',
+    message: 'insert … params: secret',
+    cause: { code, severity: 'ERROR' },
+  });
 
   it('renders domain errors with their catalogued status', () => {
-    expect(renderException(new ApiError('PLAN_LIMIT_REACHED'))).toMatchObject({ code: 'PLAN_LIMIT_REACHED', status: 402, unexpected: false });
+    expect(renderException(new ApiError('PLAN_LIMIT_REACHED'))).toMatchObject({
+      code: 'PLAN_LIMIT_REACHED',
+      status: 402,
+      unexpected: false,
+    });
     expect(renderException(ApiError.rateLimited(12)).headers).toEqual({ 'Retry-After': '12' });
   });
 
@@ -155,14 +200,24 @@ describe('problem details', () => {
     expect(renderException(pg('23505'))).toMatchObject({ code: 'CONFLICT', status: 409 });
     expect(renderException(pg('23001'))).toMatchObject({ code: 'CONFLICT', status: 409 });
     expect(renderException(pg('TK001'))).toMatchObject({ code: 'OWNER_IMMUTABLE', status: 403 });
-    expect(renderException(pg('40001'))).toMatchObject({ code: 'SERVICE_UNAVAILABLE', status: 503, unexpected: true });
+    expect(renderException(pg('40001'))).toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+      status: 503,
+      unexpected: true,
+    });
     expect(renderException(pg('42501'))).toMatchObject({ code: 'FORBIDDEN', unexpected: true });
     expect(JSON.stringify(renderException(pg('23505')))).not.toContain('secret');
   });
 
   it('turns unreadable bodies into validation problems and anything else into a 500', () => {
-    expect(renderException(Object.assign(new Error('too large'), { type: 'entity.too.large', status: 413 }))).toMatchObject({ code: 'VALIDATION_FAILED', status: 413 });
-    expect(renderException(new Error('boom'))).toMatchObject({ code: 'INTERNAL', status: 500, unexpected: true });
+    expect(
+      renderException(Object.assign(new Error('too large'), { type: 'entity.too.large', status: 413 })),
+    ).toMatchObject({ code: 'VALIDATION_FAILED', status: 413 });
+    expect(renderException(new Error('boom'))).toMatchObject({
+      code: 'INTERNAL',
+      status: 500,
+      unexpected: true,
+    });
   });
 });
 
@@ -172,7 +227,13 @@ describe('SMS failover', () => {
   const service = () =>
     new SmsService(
       new AppConfig(
-        envSchema.parse({ ...BASE_ENV, SMS_PROVIDERS: 'kavenegar,smsir', KAVENEGAR_API_KEY: 'k', SMSIR_API_KEY: 's', SMSIR_OTP_TEMPLATE_ID: '100' }),
+        envSchema.parse({
+          ...BASE_ENV,
+          SMS_PROVIDERS: 'kavenegar,smsir',
+          KAVENEGAR_API_KEY: 'k',
+          SMSIR_API_KEY: 's',
+          SMSIR_OTP_TEMPLATE_ID: '100',
+        }),
       ),
     );
 
@@ -195,7 +256,9 @@ describe('SMS failover', () => {
 
   it('reports when every provider is down', async () => {
     vi.stubGlobal('fetch', async () => new Response('{}', { status: 502 }));
-    await expect(service().send({ to: '+989121234567', template: 'otp', tokens: { code: '1' } })).rejects.toBeInstanceOf(SmsUnavailableError);
+    await expect(
+      service().send({ to: '+989121234567', template: 'otp', tokens: { code: '1' } }),
+    ).rejects.toBeInstanceOf(SmsUnavailableError);
   });
 
   it('sends the receptor in local form to Kavenegar', async () => {
@@ -204,7 +267,11 @@ describe('SMS failover', () => {
       body = String(init.body);
       return new Response('{"return":{"status":200},"entries":[{"messageid":7}]}', { status: 200 });
     });
-    const receipt = await service().send({ to: '+989121234567', template: 'otp', tokens: { code: '654321' } });
+    const receipt = await service().send({
+      to: '+989121234567',
+      template: 'otp',
+      tokens: { code: '654321' },
+    });
     expect(receipt.messageId).toBe('7');
     expect(new URLSearchParams(body).get('receptor')).toBe('09121234567');
     expect(new URLSearchParams(body).get('token')).toBe('654321');

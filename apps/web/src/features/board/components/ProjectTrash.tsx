@@ -3,11 +3,11 @@
 import type { Project } from '@taskin/contracts';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { PROJECT_TRASH_DAYS,type TrashedProject } from '@/store/workspace-reducer';
-import { Button,Modal,RelativeTime } from '@/components/ui';
+import { PROJECT_TRASH_DAYS, type TrashedProject } from '@/store/workspace-reducer';
+import { Button, Modal, RelativeTime } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { ArchiveIcon,FolderIcon,RefreshIcon,TrashIcon } from '@/components/icons';
+import { ArchiveIcon, FolderIcon, RefreshIcon, TrashIcon } from '@/components/icons';
 import { TONE_CLASSES } from '@/features/workspace/components/WorkspaceAvatar';
 
 /** Asks before a project goes to the trash: nothing is lost for {@link PROJECT_TRASH_DAYS} days. */
@@ -64,29 +64,52 @@ export function ProjectTrashModal({
       icon={<ArchiveIcon size={20} />}
     >
       {entries.length === 0 ? (
-        <EmptyState compact icon={<ArchiveIcon size={20} />} title="سطل زباله خالی است" description="پروژه‌ای که حذف کنید اینجا می‌ماند تا بازیابی یا پاک‌سازی شود." />
+        <EmptyState
+          compact
+          icon={<ArchiveIcon size={20} />}
+          title="سطل زباله خالی است"
+          description="پروژه‌ای که حذف کنید اینجا می‌ماند تا بازیابی یا پاک‌سازی شود."
+        />
       ) : (
         <ul aria-label="پروژه‌های حذف‌شده" className="flex flex-col gap-2">
           {entries.map((entry) => {
             const daysLeft = Math.max(0, Math.ceil((Date.parse(entry.purgeAt) - Date.now()) / DAY));
             return (
-              <li key={entry.project.id} className="flex items-center gap-3 rounded-xl border border-secondary bg-sunken p-3">
-                <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', TONE_CLASSES[entry.project.color])}>
+              <li
+                key={entry.project.id}
+                className="flex items-center gap-3 rounded-xl border border-secondary bg-sunken p-3"
+              >
+                <span
+                  className={cn(
+                    'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                    TONE_CLASSES[entry.project.color],
+                  )}
+                >
                   <FolderIcon size={18} variant="twotone" />
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-body-sm font-semibold text-fg-primary">{entry.project.name}</span>
-                  <span className="numeric flex flex-wrap items-center gap-x-2 text-caption text-fg-tertiary">
+                  <span className="truncate text-body-sm font-semibold text-fg-primary">
+                    {entry.project.name}
+                  </span>
+                  <span className="flex flex-wrap items-center gap-x-2 text-caption text-fg-tertiary numeric">
                     <span>{`${formatCount(entry.taskCount)} وظیفه`}</span>
                     <span aria-hidden="true">·</span>
                     <span>
                       حذف <RelativeTime iso={entry.deletedAt} />
                     </span>
                     <span aria-hidden="true">·</span>
-                    <span className={daysLeft <= 7 ? 'text-status-blocked' : undefined}>{`${formatCount(daysLeft)} روز تا پاک‌سازی`}</span>
+                    <span
+                      className={daysLeft <= 7 ? 'text-status-blocked' : undefined}
+                    >{`${formatCount(daysLeft)} روز تا پاک‌سازی`}</span>
                   </span>
                 </span>
-                <Button size="sm" variant="secondary" iconStart={<RefreshIcon size={16} />} aria-label={`بازیابی ${entry.project.name}`} onClick={() => onRestore(entry.project.id)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  iconStart={<RefreshIcon size={16} />}
+                  aria-label={`بازیابی ${entry.project.name}`}
+                  onClick={() => onRestore(entry.project.id)}
+                >
                   بازیابی
                 </Button>
               </li>

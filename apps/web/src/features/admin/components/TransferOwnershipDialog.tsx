@@ -1,15 +1,15 @@
 'use client';
 
-import { useMemo,useState } from 'react';
-import type { PlatformWorkspaceDetail,PlatformWorkspaceModerationResult } from '@taskin/contracts';
+import { useMemo, useState } from 'react';
+import type { PlatformWorkspaceDetail, PlatformWorkspaceModerationResult } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { phoneLabel } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
-import { Button,Input,Modal,Textarea } from '@/components/ui';
-import { CrownIcon,SearchIcon,WarningIcon } from '@/components/icons';
+import { Button, Input, Modal, Textarea } from '@/components/ui';
+import { CrownIcon, SearchIcon, WarningIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { Loaded } from '@/features/admin/components/AdminUi';
 
@@ -55,7 +55,11 @@ export function TransferOwnershipDialog({
 
   const members = useMemo(() => {
     const needle = filter.trim();
-    return (source.data?.members ?? []).filter((member) => member.status !== 'left' && (!needle || member.fullName.includes(needle) || member.phone.includes(needle.replace(/^0/, ''))));
+    return (source.data?.members ?? []).filter(
+      (member) =>
+        member.status !== 'left' &&
+        (!needle || member.fullName.includes(needle) || member.phone.includes(needle.replace(/^0/, ''))),
+    );
   }, [source.data, filter]);
   const picked = source.data?.members.find((member) => member.userId === chosen) ?? null;
   const ready = picked !== null && reason.trim().length >= MIN_REASON;
@@ -69,7 +73,9 @@ export function TransferOwnershipDialog({
     setBusy(true);
     setError(null);
     try {
-      onDone(await call(() => adminApi.transferWorkspaceOwnership(workspaceId, picked.userId, reason.trim())));
+      onDone(
+        await call(() => adminApi.transferWorkspaceOwnership(workspaceId, picked.userId, reason.trim())),
+      );
     } catch (failure) {
       setError(problemMessage(failure));
     } finally {
@@ -102,9 +108,22 @@ export function TransferOwnershipDialog({
           {() => (
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 text-body-sm font-medium text-fg-secondary">مالک تازه</legend>
-              <Input label="جستجوی عضو" hideLabel placeholder="نام یا شماره موبایل" value={filter} onChange={(event) => setFilter(event.target.value)} iconStart={<SearchIcon size={16} />} />
-              <div className="scrollbar-thin flex max-h-72 flex-col gap-1.5 overflow-y-auto" role="radiogroup" aria-label="اعضای فضای کاری">
-                {members.length === 0 && <p className="py-3 text-center text-body-sm text-fg-tertiary">عضوی پیدا نشد.</p>}
+              <Input
+                label="جستجوی عضو"
+                hideLabel
+                placeholder="نام یا شماره موبایل"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                iconStart={<SearchIcon size={16} />}
+              />
+              <div
+                className="flex max-h-72 flex-col gap-1.5 overflow-y-auto scrollbar-thin"
+                role="radiogroup"
+                aria-label="اعضای فضای کاری"
+              >
+                {members.length === 0 && (
+                  <p className="py-3 text-center text-body-sm text-fg-tertiary">عضوی پیدا نشد.</p>
+                )}
                 {members.map((member) => {
                   const why = ineligible(member);
                   return (
@@ -113,7 +132,9 @@ export function TransferOwnershipDialog({
                       className={cn(
                         'flex items-center gap-3 rounded-lg border p-2.5 transition-colors',
                         why ? 'cursor-not-allowed border-secondary opacity-60' : 'cursor-pointer',
-                        !why && chosen === member.userId ? 'border-brand bg-brand-subtle' : !why && 'border-secondary hover:bg-hover',
+                        !why && chosen === member.userId
+                          ? 'border-brand bg-brand-subtle'
+                          : !why && 'border-secondary hover:bg-hover',
                       )}
                     >
                       <input
@@ -125,7 +146,9 @@ export function TransferOwnershipDialog({
                         onChange={() => setChosen(member.userId)}
                       />
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-body-sm font-semibold text-fg-primary">{member.fullName}</span>
+                        <span className="truncate text-body-sm font-semibold text-fg-primary">
+                          {member.fullName}
+                        </span>
                         <span className="text-caption text-fg-tertiary">
                           {member.roleName} · <span dir="ltr">{phoneLabel(member.phone)}</span>
                         </span>
@@ -135,14 +158,21 @@ export function TransferOwnershipDialog({
                   );
                 })}
               </div>
-              <p className="text-caption text-fg-tertiary">{toPersianDigits(members.filter((member) => !ineligible(member)).length)} عضو می‌توانند مالک شوند.</p>
+              <p className="text-caption text-fg-tertiary">
+                {toPersianDigits(members.filter((member) => !ineligible(member)).length)} عضو می‌توانند مالک
+                شوند.
+              </p>
             </fieldset>
           )}
         </Loaded>
         {picked && picked.hasPassword === false && (
-          <p role="note" className="flex items-start gap-2 rounded-lg bg-sunken px-3 py-2 text-body-sm text-fg-secondary">
+          <p
+            role="note"
+            className="flex items-start gap-2 rounded-lg bg-sunken px-3 py-2 text-body-sm text-fg-secondary"
+          >
             <WarningIcon size={18} className="mt-0.5 shrink-0 text-warning-600" />
-            {picked.fullName} هنوز رمز عبور ندارد؛ برای کارهای حساس مالک (حذف یا انتقال فضای کاری) باید رمز عبور بگذارد.
+            {picked.fullName} هنوز رمز عبور ندارد؛ برای کارهای حساس مالک (حذف یا انتقال فضای کاری) باید رمز
+            عبور بگذارد.
           </p>
         )}
         <Textarea
@@ -155,7 +185,10 @@ export function TransferOwnershipDialog({
           onChange={(event) => setReason(event.target.value)}
         />
         {error && (
-          <p role="alert" className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked">
+          <p
+            role="alert"
+            className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked"
+          >
             {error}
           </p>
         )}

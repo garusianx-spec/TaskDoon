@@ -1,12 +1,11 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useLive,useWorkspace } from '@/store/WorkspaceProvider';
-import { conversationById,userById } from '@/store/selectors';
+import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
+import { conversationById, userById } from '@/store/selectors';
 import { nextLocalId } from '@/store/ids';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { ChatView } from '@/features/chat/components/ChatView';
-
 
 interface ChatContentProps {
   readonly onBack: () => void;
@@ -45,10 +44,10 @@ export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatCon
       }
       onConvertToTask={(draft) => openTaskComposer(draft)}
       onOpenTask={(taskId) => dispatch({ type: 'open-task', taskId })}
-      onOpenDetails={() =>
-        dispatch({ type: 'open-conversation-details', conversationId: conversation.id })
-      }
-      typingNames={(state.typingByConversation[conversation.id] ?? []).map((userId) => userById(userId)?.fullName ?? 'کسی')}
+      onOpenDetails={() => dispatch({ type: 'open-conversation-details', conversationId: conversation.id })}
+      typingNames={(state.typingByConversation[conversation.id] ?? []).map(
+        (userId) => userById(userId)?.fullName ?? 'کسی',
+      )}
       onAttach={(items) => {
         for (const { file, caption, asFile } of items) {
           dispatch({
@@ -56,7 +55,12 @@ export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatCon
             conversationId: conversation.id,
             authorId: currentUserId,
             messageId: nextLocalId('m'),
-            picked: { attachmentId: nextLocalId('att'), file, name: file.name, previewUrl: URL.createObjectURL(file) },
+            picked: {
+              attachmentId: nextLocalId('att'),
+              file,
+              name: file.name,
+              previewUrl: URL.createObjectURL(file),
+            },
             caption,
             replyToId: null,
             ...(asFile ? { asFile } : {}),
@@ -76,7 +80,9 @@ export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatCon
       }
       focusedMessageId={state.focusedMessageId}
       onFocusShown={clearFocus}
-      scheduled={state.scheduledMessages.filter((entry) => entry.conversationId === conversation.id && entry.authorId === currentUserId)}
+      scheduled={state.scheduledMessages.filter(
+        (entry) => entry.conversationId === conversation.id && entry.authorId === currentUserId,
+      )}
       onSchedule={(text, replyToId, at) =>
         dispatch({
           type: 'schedule-message',
@@ -88,7 +94,9 @@ export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatCon
           scheduledAt: at.toISOString(),
         })
       }
-      onSendScheduledNow={(scheduledId) => dispatch({ type: 'send-scheduled-now', scheduledId, messageId: nextLocalId('m') })}
+      onSendScheduledNow={(scheduledId) =>
+        dispatch({ type: 'send-scheduled-now', scheduledId, messageId: nextLocalId('m') })
+      }
       onCancelScheduled={(scheduledId) => dispatch({ type: 'cancel-scheduled-message', scheduledId })}
       {...(live ? { onTyping: (active: boolean) => live.store.typing(conversation.id, active) } : {})}
     />

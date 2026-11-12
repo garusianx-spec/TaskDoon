@@ -1,6 +1,6 @@
 'use client';
 
-import { Popover,type PopoverProps } from '@/components/ui/Popover';
+import { Popover, type PopoverProps } from '@/components/ui/Popover';
 
 export type DropdownProps = Omit<PopoverProps, 'haspopup'>;
 

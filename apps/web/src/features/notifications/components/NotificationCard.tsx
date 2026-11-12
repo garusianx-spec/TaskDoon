@@ -1,24 +1,20 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import type { AppNotification,NotificationEvent } from '@taskin/contracts';
-import { statusLabel,statusTone } from '@/data/reference';
+import type { AppNotification, NotificationEvent } from '@taskin/contracts';
+import { statusLabel, statusTone } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { userById } from '@/store/selectors';
+import { Avatar, Badge, IconButton, RelativeTime } from '@/components/ui';
 import {
-Avatar,
-Badge,IconButton,
-RelativeTime
-} from '@/components/ui';
-import {
-ArrowLeftIcon,
-CheckIcon,MessagesIcon,
-NotificationIcon,
-RefreshIcon,
-ReplyIcon,
-TaskSquareIcon
+  ArrowLeftIcon,
+  CheckIcon,
+  MessagesIcon,
+  NotificationIcon,
+  RefreshIcon,
+  ReplyIcon,
+  TaskSquareIcon,
 } from '@/components/icons';
-
 
 const EVENT_ICONS: Readonly<Record<NotificationEvent['kind'], typeof TaskSquareIcon>> = {
   'task-assigned': TaskSquareIcon,
@@ -56,7 +52,13 @@ export function NotificationCard({ notification, onOpen, onMarkRead }: Notificat
         {!notification.read && <span className="sr-only">خوانده‌نشده: </span>}
         <span className="relative shrink-0">
           {actor ? (
-            <Avatar name={actor.fullName} initials={actor.initials} tone={actor.avatarTone} size="md" decorative />
+            <Avatar
+              name={actor.fullName}
+              initials={actor.initials}
+              tone={actor.avatarTone}
+              size="md"
+              decorative
+            />
           ) : (
             <span className="flex size-10 items-center justify-center rounded-full bg-sunken text-fg-tertiary">
               <NotificationIcon size={18} />
@@ -90,7 +92,7 @@ export function NotificationCard({ notification, onOpen, onMarkRead }: Notificat
             </span>
           )}
 
-          <span className="numeric flex items-center gap-1.5 text-micro text-fg-quaternary">
+          <span className="flex items-center gap-1.5 text-micro text-fg-quaternary numeric">
             <RelativeTime iso={notification.createdAt} />
             <span aria-hidden="true">،</span>
             <span>{targetLabel}</span>
@@ -120,7 +122,13 @@ export function NotificationCard({ notification, onOpen, onMarkRead }: Notificat
 }
 
 /** The visible sentence, with the actor and subject emphasised. */
-function Sentence({ actorName, notification }: { readonly actorName: string; readonly notification: AppNotification }) {
+function Sentence({
+  actorName,
+  notification,
+}: {
+  readonly actorName: string;
+  readonly notification: AppNotification;
+}) {
   const actor = <strong className="font-semibold text-fg-primary">{actorName}</strong>;
   const subject = <strong className="font-semibold text-fg-primary">{`«${notification.subject}»`}</strong>;
   const { event } = notification;

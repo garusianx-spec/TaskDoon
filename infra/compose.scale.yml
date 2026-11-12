@@ -18,7 +18,7 @@ services:
     environment:
       APP_ROLE: http
       # nginx is the one proxy in front: the REST limits count the real client IP.
-      TRUST_PROXY: "1"
+      TRUST_PROXY: '1'
       # The load run (scripts/chat-load.mjs) sends all its REST traffic from one address.
       THROTTLE_IP_PER_MINUTE: ${THROTTLE_IP_PER_MINUTE:-300}
     ports: !override []
@@ -30,7 +30,7 @@ services:
     environment:
       APP_ROLE: ws
       WS_NODE_ID: ws-1
-    ports: !override ["4101:4000"]
+    ports: !override ['4101:4000']
 
   api-ws-2:
     profiles: [scale]
@@ -39,7 +39,7 @@ services:
     environment:
       APP_ROLE: ws
       WS_NODE_ID: ws-2
-    ports: !override ["4102:4000"]
+    ports: !override ['4102:4000']
 
   api-worker:
     profiles: [scale]
@@ -59,9 +59,9 @@ services:
       api-ws-1: { condition: service_healthy }
       api-ws-2: { condition: service_healthy }
       api-worker: { condition: service_healthy }
-    ports: ["8080:8080"]
+    ports: ['8080:8080']
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health/ready || exit 1"]
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:8080/health/ready || exit 1']
       interval: 3s
       timeout: 3s
       retries: 20

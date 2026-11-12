@@ -1,4 +1,4 @@
-import type { AvatarTone,Workspace } from '@taskin/contracts';
+import type { AvatarTone, Workspace } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 
 /**

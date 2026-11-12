@@ -7,11 +7,7 @@ import { downloadAttachment } from '@/lib/download';
 import { userById } from '@/store/selectors';
 import { IconButton } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import {
-ATTACHMENT_ICONS,
-DocumentIcon,
-DownloadIcon
-} from '@/components/icons';
+import { ATTACHMENT_ICONS, DocumentIcon, DownloadIcon } from '@/components/icons';
 
 import type { SharedFile } from '@/features/chat/types/shared-media';
 
@@ -32,7 +28,10 @@ export function FilesPanel({ files }: { readonly files: readonly SharedFile[] })
         const Icon = ATTACHMENT_ICONS[attachment.kind];
         const sender = userById(message.authorId);
         return (
-          <li key={message.id} className="flex items-center gap-2.5 rounded-lg border border-secondary bg-surface p-2">
+          <li
+            key={message.id}
+            className="flex items-center gap-2.5 rounded-lg border border-secondary bg-surface p-2"
+          >
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sunken text-fg-brand">
               <Icon size={18} variant="twotone" />
             </span>
@@ -40,7 +39,7 @@ export function FilesPanel({ files }: { readonly files: readonly SharedFile[] })
               <span className="truncate text-caption font-semibold text-fg-primary" title={attachment.name}>
                 {attachment.name}
               </span>
-              <span className="numeric truncate text-micro text-fg-tertiary">
+              <span className="truncate text-micro text-fg-tertiary numeric">
                 {`${formatFileSize(attachment.size)}، ${sender?.fullName ?? ''}، ${stamp(message)}`}
               </span>
             </span>

@@ -1,6 +1,5 @@
-import type { Attachment,Message } from '@taskin/contracts';
+import type { Attachment, Message } from '@taskin/contracts';
 import { type SharedLink } from '@/lib/links';
-
 
 export interface SharedFile {
   readonly message: Message;

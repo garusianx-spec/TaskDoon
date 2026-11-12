@@ -1,15 +1,14 @@
 'use client';
 
-import type { BoardColumn,Task } from '@taskin/contracts';
+import type { BoardColumn, Task } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
-import { describeDeadline,formatJalali } from '@taskin/jalali';
+import { describeDeadline, formatJalali } from '@taskin/jalali';
 import { formatFraction } from '@/lib/format';
-import { priorityLabel,priorityTone,statusTone } from '@/data/reference';
-import { columnForTask,projectById,subtaskProgress,usersByIds } from '@/store/selectors';
-import { AvatarStack,Badge } from '@/components/ui';
-import { FlagIcon,StarFilledIcon } from '@/components/icons';
-import { TaskCompleteCheckbox,completedTitleClass } from '@/features/tasks/components/TaskCompleteCheckbox';
-
+import { priorityLabel, priorityTone, statusTone } from '@/data/reference';
+import { columnForTask, projectById, subtaskProgress, usersByIds } from '@/store/selectors';
+import { AvatarStack, Badge } from '@/components/ui';
+import { FlagIcon, StarFilledIcon } from '@/components/icons';
+import { TaskCompleteCheckbox, completedTitleClass } from '@/features/tasks/components/TaskCompleteCheckbox';
 
 interface TaskRowProps {
   readonly task: Task;
@@ -50,7 +49,9 @@ export function TaskRow({ task, columns, selected, onOpen, onToggleComplete }: T
             onToggle={(completed) => onToggleComplete(task.id, completed)}
             className="mt-0.5"
           />
-          {task.starred && <StarFilledIcon size={14} className="mt-1 shrink-0 text-status-progress" label="ستاره‌دار" />}
+          {task.starred && (
+            <StarFilledIcon size={14} className="mt-1 shrink-0 text-status-progress" label="ستاره‌دار" />
+          )}
           <div className="flex min-w-0 flex-col">
             <span
               className={cn(
@@ -60,7 +61,7 @@ export function TaskRow({ task, columns, selected, onOpen, onToggleComplete }: T
             >
               {task.title}
             </span>
-            <span className="numeric truncate text-micro text-fg-tertiary">
+            <span className="truncate text-micro text-fg-tertiary numeric">
               {`${task.code}، ${project?.name ?? ''}`}
             </span>
           </div>
@@ -76,7 +77,7 @@ export function TaskRow({ task, columns, selected, onOpen, onToggleComplete }: T
           {priorityLabel(task.priority)}
         </Badge>
       </td>
-      <td className="numeric px-4 py-3">
+      <td className="px-4 py-3 numeric">
         <div className="flex flex-col">
           <span className="text-body-sm text-fg-primary">{formatJalali(task.dueDate, 'medium')}</span>
           {/*
@@ -96,7 +97,7 @@ export function TaskRow({ task, columns, selected, onOpen, onToggleComplete }: T
           )}
         </div>
       </td>
-      <td className="numeric px-4 py-3 text-body-sm text-fg-secondary">
+      <td className="px-4 py-3 text-body-sm text-fg-secondary numeric">
         {progress.total > 0 ? formatFraction(progress.done, progress.total) : '—'}
       </td>
       <td className="px-4 py-3">

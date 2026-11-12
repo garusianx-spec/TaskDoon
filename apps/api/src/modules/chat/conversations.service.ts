@@ -75,7 +75,10 @@ export class ConversationsService {
    * The sidebar (`mine`: every conversation the caller is in, pinned first, then by activity) or
    * `archived`/`all` participant history, or public channels the caller can join. One statement.
    */
-  async list(member: MembershipContext, query: { scope?: 'mine' | 'public' | 'all' | 'archived'; includeHidden?: boolean }): Promise<ConversationView[]> {
+  async list(
+    member: MembershipContext,
+    query: { scope?: 'mine' | 'public' | 'all' | 'archived'; includeHidden?: boolean },
+  ): Promise<ConversationView[]> {
     requireMessageGrant(member, 'view');
     const w = member.workspaceId;
     let where: SQL;
@@ -87,7 +90,12 @@ export class ConversationsService {
     }
     return this.uow.run({ workspaceId: w, userId: member.userId }, async ({ tx }) => {
       const result = await tx.execute<ConversationRow>(
-        this.viewQuery(member, where, sql`cm.pinned_at desc nulls last, coalesce(c.last_message_at, c.created_at) desc, c.id`, false),
+        this.viewQuery(
+          member,
+          where,
+          sql`cm.pinned_at desc nulls last, coalesce(c.last_message_at, c.created_at) desc, c.id`,
+          false,
+        ),
       );
       return result.rows.map((row) => this.toView(row));
     });
@@ -95,17 +103,37 @@ export class ConversationsService {
 
   async get(member: MembershipContext, conversationId: string): Promise<ConversationDetail> {
     requireMessageGrant(member, 'view');
-    return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, (unit) => this.detail(unit.tx, member, conversationId));
+    return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, (unit) =>
+      this.detail(unit.tx, member, conversationId),
+    );
   }
 
-  private async detail(tx: Tx, member: MembershipContext, conversationId: string): Promise<ConversationDetail> {
-    const result = await tx.execute<ConversationRow>(this.viewQuery(member, sql`c.workspace_id = ${member.workspaceId} and c.id = ${conversationId}`, sql`c.id`, true));
+  private async detail(
+    tx: Tx,
+    member: MembershipContext,
+    conversationId: string,
+  ): Promise<ConversationDetail> {
+    const result = await tx.execute<ConversationRow>(
+      this.viewQuery(
+        member,
+        sql`c.workspace_id = ${member.workspaceId} and c.id = ${conversationId}`,
+        sql`c.id`,
+        true,
+      ),
+    );
     const row = result.rows[0];
-    const visible = row && (row.my_role !== null || (row.kind === 'channel' && !row.is_private && publicChannelVisible(member)));
+    const visible =
+      row &&
+      (row.my_role !== null || (row.kind === 'channel' && !row.is_private && publicChannelVisible(member)));
     if (!row || !visible) throw ApiError.notFound('The conversation');
     return {
       ...this.toView(row),
-      members: (row.members ?? []).map((entry) => ({ ...entry, lastReadSeq: Number(entry.lastReadSeq), lastDeliveredSeq: Number(entry.lastDeliveredSeq), joinedAt: iso(entry.joinedAt) })),
+      members: (row.members ?? []).map((entry) => ({
+        ...entry,
+        lastReadSeq: Number(entry.lastReadSeq),
+        lastDeliveredSeq: Number(entry.lastDeliveredSeq),
+        joinedAt: iso(entry.joinedAt),
+      })),
     };
   }
 
@@ -175,27 +203,49 @@ export class ConversationsService {
 
   /* ================================================================== create and update */
 
-  async deleteArchived(member: MembershipContext, conversationId: string, confirmTitle: string): Promise<void> {
+  async deleteArchived(
+    member: MembershipContext,
+    conversationId: string,
+    confirmTitle: string,
+  ): Promise<void> {
     requireMessageGrant(member, 'delete');
     await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const access = await loadConversation(tx, member, conversationId, { lock: true });
       if (!access.conversation.archived || !access.canManage) throw ApiError.forbidden();
-      if (confirmTitle !== access.conversation.title) throw ApiError.validation([{ field: 'confirmTitle', message: 'must match the conversation title' }]);
-      await this.audit.write(tx, { action: 'conversation.archive.delete', workspaceId: member.workspaceId, resourceType: 'conversation', resourceId: conversationId });
-      await tx.execute(sql`delete from conversations where workspace_id = ${member.workspaceId} and id = ${conversationId}`);
-      await this.outbox.add(tx, { type: 'conversation.updated', aggregateType: 'conversation', aggregateId: conversationId, workspaceId: member.workspaceId, payload: { conversationId, fields: ['deleted'] } });
+      if (confirmTitle !== access.conversation.title)
+        throw ApiError.validation([{ field: 'confirmTitle', message: 'must match the conversation title' }]);
+      await this.audit.write(tx, {
+        action: 'conversation.archive.delete',
+        workspaceId: member.workspaceId,
+        resourceType: 'conversation',
+        resourceId: conversationId,
+      });
+      await tx.execute(
+        sql`delete from conversations where workspace_id = ${member.workspaceId} and id = ${conversationId}`,
+      );
+      await this.outbox.add(tx, {
+        type: 'conversation.updated',
+        aggregateType: 'conversation',
+        aggregateId: conversationId,
+        workspaceId: member.workspaceId,
+        payload: { conversationId, fields: ['deleted'] },
+      });
     });
   }
 
   /** Creates a conversation; for a direct chat, returns the existing one with that person if any. */
-  async create(member: MembershipContext, body: CreateConversationBody): Promise<{ conversation: ConversationDetail; created: boolean }> {
+  async create(
+    member: MembershipContext,
+    body: CreateConversationBody,
+  ): Promise<{ conversation: ConversationDetail; created: boolean }> {
     requireMessageGrant(member, 'create');
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const w = member.workspaceId;
       let conversationId: string;
       let created = true;
       if (body.kind === 'direct') {
-        if (body.userId === member.userId) throw ApiError.validation([{ field: 'userId', message: 'must be someone else' }]);
+        if (body.userId === member.userId)
+          throw ApiError.validation([{ field: 'userId', message: 'must be someone else' }]);
         await this.assertActive(tx, w, [body.userId], 'userId');
         const key = directKey(member.userId, body.userId);
         const inserted = await tx.execute<{ id: string }>(sql`
@@ -210,7 +260,9 @@ export class ConversationsService {
             values (${w}, ${conversationId}, ${member.userId}, 'member'), (${w}, ${conversationId}, ${body.userId}, 'member')`);
         } else {
           created = false;
-          const existing = await tx.execute<{ id: string }>(sql`select id from conversations where workspace_id = ${w} and kind = 'direct' and direct_key = ${key}`);
+          const existing = await tx.execute<{ id: string }>(
+            sql`select id from conversations where workspace_id = ${w} and kind = 'direct' and direct_key = ${key}`,
+          );
           conversationId = existing.rows[0]?.id as string;
           // Opening it again brings a hidden chat back, and rejoins a person who had left the workspace and returned.
           await tx.execute(sql`
@@ -221,7 +273,10 @@ export class ConversationsService {
         const title = body.title.trim();
         if (!title) throw ApiError.validation([{ field: 'title', message: 'is required' }]);
         const others = [...new Set(body.memberIds ?? [])].filter((id) => id !== member.userId);
-        if (others.length > GROUP_MEMBERS_MAX) throw ApiError.validation([{ field: 'memberIds', message: `is at most ${GROUP_MEMBERS_MAX} people` }]);
+        if (others.length > GROUP_MEMBERS_MAX)
+          throw ApiError.validation([
+            { field: 'memberIds', message: `is at most ${GROUP_MEMBERS_MAX} people` },
+          ]);
         await this.assertActive(tx, w, others, 'memberIds');
         const isPrivate = body.kind === 'channel' ? (body.isPrivate ?? true) : true;
         const postPolicy = body.kind === 'channel' ? (body.postPolicy ?? 'everyone') : 'everyone';
@@ -236,7 +291,10 @@ export class ConversationsService {
           from unnest(${sql.param([member.userId, ...others])}::uuid[]) as u(user_id)`);
       }
       if (created) {
-        const memberIds = body.kind === 'direct' ? [member.userId, body.userId] : [member.userId, ...new Set((body.memberIds ?? []).filter((id) => id !== member.userId))];
+        const memberIds =
+          body.kind === 'direct'
+            ? [member.userId, body.userId]
+            : [member.userId, ...new Set((body.memberIds ?? []).filter((id) => id !== member.userId))];
         await this.outbox.add(tx, {
           type: 'conversation.created',
           aggregateType: 'conversation',
@@ -256,17 +314,31 @@ export class ConversationsService {
     });
   }
 
-  async update(member: MembershipContext, conversationId: string, body: UpdateConversationBody): Promise<ConversationDetail> {
+  async update(
+    member: MembershipContext,
+    conversationId: string,
+    body: UpdateConversationBody,
+  ): Promise<ConversationDetail> {
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const access = await loadConversation(tx, member, conversationId, { lock: true });
       if (access.conversation.archived) throw new ApiError('CONVERSATION_ARCHIVED');
       if (access.conversation.kind === 'direct') throw new ApiError('DIRECT_CONVERSATION');
-      if (!access.canManage) throw ApiError.forbidden('Only the conversation\'s owners and admins can change it.');
-      if (access.conversation.kind !== 'channel' && (body.isPrivate !== undefined || body.postPolicy !== undefined)) {
-        throw ApiError.validation([{ field: body.isPrivate !== undefined ? 'isPrivate' : 'postPolicy', message: 'applies to channels only' }]);
+      if (!access.canManage)
+        throw ApiError.forbidden("Only the conversation's owners and admins can change it.");
+      if (
+        access.conversation.kind !== 'channel' &&
+        (body.isPrivate !== undefined || body.postPolicy !== undefined)
+      ) {
+        throw ApiError.validation([
+          {
+            field: body.isPrivate !== undefined ? 'isPrivate' : 'postPolicy',
+            message: 'applies to channels only',
+          },
+        ]);
       }
       const title = body.title?.trim();
-      if (body.title !== undefined && !title) throw ApiError.validation([{ field: 'title', message: 'is required' }]);
+      if (body.title !== undefined && !title)
+        throw ApiError.validation([{ field: 'title', message: 'is required' }]);
       const changes: SQL[] = [];
       if (title !== undefined) changes.push(sql`title = ${title}`);
       if (body.topic !== undefined) changes.push(sql`topic = ${body.topic.trim()}`);
@@ -275,7 +347,9 @@ export class ConversationsService {
       if (body.postPolicy !== undefined) changes.push(sql`post_policy = ${body.postPolicy}`);
       const fields = Object.keys(body).filter((key) => (body as Record<string, unknown>)[key] !== undefined);
       if (changes.length > 0) {
-        await tx.execute(sql`update conversations set ${sql.join(changes, sql`, `)} where workspace_id = ${member.workspaceId} and id = ${conversationId}`);
+        await tx.execute(
+          sql`update conversations set ${sql.join(changes, sql`, `)} where workspace_id = ${member.workspaceId} and id = ${conversationId}`,
+        );
         await this.outbox.add(tx, {
           type: 'conversation.updated',
           aggregateType: 'conversation',
@@ -301,7 +375,12 @@ export class ConversationsService {
    * Adds a member or changes a member's role (owners and admins), or joins a public channel
    * (anyone who can see it, on themselves). A new member starts with nothing unread.
    */
-  async putMember(member: MembershipContext, conversationId: string, userId: string, body: PutConversationMemberBody): Promise<ConversationMemberView> {
+  async putMember(
+    member: MembershipContext,
+    conversationId: string,
+    userId: string,
+    body: PutConversationMemberBody,
+  ): Promise<ConversationMemberView> {
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const w = member.workspaceId;
       const access = await loadConversation(tx, member, conversationId, { lock: true });
@@ -318,14 +397,17 @@ export class ConversationsService {
       let role: ConversationRole = body.role ?? current?.role ?? 'member';
       if (selfJoin) {
         // Joining yourself: only a public channel, only as a plain member.
-        if (!(conversation.kind === 'channel' && !conversation.isPrivate && publicChannelVisible(member))) throw ApiError.forbidden();
+        if (!(conversation.kind === 'channel' && !conversation.isPrivate && publicChannelVisible(member)))
+          throw ApiError.forbidden();
         requireMessageGrant(member, 'view');
         role = 'member';
       } else {
-        if (!access.canManage) throw ApiError.forbidden('Only the conversation\'s owners and admins can manage its members.');
+        if (!access.canManage)
+          throw ApiError.forbidden("Only the conversation's owners and admins can manage its members.");
         const owner = access.myRole === 'owner' || member.isOwner;
         if (role === 'owner' && !owner) throw ApiError.forbidden('Only an owner can make another owner.');
-        if (current?.role === 'owner' && !owner) throw ApiError.forbidden('Only an owner can change an owner.');
+        if (current?.role === 'owner' && !owner)
+          throw ApiError.forbidden('Only an owner can change an owner.');
         await this.assertActive(tx, w, [userId], 'userId');
       }
       if (current && current.role === role) return this.memberView(tx, w, conversationId, userId);
@@ -347,7 +429,11 @@ export class ConversationsService {
         payload: current ? { conversationId, fields: ['members'] } : { conversationId, userId, role },
       } as Parameters<OutboxWriter['add']>[1]);
       await this.audit.write(tx, {
-        action: selfJoin ? 'conversation.join' : current ? 'conversation.member.role' : 'conversation.member.add',
+        action: selfJoin
+          ? 'conversation.join'
+          : current
+            ? 'conversation.member.role'
+            : 'conversation.member.add',
         workspaceId: w,
         resourceType: 'conversation',
         resourceId: conversationId,
@@ -375,8 +461,10 @@ export class ConversationsService {
       const role = target.rows[0]?.role;
       if (!role) throw ApiError.notFound('The member');
       if (userId !== member.userId) {
-        if (!access.canManage) throw ApiError.forbidden('Only the conversation\'s owners and admins can remove members.');
-        if (role === 'owner' && access.myRole !== 'owner' && !member.isOwner) throw ApiError.forbidden('Only an owner can remove an owner.');
+        if (!access.canManage)
+          throw ApiError.forbidden("Only the conversation's owners and admins can remove members.");
+        if (role === 'owner' && access.myRole !== 'owner' && !member.isOwner)
+          throw ApiError.forbidden('Only an owner can remove an owner.');
       }
       await tx.execute(sql`
         update conversation_members set left_at = now(), pinned_at = null
@@ -413,13 +501,20 @@ export class ConversationsService {
   }
 
   /** The caller's own pin, mute, notification level and visibility for one conversation. */
-  async updateMine(member: MembershipContext, conversationId: string, body: UpdateMyConversationBody): Promise<ConversationView> {
+  async updateMine(
+    member: MembershipContext,
+    conversationId: string,
+    body: UpdateMyConversationBody,
+  ): Promise<ConversationView> {
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const changes: SQL[] = [];
-      if (body.pinned !== undefined) changes.push(body.pinned ? sql`pinned_at = coalesce(pinned_at, now())` : sql`pinned_at = null`);
+      if (body.pinned !== undefined)
+        changes.push(body.pinned ? sql`pinned_at = coalesce(pinned_at, now())` : sql`pinned_at = null`);
       if (body.mutedUntil !== undefined) changes.push(sql`muted_until = ${body.mutedUntil}::timestamptz`);
-      if (body.notificationLevel !== undefined) changes.push(sql`notification_level = ${body.notificationLevel}`);
-      if (body.hidden !== undefined) changes.push(body.hidden ? sql`hidden_at = coalesce(hidden_at, now())` : sql`hidden_at = null`);
+      if (body.notificationLevel !== undefined)
+        changes.push(sql`notification_level = ${body.notificationLevel}`);
+      if (body.hidden !== undefined)
+        changes.push(body.hidden ? sql`hidden_at = coalesce(hidden_at, now())` : sql`hidden_at = null`);
       const updated = await tx.execute(sql`
         update conversation_members set ${changes.length > 0 ? sql.join(changes, sql`, `) : sql`user_id = user_id`}
         where workspace_id = ${member.workspaceId} and conversation_id = ${conversationId} and user_id = ${member.userId} and left_at is null
@@ -442,23 +537,45 @@ export class ConversationsService {
 
   /* ================================================================== helpers */
 
-  private async memberView(tx: Tx, workspaceId: string, conversationId: string, userId: string): Promise<ConversationMemberView> {
-    const result = await tx.execute<{ role: ConversationRole; last_read_seq: string; last_delivered_seq: string; joined_at: string }>(sql`
+  private async memberView(
+    tx: Tx,
+    workspaceId: string,
+    conversationId: string,
+    userId: string,
+  ): Promise<ConversationMemberView> {
+    const result = await tx.execute<{
+      role: ConversationRole;
+      last_read_seq: string;
+      last_delivered_seq: string;
+      joined_at: string;
+    }>(sql`
       select role, last_read_seq, last_delivered_seq, joined_at from conversation_members
       where workspace_id = ${workspaceId} and conversation_id = ${conversationId} and user_id = ${userId}`);
     const row = result.rows[0];
     if (!row) throw ApiError.notFound('The member');
-    return { userId, role: row.role, lastReadSeq: Number(row.last_read_seq), lastDeliveredSeq: Number(row.last_delivered_seq), joinedAt: iso(row.joined_at) };
+    return {
+      userId,
+      role: row.role,
+      lastReadSeq: Number(row.last_read_seq),
+      lastDeliveredSeq: Number(row.last_delivered_seq),
+      joinedAt: iso(row.joined_at),
+    };
   }
 
   /** Every id must be an active member of the workspace (422 names the first that is not). */
-  private async assertActive(tx: Tx, workspaceId: string, userIds: readonly string[], field: string): Promise<void> {
+  private async assertActive(
+    tx: Tx,
+    workspaceId: string,
+    userIds: readonly string[],
+    field: string,
+  ): Promise<void> {
     if (userIds.length === 0) return;
     const result = await tx.execute<{ user_id: string }>(sql`
       select user_id from workspace_members
       where workspace_id = ${workspaceId} and status = 'active' and user_id = any(${sql.param([...userIds])}::uuid[])`);
     const active = new Set(result.rows.map((row) => row.user_id));
     const missing = userIds.find((id) => !active.has(id));
-    if (missing) throw ApiError.validation([{ field, message: `${missing} is not an active member of this workspace` }]);
+    if (missing)
+      throw ApiError.validation([{ field, message: `${missing} is not an active member of this workspace` }]);
   }
 }

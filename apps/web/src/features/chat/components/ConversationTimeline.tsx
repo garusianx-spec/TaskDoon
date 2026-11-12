@@ -2,27 +2,39 @@
 
 import type { Message } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
-import { formatDateDivider,fromISODate } from '@taskin/jalali';
+import { formatDateDivider, fromISODate } from '@taskin/jalali';
 import { truncate } from '@/lib/format';
-import {
-isGroupedWithPrevious,
-messageById,
-messagePreview,
-userById
-} from '@/store/selectors';
+import { isGroupedWithPrevious, messageById, messagePreview, userById } from '@/store/selectors';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { MessageBubble } from '@/features/chat/components/MessageBubble';
 import { SystemLine } from '@/features/chat/components/SystemLine';
-import {
-MessagesIcon
-} from '@/components/icons';
+import { MessagesIcon } from '@/components/icons';
 import { type ChatViewProps } from '@/features/chat/types/chat-view';
 import { type ConversationTimelineState } from '@/features/chat/hooks/useConversationTimeline';
 
-export function ConversationTimeline({ conversation, messages, currentUserId, onToggleReaction, onOpenTask, onResend, onDiscard, onReply, onConvert, onLongPress, timeline }: Pick<ChatViewProps, "conversation" | "messages" | "currentUserId" | "onToggleReaction" | "onOpenTask"> & { readonly onResend: ChatViewProps["onResend"]; readonly onDiscard: ChatViewProps["onDiscard"]; readonly onReply: (id: string) => void; readonly onConvert: (message: Message) => void; readonly onLongPress: (message: Message) => void; readonly timeline: ConversationTimelineState }) {
+export function ConversationTimeline({
+  conversation,
+  messages,
+  currentUserId,
+  onToggleReaction,
+  onOpenTask,
+  onResend,
+  onDiscard,
+  onReply,
+  onConvert,
+  onLongPress,
+  timeline,
+}: Pick<ChatViewProps, 'conversation' | 'messages' | 'currentUserId' | 'onToggleReaction' | 'onOpenTask'> & {
+  readonly onResend: ChatViewProps['onResend'];
+  readonly onDiscard: ChatViewProps['onDiscard'];
+  readonly onReply: (id: string) => void;
+  readonly onConvert: (message: Message) => void;
+  readonly onLongPress: (message: Message) => void;
+  readonly timeline: ConversationTimelineState;
+}) {
   const { groups, inChatQuery, highlightedId, scrollRef, bottomRef } = timeline;
   return (
-    <div ref={scrollRef} className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4 sm:px-6">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin sm:px-6">
       {groups.length === 0 ? (
         <EmptyState
           icon={<MessagesIcon size={26} />}
@@ -104,7 +116,11 @@ export function ConversationTimeline({ conversation, messages, currentUserId, on
  */
 function DateDivider({ iso }: { readonly iso: string }) {
   return (
-    <div role="separator" aria-label={formatDateDivider(fromISODate(iso))} className="relative flex items-center gap-3 py-3">
+    <div
+      role="separator"
+      aria-label={formatDateDivider(fromISODate(iso))}
+      className="relative flex items-center gap-3 py-3"
+    >
       <span className="h-px flex-1 bg-gray-200" aria-hidden="true" />
       <span className="rounded-full border border-secondary bg-surface px-3 py-1 text-micro font-semibold text-fg-tertiary shadow-xs">
         {formatDateDivider(fromISODate(iso))}

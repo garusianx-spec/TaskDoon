@@ -29,7 +29,12 @@ export function authCookies(config: AppConfig): { refresh: CookieSpec; csrf: Coo
   };
 }
 
-export function setAuthCookies(response: Response, config: AppConfig, refreshToken: string, expiresAt: Date): void {
+export function setAuthCookies(
+  response: Response,
+  config: AppConfig,
+  refreshToken: string,
+  expiresAt: Date,
+): void {
   const { refresh, csrf } = authCookies(config);
   response.cookie(refresh.name, refreshToken, { ...refresh.options, expires: expiresAt });
   response.cookie(csrf.name, randomToken(24), { ...csrf.options, expires: expiresAt });

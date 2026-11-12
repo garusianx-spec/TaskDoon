@@ -2,7 +2,9 @@ import { HttpException } from '@nestjs/common';
 import type { ApiErrorCode, FieldError } from '@taskin/contracts';
 
 /** HTTP status and a short English title for every error code (the client localises by code). */
-export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: number; readonly title: string }>> = {
+export const ERROR_CATALOGUE: Readonly<
+  Record<ApiErrorCode, { readonly status: number; readonly title: string }>
+> = {
   VALIDATION_FAILED: { status: 400, title: 'The request is not valid' },
   NOT_FOUND: { status: 404, title: 'Not found' },
   CONFLICT: { status: 409, title: 'Conflicts with the current state' },
@@ -44,7 +46,10 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   PROJECT_KEY_TAKEN: { status: 409, title: 'Another project uses that key' },
   PROJECT_ARCHIVED: { status: 409, title: 'The project is archived' },
   COLUMN_GONE: { status: 409, title: 'The column was deleted' },
-  WORKFLOW_CATEGORY_REQUIRED: { status: 409, title: 'The board needs at least one to-do and one done column' },
+  WORKFLOW_CATEGORY_REQUIRED: {
+    status: 409,
+    title: 'The board needs at least one to-do and one done column',
+  },
   BOARD_CHANGED: { status: 409, title: 'The board changed; reload it' },
   SUBTASKS_CHANGED: { status: 409, title: 'The subtasks changed; reload the task' },
   ASSIGNEE_NO_ACCESS: { status: 422, title: 'An assignee cannot see this project' },
@@ -55,7 +60,10 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   CONVERSATION_ARCHIVED: { status: 409, title: 'The conversation is archived' },
   POSTING_RESTRICTED: { status: 403, title: 'Only the channel admins can post here' },
   DIRECT_CONVERSATION: { status: 409, title: 'A direct chat always has exactly its two people' },
-  PROJECT_CHANNEL: { status: 409, title: 'A project channel\'s members are the project\'s: add or remove them in the project' },
+  PROJECT_CHANNEL: {
+    status: 409,
+    title: "A project channel's members are the project's: add or remove them in the project",
+  },
   EDIT_WINDOW_CLOSED: { status: 409, title: 'The message can no longer be edited' },
   MESSAGE_GONE: { status: 410, title: 'The message was deleted' },
   MESSAGE_NOT_CONVERTIBLE: { status: 422, title: 'Only a text, file or voice message becomes a task' },
@@ -71,7 +79,10 @@ export const ERROR_CATALOGUE: Readonly<Record<ApiErrorCode, { readonly status: n
   ADMIN_SELF_ACTION: { status: 403, title: 'Platform admins cannot moderate their own account' },
   ADMIN_TARGET_PROTECTED: { status: 409, title: 'Another platform admin cannot be suspended here' },
   WORKSPACE_SUSPENDED: { status: 403, title: 'This workspace is suspended' },
-  OWNERSHIP_TARGET_INVALID: { status: 409, title: 'The new owner must be an active member with an active account' },
+  OWNERSHIP_TARGET_INVALID: {
+    status: 409,
+    title: 'The new owner must be an active member with an active account',
+  },
   ALREADY_OWNER: { status: 409, title: 'This member already owns the workspace' },
 };
 
@@ -104,7 +115,9 @@ export class ApiError extends HttpException {
   }
 
   static rateLimited(retryAfterSeconds: number, detail?: string): ApiError {
-    return new ApiError('RATE_LIMITED', detail, undefined, { 'Retry-After': String(Math.max(1, Math.ceil(retryAfterSeconds))) });
+    return new ApiError('RATE_LIMITED', detail, undefined, {
+      'Retry-After': String(Math.max(1, Math.ceil(retryAfterSeconds))),
+    });
   }
 
   /**
@@ -128,7 +141,8 @@ export class ApiError extends HttpException {
 export function parseIfMatch(header: string | undefined): number | undefined {
   if (header === undefined || header.trim() === '') return undefined;
   const match = /^(?:W\/)?"?(\d{1,9})"?$/.exec(header.trim());
-  if (!match?.[1]) throw ApiError.validation([{ field: 'If-Match', message: 'must be the version, e.g. "3"' }]);
+  if (!match?.[1])
+    throw ApiError.validation([{ field: 'If-Match', message: 'must be the version, e.g. "3"' }]);
   return Number(match[1]);
 }
 

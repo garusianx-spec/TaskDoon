@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback,useEffect,useMemo,useRef,useState,type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useNamespacedId } from '@/hooks/useId';
-import { IconButton,MenuList } from '@/components/ui';
+import { IconButton, MenuList } from '@/components/ui';
 import { MoreHorizontalIcon } from '@/components/icons';
 
 const GAP = 6;
@@ -72,7 +72,9 @@ export function FixedMenu({
     document.addEventListener('keydown', onKeyDown);
     window.addEventListener('scroll', onMove, true);
     window.addEventListener('resize', onMove);
-    const frame = requestAnimationFrame(() => panelRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus());
+    const frame = requestAnimationFrame(() =>
+      panelRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus(),
+    );
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', onKeyDown);

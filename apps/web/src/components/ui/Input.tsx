@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef,type InputHTMLAttributes,type ReactNode,type TextareaHTMLAttributes } from 'react';
+import { forwardRef, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 import { useNamespacedId } from '@/hooks/useId';
 
@@ -29,7 +29,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <div className={cn('flex flex-col gap-1.5', containerClassName)}>
       {label && (
-        <label htmlFor={inputId} className={cn('text-body-sm font-medium text-fg-secondary', hideLabel && 'sr-only')}>
+        <label
+          htmlFor={inputId}
+          className={cn('text-body-sm font-medium text-fg-secondary', hideLabel && 'sr-only')}
+        >
           {label}
         </label>
       )}
@@ -71,8 +74,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   );
 });
 
-export interface TextareaProps
-  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'> {
+export interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'> {
   readonly label?: string;
   readonly hint?: string;
   readonly className?: string;
@@ -91,7 +93,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   return (
     <div className={cn('flex flex-col gap-1.5', containerClassName)}>
       {label && (
-        <label htmlFor={textareaId} className={cn('text-body-sm font-medium text-fg-secondary', hideLabel && 'sr-only')}>
+        <label
+          htmlFor={textareaId}
+          className={cn('text-body-sm font-medium text-fg-secondary', hideLabel && 'sr-only')}
+        >
           {label}
         </label>
       )}

@@ -244,7 +244,11 @@ export const PERMISSION_MODULES: readonly PermissionModuleDescriptor[] = [
   { id: 'messages', name: 'پیام‌ها و کانال‌ها', description: 'گفتگوهای خصوصی، گروه‌ها و کانال‌های سازمانی' },
   { id: 'boards', name: 'بوردها و پروژه‌ها', description: 'بوردهای کانبان، وظایف و زمان‌بندی پروژه' },
   { id: 'files', name: 'اسناد و فایل‌ها', description: 'مخزن فایل پروژه‌ها و پیوست گفتگوها' },
-  { id: 'reports', name: 'گزارش‌های عملکرد و تایم‌شیت', description: 'گزارش‌های تحلیلی، بهره‌وری و ثبت ساعت کاری' },
+  {
+    id: 'reports',
+    name: 'گزارش‌های عملکرد و تایم‌شیت',
+    description: 'گزارش‌های تحلیلی، بهره‌وری و ثبت ساعت کاری',
+  },
   { id: 'members', name: 'مدیریت اعضا و دسترسی‌ها', description: 'دعوت اعضا، تخصیص نقش و تنظیم سطح دسترسی' },
 ];
 
@@ -259,5 +263,4 @@ export const PERMISSION_ACTIONS: readonly PermissionActionDescriptor[] = [
 /** Shipping defaults, shared with the API's role seeds. The RBAC screen edits a working copy. */
 export { DEFAULT_PERMISSION_MATRIX };
 
-export const roleLabel = (role: RoleId): string =>
-  ROLES.find((entry) => entry.id === role)?.name ?? role;
+export const roleLabel = (role: RoleId): string => ROLES.find((entry) => entry.id === role)?.name ?? role;

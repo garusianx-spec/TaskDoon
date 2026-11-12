@@ -54,7 +54,15 @@ import {
 } from '@taskin/contracts';
 import { AVATAR_TONES } from '../users/me.controller.js';
 
-const WEEK_DAYS: readonly WeekDay[] = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+const WEEK_DAYS: readonly WeekDay[] = [
+  'saturday',
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+];
 const PRESENCES: readonly ManualPresence[] = ['online', 'busy', 'away'];
 const CHANNELS: readonly InvitationChannel[] = ['email', 'sms'];
 const ASSIGNABLE_ROLES = ROLE_IDS.filter((role) => role !== 'owner');
@@ -62,9 +70,18 @@ const ASSIGNABLE_ROLES = ROLE_IDS.filter((role) => role !== 'owner');
 /* ============================== Workspaces ============================== */
 
 export class WorkspaceSettingsPatchDto implements Partial<WorkspaceSettings> {
-  @ApiPropertyOptional({ example: 'Asia/Tehran' }) @IsOptional() @IsString() @MaxLength(64) readonly timeZone?: string;
+  @ApiPropertyOptional({ example: 'Asia/Tehran' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  readonly timeZone?: string;
   @ApiPropertyOptional({ enum: WEEK_DAYS }) @IsOptional() @IsIn(WEEK_DAYS) readonly weekStart?: WeekDay;
-  @ApiPropertyOptional({ enum: WEEK_DAYS, isArray: true }) @IsOptional() @IsArray() @ArrayMaxSize(6) @IsIn(WEEK_DAYS, { each: true }) readonly weekend?: WeekDay[];
+  @ApiPropertyOptional({ enum: WEEK_DAYS, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(6)
+  @IsIn(WEEK_DAYS, { each: true })
+  readonly weekend?: WeekDay[];
   @ApiPropertyOptional() @IsOptional() @IsBoolean() readonly systemMessageOnConvert?: boolean;
   @ApiPropertyOptional({ type: String, isArray: true, example: ['rahnama.ir'] })
   @IsOptional()
@@ -75,15 +92,34 @@ export class WorkspaceSettingsPatchDto implements Partial<WorkspaceSettings> {
 }
 
 export class CreateWorkspaceDto implements CreateWorkspaceBody {
-  @ApiProperty({ minLength: 1, maxLength: 40, example: 'هلدینگ راهنما' }) @IsString() @Length(1, 40) readonly name!: string;
-  @ApiPropertyOptional({ maxLength: 160 }) @IsOptional() @IsString() @MaxLength(160) readonly description?: string;
+  @ApiProperty({ minLength: 1, maxLength: 40, example: 'هلدینگ راهنما' })
+  @IsString()
+  @Length(1, 40)
+  readonly name!: string;
+  @ApiPropertyOptional({ maxLength: 160 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  readonly description?: string;
   @ApiPropertyOptional({ enum: AVATAR_TONES }) @IsOptional() @IsIn(AVATAR_TONES) readonly tone?: AvatarTone;
-  @ApiPropertyOptional({ description: 'The key of a completed icon upload ticket' }) @IsOptional() @IsString() @MaxLength(200) readonly iconUploadKey?: string;
+  @ApiPropertyOptional({ description: 'The key of a completed icon upload ticket' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  readonly iconUploadKey?: string;
 }
 
 export class UpdateWorkspaceDto implements UpdateWorkspaceBody {
-  @ApiPropertyOptional({ minLength: 1, maxLength: 40 }) @IsOptional() @IsString() @Length(1, 40) readonly name?: string;
-  @ApiPropertyOptional({ maxLength: 160 }) @IsOptional() @IsString() @MaxLength(160) readonly description?: string;
+  @ApiPropertyOptional({ minLength: 1, maxLength: 40 })
+  @IsOptional()
+  @IsString()
+  @Length(1, 40)
+  readonly name?: string;
+  @ApiPropertyOptional({ maxLength: 160 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  readonly description?: string;
   @ApiPropertyOptional({ enum: AVATAR_TONES }) @IsOptional() @IsIn(AVATAR_TONES) readonly tone?: AvatarTone;
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
@@ -99,7 +135,10 @@ export class UpdateWorkspaceDto implements UpdateWorkspaceBody {
 }
 
 export class DeleteWorkspaceDto implements DeleteWorkspaceBody {
-  @ApiProperty({ description: 'The exact workspace name' }) @IsString() @Length(1, 40) readonly confirmName!: string;
+  @ApiProperty({ description: 'The exact workspace name' })
+  @IsString()
+  @Length(1, 40)
+  readonly confirmName!: string;
 }
 
 export class TransferOwnershipDto implements TransferOwnershipBody {
@@ -141,7 +180,10 @@ export class WorkspaceViewDto implements WorkspaceView {
 export class UploadTicketDto implements UploadTicket {
   @ApiProperty() readonly key!: string;
   @ApiProperty() readonly url!: string;
-  @ApiProperty({ type: 'object', additionalProperties: { type: 'string' } }) readonly fields!: Record<string, string>;
+  @ApiProperty({ type: 'object', additionalProperties: { type: 'string' } }) readonly fields!: Record<
+    string,
+    string
+  >;
   @ApiProperty() readonly maxBytes!: number;
   @ApiProperty({ type: String, isArray: true }) readonly contentTypes!: string[];
   @ApiProperty() readonly expiresInSeconds!: number;
@@ -157,12 +199,19 @@ export class UpdateMemberDto implements UpdateMemberBody {
   @IsUUID()
   readonly departmentId?: string | null;
   @ApiPropertyOptional({ maxLength: 80 }) @IsOptional() @IsString() @MaxLength(80) readonly jobTitle?: string;
-  @ApiPropertyOptional({ enum: ['active', 'suspended'] }) @IsOptional() @IsIn(['active', 'suspended']) readonly status?: 'active' | 'suspended';
+  @ApiPropertyOptional({ enum: ['active', 'suspended'] })
+  @IsOptional()
+  @IsIn(['active', 'suspended'])
+  readonly status?: 'active' | 'suspended';
 }
 
 export class UpdatePresenceDto implements UpdatePresenceBody {
   @ApiProperty({ enum: PRESENCES }) @IsIn(PRESENCES) readonly presence!: ManualPresence;
-  @ApiPropertyOptional({ maxLength: 80 }) @IsOptional() @IsString() @MaxLength(80) readonly statusMessage?: string;
+  @ApiPropertyOptional({ maxLength: 80 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  readonly statusMessage?: string;
 }
 
 export class MemberViewDto implements MemberView {
@@ -180,14 +229,22 @@ export class MemberViewDto implements MemberView {
   @ApiProperty({ description: 'Connected on at least one device right now' }) readonly online!: boolean;
   @ApiProperty() readonly statusMessage!: string;
   @ApiProperty({ format: 'date-time' }) readonly joinedAt!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'date-time', description: 'Former members only: when they were removed' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    format: 'date-time',
+    description: 'Former members only: when they were removed',
+  })
   readonly leftAt?: string | null;
 }
 
 const trueish = ({ value }: { value: unknown }) => value === true || value === 'true' || value === '1';
 
 export class MemberListQueryDto {
-  @ApiPropertyOptional({ type: Boolean, description: 'Also former members (removed or left): names only, for the history they left' })
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Also former members (removed or left): names only, for the history they left',
+  })
   @IsOptional()
   @Transform(trueish)
   @IsBoolean()
@@ -199,7 +256,11 @@ export class CreateDepartmentDto implements CreateDepartmentBody {
 }
 
 export class UpdateDepartmentDto implements UpdateDepartmentBody {
-  @ApiPropertyOptional({ minLength: 1, maxLength: 60 }) @IsOptional() @IsString() @Length(1, 60) readonly name?: string;
+  @ApiPropertyOptional({ minLength: 1, maxLength: 60 })
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  readonly name?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) readonly position?: number;
 }
 
@@ -231,7 +292,11 @@ export class CreateInvitationsDto implements CreateInvitationsBody {
   @ValidateIf((_, value) => value !== null)
   @IsUUID()
   readonly departmentId?: string | null;
-  @ApiPropertyOptional({ maxLength: 280 }) @IsOptional() @IsString() @MaxLength(280) readonly message?: string;
+  @ApiPropertyOptional({ maxLength: 280 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(280)
+  readonly message?: string;
 }
 
 export class InvitationViewDto implements InvitationView {
@@ -249,7 +314,8 @@ export class InvitationViewDto implements InvitationView {
 
 export class RejectedRecipientDto {
   @ApiProperty() readonly address!: string;
-  @ApiProperty({ enum: ['invalid_address', 'already_member', 'already_invited', 'domain_not_allowed'] }) readonly reason!: InvitationRejection;
+  @ApiProperty({ enum: ['invalid_address', 'already_member', 'already_invited', 'domain_not_allowed'] })
+  readonly reason!: InvitationRejection;
 }
 
 export class CreateInvitationsResultDto implements CreateInvitationsResult {
@@ -277,15 +343,33 @@ export class ModulePermissionsDto implements ModulePermissions {
 }
 
 export class RolePermissionsDto implements RolePermissions {
-  @ApiProperty({ type: ModulePermissionsDto }) @ValidateNested() @Type(() => ModulePermissionsDto) readonly messages!: ModulePermissionsDto;
-  @ApiProperty({ type: ModulePermissionsDto }) @ValidateNested() @Type(() => ModulePermissionsDto) readonly boards!: ModulePermissionsDto;
-  @ApiProperty({ type: ModulePermissionsDto }) @ValidateNested() @Type(() => ModulePermissionsDto) readonly files!: ModulePermissionsDto;
-  @ApiProperty({ type: ModulePermissionsDto }) @ValidateNested() @Type(() => ModulePermissionsDto) readonly reports!: ModulePermissionsDto;
-  @ApiProperty({ type: ModulePermissionsDto }) @ValidateNested() @Type(() => ModulePermissionsDto) readonly members!: ModulePermissionsDto;
+  @ApiProperty({ type: ModulePermissionsDto })
+  @ValidateNested()
+  @Type(() => ModulePermissionsDto)
+  readonly messages!: ModulePermissionsDto;
+  @ApiProperty({ type: ModulePermissionsDto })
+  @ValidateNested()
+  @Type(() => ModulePermissionsDto)
+  readonly boards!: ModulePermissionsDto;
+  @ApiProperty({ type: ModulePermissionsDto })
+  @ValidateNested()
+  @Type(() => ModulePermissionsDto)
+  readonly files!: ModulePermissionsDto;
+  @ApiProperty({ type: ModulePermissionsDto })
+  @ValidateNested()
+  @Type(() => ModulePermissionsDto)
+  readonly reports!: ModulePermissionsDto;
+  @ApiProperty({ type: ModulePermissionsDto })
+  @ValidateNested()
+  @Type(() => ModulePermissionsDto)
+  readonly members!: ModulePermissionsDto;
 }
 
 export class UpdateRolePermissionsDto implements UpdateRolePermissionsBody {
-  @ApiProperty({ type: RolePermissionsDto }) @ValidateNested() @Type(() => RolePermissionsDto) readonly permissions!: RolePermissionsDto;
+  @ApiProperty({ type: RolePermissionsDto })
+  @ValidateNested()
+  @Type(() => RolePermissionsDto)
+  readonly permissions!: RolePermissionsDto;
 }
 
 export class RoleViewDto implements RoleView {

@@ -33,7 +33,11 @@ const STALE_SECONDS = 60;
 export const Idempotent = () =>
   applyDecorators(
     SetMetadata(IDEMPOTENT, true),
-    ApiHeader({ name: 'Idempotency-Key', required: true, description: '8–64 characters of [A-Za-z0-9_-], unique per intended operation' }),
+    ApiHeader({
+      name: 'Idempotency-Key',
+      required: true,
+      description: '8–64 characters of [A-Za-z0-9_-], unique per intended operation',
+    }),
   );
 
 /** Stable JSON: object keys sorted, so `{a,b}` and `{b,a}` hash the same. */
@@ -48,7 +52,8 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
 
-type Reservation = { readonly kind: 'proceed' } | { readonly kind: 'replay'; readonly status: number; readonly body: unknown };
+type Reservation =
+  { readonly kind: 'proceed' } | { readonly kind: 'replay'; readonly status: number; readonly body: unknown };
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
@@ -58,7 +63,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const enabled = this.reflector.getAllAndOverride<boolean>(IDEMPOTENT, [context.getHandler(), context.getClass()]);
+    const enabled = this.reflector.getAllAndOverride<boolean>(IDEMPOTENT, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!enabled || context.getType() !== 'http') return next.handle();
 
     const request = context.switchToHttp().getRequest<Request & AuthenticatedRequest>();
@@ -68,10 +76,15 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     const key = request.header('idempotency-key');
     if (!key) throw new ApiError('IDEMPOTENCY_KEY_REQUIRED');
-    if (!KEY_FORMAT.test(key)) throw ApiError.validation([{ field: 'Idempotency-Key', message: 'must be 8–64 characters of A–Z, a–z, 0–9, _ or -' }]);
+    if (!KEY_FORMAT.test(key))
+      throw ApiError.validation([
+        { field: 'Idempotency-Key', message: 'must be 8–64 characters of A–Z, a–z, 0–9, _ or -' },
+      ]);
 
     const scope = `${request.method} ${request.baseUrl}${(request.route as { path?: string } | undefined)?.path ?? request.path}`;
-    const requestHash = sha256(canonicalJson({ params: request.params, query: request.query, body: request.body }));
+    const requestHash = sha256(
+      canonicalJson({ params: request.params, query: request.query, body: request.body }),
+    );
     const status =
       this.reflector.get<number | undefined>(HTTP_CODE, context.getHandler()) ??
       (request.method === 'POST' ? HttpStatus.CREATED : HttpStatus.OK);
@@ -97,12 +110,24 @@ export class IdempotencyInterceptor implements NestInterceptor {
     );
   }
 
-  private async reserve(userId: string, scope: string, key: string, requestHash: Buffer): Promise<Reservation> {
+  private async reserve(
+    userId: string,
+    scope: string,
+    key: string,
+    requestHash: Buffer,
+  ): Promise<Reservation> {
     const db = this.database.db;
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const inserted = await db
         .insert(idempotencyKeys)
-        .values({ userId, scope, key, requestHash, state: 'in_progress', expiresAt: sql`now() + make_interval(hours => ${TTL_HOURS})` })
+        .values({
+          userId,
+          scope,
+          key,
+          requestHash,
+          state: 'in_progress',
+          expiresAt: sql`now() + make_interval(hours => ${TTL_HOURS})`,
+        })
         .onConflictDoNothing()
         .returning({ key: idempotencyKeys.key });
       if (inserted.length > 0) return { kind: 'proceed' };
@@ -125,7 +150,11 @@ export class IdempotencyInterceptor implements NestInterceptor {
       }
       if (!existing.requestHash.equals(requestHash)) throw new ApiError('IDEMPOTENCY_KEY_REUSED');
       if (existing.state === 'completed') {
-        return { kind: 'replay', status: existing.responseStatus ?? HttpStatus.OK, body: existing.responseBody };
+        return {
+          kind: 'replay',
+          status: existing.responseStatus ?? HttpStatus.OK,
+          body: existing.responseBody,
+        };
       }
       if (existing.stale) {
         const taken = await db
@@ -140,7 +169,13 @@ export class IdempotencyInterceptor implements NestInterceptor {
     throw new ApiError('IDEMPOTENCY_IN_PROGRESS', undefined, undefined, { 'Retry-After': '1' });
   }
 
-  private async complete(userId: string, scope: string, key: string, status: number, body: unknown): Promise<void> {
+  private async complete(
+    userId: string,
+    scope: string,
+    key: string,
+    status: number,
+    body: unknown,
+  ): Promise<void> {
     await this.database.db
       .update(idempotencyKeys)
       .set({ state: 'completed', responseStatus: status, responseBody: body ?? null })
@@ -154,6 +189,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
   }
 
   private match(userId: string, scope: string, key: string) {
-    return and(eq(idempotencyKeys.userId, userId), eq(idempotencyKeys.scope, scope), eq(idempotencyKeys.key, key));
+    return and(
+      eq(idempotencyKeys.userId, userId),
+      eq(idempotencyKeys.scope, scope),
+      eq(idempotencyKeys.key, key),
+    );
   }
 }

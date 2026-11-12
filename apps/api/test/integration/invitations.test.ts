@@ -1,6 +1,19 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { CreateInvitationsResult, WorkspaceView } from '@taskin/contracts';
-import { addMember, bearer, createTestApp, idempotencyKey, invite, localForm, ownerWithWorkspace, randomPhone, type Session, signIn, stepUp, type TestApp } from './harness.js';
+import {
+  addMember,
+  bearer,
+  createTestApp,
+  idempotencyKey,
+  invite,
+  localForm,
+  ownerWithWorkspace,
+  randomPhone,
+  type Session,
+  signIn,
+  stepUp,
+  type TestApp,
+} from './harness.js';
 
 const persianDigits = (value: string) => value.replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)] ?? d);
 
@@ -29,7 +42,8 @@ describe('invitations', () => {
     await t?.close();
   });
 
-  const accept = (session: Session, token: string) => t.http().post('/api/v1/invitations/accept').set(bearer(session)).send({ token });
+  const accept = (session: Session, token: string) =>
+    t.http().post('/api/v1/invitations/accept').set(bearer(session)).send({ token });
 
   it('normalises, classifies and deduplicates what was typed', async () => {
     const member = await addMember(t, owner, workspace.id, 'member');
@@ -49,14 +63,21 @@ describe('invitations', () => {
       ['sms', fresh],
       ['email', 'new.person@rahnama.ir'],
     ]);
-    expect(result.rejected.map((r) => r.reason)).toEqual(['invalid_address', 'invalid_address', 'already_member', 'already_invited']);
+    expect(result.rejected.map((r) => r.reason)).toEqual([
+      'invalid_address',
+      'invalid_address',
+      'already_member',
+      'already_invited',
+    ]);
   });
 
   it('texts the link, emails the link, and never stores the token in the clear', async () => {
     const phone = randomPhone();
     const email = `invitee-${Date.now()}@example.test`;
     await invite(t, owner, workspace.id, [localForm(phone), email]);
-    const outbox = await t.admin.query<{ payload: { tokens?: { link?: string }; params?: { link?: string } } }>(
+    const outbox = await t.admin.query<{
+      payload: { tokens?: { link?: string }; params?: { link?: string } };
+    }>(
       `select payload from outbox_events where event_type in ('notification.sms', 'notification.email') and published_at is null`,
     );
     for (const { payload } of outbox.rows) expect(JSON.stringify(payload)).not.toContain('token=');
@@ -100,14 +121,23 @@ describe('invitations', () => {
     const created = await invite(t, owner, workspace.id, [localForm(revokedPhone)]);
     await t.flushNotifications();
     const invitationId = created.created[0]?.id;
-    expect((await t.http().delete(`/api/v1/workspaces/${workspace.id}/invitations/${invitationId}`).set(bearer(owner))).status).toBe(204);
+    expect(
+      (
+        await t
+          .http()
+          .delete(`/api/v1/workspaces/${workspace.id}/invitations/${invitationId}`)
+          .set(bearer(owner))
+      ).status,
+    ).toBe(204);
     const revoked = await accept(await signIn(t, revokedPhone), smsToken(t, revokedPhone));
     expect(revoked.body.code).toBe('INVITATION_INVALID');
 
     const expiredPhone = randomPhone();
     const later = await invite(t, owner, workspace.id, [localForm(expiredPhone)]);
     await t.flushNotifications();
-    await t.admin.query(`update invitations set expires_at = now() - interval '1 minute' where id = $1`, [later.created[0]?.id]);
+    await t.admin.query(`update invitations set expires_at = now() - interval '1 minute' where id = $1`, [
+      later.created[0]?.id,
+    ]);
     const expired = await accept(await signIn(t, expiredPhone), smsToken(t, expiredPhone));
     expect(expired.body.code).toBe('INVITATION_INVALID');
     // A lapsed invitation does not block inviting the number again.
@@ -141,11 +171,19 @@ describe('invitations', () => {
   });
 
   it('honours the email domain allowlist', async () => {
-    await t.http().patch(`/api/v1/workspaces/${workspace.id}`).set(bearer(owner)).send({ settings: { allowedEmailDomains: ['rahnama.ir'] } });
+    await t
+      .http()
+      .patch(`/api/v1/workspaces/${workspace.id}`)
+      .set(bearer(owner))
+      .send({ settings: { allowedEmailDomains: ['rahnama.ir'] } });
     const result = await invite(t, owner, workspace.id, ['ali@rahnama.ir', 'ali@elsewhere.test']);
     expect(result.created.map((i) => i.address)).toEqual(['ali@rahnama.ir']);
     expect(result.rejected).toEqual([{ address: 'ali@elsewhere.test', reason: 'domain_not_allowed' }]);
-    await t.http().patch(`/api/v1/workspaces/${workspace.id}`).set(bearer(owner)).send({ settings: { allowedEmailDomains: [] } });
+    await t
+      .http()
+      .patch(`/api/v1/workspaces/${workspace.id}`)
+      .set(bearer(owner))
+      .send({ settings: { allowedEmailDomains: [] } });
   });
 
   it('takes seats atomically against the plan: parallel accepts never overfill it', async () => {
@@ -157,17 +195,28 @@ describe('invitations', () => {
       await invite(t, small, team.id, phones.map(localForm));
       await t.flushNotifications();
       const sessions = await Promise.all(phones.map((phone) => signIn(t, phone)));
-      const results = await Promise.all(sessions.map((session, i) => accept(session, smsToken(t, phones[i] ?? ''))));
+      const results = await Promise.all(
+        sessions.map((session, i) => accept(session, smsToken(t, phones[i] ?? ''))),
+      );
       expect(results.map((r) => r.status).sort()).toEqual([200, 402, 402]);
-      expect(results.filter((r) => r.status === 402).every((r) => r.body.code === 'PLAN_LIMIT_REACHED')).toBe(true);
+      expect(results.filter((r) => r.status === 402).every((r) => r.body.code === 'PLAN_LIMIT_REACHED')).toBe(
+        true,
+      );
       const view = await t.http().get(`/api/v1/workspaces/${team.id}`).set(bearer(small));
       expect(view.body.memberCount).toBe(2);
       // Removing a member frees the seat again.
       const joined = sessions[results.findIndex((r) => r.status === 200)] as Session;
-      await t.http().delete(`/api/v1/workspaces/${team.id}/members/${joined.userId}`).set(bearer(await stepUp(t, small)));
-      expect((await t.http().get(`/api/v1/workspaces/${team.id}`).set(bearer(small))).body.memberCount).toBe(1);
+      await t
+        .http()
+        .delete(`/api/v1/workspaces/${team.id}/members/${joined.userId}`)
+        .set(bearer(await stepUp(t, small)));
+      expect((await t.http().get(`/api/v1/workspaces/${team.id}`).set(bearer(small))).body.memberCount).toBe(
+        1,
+      );
     } finally {
-      await t.admin.query(`update plans set limits = jsonb_set(limits, '{maxMembers}', '10') where id = 'free'`);
+      await t.admin.query(
+        `update plans set limits = jsonb_set(limits, '{maxMembers}', '10') where id = 'free'`,
+      );
     }
   });
 });

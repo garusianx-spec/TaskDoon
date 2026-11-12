@@ -1,13 +1,13 @@
 'use client';
 
-import { useState,type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import type { PlatformUserSummary } from '@taskin/contracts';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { phoneLabel } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
-import { Loaded,PageHeader,Panel } from '@/features/admin/components/AdminUi';
+import { Loaded, PageHeader, Panel } from '@/features/admin/components/AdminUi';
 import { ConversationList } from '@/features/admin/components/ConversationList';
-import { Button,Input } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { SearchIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
@@ -29,9 +29,17 @@ export default function AdminConversationsPage() {
 
   return (
     <>
-      <PageHeader title="رصد پیام‌ها و گروه‌ها" description="گفتگوهای مستقیم، گروه‌ها، کانال‌های خصوصی و کانال‌های پروژه، با فیلتر تاریخ، نوع پیام و فرستنده." />
+      <PageHeader
+        title="رصد پیام‌ها و گروه‌ها"
+        description="گفتگوهای مستقیم، گروه‌ها، کانال‌های خصوصی و کانال‌های پروژه، با فیلتر تاریخ، نوع پیام و فرستنده."
+      />
       <Panel title="انتخاب کاربر">
-        <form role="search" aria-label="جستجوی کاربر برای رصد گفتگوها" onSubmit={onSearch} className="flex flex-wrap items-end gap-2">
+        <form
+          role="search"
+          aria-label="جستجوی کاربر برای رصد گفتگوها"
+          onSubmit={onSearch}
+          className="flex flex-wrap items-end gap-2"
+        >
           <Input
             containerClassName="min-w-[16rem] flex-1"
             label="نام، شماره موبایل یا ایمیل"
@@ -54,7 +62,9 @@ export default function AdminConversationsPage() {
                         onClick={() => setPerson(user)}
                         className={cn(
                           'flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-start transition-colors',
-                          person?.id === user.id ? 'border-brand bg-brand-subtle' : 'border-secondary hover:bg-hover',
+                          person?.id === user.id
+                            ? 'border-brand bg-brand-subtle'
+                            : 'border-secondary hover:bg-hover',
                         )}
                       >
                         <span className="text-body-sm font-semibold text-fg-primary">{user.fullName}</span>
@@ -70,7 +80,9 @@ export default function AdminConversationsPage() {
           </div>
         )}
       </Panel>
-      {person && <ConversationList key={person.id} userId={person.id} title={`گفتگوهای ${person.fullName}`} />}
+      {person && (
+        <ConversationList key={person.id} userId={person.id} title={`گفتگوهای ${person.fullName}`} />
+      )}
     </>
   );
 }

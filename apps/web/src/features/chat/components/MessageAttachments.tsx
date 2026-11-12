@@ -5,11 +5,8 @@ import { cn } from '@/lib/utils';
 import { downloadAttachment } from '@/lib/download';
 import { useFileUrl } from '@/store/files';
 import { formatFileSize } from '@/lib/format';
-import { Badge,IconButton } from '@/components/ui';
-import {
-DownloadIcon,ATTACHMENT_ICONS
-} from '@/components/icons';
-
+import { Badge, IconButton } from '@/components/ui';
+import { DownloadIcon, ATTACHMENT_ICONS } from '@/components/icons';
 
 interface FileCardProps {
   readonly attachment: Attachment;
@@ -40,7 +37,7 @@ export function FileCard({ attachment, caption, outgoing, preview = true }: File
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-caption font-semibold">{attachment.name}</span>
-          <span className={cn('numeric text-micro', outgoing ? 'text-fg-on-brand/70' : 'text-fg-tertiary')}>
+          <span className={cn('text-micro numeric', outgoing ? 'text-fg-on-brand/70' : 'text-fg-tertiary')}>
             {formatFileSize(attachment.size)}
           </span>
         </span>
@@ -70,7 +67,12 @@ export function PhotoCard({ attachment, caption, outgoing }: Omit<FileCardProps,
     <div className="flex flex-col gap-2">
       <div className="relative">
         {/* eslint-disable-next-line @next/next/no-img-element -- a signed, short-lived link to an upload */}
-        <img src={url} alt={attachment.name} loading="lazy" className="max-h-80 w-60 rounded-lg bg-sunken object-cover sm:w-72" />
+        <img
+          src={url}
+          alt={attachment.name}
+          loading="lazy"
+          className="max-h-80 w-60 rounded-lg bg-sunken object-cover sm:w-72"
+        />
         <IconButton
           label={`دانلود ${attachment.name}`}
           icon={<DownloadIcon size={16} />}
@@ -85,7 +87,13 @@ export function PhotoCard({ attachment, caption, outgoing }: Omit<FileCardProps,
 }
 
 /** The picture itself once there is a link to it; the demo's fixtures (no bytes) keep a badge. */
-function ImagePreview({ attachment, outgoing }: { readonly attachment: Attachment; readonly outgoing: boolean }) {
+function ImagePreview({
+  attachment,
+  outgoing,
+}: {
+  readonly attachment: Attachment;
+  readonly outgoing: boolean;
+}) {
   const url = useFileUrl(attachment, 'inline');
   if (!url) {
     return (
@@ -94,6 +102,13 @@ function ImagePreview({ attachment, outgoing }: { readonly attachment: Attachmen
       </Badge>
     );
   }
-  // eslint-disable-next-line @next/next/no-img-element -- a signed, short-lived link to an upload
-  return <img src={url} alt={attachment.name} loading="lazy" className="max-h-56 w-56 rounded-lg object-cover sm:w-64" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- a signed, short-lived link to an upload
+    <img
+      src={url}
+      alt={attachment.name}
+      loading="lazy"
+      className="max-h-56 w-56 rounded-lg object-cover sm:w-64"
+    />
+  );
 }

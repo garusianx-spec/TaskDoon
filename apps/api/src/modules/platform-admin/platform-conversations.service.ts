@@ -130,14 +130,29 @@ export class PlatformConversationsService {
           limit 500`)
       ).rows;
     });
-    await this.auditLog.record(admin, { action: 'admin.conversations.list', targetUserId: userId, resourceType: 'user', resourceId: userId, metadata: { results: rows.length } });
+    await this.auditLog.record(admin, {
+      action: 'admin.conversations.list',
+      targetUserId: userId,
+      resourceType: 'user',
+      resourceId: userId,
+      metadata: { results: rows.length },
+    });
     return rows.map((row) => ({ ...view(row), role: row.role, leftAt: isoOrNull(row.left_at) }));
   }
 
-  async detail(admin: PlatformAdmin, conversationId: string, targetUserId: string | undefined): Promise<PlatformConversationDetail> {
+  async detail(
+    admin: PlatformAdmin,
+    conversationId: string,
+    targetUserId: string | undefined,
+  ): Promise<PlatformConversationDetail> {
     const { conversation, members } = await this.admins.read(admin, async (tx) => {
       const found = await this.load(tx, conversationId);
-      const joined = await tx.execute<{ user_id: string; full_name: string; role: string; left_at: string | null }>(sql`
+      const joined = await tx.execute<{
+        user_id: string;
+        full_name: string;
+        role: string;
+        left_at: string | null;
+      }>(sql`
         select cm.user_id, u.full_name, cm.role, cm.left_at
         from conversation_members cm join users u on u.id = cm.user_id
         where cm.conversation_id = ${conversationId}
@@ -153,12 +168,21 @@ export class PlatformConversationsService {
     });
     return {
       ...view(conversation),
-      members: members.map((row) => ({ userId: row.user_id, fullName: row.full_name, role: row.role, leftAt: isoOrNull(row.left_at) })),
+      members: members.map((row) => ({
+        userId: row.user_id,
+        fullName: row.full_name,
+        role: row.role,
+        leftAt: isoOrNull(row.left_at),
+      })),
     };
   }
 
   /** Newest first from `beforeSeq` (or the end), returned oldest first. */
-  async messages(admin: PlatformAdmin, conversationId: string, filters: PlatformMessageFilters): Promise<PlatformMessagePage> {
+  async messages(
+    admin: PlatformAdmin,
+    conversationId: string,
+    filters: PlatformMessageFilters,
+  ): Promise<PlatformMessagePage> {
     const limit = filters.limit ?? 50;
     const where: SQL[] = [sql`m.conversation_id = ${conversationId}`];
     if (filters.from) where.push(sql`m.created_at >= ${filters.from}::timestamptz`);
@@ -169,12 +193,21 @@ export class PlatformConversationsService {
 
     const { conversation, rows, authors } = await this.admins.read(admin, async (tx) => {
       const found = await this.load(tx, conversationId);
-      const page = (await tx.execute<MessageRow>(messagesQuery(sql.join(where, sql` and `), sql`m.seq desc`, limit + 1))).rows;
+      const page = (
+        await tx.execute<MessageRow>(messagesQuery(sql.join(where, sql` and `), sql`m.seq desc`, limit + 1))
+      ).rows;
       const ids = [...new Set(page.slice(0, limit).flatMap((row) => (row.author_id ? [row.author_id] : [])))];
       const names =
         ids.length === 0
           ? []
-          : (await tx.execute<{ id: string; full_name: string }>(sql`select id, full_name from users where id in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})`)).rows;
+          : (
+              await tx.execute<{ id: string; full_name: string }>(
+                sql`select id, full_name from users where id in (${sql.join(
+                  ids.map((id) => sql`${id}::uuid`),
+                  sql`, `,
+                )})`,
+              )
+            ).rows;
       return { conversation: found, rows: page, authors: names };
     });
     const page = rows.slice(0, limit);
@@ -185,7 +218,13 @@ export class PlatformConversationsService {
       resourceId: conversationId,
       metadata: {
         workspaceId: conversation.workspace_id,
-        filters: { from: filters.from ?? null, to: filters.to ?? null, type: filters.type ?? null, senderId: filters.senderId ?? null, beforeSeq: filters.beforeSeq ?? null },
+        filters: {
+          from: filters.from ?? null,
+          to: filters.to ?? null,
+          type: filters.type ?? null,
+          senderId: filters.senderId ?? null,
+          beforeSeq: filters.beforeSeq ?? null,
+        },
         results: page.length,
       },
     });
@@ -198,10 +237,20 @@ export class PlatformConversationsService {
   }
 
   /** A five-minute link to a file sent in a conversation (images, audio and video open inline). */
-  async attachmentLink(admin: PlatformAdmin, attachmentId: string, targetUserId: string | undefined): Promise<PlatformAttachmentLink> {
+  async attachmentLink(
+    admin: PlatformAdmin,
+    attachmentId: string,
+    targetUserId: string | undefined,
+  ): Promise<PlatformAttachmentLink> {
     const file = await this.admins.read(admin, async (tx) => {
       const [row] = (
-        await tx.execute<{ workspace_id: string; object_key: string; file_name: string; mime_type: string; kind: string }>(sql`
+        await tx.execute<{
+          workspace_id: string;
+          object_key: string;
+          file_name: string;
+          mime_type: string;
+          kind: string;
+        }>(sql`
           select a.workspace_id, a.object_key, a.file_name, a.mime_type, a.kind from attachments a
           where a.id = ${attachmentId} and a.deleted_at is null and a.status = 'ready'`)
       ).rows;
@@ -216,12 +265,22 @@ export class PlatformConversationsService {
       metadata: { workspaceId: file.workspace_id, kind: file.kind },
     });
     const disposition = INLINE_KINDS.has(file.kind) ? 'inline' : 'attachment';
-    const url = await this.storage.presignGet(file.object_key, LINK_TTL_SECONDS, file.file_name, file.mime_type, disposition);
+    const url = await this.storage.presignGet(
+      file.object_key,
+      LINK_TTL_SECONDS,
+      file.file_name,
+      file.mime_type,
+      disposition,
+    );
     return { url, expiresAt: new Date(Date.now() + LINK_TTL_SECONDS * 1000).toISOString() };
   }
 
   private async load(tx: Tx, conversationId: string): Promise<ConversationRow> {
-    const [row] = (await tx.execute<ConversationRow>(sql`select ${CONVERSATION_COLUMNS} from conversations c ${CONVERSATION_JOINS} where c.id = ${conversationId}`)).rows;
+    const [row] = (
+      await tx.execute<ConversationRow>(
+        sql`select ${CONVERSATION_COLUMNS} from conversations c ${CONVERSATION_JOINS} where c.id = ${conversationId}`,
+      )
+    ).rows;
     if (!row) throw ApiError.notFound('The conversation');
     return row;
   }
@@ -231,4 +290,3 @@ export class PlatformConversationsService {
     if (found.rows.length === 0) throw ApiError.notFound('The user');
   }
 }
-

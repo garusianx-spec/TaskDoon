@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo,useState } from 'react';
-import { formatJalali,toISODate,toPersianDigits } from '@taskin/jalali';
+import { useMemo, useState } from 'react';
+import { formatJalali, toISODate, toPersianDigits } from '@taskin/jalali';
 import { truncate } from '@/lib/format';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
-import { Button,Input,Modal } from '@/components/ui';
+import { Button, Input, Modal } from '@/components/ui';
 import { ClockIcon } from '@/components/icons';
 import { JalaliDatePicker } from '@/components/shared/JalaliDatePicker';
 
@@ -12,7 +12,8 @@ import { JalaliDatePicker } from '@/components/shared/JalaliDatePicker';
 const MIN_LEAD_MS = 60_000;
 const MAX_AHEAD_MS = 365 * 24 * 3600 * 1000;
 
-const hhmm = (date: Date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+const hhmm = (date: Date) =>
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
 /** A local wall-clock `date` + `time` as an instant (this device's zone, like the rest of the UI). */
 function instantOf(date: string, time: string): Date | null {
@@ -39,7 +40,9 @@ function presets(now: Date): readonly Preset[] {
   const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0);
   return [
     { label: 'یک ساعت دیگر', at: defaultSlot(now) },
-    ...(tonight.getTime() - now.getTime() > MIN_LEAD_MS ? [{ label: `امشب ساعت ${toPersianDigits('21:00')}`, at: tonight }] : []),
+    ...(tonight.getTime() - now.getTime() > MIN_LEAD_MS
+      ? [{ label: `امشب ساعت ${toPersianDigits('21:00')}`, at: tonight }]
+      : []),
     { label: `فردا ساعت ${toPersianDigits('09:00')}`, at: tomorrow },
   ];
 }
@@ -129,7 +132,14 @@ export function ScheduleMessageDialog({
             <span className="text-body-sm font-medium text-fg-secondary">تاریخ ارسال</span>
             <JalaliDatePicker label="انتخاب تاریخ ارسال" value={date} onChange={setDate} />
           </div>
-          <Input label="ساعت ارسال" type="time" dir="ltr" step={60} value={time} onChange={(event) => setTime(event.target.value)} />
+          <Input
+            label="ساعت ارسال"
+            type="time"
+            dir="ltr"
+            step={60}
+            value={time}
+            onChange={(event) => setTime(event.target.value)}
+          />
         </div>
         {at && !error && (
           <p className="text-body-sm text-fg-secondary" aria-live="polite">

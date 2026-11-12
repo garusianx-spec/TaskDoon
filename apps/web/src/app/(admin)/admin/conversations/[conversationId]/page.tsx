@@ -1,19 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams,useSearchParams } from 'next/navigation';
-import { useState,type FormEvent } from 'react';
-import type { MessageView,PlatformMessagePage } from '@taskin/contracts';
+import { useParams, useSearchParams } from 'next/navigation';
+import { useState, type FormEvent } from 'react';
+import type { MessageView, PlatformMessagePage } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
-import { adminApi,type MessageFilters } from '@/features/admin/api/admin-api';
+import { adminApi, type MessageFilters } from '@/features/admin/api/admin-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
-import { CONVERSATION_KINDS,CONVERSATION_ROLES } from '@/features/admin/lib/format';
+import { CONVERSATION_KINDS, CONVERSATION_ROLES } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
-import { Loaded,PageHeader,Panel } from '@/features/admin/components/AdminUi';
+import { Loaded, PageHeader, Panel } from '@/features/admin/components/AdminUi';
 import { MessageItem } from '@/features/admin/components/MessageItem';
-import { Badge,Button,Input,Select } from '@/components/ui';
-import { ArrowRightIcon,FilterIcon } from '@/components/icons';
+import { Badge, Button, Input, Select } from '@/components/ui';
+import { ArrowRightIcon, FilterIcon } from '@/components/icons';
 
 interface FilterDraft {
   readonly from: string;
@@ -52,7 +52,9 @@ export default function AdminConversationPage() {
     targetUserId,
   };
   const detail = useAdminLoad(conversationId, () => adminApi.conversation(conversationId, targetUserId));
-  const page = useAdminLoad(`${conversationId}:${JSON.stringify(applied)}`, () => adminApi.messages(conversationId, filters));
+  const page = useAdminLoad(`${conversationId}:${JSON.stringify(applied)}`, () =>
+    adminApi.messages(conversationId, filters),
+  );
 
   const onFilter = (event: FormEvent) => {
     event.preventDefault();
@@ -67,7 +69,9 @@ export default function AdminConversationPage() {
     setLoadingOlder(true);
     setOlderError(null);
     try {
-      const next = await call(() => adminApi.messages(conversationId, { ...filters, beforeSeq: oldestPage.olderBeforeSeq }));
+      const next = await call(() =>
+        adminApi.messages(conversationId, { ...filters, beforeSeq: oldestPage.olderBeforeSeq }),
+      );
       setOlder((current) => [...current, next]);
     } catch (error) {
       setOlderError(problemMessage(error));
@@ -96,9 +100,14 @@ export default function AdminConversationPage() {
               <ul className="flex flex-wrap gap-2">
                 {conversation.members.map((member) => (
                   <li key={member.userId}>
-                    <Link href={`/admin/users/${member.userId}`} className="inline-flex items-center gap-1 rounded-full border border-secondary px-3 py-1 text-body-sm hover:bg-hover">
+                    <Link
+                      href={`/admin/users/${member.userId}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-secondary px-3 py-1 text-body-sm hover:bg-hover"
+                    >
                       {member.fullName}
-                      <span className="text-caption text-fg-tertiary">· {CONVERSATION_ROLES[member.role] ?? member.role}</span>
+                      <span className="text-caption text-fg-tertiary">
+                        · {CONVERSATION_ROLES[member.role] ?? member.role}
+                      </span>
                       {member.leftAt && (
                         <Badge tone="neutral" size="sm">
                           خارج‌شده
@@ -110,9 +119,25 @@ export default function AdminConversationPage() {
               </ul>
             </Panel>
             <Panel title="پیام‌ها">
-              <form onSubmit={onFilter} aria-label="فیلتر پیام‌ها" className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <Input label="از تاریخ" type="date" dir="ltr" value={draft.from} onChange={(event) => setDraft({ ...draft, from: event.target.value })} />
-                <Input label="تا تاریخ" type="date" dir="ltr" value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
+              <form
+                onSubmit={onFilter}
+                aria-label="فیلتر پیام‌ها"
+                className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+              >
+                <Input
+                  label="از تاریخ"
+                  type="date"
+                  dir="ltr"
+                  value={draft.from}
+                  onChange={(event) => setDraft({ ...draft, from: event.target.value })}
+                />
+                <Input
+                  label="تا تاریخ"
+                  type="date"
+                  dir="ltr"
+                  value={draft.to}
+                  onChange={(event) => setDraft({ ...draft, to: event.target.value })}
+                />
                 <Select
                   label="نوع پیام"
                   hideLabel={false}
@@ -131,7 +156,13 @@ export default function AdminConversationPage() {
                   hideLabel={false}
                   value={draft.senderId || 'any'}
                   onValueChange={(value) => setDraft({ ...draft, senderId: value === 'any' ? '' : value })}
-                  options={[{ value: 'any', label: 'همه' }, ...conversation.members.map((member) => ({ value: member.userId, label: member.fullName }))]}
+                  options={[
+                    { value: 'any', label: 'همه' },
+                    ...conversation.members.map((member) => ({
+                      value: member.userId,
+                      label: member.fullName,
+                    })),
+                  ]}
                 />
                 <div className="flex items-end gap-2">
                   <Button type="submit" iconStart={<FilterIcon size={16} />}>
@@ -153,13 +184,21 @@ export default function AdminConversationPage() {
               <Loaded load={page} empty={(data) => data.items.length === 0}>
                 {(latest) => {
                   const pages = [...older].reverse().concat(latest);
-                  const authors = Object.assign({}, ...pages.map((entry) => entry.authors)) as Record<string, string>;
+                  const authors = Object.assign({}, ...pages.map((entry) => entry.authors)) as Record<
+                    string,
+                    string
+                  >;
                   const messages: MessageView[] = pages.flatMap((entry) => entry.items);
                   return (
                     <>
                       {oldestPage?.olderBeforeSeq && (
                         <div className="mb-3 flex justify-center">
-                          <Button variant="secondary" size="sm" loading={loadingOlder} onClick={() => void loadOlder()}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            loading={loadingOlder}
+                            onClick={() => void loadOlder()}
+                          >
                             پیام‌های قدیمی‌تر
                           </Button>
                         </div>
@@ -171,7 +210,12 @@ export default function AdminConversationPage() {
                       )}
                       <ol aria-label="پیام‌های گفتگو" className="flex flex-col gap-2">
                         {messages.map((message) => (
-                          <MessageItem key={message.id} message={message} authors={authors} targetUserId={targetUserId} />
+                          <MessageItem
+                            key={message.id}
+                            message={message}
+                            authors={authors}
+                            targetUserId={targetUserId}
+                          />
                         ))}
                       </ol>
                     </>

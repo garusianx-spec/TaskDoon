@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo,useState } from 'react';
-import type { BoardColumn,Task,TaskStatus } from '@taskin/contracts';
+import { useMemo, useState } from 'react';
+import type { BoardColumn, Task, TaskStatus } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { CheckCircleIcon,ChevronDownIcon,TaskSquareIcon } from '@/components/icons';
+import { CheckCircleIcon, ChevronDownIcon, TaskSquareIcon } from '@/components/icons';
 import { TaskRow } from '@/features/board/components/TaskRow';
 import { SortableHeader } from '@/features/board/components/SortableHeader';
 
@@ -42,7 +42,13 @@ const STATUS_RANK: Readonly<Record<TaskStatus, number>> = {
  * in its own collapsible row group under the open tasks, so ticking a checkbox visibly moves
  * the task into "انجام‌شده".
  */
-export function TaskListView({ tasks, columns, onOpenTask, onToggleComplete, selectedTaskId }: TaskListViewProps) {
+export function TaskListView({
+  tasks,
+  columns,
+  onOpenTask,
+  onToggleComplete,
+  selectedTaskId,
+}: TaskListViewProps) {
   const [sortKey, setSortKey] = useState<SortKey>('due');
   const [ascending, setAscending] = useState(true);
   const [showCompleted, setShowCompleted] = useState(true);
@@ -93,18 +99,41 @@ export function TaskListView({ tasks, columns, onOpenTask, onToggleComplete, sel
   }
 
   return (
-    <div className="scrollbar-thin h-full overflow-auto p-4">
+    <div className="h-full overflow-auto p-4 scrollbar-thin">
       <div className="min-w-[56rem] overflow-hidden rounded-xl border border-secondary bg-surface shadow-xs">
         <table className="w-full border-collapse text-start">
-          <caption className="sr-only">
-            {`فهرست وظایف — ${formatCount(tasks.length)} مورد`}
-          </caption>
+          <caption className="sr-only">{`فهرست وظایف — ${formatCount(tasks.length)} مورد`}</caption>
           <thead className="bg-sunken">
             <tr>
-              <SortableHeader label="عنوان وظیفه" active={sortKey === 'title'} ascending={ascending} sort={sortState('title')} onClick={() => toggleSort('title')} className="w-[34%]" />
-              <SortableHeader label="وضعیت" active={sortKey === 'status'} ascending={ascending} sort={sortState('status')} onClick={() => toggleSort('status')} />
-              <SortableHeader label="اولویت" active={sortKey === 'priority'} ascending={ascending} sort={sortState('priority')} onClick={() => toggleSort('priority')} />
-              <SortableHeader label="مهلت انجام" active={sortKey === 'due'} ascending={ascending} sort={sortState('due')} onClick={() => toggleSort('due')} />
+              <SortableHeader
+                label="عنوان وظیفه"
+                active={sortKey === 'title'}
+                ascending={ascending}
+                sort={sortState('title')}
+                onClick={() => toggleSort('title')}
+                className="w-[34%]"
+              />
+              <SortableHeader
+                label="وضعیت"
+                active={sortKey === 'status'}
+                ascending={ascending}
+                sort={sortState('status')}
+                onClick={() => toggleSort('status')}
+              />
+              <SortableHeader
+                label="اولویت"
+                active={sortKey === 'priority'}
+                ascending={ascending}
+                sort={sortState('priority')}
+                onClick={() => toggleSort('priority')}
+              />
+              <SortableHeader
+                label="مهلت انجام"
+                active={sortKey === 'due'}
+                ascending={ascending}
+                sort={sortState('due')}
+                onClick={() => toggleSort('due')}
+              />
               <th scope="col" className="px-4 py-3 text-start text-title-sm font-semibold text-fg-secondary">
                 پیشرفت
               </th>
@@ -170,7 +199,7 @@ export function TaskListView({ tasks, columns, onOpenTask, onToggleComplete, sel
         </table>
       </div>
 
-      <p className="numeric mt-3 px-1 text-caption text-fg-tertiary">
+      <p className="mt-3 px-1 text-caption text-fg-tertiary numeric">
         {`مجموع ${formatCount(tasks.length)} وظیفه — ${formatCount(
           tasks.filter((task) => task.status === 'done').length,
         )} مورد انجام‌شده`}

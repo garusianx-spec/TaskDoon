@@ -29,7 +29,11 @@ import { MembersService } from '../modules/workspaces/members.service.js';
 import { WorkspacesService } from '../modules/workspaces/workspaces.service.js';
 
 /** Opens the sealed values (invitation links) only at the moment of sending. */
-function unseal(values: Readonly<Record<string, string>>, sealed: readonly string[] | undefined, box: SecretBox): Record<string, string> {
+function unseal(
+  values: Readonly<Record<string, string>>,
+  sealed: readonly string[] | undefined,
+  box: SecretBox,
+): Record<string, string> {
   const open: Record<string, string> = { ...values };
   for (const key of sealed ?? []) {
     const value = open[key];
@@ -38,7 +42,11 @@ function unseal(values: Readonly<Record<string, string>>, sealed: readonly strin
   return open;
 }
 
-function inviteMail(params: Readonly<Record<string, string>>): { subject: string; text: string; html: string } {
+function inviteMail(params: Readonly<Record<string, string>>): {
+  subject: string;
+  text: string;
+  html: string;
+} {
   const workspace = params.workspace ?? '';
   const link = params.link ?? '';
   const note = params.message ? `\n\n«${params.message}»` : '';
@@ -52,7 +60,11 @@ function inviteMail(params: Readonly<Record<string, string>>): { subject: string
 }
 
 /** A password reset link a platform admin sent (single use; it expires). */
-function resetMail(params: Readonly<Record<string, string>>): { subject: string; text: string; html: string } {
+function resetMail(params: Readonly<Record<string, string>>): {
+  subject: string;
+  text: string;
+  html: string;
+} {
   const link = params.link ?? '';
   return {
     subject: 'بازنشانی رمز عبور تسک‌دون',
@@ -62,7 +74,10 @@ function resetMail(params: Readonly<Record<string, string>>): { subject: string;
 }
 
 function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char);
+  return value.replace(
+    /[&<>"']/g,
+    (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char,
+  );
 }
 
 /**
@@ -81,13 +96,20 @@ export class NotificationsProcessor {
     switch (name) {
       case 'sms.send': {
         const payload = data.payload as NotificationJobs['sms.send'];
-        await this.sms.send({ to: payload.to, template: payload.template, tokens: unseal(payload.tokens, payload.sealed, this.box) });
+        await this.sms.send({
+          to: payload.to,
+          template: payload.template,
+          tokens: unseal(payload.tokens, payload.sealed, this.box),
+        });
         return;
       }
       case 'mail.send': {
         const payload = data.payload as NotificationJobs['mail.send'];
         const params = unseal(payload.params, payload.sealed, this.box);
-        await this.mail.send({ to: payload.to, ...(payload.template === 'password_reset' ? resetMail(params) : inviteMail(params)) });
+        await this.mail.send({
+          to: payload.to,
+          ...(payload.template === 'password_reset' ? resetMail(params) : inviteMail(params)),
+        });
         return;
       }
     }
@@ -170,7 +192,12 @@ export class MaintenanceProcessor {
         const events = await this.relay.purgePublished(7);
         const lag = await this.relay.lagSeconds();
         if (lag > 5) this.logger.warn({ lagSeconds: lag }, 'outbox is lagging');
-        return { challenges: challenges.length, idempotencyKeys: keys.length, outboxEvents: events, outboxLagSeconds: lag };
+        return {
+          challenges: challenges.length,
+          idempotencyKeys: keys.length,
+          outboxEvents: events,
+          outboxLagSeconds: lag,
+        };
       }
     }
   }
@@ -200,7 +227,11 @@ export class QueueWorkers implements OnApplicationBootstrap, OnModuleDestroy {
         (job) => this.runNotification(job.name as keyof NotificationJobs, job.data),
         { ...options, concurrency: 8 },
       ),
-      new Worker<WorkJobData, unknown>(QUEUE_NAMES.work, (job) => this.runWork(job.name as keyof WorkJobs, job.data), { ...options, concurrency: 8 }),
+      new Worker<WorkJobData, unknown>(
+        QUEUE_NAMES.work,
+        (job) => this.runWork(job.name as keyof WorkJobs, job.data),
+        { ...options, concurrency: 8 },
+      ),
       new Worker<Record<string, never>, unknown>(
         QUEUE_NAMES.maintenance,
         (job) => this.context.run({}, () => this.maintenance.handle(job.name as MaintenanceJob)),
@@ -208,16 +239,47 @@ export class QueueWorkers implements OnApplicationBootstrap, OnModuleDestroy {
       ),
     ];
     for (const worker of this.workers) {
-      worker.on('failed', (job, error) => this.logger.warn({ queue: worker.name, job: job?.name, attempts: job?.attemptsMade, error: error.message }, 'job failed'));
-      worker.on('error', (error) => this.logger.warn({ queue: worker.name, error: error.message }, 'worker error'));
+      worker.on('failed', (job, error) =>
+        this.logger.warn(
+          { queue: worker.name, job: job?.name, attempts: job?.attemptsMade, error: error.message },
+          'job failed',
+        ),
+      );
+      worker.on('error', (error) =>
+        this.logger.warn({ queue: worker.name, error: error.message }, 'worker error'),
+      );
     }
-    await this.queues.maintenance.upsertJobScheduler('audit-partitions', { every: 24 * 3600 * 1000 }, { name: 'audit.partitions' });
-    await this.queues.maintenance.upsertJobScheduler('workspace-purge', { every: 10 * 60 * 1000 }, { name: 'workspace.purge' });
-    await this.queues.maintenance.upsertJobScheduler('projects-purge', { every: 3600 * 1000 }, { name: 'projects.purge' });
-    await this.queues.maintenance.upsertJobScheduler('members-purge', { every: 3600 * 1000 }, { name: 'members.purge' });
+    await this.queues.maintenance.upsertJobScheduler(
+      'audit-partitions',
+      { every: 24 * 3600 * 1000 },
+      { name: 'audit.partitions' },
+    );
+    await this.queues.maintenance.upsertJobScheduler(
+      'workspace-purge',
+      { every: 10 * 60 * 1000 },
+      { name: 'workspace.purge' },
+    );
+    await this.queues.maintenance.upsertJobScheduler(
+      'projects-purge',
+      { every: 3600 * 1000 },
+      { name: 'projects.purge' },
+    );
+    await this.queues.maintenance.upsertJobScheduler(
+      'members-purge',
+      { every: 3600 * 1000 },
+      { name: 'members.purge' },
+    );
     await this.queues.maintenance.upsertJobScheduler('cleanup', { every: 3600 * 1000 }, { name: 'cleanup' });
-    await this.queues.maintenance.upsertJobScheduler('files-gc', { every: 3600 * 1000 }, { name: 'files.gc' });
-    await this.queues.maintenance.upsertJobScheduler('scheduled-sweep', { every: 60 * 1000 }, { name: 'scheduled.sweep' });
+    await this.queues.maintenance.upsertJobScheduler(
+      'files-gc',
+      { every: 3600 * 1000 },
+      { name: 'files.gc' },
+    );
+    await this.queues.maintenance.upsertJobScheduler(
+      'scheduled-sweep',
+      { every: 60 * 1000 },
+      { name: 'scheduled.sweep' },
+    );
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -226,11 +288,15 @@ export class QueueWorkers implements OnApplicationBootstrap, OnModuleDestroy {
 
   /** One work job, in a context carrying the request id and trace id that caused it. */
   runWork(name: keyof WorkJobs, data: WorkJobData): Promise<unknown> {
-    return this.context.run({ requestId: data.headers.requestId, traceId: data.headers.traceId }, () => this.work.handle(name, data));
+    return this.context.run({ requestId: data.headers.requestId, traceId: data.headers.traceId }, () =>
+      this.work.handle(name, data),
+    );
   }
 
   /** One notification job, in a context carrying the request id and trace id that caused it. */
   runNotification(name: keyof NotificationJobs, data: NotificationJobData): Promise<void> {
-    return this.context.run({ requestId: data.headers.requestId, traceId: data.headers.traceId }, () => this.notifications.handle(name, data));
+    return this.context.run({ requestId: data.headers.requestId, traceId: data.headers.traceId }, () =>
+      this.notifications.handle(name, data),
+    );
   }
 }

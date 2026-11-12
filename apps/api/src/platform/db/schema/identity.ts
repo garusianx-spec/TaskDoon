@@ -1,6 +1,17 @@
 import type { PlatformAdminRole, AdministrativeStatus } from '@taskin/contracts';
 import { sql } from 'drizzle-orm';
-import { boolean, check, index, inet, integer, pgTable, smallint, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  check,
+  index,
+  inet,
+  integer,
+  pgTable,
+  smallint,
+  text,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { bytea, citext, createdAt, instant, updatedAt, uuidPk } from './columns.js';
 import { avatarTone, otpPurpose, sessionRevokeReason, userStatus } from './enums.js';
 
@@ -44,10 +55,20 @@ export const users = pgTable(
     deletedAt: instant(),
   },
   (t) => [
-    uniqueIndex('users_phone_uq').on(t.phone).where(sql`${t.deletedAt} is null`),
-    uniqueIndex('users_email_uq').on(t.email).where(sql`${t.email} is not null and ${t.deletedAt} is null`),
-    check('users_platform_admin_role', sql`${t.platformAdminRole} is null or ${t.platformAdminRole} in ('SUPER_ADMIN', 'ADMIN', 'OPERATOR')`),
-    check('users_platform_admin_status', sql`${t.platformAdminStatus} in ('ACTIVE', 'PENDING_SETUP', 'SUSPENDED')`),
+    uniqueIndex('users_phone_uq')
+      .on(t.phone)
+      .where(sql`${t.deletedAt} is null`),
+    uniqueIndex('users_email_uq')
+      .on(t.email)
+      .where(sql`${t.email} is not null and ${t.deletedAt} is null`),
+    check(
+      'users_platform_admin_role',
+      sql`${t.platformAdminRole} is null or ${t.platformAdminRole} in ('SUPER_ADMIN', 'ADMIN', 'OPERATOR')`,
+    ),
+    check(
+      'users_platform_admin_status',
+      sql`${t.platformAdminStatus} in ('ACTIVE', 'PENDING_SETUP', 'SUSPENDED')`,
+    ),
     check('users_full_name_len', sql`char_length(${t.fullName}) between 2 and 80`),
     check('users_phone_e164', sql`${t.phone} ~ '^\\+[1-9][0-9]{7,14}$'`),
   ],
@@ -107,7 +128,11 @@ export const authSessions = pgTable(
     revokeReason: sessionRevokeReason(),
     createdAt: createdAt(),
   },
-  (t) => [index('auth_sessions_user_active_idx').on(t.userId).where(sql`${t.revokedAt} is null`)],
+  (t) => [
+    index('auth_sessions_user_active_idx')
+      .on(t.userId)
+      .where(sql`${t.revokedAt} is null`),
+  ],
 );
 
 /**
@@ -151,7 +176,9 @@ export const passwordResetTokens = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    index('password_reset_tokens_user_idx').on(t.userId).where(sql`${t.usedAt} is null`),
+    index('password_reset_tokens_user_idx')
+      .on(t.userId)
+      .where(sql`${t.usedAt} is null`),
     check('password_reset_tokens_channel', sql`${t.channel} in ('sms', 'email', 'manual')`),
   ],
 );
@@ -161,7 +188,9 @@ export const authChallenges = pgTable(
   'auth_challenges',
   {
     id: uuidPk(),
-    userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     purpose: text().notNull(),
     tokenHash: bytea().notNull().unique('auth_challenges_token_hash_uq'),
     securityVersion: integer().notNull(),
@@ -173,6 +202,9 @@ export const authChallenges = pgTable(
   },
   (t) => [
     index('auth_challenges_user_idx').on(t.userId),
-    check('auth_challenges_purpose', sql`${t.purpose} in ('admin_login', 'admin_recovery', 'email_verify', 'admin_setup', 'admin_setup_email')`),
+    check(
+      'auth_challenges_purpose',
+      sql`${t.purpose} in ('admin_login', 'admin_recovery', 'email_verify', 'admin_setup', 'admin_setup_email')`,
+    ),
   ],
 );

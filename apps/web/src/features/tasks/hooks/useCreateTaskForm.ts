@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef,useState } from 'react';
+import { useRef, useState } from 'react';
 import type { TaskDraft } from '@taskin/contracts';
 import { directory } from '@/store/directory';
 import { problemMessage } from '@/lib/api-problem';
@@ -8,10 +8,18 @@ import { newIdempotencyKey } from '@/lib/api-client';
 import { toISODate } from '@taskin/jalali';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { taskDraft } from '@/store/drafts';
-import { columnForPlacement,projectColumns } from '@/store/selectors';
+import { columnForPlacement, projectColumns } from '@/store/selectors';
 import { type CreateTaskModalProps } from '@/features/tasks/types/create-task';
 
-export function useCreateTaskForm({ open, draft, columns, fixedProjectId, timeZone, onClose, onSubmit }: Omit<CreateTaskModalProps, 'onCreateProject'>) {
+export function useCreateTaskForm({
+  open,
+  draft,
+  columns,
+  fixedProjectId,
+  timeZone,
+  onClose,
+  onSubmit,
+}: Omit<CreateTaskModalProps, 'onCreateProject'>) {
   const today = (): string => toISODate(new Date(), timeZone);
   const [form, setForm] = useState<TaskDraft>(() => taskDraft());
   const [touched, setTouched] = useState(false);
@@ -52,8 +60,13 @@ export function useCreateTaskForm({ open, draft, columns, fixedProjectId, timeZo
   const boardColumns = projectColumns(columns, projectId);
   const columnValue = columnForPlacement(boardColumns, form)?.id ?? '';
   const presetDate = draft !== null && draft.dueDate !== null && !fromMessage && !fromNote;
-  const titleError = !touched ? undefined : !form.title.trim() ? 'عنوان وظیفه الزامی است.'
-    : form.title.trim().length > 200 ? 'عنوان وظیفه باید حداکثر ۲۰۰ نویسه باشد.' : undefined;
+  const titleError = !touched
+    ? undefined
+    : !form.title.trim()
+      ? 'عنوان وظیفه الزامی است.'
+      : form.title.trim().length > 200
+        ? 'عنوان وظیفه باید حداکثر ۲۰۰ نویسه باشد.'
+        : undefined;
 
   const projects = directory.projects();
   const noProject = !projects.some((project) => project.id === projectId);
@@ -72,7 +85,15 @@ export function useCreateTaskForm({ open, draft, columns, fixedProjectId, timeZo
       const next = [...current];
       for (const file of picked) {
         if (file.size === 0) continue;
-        if (!next.some((entry) => entry.name === file.name && entry.size === file.size && entry.lastModified === file.lastModified)) next.push(file);
+        if (
+          !next.some(
+            (entry) =>
+              entry.name === file.name &&
+              entry.size === file.size &&
+              entry.lastModified === file.lastModified,
+          )
+        )
+          next.push(file);
       }
       return next;
     });
@@ -99,21 +120,54 @@ export function useCreateTaskForm({ open, draft, columns, fixedProjectId, timeZo
     submitting.current = true;
     setSaving(true);
     try {
-      const submitted = { ...form, projectId, title: form.title.trim(), startDate, dueDate: form.dueDate ?? today() };
+      const submitted = {
+        ...form,
+        projectId,
+        title: form.title.trim(),
+        startDate,
+        dueDate: form.dueDate ?? today(),
+      };
       const signature = JSON.stringify(submitted);
       if (submission.current?.signature !== signature || submission.current.files !== files) {
         submission.current = { signature, files, commandId: newIdempotencyKey() };
       }
       await onSubmit(submitted, files, submission.current.commandId);
     } catch (error) {
-      setSubmitError(problemMessage(error, 'وظیفه ثبت نشد؛ اطلاعات فرم و فایل‌ها حفظ شده‌اند. اتصال را بررسی و دوباره تلاش کنید.'));
+      setSubmitError(
+        problemMessage(
+          error,
+          'وظیفه ثبت نشد؛ اطلاعات فرم و فایل‌ها حفظ شده‌اند. اتصال را بررسی و دوباره تلاش کنید.',
+        ),
+      );
     } finally {
       submitting.current = false;
       setSaving(false);
     }
   };
 
-  return { today, form, setForm, setTouched, files, setFiles, fileError, submitError, setSubmitError, saving, titleRef, fromMessage, fromNote, boardColumns, columnValue, presetDate, titleError, projects, close, pickFiles, submit };
+  return {
+    today,
+    form,
+    setForm,
+    setTouched,
+    files,
+    setFiles,
+    fileError,
+    submitError,
+    setSubmitError,
+    saving,
+    titleRef,
+    fromMessage,
+    fromNote,
+    boardColumns,
+    columnValue,
+    presetDate,
+    titleError,
+    projects,
+    close,
+    pickFiles,
+    submit,
+  };
 }
 
 export type CreateTaskForm = ReturnType<typeof useCreateTaskForm>;

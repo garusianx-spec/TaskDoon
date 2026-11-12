@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { redactQueueFailure, withHealthTimeout } from '../../src/modules/platform-admin/platform-health.service.js';
+import {
+  redactQueueFailure,
+  withHealthTimeout,
+} from '../../src/modules/platform-admin/platform-health.service.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -17,8 +20,19 @@ describe('redactQueueFailure: safe, bounded operational summaries', () => {
   });
 
   it('removes addresses, links and obvious credentials from failure messages', () => {
-    const safe = redactQueueFailure('Failed https://sms.example.test/send?token=secret-link to sara@example.test Bearer secret-bearer password=secret-password apiKey: secret-key token="secret-token"');
-    for (const sensitive of ['sms.example.test', 'sara@example.test', 'secret-link', 'secret-bearer', 'secret-password', 'secret-key', 'secret-token']) expect(safe).not.toContain(sensitive);
+    const safe = redactQueueFailure(
+      'Failed https://sms.example.test/send?token=secret-link to sara@example.test Bearer secret-bearer password=secret-password apiKey: secret-key token="secret-token"',
+    );
+    for (const sensitive of [
+      'sms.example.test',
+      'sara@example.test',
+      'secret-link',
+      'secret-bearer',
+      'secret-password',
+      'secret-key',
+      'secret-token',
+    ])
+      expect(safe).not.toContain(sensitive);
   });
 
   it('flattens multiline failures, truncates at 200 characters and accepts an empty reason', () => {
@@ -39,7 +53,11 @@ describe('withHealthTimeout: bounded probes without leaked timers', () => {
   it('preserves the dependency failure and clears its timeout', async () => {
     vi.useFakeTimers();
     const failure = new Error('controlled dependency failure');
-    await expect(withHealthTimeout(async () => { throw failure; }, 25)).rejects.toBe(failure);
+    await expect(
+      withHealthTimeout(async () => {
+        throw failure;
+      }, 25),
+    ).rejects.toBe(failure);
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -54,6 +72,10 @@ describe('withHealthTimeout: bounded probes without leaked timers', () => {
 
   it('turns a synchronous probe failure into a rejected promise', async () => {
     const failure = new Error('synchronous failure');
-    await expect(withHealthTimeout(() => { throw failure; })).rejects.toBe(failure);
+    await expect(
+      withHealthTimeout(() => {
+        throw failure;
+      }),
+    ).rejects.toBe(failure);
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback,useEffect,useRef,useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface Recorded {
   readonly blob: Blob;
@@ -135,14 +135,16 @@ export function useVoiceRecorder() {
         for (const track of stream.getTracks()) track.stop();
         return;
       }
-      const mimeType = typeof Recorder.isTypeSupported === 'function'
-        ? MIME_TYPES.find((type) => Recorder.isTypeSupported(type))
-        : undefined;
+      const mimeType =
+        typeof Recorder.isTypeSupported === 'function'
+          ? MIME_TYPES.find((type) => Recorder.isTypeSupported(type))
+          : undefined;
       const recorder = new Recorder(stream, mimeType ? { mimeType } : undefined);
       let analyser: AnalyserNode | null = null;
       // Safari versions may expose only webkitAudioContext; analysis must not gate capture.
-      const Context = window.AudioContext
-        ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      const Context =
+        window.AudioContext ??
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       try {
         if (Context) {
           context = new Context();
@@ -157,10 +159,22 @@ export function useVoiceRecorder() {
       }
       const samples = new Uint8Array(analyser?.fftSize ?? 0);
       let resolveStopped!: () => void;
-      const stopped = new Promise<void>((resolve) => { resolveStopped = resolve; });
+      const stopped = new Promise<void>((resolve) => {
+        resolveStopped = resolve;
+      });
       const current: Session = {
-        recorder, stream, context, chunks: [], levels: [], startedAt: performance.now(),
-        stopped, resolveStopped, requestedMime: mimeType, stoppedAt: null, timer: null, released: false,
+        recorder,
+        stream,
+        context,
+        chunks: [],
+        levels: [],
+        startedAt: performance.now(),
+        stopped,
+        resolveStopped,
+        requestedMime: mimeType,
+        stoppedAt: null,
+        timer: null,
+        released: false,
       };
       // Register once, before start/automatic stop: stop() can safely await an already-fired event.
       recorder.ondataavailable = (event) => {
@@ -211,15 +225,22 @@ export function useVoiceRecorder() {
     await current.stopped;
     // A cancellation or a concurrent stop consumed the session while it was finalizing.
     if (session.current !== current) return null;
-    const durationSec = Math.min(MAX_SECONDS, Math.round(((current.stoppedAt ?? performance.now()) - current.startedAt) / 1000));
-    const mimeType = current.recorder.mimeType || current.chunks.find((chunk) => chunk.type)?.type || current.requestedMime;
+    const durationSec = Math.min(
+      MAX_SECONDS,
+      Math.round(((current.stoppedAt ?? performance.now()) - current.startedAt) / 1000),
+    );
+    const mimeType =
+      current.recorder.mimeType || current.chunks.find((chunk) => chunk.type)?.type || current.requestedMime;
     const blob = new Blob(current.chunks, { type: mimeType });
     const levels = [...current.levels];
     release();
     setState({ phase: 'idle' });
     if (durationSec < MIN_SECONDS || blob.size === 0) return null;
     if (!mimeType) {
-      setState({ phase: 'error', message: 'قالب صدای ضبط‌شده مشخص نیست. مرورگر را به‌روز کنید و دوباره تلاش کنید.' });
+      setState({
+        phase: 'error',
+        message: 'قالب صدای ضبط‌شده مشخص نیست. مرورگر را به‌روز کنید و دوباره تلاش کنید.',
+      });
       return null;
     }
     return { blob, durationSec, waveform: toWaveform(levels) };

@@ -5,12 +5,11 @@ import { formatJalali } from '@taskin/jalali';
 import { cn } from '@/lib/utils';
 import type { TaskSquareIcon } from '@/components/icons';
 
-
 /** The visitor's current Jalali date — resolved after mount, since this route is static. */
 export function TodayLabel() {
   const now = useNow();
   return (
-    <p className="numeric text-body text-fg-tertiary" suppressHydrationWarning>
+    <p className="text-body text-fg-tertiary numeric" suppressHydrationWarning>
       {now ? formatJalali(now, 'long') : '\u00A0'}
     </p>
   );
@@ -37,7 +36,7 @@ export function SummaryCard({ label, value, tone, Icon }: SummaryCardProps) {
         <Icon size={20} variant="twotone" />
       </span>
       <span className="flex min-w-0 flex-col">
-        <span className="numeric text-heading font-extrabold leading-tight text-fg-primary">{value}</span>
+        <span className="text-heading font-extrabold leading-tight text-fg-primary numeric">{value}</span>
         <span className="truncate text-caption text-fg-tertiary">{label}</span>
       </span>
     </div>

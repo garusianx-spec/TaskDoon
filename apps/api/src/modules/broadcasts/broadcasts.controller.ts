@@ -13,5 +13,7 @@ export class BroadcastsController {
   @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Current platform announcements for every authenticated user' })
   @ApiOkResponse({ type: ActiveBroadcastsDto })
-  active(): Promise<ActiveBroadcasts> { return this.broadcasts.active(); }
+  active(): Promise<ActiveBroadcasts> {
+    return this.broadcasts.active();
+  }
 }

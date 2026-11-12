@@ -14,7 +14,11 @@ import {
 } from '../dist/index.js';
 
 /** ICU's Persian calendar, used only as an oracle here — never at runtime. */
-const persian = new Intl.DateTimeFormat('en-u-ca-persian-nu-latn', { year: 'numeric', month: 'numeric', day: 'numeric' });
+const persian = new Intl.DateTimeFormat('en-u-ca-persian-nu-latn', {
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+});
 const icuJalali = (date) => {
   const parts = Object.fromEntries(persian.formatToParts(date).map((part) => [part.type, part.value]));
   return { year: Number.parseInt(parts.year, 10), month: Number(parts.month), day: Number(parts.day) };

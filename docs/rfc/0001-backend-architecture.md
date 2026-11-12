@@ -8,40 +8,40 @@ Taskin's backend is a NestJS modular monolith on PostgreSQL 18 (Drizzle ORM), tw
 
 The backend replaces the frontend's in-memory reducer and fixtures (`apps/web/src/store/workspace-reducer.ts`, about 60 actions) with a multi-tenant service. The four business decisions below are confirmed.
 
-| Topic | Decision | Consequence |
-| --- | --- | --- |
-| Repository | Monorepo in `taskin`: `apps/web`, `apps/api`, `packages/contracts` (npm workspaces) | One CI; client and server types cannot drift; the web app moves under `apps/web` unchanged |
-| Identity | Mobile OTP first. The phone number is the account; email is optional. Passwords only for owners and admins, as a step-up factor | Login becomes phone → OTP. Admin-sensitive actions need OTP session + password. SIM-swap risk is contained to non-admin accounts |
-| Hosting | Iran-hosted, everything self-hosted | MinIO or Arvan/Ceph S3; Kavenegar or SMS.ir behind an adapter; self-hosted SMTP; Grafana, Loki, Tempo, Prometheus and GlitchTip; an image-registry mirror; no foreign SaaS |
-| Billing | Plans and limits only | Tiers with entitlements (seats, storage, file size, history, projects). Payments come later on the same idempotency and outbox framework |
+| Topic      | Decision                                                                                                                        | Consequence                                                                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository | Monorepo in `taskin`: `apps/web`, `apps/api`, `packages/contracts` (npm workspaces)                                             | One CI; client and server types cannot drift; the web app moves under `apps/web` unchanged                                                                                 |
+| Identity   | Mobile OTP first. The phone number is the account; email is optional. Passwords only for owners and admins, as a step-up factor | Login becomes phone → OTP. Admin-sensitive actions need OTP session + password. SIM-swap risk is contained to non-admin accounts                                           |
+| Hosting    | Iran-hosted, everything self-hosted                                                                                             | MinIO or Arvan/Ceph S3; Kavenegar or SMS.ir behind an adapter; self-hosted SMTP; Grafana, Loki, Tempo, Prometheus and GlitchTip; an image-registry mirror; no foreign SaaS |
+| Billing    | Plans and limits only                                                                                                           | Tiers with entitlements (seats, storage, file size, history, projects). Payments come later on the same idempotency and outbox framework                                   |
 
 ### Locked stack
 
-| Layer | Choice |
-| --- | --- |
-| Runtime | Node.js 22 LTS |
-| Framework | NestJS (latest stable) with strict TypeScript and `noUncheckedIndexedAccess` |
-| Database | PostgreSQL 18 (native `uuidv7()`), extensions `pg_trgm`, `btree_gin`, `citext`; PgBouncer in transaction mode |
-| Redis | Redis 7.4+ or Valkey 8, split into two deployments (section 3); BullMQ for queues |
-| Real-time | `@nestjs/websockets` + `@nestjs/platform-socket.io` + Socket.IO 4 + `@socket.io/redis-adapter`; workers use `@socket.io/redis-emitter` |
+| Layer          | Choice                                                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime        | Node.js 22 LTS                                                                                                                                                                  |
+| Framework      | NestJS (latest stable) with strict TypeScript and `noUncheckedIndexedAccess`                                                                                                    |
+| Database       | PostgreSQL 18 (native `uuidv7()`), extensions `pg_trgm`, `btree_gin`, `citext`; PgBouncer in transaction mode                                                                   |
+| Redis          | Redis 7.4+ or Valkey 8, split into two deployments (section 3); BullMQ for queues                                                                                               |
+| Real-time      | `@nestjs/websockets` + `@nestjs/platform-socket.io` + Socket.IO 4 + `@socket.io/redis-adapter`; workers use `@socket.io/redis-emitter`                                          |
 | Object storage | MinIO or any S3-compatible store via `@aws-sdk/client-s3` and the presigners. Confirm MinIO licensing and distribution at procurement; the storage port keeps us vendor-neutral |
-| Auth | `jose` (EdDSA JWT), `argon2` (argon2id), `libphonenumber-js` |
-| Authorization | `@casl/ability` 6 |
-| Observability | `nestjs-pino`, `nestjs-cls`, OpenTelemetry Node SDK, `prom-client`, `@nestjs/terminus` |
-| Security | `helmet`, `@nestjs/throttler` with Redis storage, `class-validator` and `class-transformer` |
+| Auth           | `jose` (EdDSA JWT), `argon2` (argon2id), `libphonenumber-js`                                                                                                                    |
+| Authorization  | `@casl/ability` 6                                                                                                                                                               |
+| Observability  | `nestjs-pino`, `nestjs-cls`, OpenTelemetry Node SDK, `prom-client`, `@nestjs/terminus`                                                                                          |
+| Security       | `helmet`, `@nestjs/throttler` with Redis storage, `class-validator` and `class-transformer`                                                                                     |
 
 ### ORM: Drizzle, not Prisma
 
 Drizzle ORM on `pg` (node-postgres) wins on the two requirements that matter most here: row-level security per transaction and indexes the schema must express.
 
-| What this system needs | Prisma | Drizzle | Winner |
-| --- | --- | --- | --- |
-| RLS tenant context: `SET LOCAL app.workspace_id` at the start of every transaction | Interactive `$transaction` or client-extension wrappers on every call path | `db.transaction(async tx => ...)` with one `set_config` call; explicit and uniform | Drizzle |
-| Partial unique indexes, GIN trigram on generated columns, `btree_gin` composites, CHECK constraints, composite FKs | Several can't be written in the Prisma schema; they live in hand-edited SQL that drifts from the model | Expressed in the TS schema; `drizzle-kit` generates them | Drizzle |
-| Chat hot path: one-round-trip CTE (seq bump, insert, cursor update, outbox) | `$queryRaw`, which loses typing | Typed builder or `sql` template with inferred result types | Drizzle |
-| Seeing the emitted SQL for N+1 audits and `EXPLAIN` | Engine-generated, less control | 1:1 with the code; relational queries compile to one statement with JSON aggregation | Drizzle |
-| Migration tooling (shadow DB, drift detection) | Excellent | Good, with the gaps mitigated below | Prisma |
-| Hiring familiarity | Higher | Growing | Prisma |
+| What this system needs                                                                                             | Prisma                                                                                                 | Drizzle                                                                              | Winner  |
+| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------- |
+| RLS tenant context: `SET LOCAL app.workspace_id` at the start of every transaction                                 | Interactive `$transaction` or client-extension wrappers on every call path                             | `db.transaction(async tx => ...)` with one `set_config` call; explicit and uniform   | Drizzle |
+| Partial unique indexes, GIN trigram on generated columns, `btree_gin` composites, CHECK constraints, composite FKs | Several can't be written in the Prisma schema; they live in hand-edited SQL that drifts from the model | Expressed in the TS schema; `drizzle-kit` generates them                             | Drizzle |
+| Chat hot path: one-round-trip CTE (seq bump, insert, cursor update, outbox)                                        | `$queryRaw`, which loses typing                                                                        | Typed builder or `sql` template with inferred result types                           | Drizzle |
+| Seeing the emitted SQL for N+1 audits and `EXPLAIN`                                                                | Engine-generated, less control                                                                         | 1:1 with the code; relational queries compile to one statement with JSON aggregation | Drizzle |
+| Migration tooling (shadow DB, drift detection)                                                                     | Excellent                                                                                              | Good, with the gaps mitigated below                                                  | Prisma  |
+| Hiring familiarity                                                                                                 | Higher                                                                                                 | Growing                                                                              | Prisma  |
 
 Mitigations for the weaker migration tooling:
 
@@ -76,23 +76,23 @@ Contract rule: `packages/contracts` exports interfaces and string-literal unions
 
 ### Bounded contexts (`apps/api/src/modules/*`)
 
-| Module | Owns | Public facade |
-| --- | --- | --- |
-| `platform` | config, DB and UnitOfWork, Redis, logging, telemetry, idempotency, outbox, storage, SMS, mail, clock | infrastructure ports |
-| `auth` | OTP challenges, sessions, refresh tokens, JWT, step-up, admin password, optional TOTP | `AuthFacade` |
-| `users` | global profile, phone and email change | `UsersFacade` |
-| `workspaces` | workspaces, members, departments, invitations, plans and entitlements | `WorkspacesFacade`, `EntitlementsService` |
-| `rbac` | roles, permission matrix, CASL ability factory, guards, policy decorators | `AbilityFactory`, `@CheckPolicies` |
-| `projects` | projects, project members, workflows, board columns, stars | `ProjectsFacade` |
-| `tasks` | tasks, assignees, subtasks, comments, labels, attachment links, positions | `TasksFacade` |
-| `chats` | conversations, members, messages, reactions, mentions, read cursors, realtime gateway | `ChatFacade`, `RealtimePublisher` |
-| `files` | attachments, upload and download, scanning, quota | `FilesFacade` |
-| `calendar` | events, attendees, reminders, derived deadline feed | `CalendarFacade` |
-| `notes` | note categories, notes | `NotesFacade` |
-| `notifications` | in-app notifications, activity feed, SMS and email delivery | `NotificationsFacade` |
-| `search` | cross-entity trigram search | `SearchFacade` |
-| `audit-logs` | append-only audit trail and query API | `AuditWriter` |
-| `bridges` | Chat→Task, Note→Task and project↔channel orchestration; depends on facades only, so there are no cycles | none |
+| Module          | Owns                                                                                                    | Public facade                             |
+| --------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `platform`      | config, DB and UnitOfWork, Redis, logging, telemetry, idempotency, outbox, storage, SMS, mail, clock    | infrastructure ports                      |
+| `auth`          | OTP challenges, sessions, refresh tokens, JWT, step-up, admin password, optional TOTP                   | `AuthFacade`                              |
+| `users`         | global profile, phone and email change                                                                  | `UsersFacade`                             |
+| `workspaces`    | workspaces, members, departments, invitations, plans and entitlements                                   | `WorkspacesFacade`, `EntitlementsService` |
+| `rbac`          | roles, permission matrix, CASL ability factory, guards, policy decorators                               | `AbilityFactory`, `@CheckPolicies`        |
+| `projects`      | projects, project members, workflows, board columns, stars                                              | `ProjectsFacade`                          |
+| `tasks`         | tasks, assignees, subtasks, comments, labels, attachment links, positions                               | `TasksFacade`                             |
+| `chats`         | conversations, members, messages, reactions, mentions, read cursors, realtime gateway                   | `ChatFacade`, `RealtimePublisher`         |
+| `files`         | attachments, upload and download, scanning, quota                                                       | `FilesFacade`                             |
+| `calendar`      | events, attendees, reminders, derived deadline feed                                                     | `CalendarFacade`                          |
+| `notes`         | note categories, notes                                                                                  | `NotesFacade`                             |
+| `notifications` | in-app notifications, activity feed, SMS and email delivery                                             | `NotificationsFacade`                     |
+| `search`        | cross-entity trigram search                                                                             | `SearchFacade`                            |
+| `audit-logs`    | append-only audit trail and query API                                                                   | `AuditWriter`                             |
+| `bridges`       | Chat→Task, Note→Task and project↔channel orchestration; depends on facades only, so there are no cycles | none                                      |
 
 ### Layering inside a module
 
@@ -109,12 +109,12 @@ Rules:
 
 ### Runtime roles (same image, `APP_ROLE`)
 
-| Role | Runs | Scales on |
-| --- | --- | --- |
-| `http` | REST API, no Socket.IO server | RPS and latency |
-| `ws` | Socket.IO gateway plus health endpoints | open sockets |
-| `worker` | BullMQ consumers, outbox relay (single leader), schedulers, purge and GC, link unfurl, AV scan, thumbnails | queue depth |
-| `all` | everything, for local development only | n/a |
+| Role     | Runs                                                                                                       | Scales on       |
+| -------- | ---------------------------------------------------------------------------------------------------------- | --------------- |
+| `http`   | REST API, no Socket.IO server                                                                              | RPS and latency |
+| `ws`     | Socket.IO gateway plus health endpoints                                                                    | open sockets    |
+| `worker` | BullMQ consumers, outbox relay (single leader), schedulers, purge and GC, link unfurl, AV scan, thumbnails | queue depth     |
+| `all`    | everything, for local development only                                                                     | n/a             |
 
 Splitting `ws` from `http` gives chat its own processes and its own PgBouncer pool, so chat bursts cannot starve task workflows.
 
@@ -153,9 +153,9 @@ Observability is fully self-hosted: pino JSON → Vector → Loki; OpenTelemetry
 
 ### Redis roles
 
-| Deployment | Policy | Holds |
-| --- | --- | --- |
-| `redis-rt` | no AOF, `volatile-lru` | adapter pub/sub, `presence:*`, `typing:*`, `rt:events:{wid}` streams, `ws:node:{id}` heartbeats |
+| Deployment   | Policy                                              | Holds                                                                                                              |
+| ------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `redis-rt`   | no AOF, `volatile-lru`                              | adapter pub/sub, `presence:*`, `typing:*`, `rt:events:{wid}` streams, `ws:node:{id}` heartbeats                    |
 | `redis-core` | AOF every second, `noeviction` (BullMQ requires it) | BullMQ queues, `throttle:*`, `idem:*`, `otp:*` counters, `revoked:sid:*`, membership and RBAC caches, leader locks |
 
 The two policies conflict, so production keeps them separate. When Redis is down, auth, OTP and idempotency fail closed (503), read caches fall back to the DB, and clients fall back to 15-second HTTP polling until WebSocket fan-out returns.
@@ -197,13 +197,13 @@ Sockets authenticate at the handshake, refresh their token in-band, join scoped 
 6. `workspace:subscribe {workspaceId}` loads membership and joins `workspace_{wid}`, one `project_{pid}` per viewable project and one `room_{cid}` per conversation membership.
 7. Only one workspace is hot per socket; switching leaves the old rooms. `user_{id}` still delivers notifications from every workspace, each tagged with `workspaceId`.
 
-| Room | Carries |
-| --- | --- |
-| `user_{userId}` | notifications, permission updates, workspace removal |
-| `session_{sid}` | forced disconnect on logout or revocation |
-| `workspace_{wid}` | members, presence, workspace settings |
-| `project_{pid}` | board and task events |
-| `room_{conversationId}` | messages, reactions, typing, read cursors |
+| Room                    | Carries                                              |
+| ----------------------- | ---------------------------------------------------- |
+| `user_{userId}`         | notifications, permission updates, workspace removal |
+| `session_{sid}`         | forced disconnect on logout or revocation            |
+| `workspace_{wid}`       | members, presence, workspace settings                |
+| `project_{pid}`         | board and task events                                |
+| `room_{conversationId}` | messages, reactions, typing, read cursors            |
 
 Membership changes propagate cluster-wide through the adapter: `io.in('user_{uid}').socketsJoin('room_{cid}')` or `socketsLeave(...)`, `io.in('session_{sid}').disconnectSockets(true)` on revocation, and `socketsLeave('workspace_{wid}')` plus `workspace:removed` when a member is removed or a workspace deleted.
 
@@ -254,14 +254,14 @@ One transaction per use case at READ COMMITTED, explicit row locks in a fixed or
 - Secrets in SOPS-encrypted env files or self-hosted Vault. JWT signing keys carry a `kid` and rotate every 90 days, keeping the previous key for verification.
 - Backups: pgBackRest (weekly full, daily differential, WAL archiving) for RPO ≤ 5 min and RTO ≤ 1 h; MinIO versioning plus site replication; a restore drill every milestone from M2.
 
-| Rate limit (Redis store) | Limit |
-| --- | --- |
-| Global, per IP | 300/min |
-| Per user | 600/min |
-| OTP send | 1 per 60 s and 5/h per phone; 20/h per IP |
-| OTP verify | 5 attempts per challenge; 30/h per IP |
-| Upload init | 60/h per user |
-| WS `message:send` | burst 20, then 5/s per socket |
+| Rate limit (Redis store) | Limit                                     |
+| ------------------------ | ----------------------------------------- |
+| Global, per IP           | 300/min                                   |
+| Per user                 | 600/min                                   |
+| OTP send                 | 1 per 60 s and 5/h per phone; 20/h per IP |
+| OTP verify               | 5 attempts per challenge; 30/h per IP     |
+| Upload init              | 60/h per user                             |
+| WS `message:send`        | burst 20, then 5/s per socket             |
 
 ### Migrations
 
@@ -693,11 +693,11 @@ INDEX (id) WHERE published_at IS NULL               -- relay scan; published row
 
 The database stores UTC instants and workspace-time-zone dates only; Jalali exists purely in presentation, in both the web app and server-generated text.
 
-| Kind of value | Stored as | On the wire |
-| --- | --- | --- |
-| Instants: `sent_at`, `created_at`, timed events | `timestamptz` (UTC) | ISO-8601 with `Z` |
-| Calendar dates: due and start dates, all-day events, milestones | `date` in the workspace time zone (default `Asia/Tehran`) | `YYYY-MM-DD` |
-| Jalali strings | never stored | never sent; ASCII digits only |
+| Kind of value                                                   | Stored as                                                 | On the wire                   |
+| --------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------- |
+| Instants: `sent_at`, `created_at`, timed events                 | `timestamptz` (UTC)                                       | ISO-8601 with `Z`             |
+| Calendar dates: due and start dates, all-day events, milestones | `date` in the workspace time zone (default `Asia/Tehran`) | `YYYY-MM-DD`                  |
+| Jalali strings                                                  | never stored                                              | never sent; ASCII digits only |
 
 - Storing dates as `date` avoids the 00:00–03:30 Tehran window where the UTC date differs, and matches the frontend's local-date parsing (`fromISODate`).
 - Any Persian or Arabic digits in input are normalised by `packages/text` before validation.
@@ -759,30 +759,30 @@ sequenceDiagram
   R->>WS: notification:new to assignees
 ```
 
-| Target | Event | Why |
-| --- | --- | --- |
-| `project_{pid}` | `task:created` (full card) | boards and lists of project viewers update |
-| `room_{cid}` | `message:task_linked {messageId, taskId, code}` | every chat member sees "مشاهده وظیفه مرتبط". The payload omits title and description because not every chat member can see the project; `GET /tasks/:id/preview` enforces access |
-| `room_{cid}` | `message:new` (system message) | traceability in the conversation |
-| `user_{assignee}` | `notification:new` | written by the notifications worker with per-user preferences |
-| BullMQ | `search.index`, `activity.fanout` | asynchronous side effects |
+| Target            | Event                                           | Why                                                                                                                                                                              |
+| ----------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project_{pid}`   | `task:created` (full card)                      | boards and lists of project viewers update                                                                                                                                       |
+| `room_{cid}`      | `message:task_linked {messageId, taskId, code}` | every chat member sees "مشاهده وظیفه مرتبط". The payload omits title and description because not every chat member can see the project; `GET /tasks/:id/preview` enforces access |
+| `room_{cid}`      | `message:new` (system message)                  | traceability in the conversation                                                                                                                                                 |
+| `user_{assignee}` | `notification:new`                              | written by the notifications worker with per-user preferences                                                                                                                    |
+| BullMQ            | `search.index`, `activity.fanout`               | asynchronous side effects                                                                                                                                                        |
 
 The originating client receives `201 {task}` and then `task:created`, and dedupes by id and version.
 
 ### Edge cases
 
-| Case | Outcome |
-| --- | --- |
-| Message deleted between opening the composer and submitting | 410 `SOURCE_MESSAGE_GONE` |
-| Actor removed from the conversation meanwhile | 403 |
-| Two devices convert the same message | Partial unique index: the second gets 200 `{existing: true}` |
-| Conversion from a direct message | Allowed as an explicit act, audited, no system message |
-| Message edited after conversion | The task keeps its snapshot; the link stays |
-| Source message later deleted | `source_message_id` stays; the task shows "پیام مبدأ حذف شده" |
-| Task soft-deleted | The message is freed for a new conversion and the link disappears |
-| Attachment still being scanned | Linked and shown as pending on the card |
-| Attachment later rejected by the virus scan | The link is removed; uploader and assignees are notified |
-| Plan project or task limit reached | `PLAN_LIMIT_REACHED` (a code only; no payment flow) |
+| Case                                                        | Outcome                                                           |
+| ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| Message deleted between opening the composer and submitting | 410 `SOURCE_MESSAGE_GONE`                                         |
+| Actor removed from the conversation meanwhile               | 403                                                               |
+| Two devices convert the same message                        | Partial unique index: the second gets 200 `{existing: true}`      |
+| Conversion from a direct message                            | Allowed as an explicit act, audited, no system message            |
+| Message edited after conversion                             | The task keeps its snapshot; the link stays                       |
+| Source message later deleted                                | `source_message_id` stays; the task shows "پیام مبدأ حذف شده"     |
+| Task soft-deleted                                           | The message is freed for a new conversion and the link disappears |
+| Attachment still being scanned                              | Linked and shown as pending on the card                           |
+| Attachment later rejected by the virus scan                 | The link is removed; uploader and assignees are notified          |
+| Plan project or task limit reached                          | `PLAN_LIMIT_REACHED` (a code only; no payment flow)               |
 
 ### Note → Task
 
@@ -805,8 +805,19 @@ Tokens identify the user and session only; permissions are resolved per request 
 Access JWT: EdDSA (Ed25519), 15 minutes, kept in memory by the web client and sent as a Bearer header.
 
 ```json
-{ "iss": "taskin-api", "aud": "taskin-web", "sub": "<userId>", "sid": "<sessionId>", "jti": "<uuidv7>",
-  "iat": 0, "exp": 0, "auth_time": 0, "amr": ["otp"], "sv": 3, "stepup_at": 0 }
+{
+  "iss": "taskin-api",
+  "aud": "taskin-web",
+  "sub": "<userId>",
+  "sid": "<sessionId>",
+  "jti": "<uuidv7>",
+  "iat": 0,
+  "exp": 0,
+  "auth_time": 0,
+  "amr": ["otp"],
+  "sv": 3,
+  "stepup_at": 0
+}
 ```
 
 - No workspace or role claims: a user belongs to many workspaces and roles change often.
@@ -825,19 +836,19 @@ Access JWT: EdDSA (Ed25519), 15 minutes, kept in memory by the web client and se
 
 ### Three permission scopes
 
-| Scope | Source | Semantics |
-| --- | --- | --- |
-| Workspace | `roles` + `role_permissions`: the UI's 5 roles × 5 modules × 5 actions, editable per workspace, owner locked | baseline grants per module and action |
-| Project | `project_members.role` (lead, contributor, viewer) + `projects.visibility` | per-project widening or narrowing; private projects are invisible without membership; guests see only projects they belong to |
-| Channel | `conversation_members.role` (owner, admin, member) + `post_policy` + `is_private` | posting, moderation and private-channel visibility |
+| Scope     | Source                                                                                                       | Semantics                                                                                                                     |
+| --------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| Workspace | `roles` + `role_permissions`: the UI's 5 roles × 5 modules × 5 actions, editable per workspace, owner locked | baseline grants per module and action                                                                                         |
+| Project   | `project_members.role` (lead, contributor, viewer) + `projects.visibility`                                   | per-project widening or narrowing; private projects are invisible without membership; guests see only projects they belong to |
+| Channel   | `conversation_members.role` (owner, admin, member) + `post_policy` + `is_private`                            | posting, moderation and private-channel visibility                                                                            |
 
-| Module | CASL subjects |
-| --- | --- |
-| `messages` | Conversation, Message, Reaction |
-| `boards` | Project, BoardColumn, Task, Subtask, TaskComment, project-linked CalendarEvent |
-| `files` | File |
-| `reports` | Report |
-| `members` | Member, Invitation, Role, WorkspaceSettings |
+| Module     | CASL subjects                                                                  |
+| ---------- | ------------------------------------------------------------------------------ |
+| `messages` | Conversation, Message, Reaction                                                |
+| `boards`   | Project, BoardColumn, Task, Subtask, TaskComment, project-linked CalendarEvent |
+| `files`    | File                                                                           |
+| `reports`  | Report                                                                         |
+| `members`  | Member, Invitation, Role, WorkspaceSettings                                    |
 
 Notes and personal calendar events are owner-scoped and never gated by the matrix. Actions are `view`, `create`, `edit`, `delete` and `assign` (assignees, reviewer, status and column moves, member roles), plus the CASL alias `manage`.
 
@@ -874,28 +885,28 @@ CASL decides on loaded objects; list queries use an `AccessScope` built from the
 
 Tenant routes live under `/api/v1/workspaces/:workspaceId`; routes marked Idem. require an `Idempotency-Key` header.
 
-| Area | Endpoints |
-| --- | --- |
-| Auth | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/signup`, `/auth/refresh`, `/auth/logout`, `/auth/step-up`, `/auth/password`; `GET` and `DELETE /auth/sessions` |
-| Me | `GET /me` (user plus workspaces for the switcher), `PATCH /me`, `POST /me/phone`, `GET /me/notifications?workspaceId&filter`, `POST /me/notifications/read` |
-| Workspaces | `POST /workspaces` (Idem.), `GET` and `PATCH /workspaces/:id`, `DELETE /workspaces/:id` (owner, step-up, `{confirmName}`), `POST /workspaces/:id/transfer-ownership` (step-up) |
-| Members | `GET /members`, `PATCH /members/:uid` (role, department, suspend), `DELETE /members/:uid`, `PATCH /me/presence` |
-| Invitations | `POST /invitations` (Idem.; `{recipients: [{address, channel}], role, department, message}`), `DELETE /invitations/:id`, `POST /invitations/accept {token}` (global) |
-| RBAC | `GET /roles`, `PUT /roles/:id/permissions` (step-up; whole-row replace with `If-Match`), `POST /roles/reset-defaults`, `GET /me/permissions` |
-| Projects | CRUD `/projects`, `PUT` and `DELETE /projects/:pid/members/:uid`, `PUT` and `DELETE /projects/:pid/star`, `POST /projects/:pid/channel` |
-| Workflow | `GET /workflow`, `POST /workflow/columns` (Idem.), `PATCH /workflow/columns/:id` (rename, tone, position), `DELETE /workflow/columns/:id {disposition}` |
-| Tasks | `GET /tasks?projectId&view&smart&q&cursor`, `POST /tasks` (Idem.), `GET`, `PATCH` and `DELETE /tasks/:id` (`If-Match`), `POST /tasks/:id/move {columnId, beforeId?, afterId?, expectedVersion}`, `POST /tasks/:id/complete {completed}`, sub-resources for subtasks, comments, assignees, labels and attachments, `PUT` and `DELETE /tasks/:id/star`, `GET /tasks/:id/preview` |
-| Chat | `GET` and `POST /conversations` (Idem.; a DM returns the existing one), `PATCH /conversations/:cid`, `PUT` and `DELETE /conversations/:cid/members/:uid`, `PUT /conversations/:cid/me {pinned, mutedUntil, notificationLevel}`, `GET /conversations/:cid/messages?beforeSeq\|afterSeq&limit`, `POST /conversations/:cid/messages` (HTTP fallback, clientMsgId), `GET /conversations/:cid/media?tab=files\|media\|audio\|links&cursor`, `POST .../messages/:mid/task` |
-| Files | `POST /files/uploads` (Idem.; returns a POST policy or multipart plan), `POST /files/uploads/:id/complete`, `POST /files/uploads/:id/abort`, `GET /files/:id/download` |
-| Calendar | `GET /calendar?from=YYYY-MM-DD&to=` (events plus derived deadlines), CRUD `/calendar/events` |
-| Notes | CRUD `/note-categories` (delete returns 409 unless empty), CRUD `/notes` (`If-Match` autosave), `POST /notes/:id/task` |
-| Feed, search, audit | `GET /activity?cursor`, `GET /search?q&types=`, `GET /audit-logs?resource&actor&cursor` (admins) |
+| Area                | Endpoints                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth                | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/signup`, `/auth/refresh`, `/auth/logout`, `/auth/step-up`, `/auth/password`; `GET` and `DELETE /auth/sessions`                                                                                                                                                                                                                                                                                                  |
+| Me                  | `GET /me` (user plus workspaces for the switcher), `PATCH /me`, `POST /me/phone`, `GET /me/notifications?workspaceId&filter`, `POST /me/notifications/read`                                                                                                                                                                                                                                                                                                          |
+| Workspaces          | `POST /workspaces` (Idem.), `GET` and `PATCH /workspaces/:id`, `DELETE /workspaces/:id` (owner, step-up, `{confirmName}`), `POST /workspaces/:id/transfer-ownership` (step-up)                                                                                                                                                                                                                                                                                       |
+| Members             | `GET /members`, `PATCH /members/:uid` (role, department, suspend), `DELETE /members/:uid`, `PATCH /me/presence`                                                                                                                                                                                                                                                                                                                                                      |
+| Invitations         | `POST /invitations` (Idem.; `{recipients: [{address, channel}], role, department, message}`), `DELETE /invitations/:id`, `POST /invitations/accept {token}` (global)                                                                                                                                                                                                                                                                                                 |
+| RBAC                | `GET /roles`, `PUT /roles/:id/permissions` (step-up; whole-row replace with `If-Match`), `POST /roles/reset-defaults`, `GET /me/permissions`                                                                                                                                                                                                                                                                                                                         |
+| Projects            | CRUD `/projects`, `PUT` and `DELETE /projects/:pid/members/:uid`, `PUT` and `DELETE /projects/:pid/star`, `POST /projects/:pid/channel`                                                                                                                                                                                                                                                                                                                              |
+| Workflow            | `GET /workflow`, `POST /workflow/columns` (Idem.), `PATCH /workflow/columns/:id` (rename, tone, position), `DELETE /workflow/columns/:id {disposition}`                                                                                                                                                                                                                                                                                                              |
+| Tasks               | `GET /tasks?projectId&view&smart&q&cursor`, `POST /tasks` (Idem.), `GET`, `PATCH` and `DELETE /tasks/:id` (`If-Match`), `POST /tasks/:id/move {columnId, beforeId?, afterId?, expectedVersion}`, `POST /tasks/:id/complete {completed}`, sub-resources for subtasks, comments, assignees, labels and attachments, `PUT` and `DELETE /tasks/:id/star`, `GET /tasks/:id/preview`                                                                                       |
+| Chat                | `GET` and `POST /conversations` (Idem.; a DM returns the existing one), `PATCH /conversations/:cid`, `PUT` and `DELETE /conversations/:cid/members/:uid`, `PUT /conversations/:cid/me {pinned, mutedUntil, notificationLevel}`, `GET /conversations/:cid/messages?beforeSeq\|afterSeq&limit`, `POST /conversations/:cid/messages` (HTTP fallback, clientMsgId), `GET /conversations/:cid/media?tab=files\|media\|audio\|links&cursor`, `POST .../messages/:mid/task` |
+| Files               | `POST /files/uploads` (Idem.; returns a POST policy or multipart plan), `POST /files/uploads/:id/complete`, `POST /files/uploads/:id/abort`, `GET /files/:id/download`                                                                                                                                                                                                                                                                                               |
+| Calendar            | `GET /calendar?from=YYYY-MM-DD&to=` (events plus derived deadlines), CRUD `/calendar/events`                                                                                                                                                                                                                                                                                                                                                                         |
+| Notes               | CRUD `/note-categories` (delete returns 409 unless empty), CRUD `/notes` (`If-Match` autosave), `POST /notes/:id/task`                                                                                                                                                                                                                                                                                                                                               |
+| Feed, search, audit | `GET /activity?cursor`, `GET /search?q&types=`, `GET /audit-logs?resource&actor&cursor` (admins)                                                                                                                                                                                                                                                                                                                                                                     |
 
 ### WebSocket events
 
-| Direction | Events |
-| --- | --- |
-| Client → server | `workspace:subscribe`, `auth:refresh`, `sync:resume`, `message:send` (ack `{ok, id, seq}`), `message:edit`, `message:delete`, `message:react`, `message:delivered`, `message:read`, `typing:start`, `typing:stop`, `presence:set` |
+| Direction       | Events                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client → server | `workspace:subscribe`, `auth:refresh`, `sync:resume`, `message:send` (ack `{ok, id, seq}`), `message:edit`, `message:delete`, `message:react`, `message:delivered`, `message:read`, `typing:start`, `typing:stop`, `presence:set`                                                                                                                                                                                                                                                                                     |
 | Server → client | `message:new`, `message:updated`, `message:deleted`, `message:task_linked`, `reaction:updated`, `read:updated`, `typing`, `presence:updated`, `conversation:created`, `conversation:updated`, `conversation:member_added`, `conversation:member_removed`, `task:created`, `task:updated`, `task:moved`, `task:deleted`, `board:column_added`, `board:column_updated`, `board:column_removed`, `notification:new`, `permissions:updated`, `workspace:removed`, `session:revoked`, `resync:required`, `server:draining` |
 
 Every server event uses one envelope: `{ eventId, type, workspaceId, occurredAt, actorId, requestId, version?, data }`.
@@ -911,19 +922,19 @@ Every server event uses one envelope: `{ eventId, type, workspaceId, occurredAt,
 
 `npm run infra:up` starts `infra/docker-compose.yml`; every service has a health check and dependents wait on `condition: service_healthy`.
 
-| Service | Image and notes | Ports |
-| --- | --- | --- |
-| `postgres` | `postgres:18`; `init/01-roles.sql` creates `taskin_migrator` (owner) and `taskin_app` (DML, no BYPASSRLS); `02-extensions.sql` enables `pg_trgm`, `btree_gin`, `citext` | 5432 |
-| `pgbouncer` | transaction mode, userlist auth; the app connects here | 6432 |
-| `redis-core` | `appendonly yes`, `maxmemory-policy noeviction` | 6379 |
-| `redis-rt` | no persistence, `volatile-lru` | 6380 |
+| Service                | Image and notes                                                                                                                                                                      | Ports      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| `postgres`             | `postgres:18`; `init/01-roles.sql` creates `taskin_migrator` (owner) and `taskin_app` (DML, no BYPASSRLS); `02-extensions.sql` enables `pg_trgm`, `btree_gin`, `citext`              | 5432       |
+| `pgbouncer`            | transaction mode, userlist auth; the app connects here                                                                                                                               | 6432       |
+| `redis-core`           | `appendonly yes`, `maxmemory-policy noeviction`                                                                                                                                      | 6379       |
+| `redis-rt`             | no persistence, `volatile-lru`                                                                                                                                                       | 6380       |
 | `minio` + `minio-init` | `mc` creates private bucket `taskin-files` with versioning, lifecycle rules (abort incomplete multipart after 1 day, expire `tmp/` after 1 day) and CORS for `http://localhost:3000` | 9000, 9001 |
-| `mailpit` | SMTP sink with a web UI for invitation emails | 1025, 8025 |
-| `clamav` | profile `security`; the scan worker uses clamd over TCP (a no-op scanner by default in dev) | 3310 |
-| `migrate` | one-shot Drizzle migrate as `taskin_migrator`, then seed | none |
-| `api` | `APP_ROLE=all`. `compose.scale.yml` instead runs `api-http` ×2 and `api-ws` ×2 behind `nginx` (proving multi-node fan-out) plus one `api-worker` | 4000 |
-| `web` | `apps/web` dev server, proxied at `/api` and `/rt` | 3000 |
-| observability profile | `otel-collector`, `tempo`, `loki`, `prometheus`, `grafana` with provisioned dashboards (API RED, WebSocket, outbox lag, queues) | 3001+ |
+| `mailpit`              | SMTP sink with a web UI for invitation emails                                                                                                                                        | 1025, 8025 |
+| `clamav`               | profile `security`; the scan worker uses clamd over TCP (a no-op scanner by default in dev)                                                                                          | 3310       |
+| `migrate`              | one-shot Drizzle migrate as `taskin_migrator`, then seed                                                                                                                             | none       |
+| `api`                  | `APP_ROLE=all`. `compose.scale.yml` instead runs `api-http` ×2 and `api-ws` ×2 behind `nginx` (proving multi-node fan-out) plus one `api-worker`                                     | 4000       |
+| `web`                  | `apps/web` dev server, proxied at `/api` and `/rt`                                                                                                                                   | 3000       |
+| observability profile  | `otel-collector`, `tempo`, `loki`, `prometheus`, `grafana` with provisioned dashboards (API RED, WebSocket, outbox lag, queues)                                                      | 3001+      |
 
 - In dev, SMS uses the console driver: the OTP is logged at `info` with `devOnly: true`. Config validation refuses that driver when `NODE_ENV=production`.
 - Configuration is a zod-validated env schema (`apps/api/src/platform/config`); the process exits on invalid config. `.env.example` is committed.
@@ -933,43 +944,43 @@ Every server event uses one envelope: `{ eventId, type, workspaceId, occurredAt,
 
 Each known failure mode has a designed response; the milestone checklists test the high-risk ones.
 
-| # | Edge case | Response |
-| --- | --- | --- |
-| 1 | SMS provider outage | Fail over to the second provider, circuit breaker per provider, 503 `SMS_UNAVAILABLE` with retry-after; admins can still use password + TOTP |
-| 2 | OTP brute force or SMS pumping | Per-phone, per-IP and global send budgets; 5 attempts per challenge; Iranian mobile ranges only; alert on anomalous send rate |
-| 3 | Access token expires with the socket open | In-band `auth:refresh`; forced disconnect 60 s after `exp` |
-| 4 | Session revoked or refresh token reused | `session_{sid}` sockets disconnected cluster-wide; audited; SMS alert on reuse |
-| 5 | WS node crash | Clients reconnect with jitter; the presence sweeper clears the node within 30 s; sequence and stream resume close the gaps |
-| 6 | `redis-rt` lost | Fan-out stops; clients poll every 15 s and resync on reconnect; chat writes continue in the DB |
-| 7 | Outbox relay crash | The leader lock is released and another worker takes over; unpublished rows remain; lag alert fires |
-| 8 | Duplicate `message:send` after a timeout | Unique `(conversation_id, author_id, client_msg_id)` returns the original `{id, seq}` |
-| 9 | Concurrent senders in one conversation | The conversation row lock serialises `seq`; ordering never uses clocks |
-| 10 | Two devices convert the same message | Partial unique index; the second gets 200 `{existing: true}` |
-| 11 | Idempotency key reused with a different body | 422 `IDEMPOTENCY_KEY_REUSED`; while still in progress, 409 with `Retry-After` |
-| 12 | Column deleted while a card is dragged into it | Workflow lock plus liveness check → 409 `COLUMN_GONE`; the client resyncs the board |
-| 13 | Deleting the last todo or done column | 409 `WORKFLOW_CATEGORY_REQUIRED`; the frontend disables the menu item |
-| 14 | Concurrent task edits | `version` + `If-Match` → 412 with current state; the UI merges field by field |
-| 15 | Seat race on invitation accept | Conditional `member_count` update → `PLAN_LIMIT_REACHED` |
-| 16 | Storage quota race | `storage_reserved_bytes` reserved at upload init, settled on complete or abort, expired by GC |
-| 17 | Owner leaves or deletes their account | Blocked until ownership is transferred (step-up) or the workspace is deleted |
-| 18 | Member removed | Project and channel memberships removed, sockets leave rooms, open assignments kept but flagged as an inactive assignee |
-| 19 | User account deleted | Anonymised: messages point to a tombstone profile «کاربر حذف‌شده»; the phone is freed after 30 days |
-| 20 | Workspace deleted (the UI says permanent) | Immediately inaccessible, sockets kicked with `workspace:removed`; rows and the `ws/{wid}/` object prefix are purged after a configurable grace (default 7 days, disaster recovery only, not user-restorable) |
-| 21 | Guest demoted or project made private | `rbac_version` bump → caches purged, sockets leave project rooms, `permissions:updated` |
-| 22 | Chat member without project access sees a linked task | Broadcast only `{taskId, code}`; the preview endpoint enforces access |
-| 23 | Channels with 5,000+ members | A room emit is one publish; read receipts become counts; unread counts cap at 99+ |
-| 24 | Unread counts with deleted or own messages | Capped `count(*)` over `seq > last_read_seq AND author_id <> me AND deleted_at IS NULL`, one lateral query for the sidebar |
-| 25 | Persian spelling variants (ي/ی, ك/ک, ZWNJ, digits) | One normaliser in `packages/text`, applied on write and on query |
-| 26 | Filename spoofing with right-to-left override | Bidi controls stripped; the extension comes from the sniffed MIME type |
-| 27 | "Due today" around midnight in Tehran | All date logic uses the workspace-zone `date`, never the UTC date |
-| 28 | Event edited after its reminder was scheduled | Versioned job id; the stale job no-ops |
-| 29 | Serialization failure or deadlock | Canonical lock order plus up to 3 automatic retries |
-| 30 | Link-preview SSRF or DNS rebinding | Resolve, then connect to the vetted IP; private ranges blocked on every redirect |
-| 31 | Message edited after conversion or after 48 hours | The task snapshot is unchanged; the edit window is an ability condition on `createdAt` |
-| 32 | Notification storms from bulk moves | `dedupe_key` collapse plus a digest in linked channels |
-| 33 | Clock skew between nodes | JWT leeway of 30 s; ordering relies on sequences and identity ids, never wall clocks |
-| 34 | Free-plan message history | Enforced at read time; data is retained for an upgrade |
-| 35 | Prepared statements through PgBouncer | Unnamed statements only; `LISTEN` on a direct connection (the relay) |
+| #   | Edge case                                             | Response                                                                                                                                                                                                      |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | SMS provider outage                                   | Fail over to the second provider, circuit breaker per provider, 503 `SMS_UNAVAILABLE` with retry-after; admins can still use password + TOTP                                                                  |
+| 2   | OTP brute force or SMS pumping                        | Per-phone, per-IP and global send budgets; 5 attempts per challenge; Iranian mobile ranges only; alert on anomalous send rate                                                                                 |
+| 3   | Access token expires with the socket open             | In-band `auth:refresh`; forced disconnect 60 s after `exp`                                                                                                                                                    |
+| 4   | Session revoked or refresh token reused               | `session_{sid}` sockets disconnected cluster-wide; audited; SMS alert on reuse                                                                                                                                |
+| 5   | WS node crash                                         | Clients reconnect with jitter; the presence sweeper clears the node within 30 s; sequence and stream resume close the gaps                                                                                    |
+| 6   | `redis-rt` lost                                       | Fan-out stops; clients poll every 15 s and resync on reconnect; chat writes continue in the DB                                                                                                                |
+| 7   | Outbox relay crash                                    | The leader lock is released and another worker takes over; unpublished rows remain; lag alert fires                                                                                                           |
+| 8   | Duplicate `message:send` after a timeout              | Unique `(conversation_id, author_id, client_msg_id)` returns the original `{id, seq}`                                                                                                                         |
+| 9   | Concurrent senders in one conversation                | The conversation row lock serialises `seq`; ordering never uses clocks                                                                                                                                        |
+| 10  | Two devices convert the same message                  | Partial unique index; the second gets 200 `{existing: true}`                                                                                                                                                  |
+| 11  | Idempotency key reused with a different body          | 422 `IDEMPOTENCY_KEY_REUSED`; while still in progress, 409 with `Retry-After`                                                                                                                                 |
+| 12  | Column deleted while a card is dragged into it        | Workflow lock plus liveness check → 409 `COLUMN_GONE`; the client resyncs the board                                                                                                                           |
+| 13  | Deleting the last todo or done column                 | 409 `WORKFLOW_CATEGORY_REQUIRED`; the frontend disables the menu item                                                                                                                                         |
+| 14  | Concurrent task edits                                 | `version` + `If-Match` → 412 with current state; the UI merges field by field                                                                                                                                 |
+| 15  | Seat race on invitation accept                        | Conditional `member_count` update → `PLAN_LIMIT_REACHED`                                                                                                                                                      |
+| 16  | Storage quota race                                    | `storage_reserved_bytes` reserved at upload init, settled on complete or abort, expired by GC                                                                                                                 |
+| 17  | Owner leaves or deletes their account                 | Blocked until ownership is transferred (step-up) or the workspace is deleted                                                                                                                                  |
+| 18  | Member removed                                        | Project and channel memberships removed, sockets leave rooms, open assignments kept but flagged as an inactive assignee                                                                                       |
+| 19  | User account deleted                                  | Anonymised: messages point to a tombstone profile «کاربر حذف‌شده»; the phone is freed after 30 days                                                                                                           |
+| 20  | Workspace deleted (the UI says permanent)             | Immediately inaccessible, sockets kicked with `workspace:removed`; rows and the `ws/{wid}/` object prefix are purged after a configurable grace (default 7 days, disaster recovery only, not user-restorable) |
+| 21  | Guest demoted or project made private                 | `rbac_version` bump → caches purged, sockets leave project rooms, `permissions:updated`                                                                                                                       |
+| 22  | Chat member without project access sees a linked task | Broadcast only `{taskId, code}`; the preview endpoint enforces access                                                                                                                                         |
+| 23  | Channels with 5,000+ members                          | A room emit is one publish; read receipts become counts; unread counts cap at 99+                                                                                                                             |
+| 24  | Unread counts with deleted or own messages            | Capped `count(*)` over `seq > last_read_seq AND author_id <> me AND deleted_at IS NULL`, one lateral query for the sidebar                                                                                    |
+| 25  | Persian spelling variants (ي/ی, ك/ک, ZWNJ, digits)    | One normaliser in `packages/text`, applied on write and on query                                                                                                                                              |
+| 26  | Filename spoofing with right-to-left override         | Bidi controls stripped; the extension comes from the sniffed MIME type                                                                                                                                        |
+| 27  | "Due today" around midnight in Tehran                 | All date logic uses the workspace-zone `date`, never the UTC date                                                                                                                                             |
+| 28  | Event edited after its reminder was scheduled         | Versioned job id; the stale job no-ops                                                                                                                                                                        |
+| 29  | Serialization failure or deadlock                     | Canonical lock order plus up to 3 automatic retries                                                                                                                                                           |
+| 30  | Link-preview SSRF or DNS rebinding                    | Resolve, then connect to the vetted IP; private ranges blocked on every redirect                                                                                                                              |
+| 31  | Message edited after conversion or after 48 hours     | The task snapshot is unchanged; the edit window is an ability condition on `createdAt`                                                                                                                        |
+| 32  | Notification storms from bulk moves                   | `dedupe_key` collapse plus a digest in linked channels                                                                                                                                                        |
+| 33  | Clock skew between nodes                              | JWT leeway of 30 s; ordering relies on sequences and identity ids, never wall clocks                                                                                                                          |
+| 34  | Free-plan message history                             | Enforced at read time; data is retained for an upgrade                                                                                                                                                        |
+| 35  | Prepared statements through PgBouncer                 | Unnamed statements only; `LISTEN` on a direct connection (the relay)                                                                                                                                          |
 
 ## 15. Roadmap and acceptance checklists
 
@@ -1047,15 +1058,15 @@ Five milestones, each ending with its checklist green, a pushed commit and a rev
 
 Seven decisions have working defaults and don't block M0 or M1; confirm them during the M1 review.
 
-| Item | Default in this RFC |
-| --- | --- |
-| Plan limit values (seats, storage, file size, history days, projects) | Placeholders in seeds until business sets them |
-| Workspace purge grace | 7 days, disaster recovery only |
-| Message edit window; delete-for-everyone rules in DMs | 48 hours; authors may always delete their own |
-| Note sharing | Notes stay private in v1 |
-| System message on conversion | On, except in direct messages |
-| Audit retention | 12 months |
-| SMS providers | Kavenegar primary, SMS.ir failover; allow lead time for sender-line and template approval |
+| Item                                                                  | Default in this RFC                                                                       |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Plan limit values (seats, storage, file size, history days, projects) | Placeholders in seeds until business sets them                                            |
+| Workspace purge grace                                                 | 7 days, disaster recovery only                                                            |
+| Message edit window; delete-for-everyone rules in DMs                 | 48 hours; authors may always delete their own                                             |
+| Note sharing                                                          | Notes stay private in v1                                                                  |
+| System message on conversion                                          | On, except in direct messages                                                             |
+| Audit retention                                                       | 12 months                                                                                 |
+| SMS providers                                                         | Kavenegar primary, SMS.ir failover; allow lead time for sender-line and template approval |
 
 Next steps once this RFC is approved:
 
@@ -1069,33 +1080,33 @@ comments at the named places carry the detail.
 
 **Infrastructure**
 
-| RFC | Implemented | Why |
-| --- | --- | --- |
-| MinIO + `minio-init` in Compose (§13) | SeaweedFS 4.47 (`chrislusf/seaweedfs`) with an `s3-init` job creating `taskin-files` | MinIO no longer publishes community images or binaries. The API talks to the S3 port only (`forcePathStyle`, presigned POST), so production can still run MinIO, Arvan or Ceph. Versioning and lifecycle rules move to the production bucket runbook |
-| Migrations tested with Testcontainers; `pg_dump --schema-only` diffed against a snapshot (§1) | A template database migrated from zero once per test run; `db/schema.snapshot.txt` rendered from the catalog (columns, constraints, indexes, RLS, policies, triggers, function signatures, grants) and compared in `schema.test.ts`. CI also runs `drizzle-kit check` and fails on ungenerated schema changes | No Docker-in-Docker in CI or the dev container, and a catalog query is stable across `pg_dump` versions |
-| "Traceable end to end in Loki" (§15, M1 checklist) | `observability.test.ts` captures the process's JSON logs and asserts one request id and trace id across the request logs, the audit row, the outbox headers and the worker job's logs | Loki arrives with the observability profile; the assertion is the same, without a Loki container in CI |
-| NestJS "latest stable" | NestJS 12, ESM (`"type": "module"`, NodeNext) | Current major; decorators and `emitDecoratorMetadata` work under `tsc` and, in tests, SWC |
+| RFC                                                                                           | Implemented                                                                                                                                                                                                                                                                                                   | Why                                                                                                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MinIO + `minio-init` in Compose (§13)                                                         | SeaweedFS 4.47 (`chrislusf/seaweedfs`) with an `s3-init` job creating `taskin-files`                                                                                                                                                                                                                          | MinIO no longer publishes community images or binaries. The API talks to the S3 port only (`forcePathStyle`, presigned POST), so production can still run MinIO, Arvan or Ceph. Versioning and lifecycle rules move to the production bucket runbook |
+| Migrations tested with Testcontainers; `pg_dump --schema-only` diffed against a snapshot (§1) | A template database migrated from zero once per test run; `db/schema.snapshot.txt` rendered from the catalog (columns, constraints, indexes, RLS, policies, triggers, function signatures, grants) and compared in `schema.test.ts`. CI also runs `drizzle-kit check` and fails on ungenerated schema changes | No Docker-in-Docker in CI or the dev container, and a catalog query is stable across `pg_dump` versions                                                                                                                                              |
+| "Traceable end to end in Loki" (§15, M1 checklist)                                            | `observability.test.ts` captures the process's JSON logs and asserts one request id and trace id across the request logs, the audit row, the outbox headers and the worker job's logs                                                                                                                         | Loki arrives with the observability profile; the assertion is the same, without a Loki container in CI                                                                                                                                               |
+| NestJS "latest stable"                                                                        | NestJS 12, ESM (`"type": "module"`, NodeNext)                                                                                                                                                                                                                                                                 | Current major; decorators and `emitDecoratorMetadata` work under `tsc` and, in tests, SWC                                                                                                                                                            |
 
 **Schema**
 
-| RFC | Implemented | Why |
-| --- | --- | --- |
-| `users.phone_e164` (§6) | `users.phone` with `CHECK (phone ~ '^\+[1-9][0-9]{7,14}$')` | The snake_case mapping turns `phoneE164` into `phone_e_164`; `phone` reads better and the CHECK enforces the E.164 form |
-| `plans.limits` keys in snake_case (§6) | camelCase (`maxMembers`, `storageBytes`, …), matching `PlanLimits` in contracts | JSON goes straight to the client without a mapping layer. The seeded values (free 10 seats, team 100, enterprise 1000) are placeholders until business sets them (§16) |
-| `workspace_members.department_id … ON DELETE SET NULL` (§6) | `ON DELETE RESTRICT`; deleting a department in use returns 409 `DEPARTMENT_IN_USE` | A plain `SET NULL` on the composite FK would also null `workspace_id`, and Drizzle cannot declare PostgreSQL's column-list form `SET NULL (department_id)`. Reassigning members first is also what the UI expects |
-| `roles.name` (§6) | No `name` column; `roles.version` added | Built-in role names are localised on the client from `key`. `version` is the `ETag` for `PUT /roles/:id/permissions` with `If-Match` |
-| `auth_sessions` (§6) | Adds `stepped_up_at` | A refreshed access token keeps the session's step-up time instead of losing it |
-| The owner role's grants | The owner role has no `role_permissions` rows; the ability factory grants `manage all` | A locked role with implicit grants cannot drift. The trigger still rejects writes to it (SQLSTATE `TK001`) |
-| `project_members` in §6 | Created in M2 with `projects` | Its composite FK needs `projects` |
-| `audit_logs.id` as primary key | `PRIMARY KEY (id, created_at)`; monthly partitions created ahead by the maintenance queue, plus a default partition | A partitioned table's primary key must include the partition key |
+| RFC                                                         | Implemented                                                                                                         | Why                                                                                                                                                                                                               |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users.phone_e164` (§6)                                     | `users.phone` with `CHECK (phone ~ '^\+[1-9][0-9]{7,14}$')`                                                         | The snake_case mapping turns `phoneE164` into `phone_e_164`; `phone` reads better and the CHECK enforces the E.164 form                                                                                           |
+| `plans.limits` keys in snake_case (§6)                      | camelCase (`maxMembers`, `storageBytes`, …), matching `PlanLimits` in contracts                                     | JSON goes straight to the client without a mapping layer. The seeded values (free 10 seats, team 100, enterprise 1000) are placeholders until business sets them (§16)                                            |
+| `workspace_members.department_id … ON DELETE SET NULL` (§6) | `ON DELETE RESTRICT`; deleting a department in use returns 409 `DEPARTMENT_IN_USE`                                  | A plain `SET NULL` on the composite FK would also null `workspace_id`, and Drizzle cannot declare PostgreSQL's column-list form `SET NULL (department_id)`. Reassigning members first is also what the UI expects |
+| `roles.name` (§6)                                           | No `name` column; `roles.version` added                                                                             | Built-in role names are localised on the client from `key`. `version` is the `ETag` for `PUT /roles/:id/permissions` with `If-Match`                                                                              |
+| `auth_sessions` (§6)                                        | Adds `stepped_up_at`                                                                                                | A refreshed access token keeps the session's step-up time instead of losing it                                                                                                                                    |
+| The owner role's grants                                     | The owner role has no `role_permissions` rows; the ability factory grants `manage all`                              | A locked role with implicit grants cannot drift. The trigger still rejects writes to it (SQLSTATE `TK001`)                                                                                                        |
+| `project_members` in §6                                     | Created in M2 with `projects`                                                                                       | Its composite FK needs `projects`                                                                                                                                                                                 |
+| `audit_logs.id` as primary key                              | `PRIMARY KEY (id, created_at)`; monthly partitions created ahead by the maintenance queue, plus a default partition | A partitioned table's primary key must include the partition key                                                                                                                                                  |
 
 **Authentication and authorisation**
 
-| RFC | Implemented | Why |
-| --- | --- | --- |
-| Refresh cookie `__Host-taskin_rt; Path=/api/v1/auth` (§11) | `__Secure-taskin_rt` with the same path; the CSRF cookie is `__Host-taskin_csrf; Path=/` | Browsers reject a `__Host-` cookie whose path is not `/`. Plain-http development (`COOKIE_SECURE=false`) drops both prefixes |
-| Admin password required on first elevation (§11) | Also required to create a workspace: `POST /workspaces` returns 403 `PASSWORD_REQUIRED` until one is set | The creator becomes an owner, so they need a step-up factor from the start |
-| TOTP and phone change (§11) | Deferred | Not in the M1 scope. The `otp_purpose` enum already has `step_up` and `phone_change`; `users.totp_secret_enc` is added with TOTP |
+| RFC                                                        | Implemented                                                                                              | Why                                                                                                                              |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Refresh cookie `__Host-taskin_rt; Path=/api/v1/auth` (§11) | `__Secure-taskin_rt` with the same path; the CSRF cookie is `__Host-taskin_csrf; Path=/`                 | Browsers reject a `__Host-` cookie whose path is not `/`. Plain-http development (`COOKIE_SECURE=false`) drops both prefixes     |
+| Admin password required on first elevation (§11)           | Also required to create a workspace: `POST /workspaces` returns 403 `PASSWORD_REQUIRED` until one is set | The creator becomes an owner, so they need a step-up factor from the start                                                       |
+| TOTP and phone change (§11)                                | Deferred                                                                                                 | Not in the M1 scope. The `otp_purpose` enum already has `step_up` and `phone_change`; `users.totp_secret_enc` is added with TOTP |
 
 **Code structure**
 
@@ -1113,15 +1124,15 @@ M2 follows this RFC except where noted below. As in Addendum A, each entry says 
 
 **Schema**
 
-| RFC | Implemented | Why |
-| --- | --- | --- |
-| People referenced as `users(id)` (§7–8) | Assignees, reviewers, authors, attendees, note owners and project members reference `workspace_members (workspace_id, user_id)` | Work can only point at someone who belongs, or belonged, to the same workspace. Members are never deleted (they leave), so the references never dangle |
-| `RESTRICT` and `SET NULL` foreign keys (§7–8) | `NO ACTION` everywhere except cascades; column-list `SET NULL (department_id)` for `projects` and `SET NULL (source_note_id)` for `tasks`, declared in SQL | A workspace purge cascades through every table in one statement, which `NO ACTION` allows and `RESTRICT` may not. The column list keeps `workspace_id` when a department or note goes |
-| `tasks.source_message_id → messages` (§7) | The column exists; its foreign key arrives with the messages table in M3 | The table does not exist yet |
-| `notification_kind` and `activity_kind` with underscores (§6) | Hyphenated (`task-assigned`), as in the contracts | §6's own rule: enum literals equal the contract literals, so there is no mapping layer |
-| `notes.deleted_at` (§8) | Notes are deleted outright | The category foreign key then enforces "a notebook can only be deleted when empty"; a task made from a deleted note keeps its content and loses the link |
-| A `tasks.status` written by the service | Also enforced by the `tasks_sync_status` trigger | The column is the source of truth; nothing can store a status that disagrees with it |
-| "Every workflow keeps a live to-do and a live done column" | The API checks (409 `WORKFLOW_CATEGORY_REQUIRED`), and a deferred constraint trigger (SQLSTATE `TK002`) makes a violating commit impossible | Defence in depth, like the owner-row trigger |
+| RFC                                                           | Implemented                                                                                                                                                | Why                                                                                                                                                                                   |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| People referenced as `users(id)` (§7–8)                       | Assignees, reviewers, authors, attendees, note owners and project members reference `workspace_members (workspace_id, user_id)`                            | Work can only point at someone who belongs, or belonged, to the same workspace. Members are never deleted (they leave), so the references never dangle                                |
+| `RESTRICT` and `SET NULL` foreign keys (§7–8)                 | `NO ACTION` everywhere except cascades; column-list `SET NULL (department_id)` for `projects` and `SET NULL (source_note_id)` for `tasks`, declared in SQL | A workspace purge cascades through every table in one statement, which `NO ACTION` allows and `RESTRICT` may not. The column list keeps `workspace_id` when a department or note goes |
+| `tasks.source_message_id → messages` (§7)                     | The column exists; its foreign key arrives with the messages table in M3                                                                                   | The table does not exist yet                                                                                                                                                          |
+| `notification_kind` and `activity_kind` with underscores (§6) | Hyphenated (`task-assigned`), as in the contracts                                                                                                          | §6's own rule: enum literals equal the contract literals, so there is no mapping layer                                                                                                |
+| `notes.deleted_at` (§8)                                       | Notes are deleted outright                                                                                                                                 | The category foreign key then enforces "a notebook can only be deleted when empty"; a task made from a deleted note keeps its content and loses the link                              |
+| A `tasks.status` written by the service                       | Also enforced by the `tasks_sync_status` trigger                                                                                                           | The column is the source of truth; nothing can store a status that disagrees with it                                                                                                  |
+| "Every workflow keeps a live to-do and a live done column"    | The API checks (409 `WORKFLOW_CATEGORY_REQUIRED`), and a deferred constraint trigger (SQLSTATE `TK002`) makes a violating commit impossible                | Defence in depth, like the owner-row trigger                                                                                                                                          |
 
 **Permissions**
 
@@ -1172,15 +1183,15 @@ M3 follows this RFC except where noted below. As in Addenda A and B, each entry 
 
 **Transport and fan-out**
 
-| RFC | Implemented | Why |
-| --- | --- | --- |
-| Namespace `/rt` (§4) | The Socket.IO **path** is `/rt`, with the default namespace | The edge routes by path; one namespace is all the client needs |
+| RFC                                                      | Implemented                                                                                                                                                                                                                                | Why                                                                                                                                                                                                                               |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Namespace `/rt` (§4)                                     | The Socket.IO **path** is `/rt`, with the default namespace                                                                                                                                                                                | The edge routes by path; one namespace is all the client needs                                                                                                                                                                    |
 | Workers emit through `@socket.io/redis-emitter` (§4, §5) | A realtime bus: processes without sockets (REST nodes, the relay, the worker) publish operations on `{prefix}:rt:bus`, and every WebSocket node applies them to its own sockets, in order. Gateway nodes emit through the adapter directly | The emitter cannot reach the sharded adapter, and several operations need logic on the node: re-evaluating a member's rooms after a permission change, or joining a new conversation only on sockets subscribed to that workspace |
-| `room_{cid}`, `workspace_{wid}` … | `user:`, `session:`, `ws:`, `project:`, `conv:` | Short, and unambiguous when logged |
-| Node heartbeat TTL 30 s (§5) | 10 s, refreshed every 3 s | With the 10 s grace, a 2 s sweep and the 2 s announcement batch, a dead node's users go offline within about 25 s, which meets the checklist's 30 s |
-| Every WebSocket mutation audited | WebSocket sends are not audited (edits, deletes and REST sends are) | A per-message audit row would double the hot path's writes; the message row itself records who, when and where |
-| — | Added `auth:expired`, `member:joined`, `member:removed`; the handshake can also fail with `SERVICE_UNAVAILABLE` | The client needs to tell "refresh your token" from "retry later" from "sign in again" |
-| — | REST routes for reactions and read cursors, next to the socket events | The HTTP fallback the RFC promises for sending covers the other chat writes too |
+| `room_{cid}`, `workspace_{wid}` …                        | `user:`, `session:`, `ws:`, `project:`, `conv:`                                                                                                                                                                                            | Short, and unambiguous when logged                                                                                                                                                                                                |
+| Node heartbeat TTL 30 s (§5)                             | 10 s, refreshed every 3 s                                                                                                                                                                                                                  | With the 10 s grace, a 2 s sweep and the 2 s announcement batch, a dead node's users go offline within about 25 s, which meets the checklist's 30 s                                                                               |
+| Every WebSocket mutation audited                         | WebSocket sends are not audited (edits, deletes and REST sends are)                                                                                                                                                                        | A per-message audit row would double the hot path's writes; the message row itself records who, when and where                                                                                                                    |
+| —                                                        | Added `auth:expired`, `member:joined`, `member:removed`; the handshake can also fail with `SERVICE_UNAVAILABLE`                                                                                                                            | The client needs to tell "refresh your token" from "retry later" from "sign in again"                                                                                                                                             |
+| —                                                        | REST routes for reactions and read cursors, next to the socket events                                                                                                                                                                      | The HTTP fallback the RFC promises for sending covers the other chat writes too                                                                                                                                                   |
 
 **The hot path**
 
@@ -1195,6 +1206,7 @@ M3 follows this RFC except where noted below. As in Addenda A and B, each entry 
   - skips rows a send holds (`FOR UPDATE SKIP LOCKED`) for the next window, rather than waiting on them. Before this, batches and sends queued behind each other's row locks.
 
   The ack therefore means "queued", and a node crash loses at most a second of receipts, which clients send again with their next read. The REST route stays synchronous and audited.
+
 - **Shared lookups on a cold cache.** A cache miss on a user's standing (security version, status) shares one query with every other miss that arrives while it is in flight. In a reconnect storm a few queries answer thousands of handshakes.
 - **An unreachable or exhausted database is `SERVICE_UNAVAILABLE`**, on the socket and as a REST 503 with `Retry-After`, not an internal error. Clients retry, and a send retried with the same `clientMsgId` is idempotent.
 
@@ -1229,14 +1241,14 @@ M4 so far connects the web app to the API (the live data source) and adds the me
 
 **Message → task (§4.1)**
 
-| RFC | Implemented | Why |
-| --- | --- | --- |
-| `POST …/conversations/:cid/messages/:mid/task`, idempotent | As specified. The task, its links and the system line are one transaction; one live task per message through the partial unique index, so two people converting at once get the same task (`200`, `existing: true`) | — |
-| Attachments not of the message: 422 | `400 VALIDATION_FAILED` on `attachmentIds` | The same shape as every other body check; the file may have been uploaded by anyone, as long as it is the message's own |
-| — | A system message cannot be converted: `422 MESSAGE_NOT_CONVERTIBLE`; a deleted one is `410 MESSAGE_GONE` | A system line has no author or content to make a task of |
-| `message:task_linked` through the outbox relay | Emitted by the request after commit, durable in the workspace's event stream | Like chat sends: the chip must appear at once, and a client that missed it gets it on `sync:resume` |
-| System line on conversion (step 7) | Written in the same transaction, `{type: 'message_converted', params: {messageId, taskId, code, actorId}}`; groups and channels only, when `settings.systemMessageOnConvert` | Direct chats stay private, as §4.1 says |
-| — | `TaskDetail.sourceMessage`: where the task came from. People who cannot read that conversation learn only that there is a source message | The task drawer's «پیام مبدأ» link needs the conversation, and must not leak it |
+| RFC                                                        | Implemented                                                                                                                                                                                                         | Why                                                                                                                     |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `POST …/conversations/:cid/messages/:mid/task`, idempotent | As specified. The task, its links and the system line are one transaction; one live task per message through the partial unique index, so two people converting at once get the same task (`200`, `existing: true`) | —                                                                                                                       |
+| Attachments not of the message: 422                        | `400 VALIDATION_FAILED` on `attachmentIds`                                                                                                                                                                          | The same shape as every other body check; the file may have been uploaded by anyone, as long as it is the message's own |
+| —                                                          | A system message cannot be converted: `422 MESSAGE_NOT_CONVERTIBLE`; a deleted one is `410 MESSAGE_GONE`                                                                                                            | A system line has no author or content to make a task of                                                                |
+| `message:task_linked` through the outbox relay             | Emitted by the request after commit, durable in the workspace's event stream                                                                                                                                        | Like chat sends: the chip must appear at once, and a client that missed it gets it on `sync:resume`                     |
+| System line on conversion (step 7)                         | Written in the same transaction, `{type: 'message_converted', params: {messageId, taskId, code, actorId}}`; groups and channels only, when `settings.systemMessageOnConvert`                                        | Direct chats stay private, as §4.1 says                                                                                 |
+| —                                                          | `TaskDetail.sourceMessage`: where the task came from. People who cannot read that conversation learn only that there is a source message                                                                            | The task drawer's «پیام مبدأ» link needs the conversation, and must not leak it                                         |
 
 Locks are taken in the order project → column → task → conversation (the system line last), which is §4.1's own step order. No other path locks a conversation before a column.
 

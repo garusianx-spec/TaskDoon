@@ -81,7 +81,8 @@ export function splitRecipients(raw: string): readonly string[] {
 
 /** `09121234567` → `۰۹۱۲ ۱۲۳ ۴۵۶۷`, grouped the way Iranians read numbers aloud. */
 export function formatMobile(mobile: string): string {
-  const grouped = mobile.length === 11 ? `${mobile.slice(0, 4)} ${mobile.slice(4, 7)} ${mobile.slice(7)}` : mobile;
+  const grouped =
+    mobile.length === 11 ? `${mobile.slice(0, 4)} ${mobile.slice(4, 7)} ${mobile.slice(7)}` : mobile;
   return toPersianDigits(grouped);
 }
 

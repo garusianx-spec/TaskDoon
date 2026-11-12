@@ -1,9 +1,9 @@
 'use client';
 
-import type { User,Workspace } from '@taskin/contracts';
+import type { User, Workspace } from '@taskin/contracts';
 import { formatCount } from '@/lib/format';
-import { Badge,Button,Modal } from '@/components/ui';
-import { CrownIcon,GridIcon,LockIcon,TrashIcon } from '@/components/icons';
+import { Badge, Button, Modal } from '@/components/ui';
+import { CrownIcon, GridIcon, LockIcon, TrashIcon } from '@/components/icons';
 import { WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
 import { WorkspaceLogoUpload } from '@/features/workspace/components/WorkspaceLogoUpload';
 
@@ -54,8 +54,10 @@ export function WorkspaceSettingsModal({
           <WorkspaceAvatar workspace={workspace} size="lg" />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="truncate text-title font-bold text-fg-primary">{workspace.name}</span>
-            {workspace.description && <span className="text-caption text-fg-tertiary">{workspace.description}</span>}
-            <span className="numeric flex flex-wrap items-center gap-2 text-micro text-fg-tertiary">
+            {workspace.description && (
+              <span className="text-caption text-fg-tertiary">{workspace.description}</span>
+            )}
+            <span className="flex flex-wrap items-center gap-2 text-micro text-fg-tertiary numeric">
               {`${formatCount(workspace.memberCount)} عضو، طرح ${workspace.plan}`}
               {owner && (
                 <Badge tone="neutral" size="sm" iconStart={<CrownIcon size={11} />}>
@@ -63,7 +65,13 @@ export function WorkspaceSettingsModal({
                 </Badge>
               )}
             </span>
-            {open && onSaveIcon && <WorkspaceLogoUpload key={workspace.id} hasIcon={Boolean(workspace.iconUrl)} onSave={onSaveIcon} />}
+            {open && onSaveIcon && (
+              <WorkspaceLogoUpload
+                key={workspace.id}
+                hasIcon={Boolean(workspace.iconUrl)}
+                onSave={onSaveIcon}
+              />
+            )}
           </div>
         </section>
 
@@ -75,7 +83,8 @@ export function WorkspaceSettingsModal({
             منطقه خطر
           </h3>
           <p className="text-caption text-fg-secondary">
-            حذف فضای کاری همه وظایف، گفتگوها، یادداشت‌ها و رویدادهای آن را برای همه اعضا برای همیشه پاک می‌کند.
+            حذف فضای کاری همه وظایف، گفتگوها، یادداشت‌ها و رویدادهای آن را برای همه اعضا برای همیشه پاک
+            می‌کند.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <Button

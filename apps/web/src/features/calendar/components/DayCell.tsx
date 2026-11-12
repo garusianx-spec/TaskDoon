@@ -5,14 +5,11 @@ import type { CalendarCell } from '@taskin/jalali';
 import type { CalendarItem } from '@/store/selectors';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
-import {
-formatJalali,toPersianDigits
-} from '@taskin/jalali';
-import { Popover,type PopoverProps } from '@/components/ui';
+import { formatJalali, toPersianDigits } from '@taskin/jalali';
+import { Popover, type PopoverProps } from '@/components/ui';
 import { AddIcon } from '@/components/icons';
-import { CalendarBadge,itemDotClass } from '@/features/calendar/components/calendar-item';
+import { CalendarBadge, itemDotClass } from '@/features/calendar/components/calendar-item';
 import { DaySummary } from '@/features/calendar/components/DaySummary';
-
 
 /** At most this many badges per day; the rest fold into "+X مورد دیگر". */
 const MAX_VISIBLE = 2;
@@ -106,7 +103,7 @@ export function DayCell({
       <span className="pointer-events-none relative flex items-center justify-between">
         <span
           className={cn(
-            'numeric flex size-7 items-center justify-center rounded-full text-body-sm font-semibold',
+            'flex size-7 items-center justify-center rounded-full text-body-sm font-semibold numeric',
             cell.isToday && 'bg-brand-solid text-fg-on-brand',
             !cell.isToday && !cell.inCurrentMonth && 'text-fg-disabled',
             !cell.isToday && cell.inCurrentMonth && isFriday && 'text-status-blocked',
@@ -127,7 +124,12 @@ export function DayCell({
           item.kind === 'deadline' ? (
             <CalendarBadge key={item.id} item={item} today={today} onClick={() => onOpenTask(item.task.id)} />
           ) : (
-            <Popover key={item.id} {...popoverProps} className="w-full" trigger={<CalendarBadge item={item} today={today} />}>
+            <Popover
+              key={item.id}
+              {...popoverProps}
+              className="w-full"
+              trigger={<CalendarBadge item={item} today={today} />}
+            >
               {summary}
             </Popover>
           ),
@@ -161,10 +163,17 @@ export function DayCell({
               className="relative z-10 flex items-center gap-0.5 rounded-full px-1 py-0.5"
             >
               {visible.map((item) => (
-                <span key={item.id} className={cn('size-1.5 rounded-full', itemDotClass(item, today))} aria-hidden="true" />
+                <span
+                  key={item.id}
+                  className={cn('size-1.5 rounded-full', itemDotClass(item, today))}
+                  aria-hidden="true"
+                />
               ))}
               {hidden > 0 && (
-                <span className="numeric text-[0.625rem] font-semibold leading-none text-fg-tertiary" aria-hidden="true">
+                <span
+                  className="text-[0.625rem] font-semibold leading-none text-fg-tertiary numeric"
+                  aria-hidden="true"
+                >
                   {`+${toPersianDigits(hidden)}`}
                 </span>
               )}

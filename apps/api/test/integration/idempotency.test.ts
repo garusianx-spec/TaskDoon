@@ -1,5 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { bearer, createTestApp, idempotencyKey, randomPhone, type Session, signIn, type TestApp, withAdminPassword } from './harness.js';
+import {
+  bearer,
+  createTestApp,
+  idempotencyKey,
+  randomPhone,
+  type Session,
+  signIn,
+  type TestApp,
+  withAdminPassword,
+} from './harness.js';
 
 describe('M1 checklist: idempotency keys', () => {
   let t: TestApp;
@@ -18,7 +27,10 @@ describe('M1 checklist: idempotency keys', () => {
     return (key ? request.set('Idempotency-Key', key) : request).send({ name });
   };
   const workspacesNamed = async (name: string) =>
-    Number((await t.admin.query<{ count: string }>('select count(*) from workspaces where name = $1', [name])).rows[0]?.count);
+    Number(
+      (await t.admin.query<{ count: string }>('select count(*) from workspaces where name = $1', [name]))
+        .rows[0]?.count,
+    );
 
   it('requires the header on idempotent routes', async () => {
     const response = await create(undefined, 'بدون کلید');
@@ -76,10 +88,20 @@ describe('M1 checklist: idempotency keys', () => {
 
   it('releases the key when the request fails, so a corrected retry can use it', async () => {
     const key = idempotencyKey();
-    const invalid = await t.http().post('/api/v1/workspaces').set(bearer(owner)).set('Idempotency-Key', key).send({ name: 'x'.repeat(41) });
+    const invalid = await t
+      .http()
+      .post('/api/v1/workspaces')
+      .set(bearer(owner))
+      .set('Idempotency-Key', key)
+      .send({ name: 'x'.repeat(41) });
     expect(invalid.status).toBe(400);
     const plain = await signIn(t, randomPhone());
-    const noPassword = await t.http().post('/api/v1/workspaces').set(bearer(plain)).set('Idempotency-Key', key).send({ name: 'بدون رمز' });
+    const noPassword = await t
+      .http()
+      .post('/api/v1/workspaces')
+      .set(bearer(plain))
+      .set('Idempotency-Key', key)
+      .send({ name: 'بدون رمز' });
     expect(noPassword.body.code).toBe('PASSWORD_REQUIRED');
     const { rows } = await t.admin.query('select 1 from idempotency_keys where key = $1', [key]);
     expect(rows).toHaveLength(0);

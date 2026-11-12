@@ -5,11 +5,11 @@ import { MODULES } from '@/data/reference';
 import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
-import { CountPill,IconButton,Dropdown } from '@/components/ui';
+import { CountPill, IconButton, Dropdown } from '@/components/ui';
 import { WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
 import { WorkspaceMenu } from '@/features/workspace/components/WorkspaceMenu';
 import { QuickCreateMenu } from '@/components/layout/QuickCreateMenu';
-import { AddIcon,ChevronDownIcon,NotificationIcon,SearchIcon } from '@/components/icons';
+import { AddIcon, ChevronDownIcon, NotificationIcon, SearchIcon } from '@/components/icons';
 
 /**
  * Mobile top bar: workspace badge + switcher, quick create, global search and the
@@ -50,10 +50,7 @@ export function TopAppBar() {
 
       <div className="flex-1" />
 
-      <Dropdown
-        label="ایجاد سریع"
-        trigger={<IconButton label="ایجاد سریع" icon={<AddIcon size={20} />} />}
-      >
+      <Dropdown label="ایجاد سریع" trigger={<IconButton label="ایجاد سریع" icon={<AddIcon size={20} />} />}>
         {(close) => <QuickCreateMenu close={close} />}
       </Dropdown>
       <IconButton
@@ -77,7 +74,7 @@ export function TopAppBar() {
           <CountPill
             value={formatCount(unreadNotifications)}
             tone="error"
-            className="pointer-events-none absolute -top-1 -end-1 ring-2 ring-surface"
+            className="pointer-events-none absolute -end-1 -top-1 ring-2 ring-surface"
           />
         )}
       </span>

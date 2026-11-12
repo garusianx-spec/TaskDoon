@@ -9,9 +9,7 @@
         "height": 1000
       },
       "violations": [],
-      "needsManualReview": [
-        "color-contrast"
-      ]
+      "needsManualReview": ["color-contrast"]
     },
     {
       "label": "/",
@@ -20,9 +18,7 @@
         "height": 844
       },
       "violations": [],
-      "needsManualReview": [
-        "color-contrast"
-      ]
+      "needsManualReview": ["color-contrast"]
     },
     {
       "label": "/features",
@@ -67,10 +63,7 @@
         "height": 1000
       },
       "violations": [],
-      "needsManualReview": [
-        "aria-prohibited-attr",
-        "color-contrast"
-      ]
+      "needsManualReview": ["aria-prohibited-attr", "color-contrast"]
     },
     {
       "label": "/pricing",
@@ -79,10 +72,7 @@
         "height": 844
       },
       "violations": [],
-      "needsManualReview": [
-        "aria-prohibited-attr",
-        "color-contrast"
-      ]
+      "needsManualReview": ["aria-prohibited-attr", "color-contrast"]
     },
     {
       "label": "/about",

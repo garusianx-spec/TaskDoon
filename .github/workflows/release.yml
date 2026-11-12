@@ -155,7 +155,6 @@ jobs:
         run: |
           printf '%s\n' "$IMAGE@$DIGEST" >> "$GITHUB_STEP_SUMMARY"
 
-
   promote:
     name: Promote the complete image set
     needs: [prepare, publish]

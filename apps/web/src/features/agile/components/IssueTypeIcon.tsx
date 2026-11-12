@@ -1,9 +1,9 @@
 'use client';
 
-import type { IssueSeverity,IssueType } from '@taskin/contracts';
+import type { IssueSeverity, IssueType } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
-import { issueTypeLabel,severityLabel } from '@/features/agile/lib/agile';
-import { BugIcon,FeatureIcon,TaskSquareIcon } from '@/components/icons';
+import { issueTypeLabel, severityLabel } from '@/features/agile/lib/agile';
+import { BugIcon, FeatureIcon, TaskSquareIcon } from '@/components/icons';
 
 export interface IssueTypeIconProps {
   readonly type: IssueType;
@@ -17,10 +17,24 @@ export interface IssueTypeIconProps {
 }
 
 /** The small glyph that tells a bug or a feature apart from a plain task. */
-export function IssueTypeIcon({ type, severity = null, size = 14, showTask = false, decorative = false, className }: IssueTypeIconProps) {
-  const named = type === 'bug' && severity ? `${issueTypeLabel(type)} (شدت ${severityLabel(severity)})` : issueTypeLabel(type);
+export function IssueTypeIcon({
+  type,
+  severity = null,
+  size = 14,
+  showTask = false,
+  decorative = false,
+  className,
+}: IssueTypeIconProps) {
+  const named =
+    type === 'bug' && severity
+      ? `${issueTypeLabel(type)} (شدت ${severityLabel(severity)})`
+      : issueTypeLabel(type);
   const label = decorative ? undefined : named;
-  if (type === 'bug') return <BugIcon size={size} label={label} className={cn('shrink-0 text-status-blocked', className)} />;
-  if (type === 'feature') return <FeatureIcon size={size} label={label} className={cn('shrink-0 text-fg-brand', className)} />;
-  return showTask ? <TaskSquareIcon size={size} label={label} className={cn('shrink-0 text-fg-tertiary', className)} /> : null;
+  if (type === 'bug')
+    return <BugIcon size={size} label={label} className={cn('shrink-0 text-status-blocked', className)} />;
+  if (type === 'feature')
+    return <FeatureIcon size={size} label={label} className={cn('shrink-0 text-fg-brand', className)} />;
+  return showTask ? (
+    <TaskSquareIcon size={size} label={label} className={cn('shrink-0 text-fg-tertiary', className)} />
+  ) : null;
 }

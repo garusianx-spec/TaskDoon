@@ -8,6 +8,8 @@ export function monogram(name: string): string {
   const first = words[0];
   if (!first) return '؟';
   const letters =
-    words.length === 1 ? Array.from(first).slice(0, 2) : [Array.from(first)[0] ?? '', Array.from(words[1] ?? '')[0] ?? ''];
+    words.length === 1
+      ? Array.from(first).slice(0, 2)
+      : [Array.from(first)[0] ?? '', Array.from(words[1] ?? '')[0] ?? ''];
   return letters.join('').toLocaleUpperCase('en');
 }

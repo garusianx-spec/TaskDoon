@@ -47,7 +47,10 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(execution: ExecutionContext): Promise<boolean> {
     if (execution.getType() !== 'http') return true;
     const request = execution.switchToHttp().getRequest<HttpRequest>();
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [execution.getHandler(), execution.getClass()]);
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [
+      execution.getHandler(),
+      execution.getClass(),
+    ]);
     const token = bearer(request);
     if (!token) {
       if (isPublic) return true;
@@ -67,8 +70,12 @@ export class JwtAuthGuard implements CanActivate {
 
   async authenticate(token: string): Promise<AuthPrincipal> {
     const claims = await this.tokens.verifyAccess(token);
-    const [revoked, standing] = await Promise.all([this.revocations.isRevoked(claims.sid), this.revocations.standing(claims.sub)]);
-    if (revoked || !standing.active || standing.securityVersion !== claims.sv) throw new ApiError('SESSION_REVOKED');
+    const [revoked, standing] = await Promise.all([
+      this.revocations.isRevoked(claims.sid),
+      this.revocations.standing(claims.sub),
+    ]);
+    if (revoked || !standing.active || standing.securityVersion !== claims.sv)
+      throw new ApiError('SESSION_REVOKED');
     return {
       userId: claims.sub,
       sessionId: claims.sid,
@@ -94,7 +101,8 @@ export class StepUpGuard implements CanActivate {
   ) {}
 
   canActivate(execution: ExecutionContext): boolean {
-    if (!this.reflector.getAllAndOverride<boolean>(STEP_UP, [execution.getHandler(), execution.getClass()])) return true;
+    if (!this.reflector.getAllAndOverride<boolean>(STEP_UP, [execution.getHandler(), execution.getClass()]))
+      return true;
     const auth = execution.switchToHttp().getRequest<HttpRequest>().auth;
     if (!auth) throw new ApiError('UNAUTHENTICATED');
     const age = Math.floor(Date.now() / 1000) - (auth.stepUpAt ?? 0);
@@ -116,7 +124,9 @@ export class CsrfGuard implements CanActivate {
     const request = execution.switchToHttp().getRequest<Request>();
     const origin = request.headers.origin;
     if (origin && !this.config.allowedOrigins.includes(origin)) throw new ApiError('CSRF_FAILED');
-    const cookie = (request.cookies as Record<string, string | undefined> | undefined)?.[authCookies(this.config).csrf.name];
+    const cookie = (request.cookies as Record<string, string | undefined> | undefined)?.[
+      authCookies(this.config).csrf.name
+    ];
     const header = request.header('x-csrf-token');
     if (!cookie || !header || !safeEqual(cookie, header)) throw new ApiError('CSRF_FAILED');
     return true;
@@ -138,7 +148,8 @@ export const CurrentAuth = createParamDecorator((_: unknown, execution: Executio
 
 /** The principal when a token was presented, on a route that also works without one. */
 export const OptionalAuth = createParamDecorator(
-  (_: unknown, execution: ExecutionContext): AuthPrincipal | undefined => execution.switchToHttp().getRequest<HttpRequest>().auth,
+  (_: unknown, execution: ExecutionContext): AuthPrincipal | undefined =>
+    execution.switchToHttp().getRequest<HttpRequest>().auth,
 );
 
 export const Authenticated = () => applyDecorators(ApiBearerAuth());

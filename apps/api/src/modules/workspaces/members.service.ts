@@ -3,7 +3,15 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { MemberView, RoleId, UpdateMemberBody, UpdatePresenceBody } from '@taskin/contracts';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import type { Tx } from '../../platform/db/database.js';
-import { departments, projectMembers, projectStars, roles, users, workspaceMembers, workspaces } from '../../platform/db/schema/all.js';
+import {
+  departments,
+  projectMembers,
+  projectStars,
+  roles,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../../platform/db/schema/all.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { MembershipContext } from '../../platform/http/request.js';
@@ -18,7 +26,10 @@ import { MembershipService } from '../rbac/membership.service.js';
  * The rank rules beyond the matrix (RFC §5.3 rule 6): a member manages only members and roles
  * ranked strictly below their own, and the owner is never changed this way.
  */
-export function assertCanManage(actor: MembershipContext, target: { readonly rank: number; readonly isOwner: boolean }): void {
+export function assertCanManage(
+  actor: MembershipContext,
+  target: { readonly rank: number; readonly isOwner: boolean },
+): void {
   if (target.isOwner) throw new ApiError('OWNER_IMMUTABLE', 'Transfer ownership first.');
   if (!actor.isOwner && target.rank <= actor.rank) throw new ApiError('ROLE_RANK_VIOLATION');
 }
@@ -56,25 +67,43 @@ export class MembersService {
    * `includeFormer` adds people who were removed or left: their messages, tasks and activity stay,
    * so clients still name them (as former members; their phone and email are not shown).
    */
-  async list(member: MembershipContext, options: { readonly includeFormer?: boolean } = {}): Promise<MemberView[]> {
-    const statuses: Array<'active' | 'suspended' | 'left'> = options.includeFormer ? ['active', 'suspended', 'left'] : ['active', 'suspended'];
+  async list(
+    member: MembershipContext,
+    options: { readonly includeFormer?: boolean } = {},
+  ): Promise<MemberView[]> {
+    const statuses: Array<'active' | 'suspended' | 'left'> = options.includeFormer
+      ? ['active', 'suspended', 'left']
+      : ['active', 'suspended'];
     const rows = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, ({ tx }) =>
       tx
         .select({ m: workspaceMembers, u: users, roleKey: roles.key })
         .from(workspaceMembers)
         .innerJoin(users, eq(users.id, workspaceMembers.userId))
-        .innerJoin(roles, and(eq(roles.workspaceId, workspaceMembers.workspaceId), eq(roles.id, workspaceMembers.roleId)))
-        .where(and(eq(workspaceMembers.workspaceId, member.workspaceId), inArray(workspaceMembers.status, statuses)))
+        .innerJoin(
+          roles,
+          and(eq(roles.workspaceId, workspaceMembers.workspaceId), eq(roles.id, workspaceMembers.roleId)),
+        )
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, member.workspaceId),
+            inArray(workspaceMembers.status, statuses),
+          ),
+        )
         .orderBy(asc(roles.rank), asc(users.fullName)),
     );
     const online = await this.presence.online(rows.map(({ u }) => u.id));
-    return rows.map(({ m, u, roleKey }) => this.view(m, u, roleKey as RoleId, member.ownerUserId, online.has(u.id)));
+    return rows.map(({ m, u, roleKey }) =>
+      this.view(m, u, roleKey as RoleId, member.ownerUserId, online.has(u.id)),
+    );
   }
 
   async update(actor: MembershipContext, targetUserId: string, body: UpdateMemberBody): Promise<MemberView> {
     const ability = this.abilities.forMember(actor);
     if (body.role !== undefined && !ability.can('assign', 'Member')) throw ApiError.forbidden();
-    if ((body.departmentId !== undefined || body.jobTitle !== undefined || body.status !== undefined) && !ability.can('edit', 'Member')) {
+    if (
+      (body.departmentId !== undefined || body.jobTitle !== undefined || body.status !== undefined) &&
+      !ability.can('edit', 'Member')
+    ) {
       throw ApiError.forbidden();
     }
     const online = await this.presence.online([targetUserId]);
@@ -92,7 +121,10 @@ export class MembersService {
         if (!role) throw ApiError.validation([{ field: 'role', message: 'unknown role' }]);
         if (!actor.isOwner && role.rank <= actor.rank) throw new ApiError('ROLE_RANK_VIOLATION');
         if (body.role === 'admin' && !target.hasPassword) {
-          throw new ApiError('PASSWORD_REQUIRED', 'An admin needs an admin password; ask them to set one first.');
+          throw new ApiError(
+            'PASSWORD_REQUIRED',
+            'An admin needs an admin password; ask them to set one first.',
+          );
         }
         roleId = role.id;
       }
@@ -106,7 +138,9 @@ export class MembersService {
           ...(body.jobTitle !== undefined ? { jobTitle: body.jobTitle.trim() } : {}),
           ...(body.status !== undefined ? { status: body.status } : {}),
         })
-        .where(and(eq(workspaceMembers.workspaceId, actor.workspaceId), eq(workspaceMembers.userId, targetUserId)))
+        .where(
+          and(eq(workspaceMembers.workspaceId, actor.workspaceId), eq(workspaceMembers.userId, targetUserId)),
+        )
         .returning();
       if (!updated) throw ApiError.notFound('The member');
       if (roleId || (body.status !== undefined && body.status !== target.status)) {
@@ -128,7 +162,13 @@ export class MembersService {
       });
       const [user] = await unit.tx.select().from(users).where(eq(users.id, targetUserId));
       if (!user) throw ApiError.notFound('The member');
-      return this.view(updated, user, (body.role ?? target.roleKey) as RoleId, actor.ownerUserId, online.has(targetUserId));
+      return this.view(
+        updated,
+        user,
+        (body.role ?? target.roleKey) as RoleId,
+        actor.ownerUserId,
+        online.has(targetUserId),
+      );
     });
   }
 
@@ -139,7 +179,9 @@ export class MembersService {
    */
   async purgeDeparted(limit = 50): Promise<number> {
     const due = await this.uow.run({ workspaceId: null, userId: null }, ({ tx }) =>
-      tx.execute<{ workspace_id: string; user_id: string }>(sql`select * from app.departed_members_due(${DEPARTED_MEMBER_DAYS}, ${limit})`),
+      tx.execute<{ workspace_id: string; user_id: string }>(
+        sql`select * from app.departed_members_due(${DEPARTED_MEMBER_DAYS}, ${limit})`,
+      ),
     );
     let purged = 0;
     for (const { workspace_id: workspaceId, user_id: userId } of due.rows) {
@@ -148,12 +190,28 @@ export class MembersService {
         const [still] = await tx
           .select({ userId: workspaceMembers.userId })
           .from(workspaceMembers)
-          .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId), eq(workspaceMembers.status, 'left')))
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, workspaceId),
+              eq(workspaceMembers.userId, userId),
+              eq(workspaceMembers.status, 'left'),
+            ),
+          )
           .for('update');
         if (!still) return;
-        await tx.delete(projectMembers).where(and(eq(projectMembers.workspaceId, workspaceId), eq(projectMembers.userId, userId)));
-        await tx.delete(projectStars).where(and(eq(projectStars.workspaceId, workspaceId), eq(projectStars.userId, userId)));
-        await this.audit.write(tx, { action: 'member.state_purge', workspaceId, actorUserId: null, resourceType: 'member', resourceId: userId });
+        await tx
+          .delete(projectMembers)
+          .where(and(eq(projectMembers.workspaceId, workspaceId), eq(projectMembers.userId, userId)));
+        await tx
+          .delete(projectStars)
+          .where(and(eq(projectStars.workspaceId, workspaceId), eq(projectStars.userId, userId)));
+        await this.audit.write(tx, {
+          action: 'member.state_purge',
+          workspaceId,
+          actorUserId: null,
+          resourceType: 'member',
+          resourceId: userId,
+        });
       });
       this.logger.log({ workspaceId, userId }, 'departed member state purged');
       purged += 1;
@@ -176,7 +234,9 @@ export class MembersService {
       await unit.tx
         .update(workspaceMembers)
         .set({ status: 'left', leftAt: sql`now()` })
-        .where(and(eq(workspaceMembers.workspaceId, actor.workspaceId), eq(workspaceMembers.userId, targetUserId)));
+        .where(
+          and(eq(workspaceMembers.workspaceId, actor.workspaceId), eq(workspaceMembers.userId, targetUserId)),
+        );
       await unit.tx
         .update(workspaces)
         .set({ memberCount: sql`greatest(${workspaces.memberCount} - 1, 0)` })
@@ -205,33 +265,44 @@ export class MembersService {
 
   /** The caller's own presence and status line in this workspace. */
   async updatePresence(member: MembershipContext, body: UpdatePresenceBody): Promise<void> {
-    await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx, afterCommit }) => {
-      afterCommit(async () => {
-        const online = await this.presence.online([member.userId]);
-        await this.realtime.emit({
-          type: 'presence:updated',
-          workspaceId: member.workspaceId,
-          rooms: [rooms.workspace(member.workspaceId)],
-          data: {
-            userId: member.userId,
-            online: online.has(member.userId),
-            presence: body.presence,
-            ...(body.statusMessage !== undefined ? { statusMessage: body.statusMessage.trim() } : {}),
-          },
+    await this.uow.run(
+      { workspaceId: member.workspaceId, userId: member.userId },
+      async ({ tx, afterCommit }) => {
+        afterCommit(async () => {
+          const online = await this.presence.online([member.userId]);
+          await this.realtime.emit({
+            type: 'presence:updated',
+            workspaceId: member.workspaceId,
+            rooms: [rooms.workspace(member.workspaceId)],
+            data: {
+              userId: member.userId,
+              online: online.has(member.userId),
+              presence: body.presence,
+              ...(body.statusMessage !== undefined ? { statusMessage: body.statusMessage.trim() } : {}),
+            },
+          });
         });
-      });
-      await tx
-        .update(workspaceMembers)
-        .set({ presenceStatus: body.presence, ...(body.statusMessage !== undefined ? { statusMessage: body.statusMessage.trim() } : {}) })
-        .where(and(eq(workspaceMembers.workspaceId, member.workspaceId), eq(workspaceMembers.userId, member.userId)));
-      await this.audit.write(tx, {
-        action: 'member.presence.update',
-        workspaceId: member.workspaceId,
-        resourceType: 'member',
-        resourceId: member.userId,
-        changes: { after: body },
-      });
-    });
+        await tx
+          .update(workspaceMembers)
+          .set({
+            presenceStatus: body.presence,
+            ...(body.statusMessage !== undefined ? { statusMessage: body.statusMessage.trim() } : {}),
+          })
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, member.workspaceId),
+              eq(workspaceMembers.userId, member.userId),
+            ),
+          );
+        await this.audit.write(tx, {
+          action: 'member.presence.update',
+          workspaceId: member.workspaceId,
+          resourceType: 'member',
+          resourceId: member.userId,
+          changes: { after: body },
+        });
+      },
+    );
   }
 
   private async target(tx: Tx, workspaceId: string, userId: string): Promise<TargetRow> {
@@ -244,7 +315,10 @@ export class MembersService {
         hasPassword: sql<boolean>`${users.passwordHash} is not null`,
       })
       .from(workspaceMembers)
-      .innerJoin(roles, and(eq(roles.workspaceId, workspaceMembers.workspaceId), eq(roles.id, workspaceMembers.roleId)))
+      .innerJoin(
+        roles,
+        and(eq(roles.workspaceId, workspaceMembers.workspaceId), eq(roles.id, workspaceMembers.roleId)),
+      )
       .innerJoin(users, eq(users.id, workspaceMembers.userId))
       .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
       .for('update', { of: workspaceMembers });
@@ -283,7 +357,15 @@ export class MembersService {
       statusMessage: m.statusMessage,
       joinedAt: m.joinedAt.toISOString(),
       // A former member: named on their history, nothing more.
-      ...(m.status === 'left' ? { phone: '', email: null, online: false, statusMessage: '', leftAt: m.leftAt?.toISOString() ?? null } : {}),
+      ...(m.status === 'left'
+        ? {
+            phone: '',
+            email: null,
+            online: false,
+            statusMessage: '',
+            leftAt: m.leftAt?.toISOString() ?? null,
+          }
+        : {}),
     };
   }
 }

@@ -29,19 +29,19 @@ OpenAPI and the catalog schema snapshot were regenerated. The snapshot came from
 
 ## Verification
 
-| Check | Result |
-|---|---|
-| Workspace lint | Passed |
-| Workspace typecheck | Passed |
-| API unit tests | 211 passed |
-| Web unit/component tests | 84 passed |
-| Shared Jalali/text tests | 13 passed |
-| Full API integration suite | 303 passed in 27 files |
-| Fresh migrations, catalog snapshot, OpenAPI consistency | Passed |
-| Drizzle generation API schema drift | 0 statements |
-| Demo production build | Passed |
-| Production demo Playwright | 461 checks passed across 17 suites; zero console problems |
-| Focused live project Playwright | 15 checks passed; zero console problems |
+| Check                                                   | Result                                                    |
+| ------------------------------------------------------- | --------------------------------------------------------- |
+| Workspace lint                                          | Passed                                                    |
+| Workspace typecheck                                     | Passed                                                    |
+| API unit tests                                          | 211 passed                                                |
+| Web unit/component tests                                | 84 passed                                                 |
+| Shared Jalali/text tests                                | 13 passed                                                 |
+| Full API integration suite                              | 303 passed in 27 files                                    |
+| Fresh migrations, catalog snapshot, OpenAPI consistency | Passed                                                    |
+| Drizzle generation API schema drift                     | 0 statements                                              |
+| Demo production build                                   | Passed                                                    |
+| Production demo Playwright                              | 461 checks passed across 17 suites; zero console problems |
+| Focused live project Playwright                         | 15 checks passed; zero console problems                   |
 
 New tests cover DTO validation, primary-field compatibility, multi-selection/member payloads, lost-response retries, department conflicts, authorization failures, cross-workspace responses, actual component markup, icons and color swatches. Real-database tests verify stored assignments, membership/channel synchronization, four generated columns, legacy writes and tenant isolation. The new demo browser suite also checks both themes, 375px layout, keyboard dismissal, custom additions, first-task creation and one companion channel.
 

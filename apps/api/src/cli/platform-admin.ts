@@ -37,7 +37,11 @@ try {
     if (!user) throw new Error(`no account with ${phone}: the person signs up first`);
     await client.query(
       `insert into audit_logs (action, resource_type, resource_id, changes) values ($1, 'user', $2, $3)`,
-      [flag ? 'platform.admin.grant' : 'platform.admin.revoke', user.id, JSON.stringify({ via: 'cli', osUser: process.env.USER ?? null })],
+      [
+        flag ? 'platform.admin.grant' : 'platform.admin.revoke',
+        user.id,
+        JSON.stringify({ via: 'cli', osUser: process.env.USER ?? null }),
+      ],
     );
     await client.query('commit');
     console.log(`${user.full_name} (${phone}) ${flag ? 'is now' : 'is no longer'} a platform admin`);

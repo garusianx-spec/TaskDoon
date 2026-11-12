@@ -5,5 +5,9 @@ import { NoStoreInterceptor } from '../platform-admin/platform-admin.controller.
 import { AdminSiteController, PublicSiteController } from './site.controller.js';
 import { SiteService } from './site.service.js';
 
-@Module({ imports: [DomainModule], controllers: [PublicSiteController, AdminSiteController], providers: [SiteService, PlatformAdminGuard, PlatformAdminSmsGuard, NoStoreInterceptor] })
+@Module({
+  imports: [DomainModule],
+  controllers: [PublicSiteController, AdminSiteController],
+  providers: [SiteService, PlatformAdminGuard, PlatformAdminSmsGuard, NoStoreInterceptor],
+})
 export class SiteModule {}

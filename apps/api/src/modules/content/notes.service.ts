@@ -52,7 +52,10 @@ interface NoteListRow extends Record<string, unknown> {
 /** Postgres returns enum arrays as their text form (`{red,blue}`) through raw queries. */
 function toneArray(value: TagTone[] | string): TagTone[] {
   if (Array.isArray(value)) return value;
-  return value.replace(/^\{|\}$/g, '').split(',').filter(Boolean) as TagTone[];
+  return value
+    .replace(/^\{|\}$/g, '')
+    .split(',')
+    .filter(Boolean) as TagTone[];
 }
 
 function noteView(row: NoteRow, linkedTaskId: string | null): NoteView {
@@ -89,13 +92,27 @@ export class NotesService {
   async categories(member: MembershipContext): Promise<NoteCategoryView[]> {
     return this.uow.run(this.scope(member), async ({ tx }) => {
       await this.ensureBuiltIns(tx, member);
-      const result = await tx.execute<{ id: string; key: string | null; label: string; is_builtin: boolean; position: number; note_count: string }>(sql`
+      const result = await tx.execute<{
+        id: string;
+        key: string | null;
+        label: string;
+        is_builtin: boolean;
+        position: number;
+        note_count: string;
+      }>(sql`
         select c.id, c.key, c.label, c.is_builtin, c.position,
           (select count(*) from notes n where n.workspace_id = c.workspace_id and n.category_id = c.id) as note_count
         from note_categories c
         where c.workspace_id = ${member.workspaceId} and c.owner_id = ${member.userId} and c.deleted_at is null
         order by c.is_builtin desc, c.position, c.created_at, c.id`);
-      return result.rows.map((row) => ({ id: row.id, key: row.key, label: row.label, builtIn: row.is_builtin, position: row.position, noteCount: num(row.note_count) }));
+      return result.rows.map((row) => ({
+        id: row.id,
+        key: row.key,
+        label: row.label,
+        builtIn: row.is_builtin,
+        position: row.position,
+        noteCount: num(row.note_count),
+      }));
     });
   }
 
@@ -105,35 +122,78 @@ export class NotesService {
       try {
         const [row] = await tx
           .insert(noteCategories)
-          .values({ workspaceId: member.workspaceId, ownerId: member.userId, label: body.label.trim(), position: sql`(select coalesce(max(position), 0) + 1 from note_categories where workspace_id = ${member.workspaceId} and owner_id = ${member.userId})` })
+          .values({
+            workspaceId: member.workspaceId,
+            ownerId: member.userId,
+            label: body.label.trim(),
+            position: sql`(select coalesce(max(position), 0) + 1 from note_categories where workspace_id = ${member.workspaceId} and owner_id = ${member.userId})`,
+          })
           .returning();
         if (!row) throw new Error('category insert returned nothing');
-        await this.audit.write(tx, { action: 'note.category.create', workspaceId: member.workspaceId, resourceType: 'note_category', resourceId: row.id });
-        return { id: row.id, key: row.key, label: row.label, builtIn: false, position: row.position, noteCount: 0 };
+        await this.audit.write(tx, {
+          action: 'note.category.create',
+          workspaceId: member.workspaceId,
+          resourceType: 'note_category',
+          resourceId: row.id,
+        });
+        return {
+          id: row.id,
+          key: row.key,
+          label: row.label,
+          builtIn: false,
+          position: row.position,
+          noteCount: 0,
+        };
       } catch (error) {
-        if (isUniqueViolation(error)) throw new ApiError('CONFLICT', 'You already have a category with that name.');
+        if (isUniqueViolation(error))
+          throw new ApiError('CONFLICT', 'You already have a category with that name.');
         throw error;
       }
     });
   }
 
   /** Custom categories only: the built-ins keep their names. */
-  async updateCategory(member: MembershipContext, categoryId: string, body: UpdateNoteCategoryBody): Promise<NoteCategoryView> {
+  async updateCategory(
+    member: MembershipContext,
+    categoryId: string,
+    body: UpdateNoteCategoryBody,
+  ): Promise<NoteCategoryView> {
     return this.uow.run(this.scope(member), async ({ tx }) => {
       const current = await this.category(tx, member, categoryId);
-      if (current.isBuiltin && body.label !== undefined) throw new ApiError('CONFLICT', 'Built-in categories cannot be renamed.');
+      if (current.isBuiltin && body.label !== undefined)
+        throw new ApiError('CONFLICT', 'Built-in categories cannot be renamed.');
       try {
         const [row] = await tx
           .update(noteCategories)
-          .set({ ...(body.label !== undefined ? { label: body.label.trim() } : {}), ...(body.position !== undefined ? { position: body.position } : {}) })
+          .set({
+            ...(body.label !== undefined ? { label: body.label.trim() } : {}),
+            ...(body.position !== undefined ? { position: body.position } : {}),
+          })
           .where(and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.id, categoryId)))
           .returning();
         if (!row) throw ApiError.notFound('The category');
-        const [count] = await tx.select({ n: sql<number>`count(*)::int` }).from(notes).where(and(eq(notes.workspaceId, member.workspaceId), eq(notes.categoryId, categoryId)));
-        await this.audit.write(tx, { action: 'note.category.update', workspaceId: member.workspaceId, resourceType: 'note_category', resourceId: categoryId, changes: { after: body } });
-        return { id: row.id, key: row.key, label: row.label, builtIn: row.isBuiltin, position: row.position, noteCount: count?.n ?? 0 };
+        const [count] = await tx
+          .select({ n: sql<number>`count(*)::int` })
+          .from(notes)
+          .where(and(eq(notes.workspaceId, member.workspaceId), eq(notes.categoryId, categoryId)));
+        await this.audit.write(tx, {
+          action: 'note.category.update',
+          workspaceId: member.workspaceId,
+          resourceType: 'note_category',
+          resourceId: categoryId,
+          changes: { after: body },
+        });
+        return {
+          id: row.id,
+          key: row.key,
+          label: row.label,
+          builtIn: row.isBuiltin,
+          position: row.position,
+          noteCount: count?.n ?? 0,
+        };
       } catch (error) {
-        if (isUniqueViolation(error)) throw new ApiError('CONFLICT', 'You already have a category with that name.');
+        if (isUniqueViolation(error))
+          throw new ApiError('CONFLICT', 'You already have a category with that name.');
         throw error;
       }
     });
@@ -150,15 +210,29 @@ export class NotesService {
       const released = await tx
         .update(notes)
         .set({ categoryId: null, version: sql`${notes.version} + 1` })
-        .where(and(eq(notes.workspaceId, member.workspaceId), eq(notes.ownerId, member.userId), eq(notes.categoryId, categoryId)))
+        .where(
+          and(
+            eq(notes.workspaceId, member.workspaceId),
+            eq(notes.ownerId, member.userId),
+            eq(notes.categoryId, categoryId),
+          ),
+        )
         .returning({ id: notes.id });
-      const where = and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.id, categoryId));
+      const where = and(
+        eq(noteCategories.workspaceId, member.workspaceId),
+        eq(noteCategories.id, categoryId),
+      );
       try {
-        if (current.isBuiltin) await tx.update(noteCategories).set({ deletedAt: sql`now()` }).where(where);
+        if (current.isBuiltin)
+          await tx
+            .update(noteCategories)
+            .set({ deletedAt: sql`now()` })
+            .where(where);
         else await tx.delete(noteCategories).where(where);
       } catch (error) {
         const code = pgError(error)?.code;
-        if (code === PG.foreignKeyViolation || code === PG.restrictViolation) throw new ApiError('NOTE_CATEGORY_IN_USE');
+        if (code === PG.foreignKeyViolation || code === PG.restrictViolation)
+          throw new ApiError('NOTE_CATEGORY_IN_USE');
         throw error;
       }
       await this.audit.write(tx, {
@@ -166,14 +240,20 @@ export class NotesService {
         workspaceId: member.workspaceId,
         resourceType: 'note_category',
         resourceId: categoryId,
-        changes: { before: { label: current.label, builtIn: current.isBuiltin }, uncategorisedNotes: released.length },
+        changes: {
+          before: { label: current.label, builtIn: current.isBuiltin },
+          uncategorisedNotes: released.length,
+        },
       });
     });
   }
 
   /* ------------------------------------------------------------------ notes */
 
-  async list(member: MembershipContext, query: { categoryId?: string; q?: string; cursor?: string; limit: number }): Promise<NotePage> {
+  async list(
+    member: MembershipContext,
+    query: { categoryId?: string; q?: string; cursor?: string; limit: number },
+  ): Promise<NotePage> {
     const conditions = [sql`n.workspace_id = ${member.workspaceId}`, sql`n.owner_id = ${member.userId}`];
     if (query.categoryId) conditions.push(sql`n.category_id = ${query.categoryId}`);
     const pattern = query.q ? searchPattern(query.q) : null;
@@ -223,7 +303,8 @@ export class NotesService {
     return this.uow.run(this.scope(member), async ({ tx }) => {
       await this.ensureBuiltIns(tx, member);
       // Unsaid: «شخصی» while it exists. `null`, or no «شخصی» left: filed in no notebook.
-      const categoryId = body.categoryId === undefined ? await this.builtIn(tx, member, 'personal') : body.categoryId;
+      const categoryId =
+        body.categoryId === undefined ? await this.builtIn(tx, member, 'personal') : body.categoryId;
       if (categoryId !== null) await this.category(tx, member, categoryId);
       const title = body.title?.trim() ?? '';
       const text = body.body ?? '';
@@ -241,17 +322,29 @@ export class NotesService {
         })
         .returning();
       if (!row) throw new Error('note insert returned nothing');
-      await this.audit.write(tx, { action: 'note.create', workspaceId: member.workspaceId, resourceType: 'note', resourceId: row.id });
+      await this.audit.write(tx, {
+        action: 'note.create',
+        workspaceId: member.workspaceId,
+        resourceType: 'note',
+        resourceId: row.id,
+      });
       return noteView(row, null);
     });
   }
 
   /** Autosave: the client sends the version it edited; a newer one on the server is 412. */
-  async update(member: MembershipContext, noteId: string, ifMatch: number, body: UpdateNoteBody): Promise<NoteView> {
+  async update(
+    member: MembershipContext,
+    noteId: string,
+    ifMatch: number,
+    body: UpdateNoteBody,
+  ): Promise<NoteView> {
     return this.uow.run(this.scope(member), async ({ tx }) => {
       const current = await this.note(tx, member, noteId, true);
-      if (current.version !== ifMatch) throw ApiError.stale(noteView(current, await this.linkedTask(tx, member, noteId)));
-      if (body.categoryId !== undefined && body.categoryId !== null) await this.category(tx, member, body.categoryId);
+      if (current.version !== ifMatch)
+        throw ApiError.stale(noteView(current, await this.linkedTask(tx, member, noteId)));
+      if (body.categoryId !== undefined && body.categoryId !== null)
+        await this.category(tx, member, body.categoryId);
       const title = body.title?.trim() ?? current.title;
       const text = body.body ?? current.body;
       const [row] = await tx
@@ -261,7 +354,9 @@ export class NotesService {
           body: text,
           ...(body.categoryId !== undefined ? { categoryId: body.categoryId } : {}),
           ...(body.colors !== undefined ? { colors: [...new Set(body.colors)] } : {}),
-          ...(body.pinned !== undefined ? { pinnedAt: body.pinned ? (current.pinnedAt ?? sql`now()`) : null } : {}),
+          ...(body.pinned !== undefined
+            ? { pinnedAt: body.pinned ? (current.pinnedAt ?? sql`now()`) : null }
+            : {}),
           searchText: normaliseForSearch(`${title} ${text}`),
           version: sql`${notes.version} + 1`,
         })
@@ -273,7 +368,9 @@ export class NotesService {
         workspaceId: member.workspaceId,
         resourceType: 'note',
         resourceId: noteId,
-        changes: { fields: Object.keys(body).filter((key) => body[key as keyof UpdateNoteBody] !== undefined) },
+        changes: {
+          fields: Object.keys(body).filter((key) => body[key as keyof UpdateNoteBody] !== undefined),
+        },
       });
       return noteView(row, await this.linkedTask(tx, member, noteId));
     });
@@ -282,9 +379,17 @@ export class NotesService {
   /** Deleted for good; a task made from it keeps its content and loses the link. */
   async remove(member: MembershipContext, noteId: string): Promise<void> {
     await this.uow.run(this.scope(member), async ({ tx }) => {
-      const deleted = await tx.delete(notes).where(and(eq(notes.workspaceId, member.workspaceId), eq(notes.id, noteId))).returning({ id: notes.id });
+      const deleted = await tx
+        .delete(notes)
+        .where(and(eq(notes.workspaceId, member.workspaceId), eq(notes.id, noteId)))
+        .returning({ id: notes.id });
       if (deleted.length === 0) throw ApiError.notFound('The note');
-      await this.audit.write(tx, { action: 'note.delete', workspaceId: member.workspaceId, resourceType: 'note', resourceId: noteId });
+      await this.audit.write(tx, {
+        action: 'note.delete',
+        workspaceId: member.workspaceId,
+        resourceType: 'note',
+        resourceId: noteId,
+      });
     });
   }
 
@@ -293,13 +398,24 @@ export class NotesService {
    * and the open checklist items its subtasks. The note row is locked first, so two devices
    * converting at once get one task: the second sees it and answers `existing: true`.
    */
-  async convert(member: MembershipContext, noteId: string, body: ConvertNoteBody): Promise<ConvertNoteResult> {
+  async convert(
+    member: MembershipContext,
+    noteId: string,
+    body: ConvertNoteBody,
+  ): Promise<ConvertNoteResult> {
     const result = await this.uow.run(this.scope(member), async (unit) => {
       const note = await this.note(unit.tx, member, noteId, true);
       const existing = await this.linkedTask(unit.tx, member, noteId);
       if (existing) return { taskId: existing, existing: true };
       const { description, subtasks } = splitForTask(note.body);
-      const title = (note.title.trim() || description.split('\n').find((line) => line.trim())?.trim() || 'یادداشت').slice(0, 200);
+      const title = (
+        note.title.trim() ||
+        description
+          .split('\n')
+          .find((line) => line.trim())
+          ?.trim() ||
+        'یادداشت'
+      ).slice(0, 200);
       const taskId = await this.tasks.createIn(
         unit,
         member,
@@ -316,7 +432,13 @@ export class NotesService {
         },
         { sourceNoteId: noteId },
       );
-      await this.audit.write(unit.tx, { action: 'note.convert', workspaceId: member.workspaceId, resourceType: 'note', resourceId: noteId, changes: { taskId } });
+      await this.audit.write(unit.tx, {
+        action: 'note.convert',
+        workspaceId: member.workspaceId,
+        resourceType: 'note',
+        resourceId: noteId,
+        changes: { taskId },
+      });
       await this.outbox.add(unit.tx, {
         type: 'note.task_linked',
         aggregateType: 'note',
@@ -349,15 +471,33 @@ export class NotesService {
     const [row] = await tx
       .select({ id: noteCategories.id })
       .from(noteCategories)
-      .where(and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.ownerId, member.userId), eq(noteCategories.key, key), isNull(noteCategories.deletedAt)));
+      .where(
+        and(
+          eq(noteCategories.workspaceId, member.workspaceId),
+          eq(noteCategories.ownerId, member.userId),
+          eq(noteCategories.key, key),
+          isNull(noteCategories.deletedAt),
+        ),
+      );
     return row?.id ?? null;
   }
 
-  private async category(tx: Tx, member: MembershipContext, categoryId: string): Promise<typeof noteCategories.$inferSelect> {
+  private async category(
+    tx: Tx,
+    member: MembershipContext,
+    categoryId: string,
+  ): Promise<typeof noteCategories.$inferSelect> {
     const [row] = await tx
       .select()
       .from(noteCategories)
-      .where(and(eq(noteCategories.workspaceId, member.workspaceId), eq(noteCategories.ownerId, member.userId), eq(noteCategories.id, categoryId), isNull(noteCategories.deletedAt)));
+      .where(
+        and(
+          eq(noteCategories.workspaceId, member.workspaceId),
+          eq(noteCategories.ownerId, member.userId),
+          eq(noteCategories.id, categoryId),
+          isNull(noteCategories.deletedAt),
+        ),
+      );
     if (!row) throw ApiError.validation([{ field: 'categoryId', message: 'unknown category' }]);
     return row;
   }
@@ -366,7 +506,13 @@ export class NotesService {
     const query = tx
       .select()
       .from(notes)
-      .where(and(eq(notes.workspaceId, member.workspaceId), eq(notes.ownerId, member.userId), eq(notes.id, noteId)));
+      .where(
+        and(
+          eq(notes.workspaceId, member.workspaceId),
+          eq(notes.ownerId, member.userId),
+          eq(notes.id, noteId),
+        ),
+      );
     const [row] = lock ? await query.for('update') : await query;
     if (!row) throw ApiError.notFound('The note');
     return row;
@@ -376,7 +522,13 @@ export class NotesService {
     const [row] = await tx
       .select({ id: tasks.id })
       .from(tasks)
-      .where(and(eq(tasks.workspaceId, member.workspaceId), eq(tasks.sourceNoteId, noteId), isNull(tasks.deletedAt)))
+      .where(
+        and(
+          eq(tasks.workspaceId, member.workspaceId),
+          eq(tasks.sourceNoteId, noteId),
+          isNull(tasks.deletedAt),
+        ),
+      )
       .limit(1);
     return row?.id ?? null;
   }

@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo,useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CalendarEventKind } from '@taskin/contracts';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
-import { toISODate,toPersianDigits } from '@taskin/jalali';
+import { toISODate, toPersianDigits } from '@taskin/jalali';
 import type { CalendarEventModalProps } from '@/features/calendar/components/CalendarEventModal';
 
 /** Half-hour slots across the working day, stored as ASCII `HH:mm`. */
@@ -35,7 +35,12 @@ const blankForm = (date: string, currentUserId: string): FormState => ({
   description: '',
 });
 
-export function useCalendarEventForm({ open, initialDate, currentUserId, onSubmit }: Pick<CalendarEventModalProps, 'open' | 'initialDate' | 'currentUserId' | 'onSubmit'>) {
+export function useCalendarEventForm({
+  open,
+  initialDate,
+  currentUserId,
+  onSubmit,
+}: Pick<CalendarEventModalProps, 'open' | 'initialDate' | 'currentUserId' | 'onSubmit'>) {
   const [form, setForm] = useState<FormState>(() => blankForm(toISODate(new Date()), currentUserId));
   const [touched, setTouched] = useState(false);
 

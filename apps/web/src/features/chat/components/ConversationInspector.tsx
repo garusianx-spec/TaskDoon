@@ -1,13 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Conversation,Message } from '@taskin/contracts';
+import type { Conversation, Message } from '@taskin/contracts';
 import { formatCount } from '@/lib/format';
 import { roleLabel } from '@/data/reference';
-import { conversationMessages,usersByIds } from '@/store/selectors';
-import { Avatar,Badge,Button,IconButton,SwitchField } from '@/components/ui';
+import { conversationMessages, usersByIds } from '@/store/selectors';
+import { Avatar, Badge, Button, IconButton, SwitchField } from '@/components/ui';
 import { SharedMedia } from '@/features/chat/components/SharedMedia';
-import { CloseIcon,HashIcon,UserAddIcon } from '@/components/icons';
+import { CloseIcon, HashIcon, UserAddIcon } from '@/components/icons';
 
 export interface ConversationInspectorProps {
   readonly conversation: Conversation;
@@ -44,7 +44,7 @@ export function ConversationInspector({
             {conversation.kind === 'channel' && <HashIcon size={16} className="text-fg-tertiary" />}
             <h2 className="truncate text-title font-bold text-fg-primary">{conversation.title}</h2>
           </div>
-          <p className="numeric text-caption text-fg-tertiary">
+          <p className="text-caption text-fg-tertiary numeric">
             {`${formatCount(members.length)} عضو، ${conversation.topic}`}
           </p>
         </div>
@@ -55,7 +55,7 @@ export function ConversationInspector({
         <section aria-label="اعضای گفتگو">
           <div className="mb-2 flex items-center gap-2">
             <h3 className="text-title-sm font-semibold text-fg-primary">اعضا</h3>
-            <span className="numeric text-caption text-fg-tertiary">{formatCount(members.length)}</span>
+            <span className="text-caption text-fg-tertiary numeric">{formatCount(members.length)}</span>
             {conversation.archived ? (
               <span className="ms-auto text-micro text-fg-tertiary">بایگانی فقط خواندنی</span>
             ) : conversation.projectId ? (
@@ -69,7 +69,10 @@ export function ConversationInspector({
           </div>
           <ul className="flex flex-col gap-1">
             {members.map((member) => (
-              <li key={member.id} className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:bg-hover">
+              <li
+                key={member.id}
+                className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:bg-hover"
+              >
                 <Avatar
                   name={member.fullName}
                   initials={member.initials}

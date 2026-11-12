@@ -18,7 +18,11 @@ export default function InvitePage() {
 
   return (
     <AuthCard labelledBy="invite-title" title="پیوستن به فضای کاری" description="در حال باز کردن فضای کاری…">
-      <div role="progressbar" aria-label="بارگذاری" className="mx-auto size-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      <div
+        role="progressbar"
+        aria-label="بارگذاری"
+        className="mx-auto size-8 animate-spin rounded-full border-2 border-brand border-t-transparent"
+      />
     </AuthCard>
   );
 }

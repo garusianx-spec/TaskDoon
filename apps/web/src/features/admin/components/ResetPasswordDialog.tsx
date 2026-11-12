@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import type { PasswordResetChannel,PasswordResetIssued,PlatformUserDetail } from '@taskin/contracts';
+import type { PasswordResetChannel, PasswordResetIssued, PlatformUserDetail } from '@taskin/contracts';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
-import { dateTimeLabel,phoneLabel } from '@/features/admin/lib/format';
+import { dateTimeLabel, phoneLabel } from '@/features/admin/lib/format';
 import { problemMessage } from '@/lib/api-problem';
-import { Button,Modal } from '@/components/ui';
-import { CopyIcon,KeyIcon } from '@/components/icons';
+import { Button, Modal } from '@/components/ui';
+import { CopyIcon, KeyIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
 /**
@@ -15,7 +15,17 @@ import { cn } from '@/lib/utils';
  * the admin: the person sets a new one with the code. `manual` shows the code once, here, to hand
  * over in person; closing the dialog forgets it.
  */
-export function ResetPasswordDialog({ user, open, onClose, onIssued }: { readonly user: PlatformUserDetail; readonly open: boolean; readonly onClose: () => void; readonly onIssued: () => void }) {
+export function ResetPasswordDialog({
+  user,
+  open,
+  onClose,
+  onIssued,
+}: {
+  readonly user: PlatformUserDetail;
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly onIssued: () => void;
+}) {
   const { call } = useAdmin();
   const [channel, setChannel] = useState<PasswordResetChannel>('sms');
   const [issued, setIssued] = useState<PasswordResetIssued | null>(null);
@@ -52,10 +62,24 @@ export function ResetPasswordDialog({ user, open, onClose, onIssued }: { readonl
     }
   };
 
-  const channels: readonly { readonly id: PasswordResetChannel; readonly title: string; readonly description: string; readonly disabled?: boolean }[] = [
+  const channels: readonly {
+    readonly id: PasswordResetChannel;
+    readonly title: string;
+    readonly description: string;
+    readonly disabled?: boolean;
+  }[] = [
     { id: 'sms', title: 'ارسال پیوند با پیامک', description: `به ${phoneLabel(user.phone)}` },
-    { id: 'email', title: 'ارسال پیوند با ایمیل', description: user.email ?? 'این کاربر ایمیل ثبت‌شده ندارد', disabled: !user.email },
-    { id: 'manual', title: 'نمایش یک‌باره کد', description: 'برای تحویل حضوری؛ فقط همین یک بار نشان داده می‌شود' },
+    {
+      id: 'email',
+      title: 'ارسال پیوند با ایمیل',
+      description: user.email ?? 'این کاربر ایمیل ثبت‌شده ندارد',
+      disabled: !user.email,
+    },
+    {
+      id: 'manual',
+      title: 'نمایش یک‌باره کد',
+      description: 'برای تحویل حضوری؛ فقط همین یک بار نشان داده می‌شود',
+    },
   ];
 
   return (
@@ -87,20 +111,40 @@ export function ResetPasswordDialog({ user, open, onClose, onIssued }: { readonl
         <div className="flex flex-col gap-3" role="status">
           {issued.channel === 'manual' && issued.code && issued.link ? (
             <>
-              <p className="text-body-sm text-fg-secondary">این کد را فقط به خود کاربر بدهید. پس از بستن این پنجره دیگر نمایش داده نمی‌شود.</p>
+              <p className="text-body-sm text-fg-secondary">
+                این کد را فقط به خود کاربر بدهید. پس از بستن این پنجره دیگر نمایش داده نمی‌شود.
+              </p>
               <div className="flex items-center gap-2 rounded-lg border border-secondary bg-sunken p-3">
-                <code dir="ltr" aria-label="کد بازنشانی" className="flex-1 break-all text-start font-mono text-body-sm text-fg-primary">
+                <code
+                  dir="ltr"
+                  aria-label="کد بازنشانی"
+                  className="flex-1 break-all text-start font-mono text-body-sm text-fg-primary"
+                >
                   {issued.code}
                 </code>
-                <Button variant="secondary" size="xs" iconStart={<CopyIcon size={14} />} onClick={() => void copy('code', issued.code ?? '')}>
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  iconStart={<CopyIcon size={14} />}
+                  onClick={() => void copy('code', issued.code ?? '')}
+                >
                   {copied === 'code' ? 'کپی شد' : 'کپی کد'}
                 </Button>
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-secondary bg-sunken p-3">
-                <code dir="ltr" aria-label="پیوند بازنشانی" className="flex-1 break-all text-start font-mono text-caption text-fg-secondary">
+                <code
+                  dir="ltr"
+                  aria-label="پیوند بازنشانی"
+                  className="flex-1 break-all text-start font-mono text-caption text-fg-secondary"
+                >
                   {issued.link}
                 </code>
-                <Button variant="secondary" size="xs" iconStart={<CopyIcon size={14} />} onClick={() => void copy('link', issued.link ?? '')}>
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  iconStart={<CopyIcon size={14} />}
+                  onClick={() => void copy('link', issued.link ?? '')}
+                >
                   {copied === 'link' ? 'کپی شد' : 'کپی پیوند'}
                 </Button>
               </div>
@@ -110,7 +154,9 @@ export function ResetPasswordDialog({ user, open, onClose, onIssued }: { readonl
               پیوند بازنشانی به <span dir="ltr">{issued.sentTo}</span> فرستاده شد.
             </p>
           )}
-          <p className="text-caption text-fg-tertiary">اعتبار تا {dateTimeLabel(issued.expiresAt)}؛ یک‌بارمصرف. کد قبلی، اگر بود، باطل شد.</p>
+          <p className="text-caption text-fg-tertiary">
+            اعتبار تا {dateTimeLabel(issued.expiresAt)}؛ یک‌بارمصرف. کد قبلی، اگر بود، باطل شد.
+          </p>
         </div>
       ) : (
         <fieldset className="flex flex-col gap-2">

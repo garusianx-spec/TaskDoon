@@ -1,8 +1,8 @@
 'use client';
 
-import { Fragment,useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { parseInline,parseMarkdown } from '@taskin/text';
+import { parseInline, parseMarkdown } from '@taskin/text';
 import { Checkbox } from '@/components/ui';
 
 export interface NoteMarkdownProps {
@@ -31,7 +31,10 @@ function Inline({ text }: { readonly text: string }) {
             );
           case 'code':
             return (
-              <code key={index} className="latin-inline rounded bg-sunken px-1 py-0.5 text-caption text-fg-primary">
+              <code
+                key={index}
+                className="rounded bg-sunken px-1 py-0.5 text-caption text-fg-primary latin-inline"
+              >
                 {token.text}
               </code>
             );
@@ -56,9 +59,15 @@ export function NoteMarkdown({ source, onToggleLine, className }: NoteMarkdownPr
       {blocks.map((block, index) => {
         switch (block.kind) {
           case 'heading': {
-            const size = block.level === 1 ? 'text-heading' : block.level === 2 ? 'text-title' : 'text-title-sm';
+            const size =
+              block.level === 1 ? 'text-heading' : block.level === 2 ? 'text-title' : 'text-title-sm';
             return (
-              <p key={index} role="heading" aria-level={block.level + 2} className={cn('font-bold text-fg-primary', size)}>
+              <p
+                key={index}
+                role="heading"
+                aria-level={block.level + 2}
+                className={cn('font-bold text-fg-primary', size)}
+              >
                 <Inline text={block.text} />
               </p>
             );
@@ -97,7 +106,10 @@ export function NoteMarkdown({ source, onToggleLine, className }: NoteMarkdownPr
             );
           case 'numbers':
             return (
-              <ol key={index} className="numeric flex list-decimal flex-col gap-1 ps-5 marker:text-fg-quaternary">
+              <ol
+                key={index}
+                className="flex list-decimal flex-col gap-1 ps-5 numeric marker:text-fg-quaternary"
+              >
                 {block.items.map((item, itemIndex) => (
                   <li key={itemIndex}>
                     <Inline text={item} />
@@ -117,7 +129,12 @@ export function NoteMarkdown({ source, onToggleLine, className }: NoteMarkdownPr
                       disabled={!onToggleLine}
                       onCheckedChange={() => onToggleLine?.(item.line)}
                       label={
-                        <span className={cn('text-body leading-7', item.done ? 'text-fg-tertiary line-through' : 'text-fg-secondary')}>
+                        <span
+                          className={cn(
+                            'text-body leading-7',
+                            item.done ? 'text-fg-tertiary line-through' : 'text-fg-secondary',
+                          )}
+                        >
                           <Inline text={item.text} />
                         </span>
                       }

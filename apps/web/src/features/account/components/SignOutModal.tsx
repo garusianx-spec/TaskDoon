@@ -1,6 +1,6 @@
 'use client';
 
-import { Button,Modal } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import { LogoutIcon } from '@/components/icons';
 
 export interface SignOutModalProps {

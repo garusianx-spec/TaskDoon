@@ -1,7 +1,7 @@
 'use client';
 
 import { shiftMonthKeepingDay } from '@/lib/jalali';
-import { useEffect,useMemo,useRef,useState,type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { CalendarCell } from '@taskin/jalali';
 import type { CalendarItem } from '@/store/selectors';
 import { cn } from '@/lib/utils';
@@ -61,7 +61,12 @@ export function MonthGrid({
   };
 
   const onCellKeyDown = (cell: CalendarCell) => (event: KeyboardEvent<HTMLButtonElement>) => {
-    const byDay: Readonly<Record<string, number>> = { ArrowLeft: 1, ArrowRight: -1, ArrowDown: 7, ArrowUp: -7 };
+    const byDay: Readonly<Record<string, number>> = {
+      ArrowLeft: 1,
+      ArrowRight: -1,
+      ArrowDown: 7,
+      ArrowUp: -7,
+    };
     const days = byDay[event.key];
     if (days !== undefined) {
       event.preventDefault();

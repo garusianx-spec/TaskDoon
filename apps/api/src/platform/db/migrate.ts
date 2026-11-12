@@ -16,12 +16,38 @@ const MIB = 1024 ** 2;
  * the seed is an upsert, so changing a number here and re-running the migrate job applies it.
  */
 export const PLANS: readonly { readonly id: string; readonly name: string; readonly limits: PlanLimits }[] = [
-  { id: 'free', name: 'رایگان', limits: { maxMembers: 10, storageBytes: 5 * GIB, maxFileBytes: 25 * MIB, messageHistoryDays: 90, maxProjects: 5 } },
-  { id: 'team', name: 'تیمی', limits: { maxMembers: 100, storageBytes: 100 * GIB, maxFileBytes: 100 * MIB, messageHistoryDays: null, maxProjects: null } },
+  {
+    id: 'free',
+    name: 'رایگان',
+    limits: {
+      maxMembers: 10,
+      storageBytes: 5 * GIB,
+      maxFileBytes: 25 * MIB,
+      messageHistoryDays: 90,
+      maxProjects: 5,
+    },
+  },
+  {
+    id: 'team',
+    name: 'تیمی',
+    limits: {
+      maxMembers: 100,
+      storageBytes: 100 * GIB,
+      maxFileBytes: 100 * MIB,
+      messageHistoryDays: null,
+      maxProjects: null,
+    },
+  },
   {
     id: 'enterprise',
     name: 'سازمانی',
-    limits: { maxMembers: 1000, storageBytes: 1024 * GIB, maxFileBytes: 1024 * MIB, messageHistoryDays: null, maxProjects: null },
+    limits: {
+      maxMembers: 1000,
+      storageBytes: 1024 * GIB,
+      maxFileBytes: 1024 * MIB,
+      messageHistoryDays: null,
+      maxProjects: null,
+    },
   },
 ];
 
@@ -51,7 +77,16 @@ export async function runMigrations(migratorUrl: string): Promise<void> {
              )
            )
          ) on conflict do nothing`,
-        [kind, slug, published ? 'published' : 'draft', JSON.stringify(content), published ? JSON.stringify(content) : null, published ? slug : null, published ? 1 : null, published ? new Date() : null],
+        [
+          kind,
+          slug,
+          published ? 'published' : 'draft',
+          JSON.stringify(content),
+          published ? JSON.stringify(content) : null,
+          published ? slug : null,
+          published ? 1 : null,
+          published ? new Date() : null,
+        ],
       );
       // Preserve the original version of freshly seeded content before an administrator edits
       // it. Existing editorial history and documents changed by users are never overwritten.

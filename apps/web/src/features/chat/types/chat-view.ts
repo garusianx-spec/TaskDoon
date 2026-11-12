@@ -1,7 +1,6 @@
 import type { Recorded } from '@/features/chat/hooks/useVoiceRecorder';
-import type { Conversation,Message,ScheduledMessage,TaskDraft } from '@taskin/contracts';
+import type { Conversation, Message, ScheduledMessage, TaskDraft } from '@taskin/contracts';
 import { type OutgoingFile } from '@/features/chat/components/AttachmentPreviewModal';
-
 
 export interface ChatViewProps {
   readonly conversation: Conversation;

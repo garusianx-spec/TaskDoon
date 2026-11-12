@@ -62,16 +62,33 @@ export class MembershipService {
         if (member.rbacVersion === Number(version)) return 'none' in member ? null : member;
       }
     } catch (error) {
-      this.logger.debug({ error: error instanceof Error ? error.message : String(error) }, 'membership cache unavailable');
+      this.logger.debug(
+        { error: error instanceof Error ? error.message : String(error) },
+        'membership cache unavailable',
+      );
     }
 
     const row = await this.uow.run({ workspaceId, userId }, ({ tx }) => this.query(tx, workspaceId, userId));
-    const member = row && row.status === 'active' && !row.deleted && !row.suspended ? this.toContext(workspaceId, userId, row) : null;
+    const member =
+      row && row.status === 'active' && !row.deleted && !row.suspended
+        ? this.toContext(workspaceId, userId, row)
+        : null;
     const version = row?.rbac_version;
     if (version !== undefined) {
       try {
-        await this.redis.core.eval(SET_IF_HIGHER, 1, versionKey, String(version), String(VERSION_TTL_SECONDS));
-        await this.redis.core.set(memberKey, JSON.stringify(member ?? { none: true, rbacVersion: version }), 'EX', MEMBER_TTL_SECONDS);
+        await this.redis.core.eval(
+          SET_IF_HIGHER,
+          1,
+          versionKey,
+          String(version),
+          String(VERSION_TTL_SECONDS),
+        );
+        await this.redis.core.set(
+          memberKey,
+          JSON.stringify(member ?? { none: true, rbacVersion: version }),
+          'EX',
+          MEMBER_TTL_SECONDS,
+        );
       } catch {
         // Caching is best effort; the database answered.
       }
@@ -82,7 +99,9 @@ export class MembershipService {
   /** Same, inside a unit that already holds the tenant (no cache: the caller is mid-change). */
   async loadIn(tx: Tx, workspaceId: string, userId: string): Promise<MembershipContext | null> {
     const row = await this.query(tx, workspaceId, userId);
-    return row && row.status === 'active' && !row.deleted && !row.suspended ? this.toContext(workspaceId, userId, row) : null;
+    return row && row.status === 'active' && !row.deleted && !row.suspended
+      ? this.toContext(workspaceId, userId, row)
+      : null;
   }
 
   /**
@@ -112,7 +131,15 @@ export class MembershipService {
       .where(eq(workspaces.id, workspaceId))
       .returning({ version: workspaces.rbacVersion });
     const version = row?.version ?? 0;
-    unit.afterCommit(() => this.redis.core.eval(SET_IF_HIGHER, 1, this.versionKey(workspaceId), String(version), String(VERSION_TTL_SECONDS)));
+    unit.afterCommit(() =>
+      this.redis.core.eval(
+        SET_IF_HIGHER,
+        1,
+        this.versionKey(workspaceId),
+        String(version),
+        String(VERSION_TTL_SECONDS),
+      ),
+    );
     return version;
   }
 

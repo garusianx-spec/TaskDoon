@@ -3,8 +3,8 @@
 import type { PresenceState } from '@taskin/contracts';
 import { PRESENCE_OPTIONS } from '@/data/reference';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
-import { Avatar,Button,MenuItem,MenuList,Popover,PopoverDivider } from '@/components/ui';
-import { ClockIcon,LogoutIcon,ShieldIcon,UserIcon } from '@/components/icons';
+import { Avatar, Button, MenuItem, MenuList, Popover, PopoverDivider } from '@/components/ui';
+import { ClockIcon, LogoutIcon, ShieldIcon, UserIcon } from '@/components/icons';
 
 interface ProfileMenuProps {
   readonly fullName: string;
@@ -41,7 +41,14 @@ export function ProfileMenu({ fullName, initials, jobTitle, presence, statusMess
         return (
           <>
             <div className="flex items-center gap-3 px-2.5 py-2">
-              <Avatar name={fullName} initials={initials} tone="brand" size="md" presence={presence} decorative />
+              <Avatar
+                name={fullName}
+                initials={initials}
+                tone="brand"
+                size="md"
+                presence={presence}
+                decorative
+              />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-body-sm font-semibold text-fg-primary">{fullName}</span>
                 <span className="truncate text-micro text-fg-tertiary">

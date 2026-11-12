@@ -38,8 +38,12 @@ export const platformAuditLogs = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    index('platform_audit_logs_target_idx').on(t.targetUserId, t.createdAt.desc()).where(sql`${t.targetUserId} is not null`),
+    index('platform_audit_logs_target_idx')
+      .on(t.targetUserId, t.createdAt.desc())
+      .where(sql`${t.targetUserId} is not null`),
     index('platform_audit_logs_admin_idx').on(t.adminId, t.createdAt.desc()),
-    index('platform_audit_logs_workspace_idx').on(t.targetWorkspaceId, t.id.desc()).where(sql`${t.targetWorkspaceId} is not null`),
+    index('platform_audit_logs_workspace_idx')
+      .on(t.targetWorkspaceId, t.id.desc())
+      .where(sql`${t.targetWorkspaceId} is not null`),
   ],
 );

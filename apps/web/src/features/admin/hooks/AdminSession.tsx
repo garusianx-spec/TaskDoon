@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext,useCallback,useContext,useEffect,useMemo,useState,type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { PlatformAdminMe } from '@taskin/contracts';
 import { isProblem } from '@/lib/api-client';
 import { problemMessage } from '@/lib/api-problem';
@@ -75,7 +75,8 @@ export function AdminSession({ children }: { readonly children: ReactNode }) {
       );
     } catch (error) {
       if (isProblem(error, 'NOT_FOUND')) setPhase({ kind: 'not-admin' });
-      else if (isProblem(error, 'UNAUTHENTICATED') || isProblem(error, 'SESSION_REVOKED')) setPhase({ kind: 'signed-out' });
+      else if (isProblem(error, 'UNAUTHENTICATED') || isProblem(error, 'SESSION_REVOKED'))
+        setPhase({ kind: 'signed-out' });
       else setPhase({ kind: 'error', message: problemMessage(error) });
     }
   }, []);
@@ -102,9 +103,16 @@ export function AdminSession({ children }: { readonly children: ReactNode }) {
     try {
       return await work();
     } catch (error) {
-      if (isProblem(error, 'STEP_UP_REQUIRED')) setPhase((current) => (current.kind === 'ready' ? { kind: 'step-up', admin: current.admin } : current));
-      else if (isProblem(error, 'SMS_CONFIRMATION_REQUIRED')) setPhase((current) => (current.kind === 'ready' ? { kind: 'sms-confirm', admin: current.admin } : current));
-      else if (isProblem(error, 'SESSION_REVOKED') || isProblem(error, 'UNAUTHENTICATED')) setPhase({ kind: 'signed-out' });
+      if (isProblem(error, 'STEP_UP_REQUIRED'))
+        setPhase((current) =>
+          current.kind === 'ready' ? { kind: 'step-up', admin: current.admin } : current,
+        );
+      else if (isProblem(error, 'SMS_CONFIRMATION_REQUIRED'))
+        setPhase((current) =>
+          current.kind === 'ready' ? { kind: 'sms-confirm', admin: current.admin } : current,
+        );
+      else if (isProblem(error, 'SESSION_REVOKED') || isProblem(error, 'UNAUTHENTICATED'))
+        setPhase({ kind: 'signed-out' });
       throw error;
     }
   }, []);
@@ -119,6 +127,9 @@ export function AdminSession({ children }: { readonly children: ReactNode }) {
     setPhase({ kind: 'signed-out' });
   }, []);
 
-  const value = useMemo<AdminContextValue>(() => ({ phase, generation, probe, call, steppedUp, signOut }), [phase, generation, probe, call, steppedUp, signOut]);
+  const value = useMemo<AdminContextValue>(
+    () => ({ phase, generation, probe, call, steppedUp, signOut }),
+    [phase, generation, probe, call, steppedUp, signOut],
+  );
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }

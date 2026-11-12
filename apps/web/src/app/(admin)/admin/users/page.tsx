@@ -1,20 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef,useState,type FormEvent } from 'react';
-import type { PlatformModerationResult,PlatformUserSummary } from '@taskin/contracts';
+import { useRef, useState, type FormEvent } from 'react';
+import type { PlatformModerationResult, PlatformUserSummary } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
-import { adminApi,type UserFilters } from '@/features/admin/api/admin-api';
-import { phoneLabel,USER_STATUS } from '@/features/admin/lib/format';
-import { useAdmin,useAdminMe } from '@/features/admin/hooks/AdminSession';
+import { adminApi, type UserFilters } from '@/features/admin/api/admin-api';
+import { phoneLabel, USER_STATUS } from '@/features/admin/lib/format';
+import { useAdmin, useAdminMe } from '@/features/admin/hooks/AdminSession';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
-import { Loaded,PageHeader,Panel,TD,TH } from '@/features/admin/components/AdminUi';
-import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { ForcePasswordResetDialog } from '@/features/admin/components/ForcePasswordResetDialog';
 import { SessionsDrawer } from '@/features/admin/components/SessionsDrawer';
 import { SuspendUserDialog } from '@/features/admin/components/SuspendUserDialog';
-import { type UserAction,UserActionsMenu } from '@/features/admin/components/UserActionsMenu';
-import { Badge,Button,Input,RelativeTime,Select } from '@/components/ui';
+import { type UserAction, UserActionsMenu } from '@/features/admin/components/UserActionsMenu';
+import { Badge, Button, Input, RelativeTime, Select } from '@/components/ui';
 import { SearchIcon } from '@/components/icons';
 import { problemMessage } from '@/lib/api-problem';
 
@@ -29,7 +29,9 @@ function outcome(action: UserAction, { user, sessionsRevoked, changed }: Platfor
     case 'unsuspend':
       return changed ? `تعلیق ${user.fullName} برداشته شد.` : `${user.fullName} معلق نبود.`;
     case 'require-reset':
-      return changed ? `${user.fullName} باید رمز عبور تازه‌ای بگذارد${closed}.` : `رمز ${user.fullName} از قبل در انتظار تغییر بود${closed}.`;
+      return changed
+        ? `${user.fullName} باید رمز عبور تازه‌ای بگذارد${closed}.`
+        : `رمز ${user.fullName} از قبل در انتظار تغییر بود${closed}.`;
     default:
       return `اجبار تغییر رمز ${user.fullName} لغو شد.`;
   }
@@ -47,7 +49,10 @@ export default function AdminUsersPage() {
   const page = useAdminLoad(JSON.stringify(applied), () => adminApi.users(applied));
   /** Rows as the last moderation action left them, until the next search. */
   const [updated, setUpdated] = useState<Readonly<Record<string, PlatformUserSummary>>>({});
-  const [acting, setActing] = useState<{ readonly action: UserAction; readonly user: PlatformUserSummary } | null>(null);
+  const [acting, setActing] = useState<{
+    readonly action: UserAction;
+    readonly user: PlatformUserSummary;
+  } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const sessionsChanged = useRef(false);
 
@@ -93,12 +98,36 @@ export default function AdminUsersPage() {
 
   return (
     <>
-      <PageHeader title="کاربران و سشن‌ها" description="همه حساب‌های تسک‌دون، در همه ورک‌اسپیس‌ها. هر جستجو و مشاهده در گزارش بازرسی ثبت می‌شود." />
+      <PageHeader
+        title="کاربران و سشن‌ها"
+        description="همه حساب‌های تسک‌دون، در همه ورک‌اسپیس‌ها. هر جستجو و مشاهده در گزارش بازرسی ثبت می‌شود."
+      />
       <Panel title="جستجو">
-        <form role="search" aria-label="جستجوی کاربران" onSubmit={onSearch} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <Input label="نام، شماره یا ایمیل" value={draft.q} onChange={(event) => setDraft({ ...draft, q: event.target.value })} iconStart={<SearchIcon size={16} />} />
-          <Input label="شماره موبایل" dir="ltr" inputMode="tel" value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} />
-          <Input label="ایمیل" dir="ltr" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} />
+        <form
+          role="search"
+          aria-label="جستجوی کاربران"
+          onSubmit={onSearch}
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+        >
+          <Input
+            label="نام، شماره یا ایمیل"
+            value={draft.q}
+            onChange={(event) => setDraft({ ...draft, q: event.target.value })}
+            iconStart={<SearchIcon size={16} />}
+          />
+          <Input
+            label="شماره موبایل"
+            dir="ltr"
+            inputMode="tel"
+            value={draft.phone}
+            onChange={(event) => setDraft({ ...draft, phone: event.target.value })}
+          />
+          <Input
+            label="ایمیل"
+            dir="ltr"
+            value={draft.email}
+            onChange={(event) => setDraft({ ...draft, email: event.target.value })}
+          />
           <Select
             label="وضعیت"
             hideLabel={false}
@@ -142,7 +171,10 @@ export default function AdminUsersPage() {
       </Panel>
       <Panel title="کاربران">
         {notice && (
-          <p role="status" className="mb-3 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done">
+          <p
+            role="status"
+            className="mb-3 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done"
+          >
             {notice}
           </p>
         )}
@@ -164,38 +196,61 @@ export default function AdminUsersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...data.items, ...(more?.items ?? [])].map((listed) => updated[listed.id] ?? listed).map((user) => (
-                      <tr key={user.id}>
-                        <td className={TD}>
-                          <Link href={`/admin/users/${user.id}`} className="font-semibold text-fg-brand hover:underline">
-                            {user.fullName}
-                          </Link>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {user.isPlatformAdmin && <Badge tone="brand" size="sm">مدیر پلتفرم</Badge>}
-                            {user.passwordResetRequired && <Badge tone="warning" size="sm">بازنشانی رمز در انتظار</Badge>}
-                          </div>
-                        </td>
-                        <td className={TD}>
-                          <span dir="ltr">{phoneLabel(user.phone)}</span>
-                        </td>
-                        <td className={TD}>{user.email ? <span dir="ltr">{user.email}</span> : '—'}</td>
-                        <td className={TD}>
-                          <Badge tone={USER_STATUS[user.status].tone} size="sm">
-                            {USER_STATUS[user.status].label}
-                          </Badge>
-                        </td>
-                        <td className={TD}>{toPersianDigits(user.workspaceCount)}</td>
-                        <td className={TD}>{toPersianDigits(user.activeSessionCount)}</td>
-                        <td className={TD}>{user.lastActiveAt ? <RelativeTime iso={user.lastActiveAt} /> : '—'}</td>
-                        <td className={TD}>
-                          <UserActionsMenu user={user} selfId={self.userId} onAction={(action) => setActing({ action, user })} />
-                        </td>
-                      </tr>
-                    ))}
+                    {[...data.items, ...(more?.items ?? [])]
+                      .map((listed) => updated[listed.id] ?? listed)
+                      .map((user) => (
+                        <tr key={user.id}>
+                          <td className={TD}>
+                            <Link
+                              href={`/admin/users/${user.id}`}
+                              className="font-semibold text-fg-brand hover:underline"
+                            >
+                              {user.fullName}
+                            </Link>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {user.isPlatformAdmin && (
+                                <Badge tone="brand" size="sm">
+                                  مدیر پلتفرم
+                                </Badge>
+                              )}
+                              {user.passwordResetRequired && (
+                                <Badge tone="warning" size="sm">
+                                  بازنشانی رمز در انتظار
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className={TD}>
+                            <span dir="ltr">{phoneLabel(user.phone)}</span>
+                          </td>
+                          <td className={TD}>{user.email ? <span dir="ltr">{user.email}</span> : '—'}</td>
+                          <td className={TD}>
+                            <Badge tone={USER_STATUS[user.status].tone} size="sm">
+                              {USER_STATUS[user.status].label}
+                            </Badge>
+                          </td>
+                          <td className={TD}>{toPersianDigits(user.workspaceCount)}</td>
+                          <td className={TD}>{toPersianDigits(user.activeSessionCount)}</td>
+                          <td className={TD}>
+                            {user.lastActiveAt ? <RelativeTime iso={user.lastActiveAt} /> : '—'}
+                          </td>
+                          <td className={TD}>
+                            <UserActionsMenu
+                              user={user}
+                              selfId={self.userId}
+                              onAction={(action) => setActing({ action, user })}
+                            />
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </DataTable>
               </TableFrame>
-              {moreError && <p role="alert" className="mt-3 text-caption text-status-blocked">{moreError}</p>}
+              {moreError && (
+                <p role="alert" className="mt-3 text-caption text-status-blocked">
+                  {moreError}
+                </p>
+              )}
               {cursor && (
                 <div className="mt-4 flex justify-center">
                   <Button variant="secondary" loading={loadingMore} onClick={() => void loadMore()}>
@@ -208,7 +263,13 @@ export default function AdminUsersPage() {
         </Loaded>
       </Panel>
       {acting && (acting.action === 'suspend' || acting.action === 'unsuspend') && (
-        <SuspendUserDialog user={acting.user} mode={acting.action} open onClose={() => setActing(null)} onDone={onDone} />
+        <SuspendUserDialog
+          user={acting.user}
+          mode={acting.action}
+          open
+          onClose={() => setActing(null)}
+          onDone={onDone}
+        />
       )}
       {acting && (acting.action === 'require-reset' || acting.action === 'lift-reset') && (
         <ForcePasswordResetDialog user={acting.user} open onClose={() => setActing(null)} onDone={onDone} />

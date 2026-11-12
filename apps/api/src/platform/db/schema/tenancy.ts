@@ -87,7 +87,9 @@ export const workspaces = pgTable(
     check('workspaces_name_len', sql`char_length(${t.name}) between 1 and 40`),
     check('workspaces_description_len', sql`char_length(${t.description}) <= 160`),
     check('workspaces_member_count', sql`${t.memberCount} >= 0`),
-    index('workspaces_purge_idx').on(t.purgeAfter).where(sql`${t.deletedAt} is not null`),
+    index('workspaces_purge_idx')
+      .on(t.purgeAfter)
+      .where(sql`${t.deletedAt} is not null`),
   ],
 );
 
@@ -187,7 +189,9 @@ export const workspaceMembers = pgTable(
       columns: [t.workspaceId, t.departmentId],
       foreignColumns: [departments.workspaceId, departments.id],
     }).onDelete('restrict'),
-    index('workspace_members_user_active_idx').on(t.userId).where(sql`${t.status} = 'active'`),
+    index('workspace_members_user_active_idx')
+      .on(t.userId)
+      .where(sql`${t.status} = 'active'`),
     check('workspace_members_status_message_len', sql`char_length(${t.statusMessage}) <= 80`),
     check('workspace_members_job_title_len', sql`char_length(${t.jobTitle}) <= 80`),
   ],

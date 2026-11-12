@@ -149,29 +149,46 @@ export class PlatformUsersService {
     if (email) where.push(sql`u.email ilike ${likeContains(email)}`);
     if (filters.status) where.push(sql`u.status = ${filters.status}`);
     if (filters.platformRole) where.push(sql`u.is_platform_admin = ${filters.platformRole === 'admin'}`);
-    if (cursor) where.push(sql`(u.created_at, u.id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)`);
+    if (cursor)
+      where.push(sql`(u.created_at, u.id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)`);
 
-    const rows = await this.admins.read(admin, async (tx) =>
-      (
-        await tx.execute<UserRow>(sql`
+    const rows = await this.admins.read(
+      admin,
+      async (tx) =>
+        (
+          await tx.execute<UserRow>(sql`
           select ${USER_COLUMNS} from users u
           where ${where.length > 0 ? sql.join(where, sql` and `) : sql`true`}
           order by u.created_at desc, u.id desc
           limit ${limit + 1}`)
-      ).rows,
+        ).rows,
     );
     const page = rows.slice(0, limit);
     const last = page.at(-1);
     await this.auditLog.record(admin, {
       action: 'admin.users.search',
-      metadata: { filters: { q: q ?? null, phone: phone ?? null, email: email ?? null, status: filters.status ?? null, platformRole: filters.platformRole ?? null }, results: page.length },
+      metadata: {
+        filters: {
+          q: q ?? null,
+          phone: phone ?? null,
+          email: email ?? null,
+          status: filters.status ?? null,
+          platformRole: filters.platformRole ?? null,
+        },
+        results: page.length,
+      },
     });
-    return { items: page.map(summary), nextCursor: rows.length > limit && last ? encodeCursor(last.cursor_at, last.id) : null };
+    return {
+      items: page.map(summary),
+      nextCursor: rows.length > limit && last ? encodeCursor(last.cursor_at, last.id) : null,
+    };
   }
 
   async detail(admin: PlatformAdmin, userId: string): Promise<PlatformUserDetail> {
     const { user, memberships, suspension } = await this.admins.read(admin, async (tx) => {
-      const [row] = (await tx.execute<UserRow>(sql`select ${USER_COLUMNS} from users u where u.id = ${userId}`)).rows;
+      const [row] = (
+        await tx.execute<UserRow>(sql`select ${USER_COLUMNS} from users u where u.id = ${userId}`)
+      ).rows;
       if (!row) throw ApiError.notFound('The user');
       const joined = await tx.execute<MembershipRow>(sql`
         select wm.workspace_id, w.name as workspace_name, w.slug as workspace_slug, w.deleted_at is not null as workspace_deleted,
@@ -190,23 +207,33 @@ export class PlatformUsersService {
       // While suspended: the latest suspension in the platform audit log says when, why and by whom.
       const suspension =
         row.status === 'suspended'
-          ? (
+          ? ((
               await tx.execute<SuspensionRow>(sql`
                 select l.created_at, l.metadata ->> 'reason' as reason, l.admin_id, a.full_name as admin_name
                 from platform_audit_logs l left join users a on a.id = l.admin_id
                 where l.target_user_id = ${userId} and l.action = 'admin.user.suspend' and coalesce((l.metadata ->> 'changed')::boolean, true)
                 order by l.id desc limit 1`)
-            ).rows[0] ?? null
+            ).rows[0] ?? null)
           : null;
       return { user: row, memberships: joined.rows, suspension };
     });
-    await this.auditLog.record(admin, { action: 'admin.user.view', targetUserId: userId, resourceType: 'user', resourceId: userId });
+    await this.auditLog.record(admin, {
+      action: 'admin.user.view',
+      targetUserId: userId,
+      resourceType: 'user',
+      resourceId: userId,
+    });
     return {
       ...summary(user),
       passwordChangedAt: isoOrNull(user.password_changed_at),
       // A suspension made outside the panel (no audit row) shows as the status alone.
       suspension: suspension
-        ? { at: iso(suspension.created_at), reason: suspension.reason, adminId: suspension.admin_id, adminName: suspension.admin_name }
+        ? {
+            at: iso(suspension.created_at),
+            reason: suspension.reason,
+            adminId: suspension.admin_id,
+            adminName: suspension.admin_name,
+          }
         : null,
       memberships: memberships.map((row) => ({
         workspaceId: row.workspace_id,
@@ -226,8 +253,16 @@ export class PlatformUsersService {
     };
   }
 
-  async sessionsOf(admin: PlatformAdmin, userId: string, status: 'active' | 'revoked' | 'all'): Promise<PlatformSessionView[]> {
-    const live = and(isNull(authSessions.revokedAt), gt(authSessions.idleExpiresAt, sql`now()`), gt(authSessions.absoluteExpiresAt, sql`now()`));
+  async sessionsOf(
+    admin: PlatformAdmin,
+    userId: string,
+    status: 'active' | 'revoked' | 'all',
+  ): Promise<PlatformSessionView[]> {
+    const live = and(
+      isNull(authSessions.revokedAt),
+      gt(authSessions.idleExpiresAt, sql`now()`),
+      gt(authSessions.absoluteExpiresAt, sql`now()`),
+    );
     const rows = await this.admins.read(admin, async (tx) => {
       await this.requireUser(tx, userId);
       return tx
@@ -238,11 +273,22 @@ export class PlatformUsersService {
           expiresAt: sql<string>`least(${authSessions.idleExpiresAt}, ${authSessions.absoluteExpiresAt})`,
         })
         .from(authSessions)
-        .where(and(eq(authSessions.userId, userId), status === 'active' ? live : status === 'revoked' ? isNotNull(authSessions.revokedAt) : undefined))
+        .where(
+          and(
+            eq(authSessions.userId, userId),
+            status === 'active' ? live : status === 'revoked' ? isNotNull(authSessions.revokedAt) : undefined,
+          ),
+        )
         .orderBy(desc(authSessions.lastActiveAt))
         .limit(200);
     });
-    await this.auditLog.record(admin, { action: 'admin.sessions.view', targetUserId: userId, resourceType: 'user', resourceId: userId, metadata: { status, results: rows.length } });
+    await this.auditLog.record(admin, {
+      action: 'admin.sessions.view',
+      targetUserId: userId,
+      resourceType: 'user',
+      resourceId: userId,
+      metadata: { status, results: rows.length },
+    });
     return rows.map(({ session, status: state, expiresAt }) => ({
       id: session.id,
       status: state,
@@ -271,7 +317,13 @@ export class PlatformUsersService {
       await this.sessions.revoke(unit, [sessionId], 'admin_action', session.userId);
       await this.auditLog.record(
         admin,
-        { action: 'admin.session.revoke', targetUserId: session.userId, resourceType: 'session', resourceId: sessionId, metadata: { alreadyEnded: session.revokedAt !== null } },
+        {
+          action: 'admin.session.revoke',
+          targetUserId: session.userId,
+          resourceType: 'session',
+          resourceId: sessionId,
+          metadata: { alreadyEnded: session.revokedAt !== null },
+        },
         unit,
       );
     });
@@ -282,7 +334,17 @@ export class PlatformUsersService {
       await this.requireUser(unit.tx, userId);
       await this.protectOwner(unit.tx, userId);
       const revoked = await this.sessions.revokeOthers(unit, userId, null, 'admin_action');
-      await this.auditLog.record(admin, { action: 'admin.sessions.revoke_all', targetUserId: userId, resourceType: 'user', resourceId: userId, metadata: { revoked } }, unit);
+      await this.auditLog.record(
+        admin,
+        {
+          action: 'admin.sessions.revoke_all',
+          targetUserId: userId,
+          resourceType: 'user',
+          resourceId: userId,
+          metadata: { revoked },
+        },
+        unit,
+      );
       return { revoked };
     });
   }
@@ -293,21 +355,35 @@ export class PlatformUsersService {
    * password no longer works; an earlier unused code stops working. The password itself is never
    * seen, set or returned by anyone but its owner.
    */
-  async issuePasswordReset(admin: PlatformAdmin, userId: string, channel: PasswordResetChannel): Promise<PasswordResetIssued> {
+  async issuePasswordReset(
+    admin: PlatformAdmin,
+    userId: string,
+    channel: PasswordResetChannel,
+  ): Promise<PasswordResetIssued> {
     const code = randomToken(32);
     const link = `${new URL('/reset-password', this.config.env.PUBLIC_WEB_ORIGIN).toString()}?token=${code}`;
     return this.uow.run({ workspaceId: null, userId: admin.userId }, async (unit) => {
       const { tx } = unit;
       const [user] = await tx
-        .select({ phone: users.phone, email: users.email, fullName: users.fullName, status: users.status, deletedAt: users.deletedAt })
+        .select({
+          phone: users.phone,
+          email: users.email,
+          fullName: users.fullName,
+          status: users.status,
+          deletedAt: users.deletedAt,
+        })
         .from(users)
         .where(eq(users.id, userId))
         .for('update');
       if (!user || user.deletedAt || user.status === 'deleted') throw ApiError.notFound('The user');
       if (isPrimaryOwner(user.phone)) throw new ApiError('ADMIN_TARGET_PROTECTED');
-      if (channel === 'email' && !user.email) throw ApiError.validation([{ field: 'channel', message: 'the user has no email address' }]);
+      if (channel === 'email' && !user.email)
+        throw ApiError.validation([{ field: 'channel', message: 'the user has no email address' }]);
 
-      await tx.update(passwordResetTokens).set({ usedAt: sql`now()` }).where(and(eq(passwordResetTokens.userId, userId), isNull(passwordResetTokens.usedAt)));
+      await tx
+        .update(passwordResetTokens)
+        .set({ usedAt: sql`now()` })
+        .where(and(eq(passwordResetTokens.userId, userId), isNull(passwordResetTokens.usedAt)));
       const [token] = await tx
         .insert(passwordResetTokens)
         .values({
@@ -326,25 +402,46 @@ export class PlatformUsersService {
           type: 'notification.sms',
           aggregateType: 'user',
           aggregateId: userId,
-          payload: { to: user.phone, template: 'password_reset', tokens: { link: this.box.seal(link) }, sealed: ['link'] },
+          payload: {
+            to: user.phone,
+            template: 'password_reset',
+            tokens: { link: this.box.seal(link) },
+            sealed: ['link'],
+          },
         });
       } else if (channel === 'email' && user.email) {
         await this.outbox.add(tx, {
           type: 'notification.email',
           aggregateType: 'user',
           aggregateId: userId,
-          payload: { to: user.email, template: 'password_reset', params: { name: user.fullName, link: this.box.seal(link) }, sealed: ['link'] },
+          payload: {
+            to: user.email,
+            template: 'password_reset',
+            params: { name: user.fullName, link: this.box.seal(link) },
+            sealed: ['link'],
+          },
         });
       }
       await this.auditLog.record(
         admin,
-        { action: 'admin.password_reset.issue', targetUserId: userId, resourceType: 'password_reset', resourceId: token.id, metadata: { channel, expiresAt: token.expiresAt.toISOString() } },
+        {
+          action: 'admin.password_reset.issue',
+          targetUserId: userId,
+          resourceType: 'password_reset',
+          resourceId: token.id,
+          metadata: { channel, expiresAt: token.expiresAt.toISOString() },
+        },
         unit,
       );
       return {
         channel,
         expiresAt: token.expiresAt.toISOString(),
-        sentTo: channel === 'sms' ? maskPhone(user.phone) : channel === 'email' && user.email ? maskEmail(user.email) : null,
+        sentTo:
+          channel === 'sms'
+            ? maskPhone(user.phone)
+            : channel === 'email' && user.email
+              ? maskEmail(user.email)
+              : null,
         code: channel === 'manual' ? code : null,
         link: channel === 'manual' ? link : null,
       };

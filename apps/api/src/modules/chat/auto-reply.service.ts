@@ -46,7 +46,10 @@ export interface DueReply {
 @Injectable()
 export class AutoReplyService implements OnModuleDestroy {
   private readonly logger = new Logger('AutoReplyService');
-  private readonly enabled = new Map<string, { readonly userIds: ReadonlySet<string>; readonly expires: number }>();
+  private readonly enabled = new Map<
+    string,
+    { readonly userIds: ReadonlySet<string>; readonly expires: number }
+  >();
   private readonly inFlight = new Set<Promise<unknown>>();
 
   constructor(
@@ -82,30 +85,37 @@ export class AutoReplyService implements OnModuleDestroy {
       ...(!HH_MM.test(body.start) ? [{ field: 'start', message: 'is HH:mm' }] : []),
       ...(!HH_MM.test(body.end) ? [{ field: 'end', message: 'is HH:mm' }] : []),
       ...(body.start === body.end ? [{ field: 'end', message: 'must differ from the start' }] : []),
-      ...(message.length < 1 || message.length > 500 ? [{ field: 'message', message: 'is 1 to 500 characters' }] : []),
+      ...(message.length < 1 || message.length > 500
+        ? [{ field: 'message', message: 'is 1 to 500 characters' }]
+        : []),
     ];
     if (errors.length > 0) throw ApiError.validation(errors);
-    const view = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
-      await tx.execute(sql`
+    const view = await this.uow.run(
+      { workspaceId: member.workspaceId, userId: member.userId },
+      async ({ tx }) => {
+        await tx.execute(sql`
         insert into member_working_hours (workspace_id, user_id, auto_reply_enabled, days, start_time, end_time, message)
         values (${member.workspaceId}, ${member.userId}, ${body.autoReplyEnabled}, ${sql.param(days)}::text[], ${body.start}, ${body.end}, ${message})
         on conflict (workspace_id, user_id) do update set
           auto_reply_enabled = excluded.auto_reply_enabled, days = excluded.days, start_time = excluded.start_time,
           end_time = excluded.end_time, message = excluded.message`);
-      await this.audit.write(tx, {
-        action: 'member.working_hours.update',
-        workspaceId: member.workspaceId,
-        resourceType: 'member',
-        resourceId: member.userId,
-        changes: { after: { autoReplyEnabled: body.autoReplyEnabled, days, start: body.start, end: body.end } },
-      });
-      const result = await tx.execute<HoursRow>(sql`
+        await this.audit.write(tx, {
+          action: 'member.working_hours.update',
+          workspaceId: member.workspaceId,
+          resourceType: 'member',
+          resourceId: member.userId,
+          changes: {
+            after: { autoReplyEnabled: body.autoReplyEnabled, days, start: body.start, end: body.end },
+          },
+        });
+        const result = await tx.execute<HoursRow>(sql`
         select h.auto_reply_enabled, h.days, h.start_time, h.end_time, h.message, h.updated_at,
                coalesce(w.settings ->> 'timeZone', 'Asia/Tehran') as time_zone
         from member_working_hours h join workspaces w on w.id = h.workspace_id
         where h.workspace_id = ${member.workspaceId} and h.user_id = ${member.userId}`);
-      return toView(result.rows[0]);
-    });
+        return toView(result.rows[0]);
+      },
+    );
     this.enabled.delete(member.workspaceId);
     return view;
   }
@@ -134,7 +144,11 @@ export class AutoReplyService implements OnModuleDestroy {
         join workspaces w on w.id = c.workspace_id
         where c.workspace_id = ${sender.workspaceId} and c.id = ${conversationId} and c.kind = 'direct' and c.archived_at is null`);
       const row = result.rows[0];
-      if (!row || isWorkingTime({ days: row.days, start: row.start_time, end: row.end_time }, row.time_zone, now)) return null;
+      if (
+        !row ||
+        isWorkingTime({ days: row.days, start: row.start_time, end: row.end_time }, row.time_zone, now)
+      )
+        return null;
       // The day's slot: taken now, or already taken less than 24 hours ago (then nothing is sent).
       const slot = await tx.execute<{ replied_at: string }>(sql`
         insert into auto_reply_log (workspace_id, user_id, sender_id, replied_at)
@@ -164,7 +178,10 @@ export class AutoReplyService implements OnModuleDestroy {
   /** Keeps a background answer on the books, so shutdown (and tests) can wait for it. */
   track(work: Promise<unknown>): void {
     const settled = work.catch((error: unknown) =>
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'auto-reply not sent'),
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        'auto-reply not sent',
+      ),
     );
     this.inFlight.add(settled);
     void settled.finally(() => this.inFlight.delete(settled));
@@ -180,7 +197,9 @@ export class AutoReplyService implements OnModuleDestroy {
     const cached = this.enabled.get(workspaceId);
     if (cached && cached.expires > Date.now()) return cached.userIds;
     const result = await this.uow.run({ workspaceId, userId: null }, ({ tx }) =>
-      tx.execute<{ user_id: string }>(sql`select user_id from member_working_hours where workspace_id = ${workspaceId} and auto_reply_enabled`),
+      tx.execute<{ user_id: string }>(
+        sql`select user_id from member_working_hours where workspace_id = ${workspaceId} and auto_reply_enabled`,
+      ),
     );
     const userIds = new Set(result.rows.map((row) => row.user_id));
     this.enabled.set(workspaceId, { userIds, expires: Date.now() + ENABLED_TTL_MS });

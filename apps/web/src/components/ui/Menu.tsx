@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef,type ReactNode } from 'react';
+import { forwardRef, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface MenuItemProps {
@@ -42,7 +42,7 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function Me
     >
       {icon && <span className="flex shrink-0 text-current">{icon}</span>}
       <span className="flex-1 truncate">{children}</span>
-      {shortcut && <span className="latin-inline text-micro text-fg-quaternary">{shortcut}</span>}
+      {shortcut && <span className="text-micro text-fg-quaternary latin-inline">{shortcut}</span>}
     </button>
   );
 });

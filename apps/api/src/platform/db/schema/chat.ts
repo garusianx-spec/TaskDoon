@@ -1,5 +1,18 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, check, foreignKey, index, jsonb, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  boolean,
+  check,
+  foreignKey,
+  index,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  unique,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { createdAt, instant, updatedAt, uuidPk } from './columns.js';
 import {
   avatarTone,
@@ -57,9 +70,15 @@ export const conversations = pgTable(
   },
   (t) => [
     unique('conversations_ws_id_uq').on(t.workspaceId, t.id),
-    uniqueIndex('conversations_project_uq').on(t.workspaceId, t.projectId).where(sql`${t.projectId} is not null`),
-    uniqueIndex('conversations_direct_uq').on(t.workspaceId, t.directKey).where(sql`${t.kind} = 'direct'`),
-    index('conversations_project_idx').on(t.workspaceId, t.projectId).where(sql`${t.projectId} is not null`),
+    uniqueIndex('conversations_project_uq')
+      .on(t.workspaceId, t.projectId)
+      .where(sql`${t.projectId} is not null`),
+    uniqueIndex('conversations_direct_uq')
+      .on(t.workspaceId, t.directKey)
+      .where(sql`${t.kind} = 'direct'`),
+    index('conversations_project_idx')
+      .on(t.workspaceId, t.projectId)
+      .where(sql`${t.projectId} is not null`),
     // Browsing the public channels of a workspace.
     index('conversations_public_idx')
       .on(t.workspaceId, t.createdAt)
@@ -68,7 +87,10 @@ export const conversations = pgTable(
     check('conversations_title', sql`${t.kind} = 'direct' or char_length(${t.title}) between 1 and 80`),
     check('conversations_topic_len', sql`char_length(${t.topic}) <= 250`),
     check('conversations_direct_key', sql`(${t.kind} = 'direct') = (${t.directKey} is not null)`),
-    check('conversations_direct_shape', sql`${t.kind} <> 'direct' or (${t.isPrivate} and ${t.postPolicy} = 'everyone')`),
+    check(
+      'conversations_direct_shape',
+      sql`${t.kind} <> 'direct' or (${t.isPrivate} and ${t.postPolicy} = 'everyone')`,
+    ),
   ],
 );
 
@@ -100,7 +122,9 @@ export const conversationMembers = pgTable(
     }).onDelete('cascade'),
     member('conversation_members_user_fk', [t.workspaceId, t.userId]),
     // The sidebar: my conversations in this workspace.
-    index('conversation_members_user_idx').on(t.workspaceId, t.userId).where(sql`${t.leftAt} is null`),
+    index('conversation_members_user_idx')
+      .on(t.workspaceId, t.userId)
+      .where(sql`${t.leftAt} is null`),
   ],
 );
 
@@ -133,21 +157,37 @@ export const messages = pgTable(
     unique('messages_ws_id_uq').on(t.workspaceId, t.id),
     // Paging, gap sync and every per-conversation scan run on this index.
     unique('messages_conversation_seq_uq').on(t.conversationId, t.seq),
-    uniqueIndex('messages_client_msg_uq').on(t.conversationId, t.authorId, t.clientMsgId).where(sql`${t.clientMsgId} is not null`),
-    uniqueIndex('messages_source_event_uq').on(t.conversationId, t.sourceEventId).where(sql`${t.sourceEventId} is not null`),
+    uniqueIndex('messages_client_msg_uq')
+      .on(t.conversationId, t.authorId, t.clientMsgId)
+      .where(sql`${t.clientMsgId} is not null`),
+    uniqueIndex('messages_source_event_uq')
+      .on(t.conversationId, t.sourceEventId)
+      .where(sql`${t.sourceEventId} is not null`),
     foreignKey({
       name: 'messages_conversation_fk',
       columns: [t.workspaceId, t.conversationId],
       foreignColumns: [conversations.workspaceId, conversations.id],
     }).onDelete('cascade'),
     member('messages_author_fk', [t.workspaceId, t.authorId]),
-    foreignKey({ name: 'messages_attachment_fk', columns: [t.workspaceId, t.attachmentId], foreignColumns: [attachments.workspaceId, attachments.id] }),
+    foreignKey({
+      name: 'messages_attachment_fk',
+      columns: [t.workspaceId, t.attachmentId],
+      foreignColumns: [attachments.workspaceId, attachments.id],
+    }),
     // Shared media: the files and the links of a conversation, newest first, without a full scan.
-    index('messages_attachment_idx').on(t.conversationId, t.seq).where(sql`${t.attachmentId} is not null and ${t.deletedAt} is null`),
-    index('messages_links_idx').on(t.conversationId, t.seq).where(sql`${t.bodyText} ~* 'https?://' and ${t.deletedAt} is null`),
+    index('messages_attachment_idx')
+      .on(t.conversationId, t.seq)
+      .where(sql`${t.attachmentId} is not null and ${t.deletedAt} is null`),
+    index('messages_links_idx')
+      .on(t.conversationId, t.seq)
+      .where(sql`${t.bodyText} ~* 'https?://' and ${t.deletedAt} is null`),
     // Garbage collection asks whether any message still links a file.
-    index('messages_attachment_ref_idx').on(t.attachmentId).where(sql`${t.attachmentId} is not null`),
-    index('messages_search_idx').using('gin', t.workspaceId, t.searchText.op('gin_trgm_ops')).where(sql`${t.deletedAt} is null`),
+    index('messages_attachment_ref_idx')
+      .on(t.attachmentId)
+      .where(sql`${t.attachmentId} is not null`),
+    index('messages_search_idx')
+      .using('gin', t.workspaceId, t.searchText.op('gin_trgm_ops'))
+      .where(sql`${t.deletedAt} is null`),
     check('messages_seq_positive', sql`${t.seq} > 0`),
     check('messages_body_len', sql`char_length(${t.bodyText}) <= 8000`),
     check('messages_author', sql`(${t.kind} = 'system') = (${t.authorId} is null)`),
@@ -239,13 +279,23 @@ export const scheduledMessages = pgTable(
       foreignColumns: [conversations.workspaceId, conversations.id],
     }).onDelete('cascade'),
     member('scheduled_messages_author_fk', [t.workspaceId, t.authorId]),
-    foreignKey({ name: 'scheduled_messages_attachment_fk', columns: [t.workspaceId, t.attachmentId], foreignColumns: [attachments.workspaceId, attachments.id] }),
+    foreignKey({
+      name: 'scheduled_messages_attachment_fk',
+      columns: [t.workspaceId, t.attachmentId],
+      foreignColumns: [attachments.workspaceId, attachments.id],
+    }),
     // The author's list in one conversation (the bar above the composer), soonest first.
-    index('scheduled_messages_author_idx').on(t.workspaceId, t.authorId, t.conversationId, t.scheduledAt).where(sql`${t.status} = 'pending'`),
+    index('scheduled_messages_author_idx')
+      .on(t.workspaceId, t.authorId, t.conversationId, t.scheduledAt)
+      .where(sql`${t.status} = 'pending'`),
     // The worker's sweep for anything due that its delayed job missed.
-    index('scheduled_messages_due_idx').on(t.scheduledAt).where(sql`${t.status} = 'pending'`),
+    index('scheduled_messages_due_idx')
+      .on(t.scheduledAt)
+      .where(sql`${t.status} = 'pending'`),
     // Garbage collection asks whether a pending schedule still needs a file.
-    index('scheduled_messages_attachment_idx').on(t.attachmentId).where(sql`${t.attachmentId} is not null and ${t.status} = 'pending'`),
+    index('scheduled_messages_attachment_idx')
+      .on(t.attachmentId)
+      .where(sql`${t.attachmentId} is not null and ${t.status} = 'pending'`),
     check('scheduled_messages_kind', sql`${t.kind} <> 'system'`),
     check('scheduled_messages_body_len', sql`char_length(${t.bodyText}) <= 8000`),
     check('scheduled_messages_sent', sql`(${t.status} = 'sent') = (${t.sentAt} is not null)`),
@@ -274,7 +324,9 @@ export const memberWorkingHours = pgTable(
     primaryKey({ name: 'member_working_hours_pk', columns: [t.workspaceId, t.userId] }),
     member('member_working_hours_user_fk', [t.workspaceId, t.userId]).onDelete('cascade'),
     // Who in a workspace answers automatically (the per-node cache reads this).
-    index('member_working_hours_enabled_idx').on(t.workspaceId).where(sql`${t.autoReplyEnabled}`),
+    index('member_working_hours_enabled_idx')
+      .on(t.workspaceId)
+      .where(sql`${t.autoReplyEnabled}`),
     check(
       'member_working_hours_days',
       sql`${t.days} <@ array['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday']::text[]`,

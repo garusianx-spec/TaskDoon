@@ -14,7 +14,7 @@ export const AVATAR_TONES: readonly AvatarTone[] = ['brand', 'teal', 'violet', '
 export class UpdateMeDto implements UpdateMeBody {
   @ApiPropertyOptional({ minLength: 2, maxLength: 80 })
   @ValidateIf((_, value) => value !== undefined)
-  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @Length(2, 80)
   readonly fullName?: string;

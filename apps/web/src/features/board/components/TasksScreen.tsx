@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo,useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { filterTasks } from '@/store/selectors';
 import { AppShell } from '@/components/layout/AppShell';

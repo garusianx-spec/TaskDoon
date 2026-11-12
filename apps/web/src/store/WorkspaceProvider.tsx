@@ -1,25 +1,31 @@
 'use client';
 
 import {
-createContext,
-useCallback,
-useContext,
-useEffect,
-useMemo,
-useRef,
-useState,
-useSyncExternalStore,
-type Dispatch,
-type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type Dispatch,
+  type ReactNode,
 } from 'react';
-import type { Conversation,ProfileSettings,TaskDraft,User,Workspace } from '@taskin/contracts';
+import type { Conversation, ProfileSettings, TaskDraft, User, Workspace } from '@taskin/contracts';
 import { profileNameError } from '@/features/account/lib/profile-name';
 import { IS_LIVE } from '@/lib/data-source';
-import { workspaceReducer,type ProjectDraft,type TaskPatch,type WorkspaceAction,type WorkspaceState } from '@/store/workspace-reducer';
+import {
+  workspaceReducer,
+  type ProjectDraft,
+  type TaskPatch,
+  type WorkspaceAction,
+  type WorkspaceState,
+} from '@/store/workspace-reducer';
 import { nextLocalId } from '@/store/ids';
 import { INITIAL_WORKSPACE_STATE } from '@/store/initial-state';
 import { setDirectory } from '@/store/directory';
-import { LiveStore,type LiveStatus } from '@/store/live/live-store';
+import { LiveStore, type LiveStatus } from '@/store/live/live-store';
 import { LiveGate } from '@/features/auth/components/LiveGate';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
 
@@ -81,7 +87,10 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
 
   // Before any effect runs, so the store never reads a render React discarded (StrictMode).
   useIsomorphicLayoutEffect(() => {
-    live?.attach(() => stateRef.current, (action) => void apply(action));
+    live?.attach(
+      () => stateRef.current,
+      (action) => void apply(action),
+    );
   }, [live, apply]);
 
   const dispatch = useCallback<Dispatch<WorkspaceAction>>(
@@ -92,56 +101,83 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     [apply, live],
   );
 
-  const createTask = useCallback(async (draft: TaskDraft, files: readonly File[] = [], commandId?: string) => {
-    const previousInspector = stateRef.current.inspector;
-    const { prev, next } = apply({ type: 'create-task', draft, authorId: stateRef.current.meId });
-    const localId = next.tasks.find((task) => !prev.tasks.some((entry) => entry.id === task.id))?.id;
-    if (!localId) throw new Error('Task was not created');
-    // The composer owns focus until server confirmation; do not open a second modal underneath it.
-    apply({ type: 'sync/merge', patch: { inspector: previousInspector, announcement: prev.announcement } });
-    const id = live ? await live.createTask(draft, prev, next, files, commandId) : localId;
-    if (!live && files.length) {
-      dispatch({ type: 'attach-task-files', taskId: id, authorId: stateRef.current.meId,
-        files: files.map((file, index) => ({ attachmentId: `${id}-file-${index}`, file, name: file.name, previewUrl: URL.createObjectURL(file) })) });
-    }
-    apply({ type: 'open-task', taskId: id });
-    apply({ type: 'sync/merge', patch: { announcement: `وظیفه «${draft.title}» ایجاد شد.` } });
-    return id;
-  }, [apply, dispatch, live]);
+  const createTask = useCallback(
+    async (draft: TaskDraft, files: readonly File[] = [], commandId?: string) => {
+      const previousInspector = stateRef.current.inspector;
+      const { prev, next } = apply({ type: 'create-task', draft, authorId: stateRef.current.meId });
+      const localId = next.tasks.find((task) => !prev.tasks.some((entry) => entry.id === task.id))?.id;
+      if (!localId) throw new Error('Task was not created');
+      // The composer owns focus until server confirmation; do not open a second modal underneath it.
+      apply({ type: 'sync/merge', patch: { inspector: previousInspector, announcement: prev.announcement } });
+      const id = live ? await live.createTask(draft, prev, next, files, commandId) : localId;
+      if (!live && files.length) {
+        dispatch({
+          type: 'attach-task-files',
+          taskId: id,
+          authorId: stateRef.current.meId,
+          files: files.map((file, index) => ({
+            attachmentId: `${id}-file-${index}`,
+            file,
+            name: file.name,
+            previewUrl: URL.createObjectURL(file),
+          })),
+        });
+      }
+      apply({ type: 'open-task', taskId: id });
+      apply({ type: 'sync/merge', patch: { announcement: `وظیفه «${draft.title}» ایجاد شد.` } });
+      return id;
+    },
+    [apply, dispatch, live],
+  );
 
-  const saveTask = useCallback(async (taskId: string, patch: TaskPatch, columnId?: string) => {
-    if (live) {
-      if (Object.keys(patch).length) await live.saveTask(taskId, patch);
-      if (columnId !== undefined) await live.saveTaskColumn(taskId, columnId);
-    } else {
-      apply({ type: 'patch-task', taskId, patch });
-      if (columnId !== undefined) apply({ type: 'move-task-to-column', taskId, columnId });
-    }
-  }, [apply, live]);
+  const saveTask = useCallback(
+    async (taskId: string, patch: TaskPatch, columnId?: string) => {
+      if (live) {
+        if (Object.keys(patch).length) await live.saveTask(taskId, patch);
+        if (columnId !== undefined) await live.saveTaskColumn(taskId, columnId);
+      } else {
+        apply({ type: 'patch-task', taskId, patch });
+        if (columnId !== undefined) apply({ type: 'move-task-to-column', taskId, columnId });
+      }
+    },
+    [apply, live],
+  );
 
-  const createProject = useCallback(async (draft: ProjectDraft, commandId: string) => {
-    // Await the transaction before closing the form or allowing work on its new board.
-    const id = live ? await live.createProject(draft, commandId) : nextLocalId('project');
-    if (!live) apply({ type: 'create-project', projectId: id, draft, ownerId: stateRef.current.meId });
-    apply({ type: 'set-project-filter', projectId: id });
-    apply({ type: 'sync/merge', patch: { announcement: `پروژه «${draft.name}» ایجاد شد.` } });
-    return id;
-  }, [apply, live]);
+  const createProject = useCallback(
+    async (draft: ProjectDraft, commandId: string) => {
+      // Await the transaction before closing the form or allowing work on its new board.
+      const id = live ? await live.createProject(draft, commandId) : nextLocalId('project');
+      if (!live) apply({ type: 'create-project', projectId: id, draft, ownerId: stateRef.current.meId });
+      apply({ type: 'set-project-filter', projectId: id });
+      apply({ type: 'sync/merge', patch: { announcement: `پروژه «${draft.name}» ایجاد شد.` } });
+      return id;
+    },
+    [apply, live],
+  );
 
-  const saveProfile = useCallback(async (fullName: string, profile: ProfileSettings) => {
-    const error = profileNameError(fullName);
-    if (error) throw new Error(error);
-    if (live) await live.saveProfile(fullName.trim(), profile);
-    else {
-      apply({ type: 'update-display-name', fullName });
-      apply({ type: 'update-profile', profile });
-    }
-  }, [apply, live]);
+  const saveProfile = useCallback(
+    async (fullName: string, profile: ProfileSettings) => {
+      const error = profileNameError(fullName);
+      if (error) throw new Error(error);
+      if (live) await live.saveProfile(fullName.trim(), profile);
+      else {
+        apply({ type: 'update-display-name', fullName });
+        apply({ type: 'update-profile', profile });
+      }
+    },
+    [apply, live],
+  );
 
-  const saveNote = useCallback(async (noteId: string) => {
-    if (live) await live.flushNote(noteId);
-    apply({ type: 'sync/merge', patch: { announcement: 'یادداشت ذخیره شد. آماده نوشتن یادداشت تازه هستید.' } });
-  }, [apply, live]);
+  const saveNote = useCallback(
+    async (noteId: string) => {
+      if (live) await live.flushNote(noteId);
+      apply({
+        type: 'sync/merge',
+        patch: { announcement: 'یادداشت ذخیره شد. آماده نوشتن یادداشت تازه هستید.' },
+      });
+    },
+    [apply, live],
+  );
 
   const liveStatus = useSyncExternalStore(
     useCallback((listener: () => void) => live?.subscribe(listener) ?? (() => undefined), [live]),
@@ -158,7 +194,10 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
   const waiting = state.scheduledMessages.length > 0;
   useEffect(() => {
     if (live || !waiting) return;
-    const timer = window.setInterval(() => dispatch({ type: 'deliver-due-scheduled', now: new Date().toISOString() }), 1_000);
+    const timer = window.setInterval(
+      () => dispatch({ type: 'deliver-due-scheduled', now: new Date().toISOString() }),
+      1_000,
+    );
     return () => window.clearInterval(timer);
   }, [live, waiting, dispatch]);
 
@@ -221,7 +260,22 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
             unreadNotifications,
           }
         : null,
-    [state, dispatch, createTask, saveTask, createProject, saveProfile, saveNote, currentUser, activeWorkspace, unreadFor, isPinned, isMuted, totalUnread, unreadNotifications],
+    [
+      state,
+      dispatch,
+      createTask,
+      saveTask,
+      createProject,
+      saveProfile,
+      saveNote,
+      currentUser,
+      activeWorkspace,
+      unreadFor,
+      isPinned,
+      isMuted,
+      totalUnread,
+      unreadNotifications,
+    ],
   );
 
   const liveValue = useMemo(() => (live ? { store: live, status: liveStatus } : null), [live, liveStatus]);
@@ -241,9 +295,21 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
-const DEMO_STATUS: LiveStatus = { phase: 'ready', connection: 'online', user: null, toast: null, broadcasts: [] };
+const DEMO_STATUS: LiveStatus = {
+  phase: 'ready',
+  connection: 'online',
+  user: null,
+  toast: null,
+  broadcasts: [],
+};
 /** What the server renders: the live app always starts by restoring the session in the browser. */
-const SERVER_STATUS: LiveStatus = { phase: 'restoring', connection: 'offline', user: null, toast: null, broadcasts: [] };
+const SERVER_STATUS: LiveStatus = {
+  phase: 'restoring',
+  connection: 'offline',
+  user: null,
+  toast: null,
+  broadcasts: [],
+};
 
 export function useWorkspace(): WorkspaceContextValue {
   const context = useContext(WorkspaceContext);

@@ -33,7 +33,13 @@ const STRENGTH_TONE: Readonly<Record<Strength['score'], string>> = {
   4: 'bg-status-done',
 };
 
-export function PasswordStrengthMeter({ password, minimumLength }: { readonly password: string; readonly minimumLength: number }) {
+export function PasswordStrengthMeter({
+  password,
+  minimumLength,
+}: {
+  readonly password: string;
+  readonly minimumLength: number;
+}) {
   const strength = measureStrength(password, minimumLength);
   return (
     <div className="flex items-center gap-3">

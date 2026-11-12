@@ -11,7 +11,8 @@ export function adminUrl(): string {
 /** A connection to `database` as one of the roles (`platform_admin`: the read-only platform-admin pool). */
 export function dbUrl(database: string, role: 'app' | 'migrator' | 'platform_admin'): string {
   const url = new URL(adminUrl());
-  const name = role === 'app' ? 'taskin_app' : role === 'migrator' ? 'taskin_migrator' : 'taskin_platform_admin';
+  const name =
+    role === 'app' ? 'taskin_app' : role === 'migrator' ? 'taskin_migrator' : 'taskin_platform_admin';
   url.username = name;
   url.password = name;
   url.pathname = `/${database}`;

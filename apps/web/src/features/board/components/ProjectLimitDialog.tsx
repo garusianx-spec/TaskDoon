@@ -1,7 +1,7 @@
 'use client';
 
 import { formatCount } from '@/lib/format';
-import { Button,Modal } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import { WarningIcon } from '@/components/icons';
 
 export interface ProjectLimitDialogProps {

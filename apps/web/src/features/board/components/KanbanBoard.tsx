@@ -40,12 +40,30 @@ export function KanbanBoard({
   selectedTaskId,
   onAnnounce,
 }: KanbanBoardProps) {
-  const { draggingId, setDraggingId, dropTarget, setDropTarget, grabbedId, renamingId, setRenamingId, deleting, setDeleting, boardRef, cardRefs, hintId, revealBoardEnd, columnLoad, requestDelete, commitMove, handleCardKeyDown } = useKanbanBoard({ tasks, allTasks, columns, onMoveTask, onRemoveColumn, onAnnounce });
+  const {
+    draggingId,
+    setDraggingId,
+    dropTarget,
+    setDropTarget,
+    grabbedId,
+    renamingId,
+    setRenamingId,
+    deleting,
+    setDeleting,
+    boardRef,
+    cardRefs,
+    hintId,
+    revealBoardEnd,
+    columnLoad,
+    requestDelete,
+    commitMove,
+    handleCardKeyDown,
+  } = useKanbanBoard({ tasks, allTasks, columns, onMoveTask, onRemoveColumn, onAnnounce });
 
   return (
     <div
       ref={boardRef}
-      className="scrollbar-thin flex h-full min-h-0 gap-4 overflow-x-auto scroll-smooth p-4"
+      className="flex h-full min-h-0 gap-4 overflow-x-auto scroll-smooth p-4 scrollbar-thin"
       role="application"
       aria-label="بورد کانبان وظایف"
     >
@@ -100,7 +118,7 @@ export function KanbanBoard({
               onCreateTask={() => onCreateTask(column)}
             />
 
-            <div className="scrollbar-thin flex min-h-24 flex-1 flex-col gap-2.5 overflow-y-auto px-2.5 pb-3">
+            <div className="flex min-h-24 flex-1 flex-col gap-2.5 overflow-y-auto px-2.5 pb-3 scrollbar-thin">
               {columnTasks.length === 0 ? (
                 <EmptyState
                   compact

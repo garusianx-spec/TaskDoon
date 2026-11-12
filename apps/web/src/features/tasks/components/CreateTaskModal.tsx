@@ -1,13 +1,9 @@
 'use client';
 
 import { directory } from '@/store/directory';
-import { formatJalali,fromISODate } from '@taskin/jalali';
-import { Avatar,Badge,Button,Checkbox,IconButton,Input,Modal,Textarea } from '@/components/ui';
-import {
-CloseIcon,
-ConvertToTaskIcon,NotebookIcon,SubtaskIcon,
-TaskSquareIcon
-} from '@/components/icons';
+import { formatJalali, fromISODate } from '@taskin/jalali';
+import { Avatar, Badge, Button, Checkbox, IconButton, Input, Modal, Textarea } from '@/components/ui';
+import { CloseIcon, ConvertToTaskIcon, NotebookIcon, SubtaskIcon, TaskSquareIcon } from '@/components/icons';
 import { type CreateTaskModalProps } from '@/features/tasks/types/create-task';
 
 /**
@@ -19,9 +15,32 @@ import { useCreateTaskForm } from '@/features/tasks/hooks/useCreateTaskForm';
 import { TaskPlanningFields } from '@/features/tasks/components/TaskPlanningFields';
 import { TaskCreateFiles } from '@/features/tasks/components/TaskCreateFiles';
 
-export function CreateTaskModal({ open, draft, columns, fixedProjectId, timeZone, onClose, onSubmit, onCreateProject }: CreateTaskModalProps) {
+export function CreateTaskModal({
+  open,
+  draft,
+  columns,
+  fixedProjectId,
+  timeZone,
+  onClose,
+  onSubmit,
+  onCreateProject,
+}: CreateTaskModalProps) {
   const model = useCreateTaskForm({ open, draft, columns, fixedProjectId, timeZone, onClose, onSubmit });
-  const { form, setForm, setTouched, submitError, saving, titleRef, fromMessage, fromNote, presetDate, titleError, projects, close, submit } = model;
+  const {
+    form,
+    setForm,
+    setTouched,
+    submitError,
+    saving,
+    titleRef,
+    fromMessage,
+    fromNote,
+    presetDate,
+    titleError,
+    projects,
+    close,
+    submit,
+  } = model;
 
   return (
     <Modal
@@ -60,8 +79,13 @@ export function CreateTaskModal({ open, draft, columns, fixedProjectId, timeZone
     >
       <fieldset disabled={saving} aria-busy={saving || undefined} className="flex min-w-0 flex-col gap-4">
         {projects.length === 0 && (
-          <div role="note" className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-secondary bg-sunken p-3 text-body-sm text-fg-secondary">
-            <span className="flex-1">هنوز پروژه‌ای در این فضای کاری نیست؛ هر وظیفه در یک پروژه ثبت می‌شود.</span>
+          <div
+            role="note"
+            className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-secondary bg-sunken p-3 text-body-sm text-fg-secondary"
+          >
+            <span className="flex-1">
+              هنوز پروژه‌ای در این فضای کاری نیست؛ هر وظیفه در یک پروژه ثبت می‌شود.
+            </span>
             {onCreateProject && (
               <Button size="sm" variant="secondary" onClick={onCreateProject}>
                 ساخت پروژه
@@ -92,7 +116,12 @@ export function CreateTaskModal({ open, draft, columns, fixedProjectId, timeZone
           className="min-h-28"
         />
 
-        <TaskPlanningFields model={model} fixedProjectId={fixedProjectId} columns={columns} timeZone={timeZone} />
+        <TaskPlanningFields
+          model={model}
+          fixedProjectId={fixedProjectId}
+          columns={columns}
+          timeZone={timeZone}
+        />
 
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-body-sm font-medium text-fg-secondary">مسئولان</legend>
@@ -166,7 +195,14 @@ export function CreateTaskModal({ open, draft, columns, fixedProjectId, timeZone
 
         <TaskCreateFiles model={model} />
 
-        {submitError && <p role="alert" className="rounded-lg border border-error-300 bg-error-50 px-3 py-2 text-body-sm text-status-blocked">{submitError}</p>}
+        {submitError && (
+          <p
+            role="alert"
+            className="border-error-300 rounded-lg border bg-error-50 px-3 py-2 text-body-sm text-status-blocked"
+          >
+            {submitError}
+          </p>
+        )}
 
         {fromMessage && (
           <Badge tone="brand" size="md" iconStart={<ConvertToTaskIcon size={13} />}>

@@ -1,7 +1,18 @@
-import type { SiteContent,SiteDocumentKind } from '@taskin/contracts';
+import type { SiteContent, SiteDocumentKind } from '@taskin/contracts';
 
 export function initialContent(kind: SiteDocumentKind): SiteContent {
-  const data: Record<string, unknown> = kind === 'pricing' ? { planId: 'free', currency: 'IRR', features: [], cta: { label: 'شروع رایگان', href: '/login' } } : kind === 'faq' ? { category: 'عمومی', answer: '' } : kind === 'navigation' ? { header: [], footer: [], social: [] } : kind === 'settings' ? { siteName: 'تسک‌دون', description: '', primaryCta: { label: 'شروع رایگان', href: '/login' } } : kind === 'job' ? { employmentType: '', location: '', requirements: [] } : {};
+  const data: Record<string, unknown> =
+    kind === 'pricing'
+      ? { planId: 'free', currency: 'IRR', features: [], cta: { label: 'شروع رایگان', href: '/login' } }
+      : kind === 'faq'
+        ? { category: 'عمومی', answer: '' }
+        : kind === 'navigation'
+          ? { header: [], footer: [], social: [] }
+          : kind === 'settings'
+            ? { siteName: 'تسک‌دون', description: '', primaryCta: { label: 'شروع رایگان', href: '/login' } }
+            : kind === 'job'
+              ? { employmentType: '', location: '', requirements: [] }
+              : {};
   return { title: '', description: '', sections: [], seo: {}, data };
 }
 
@@ -9,12 +20,35 @@ export function initialContent(kind: SiteDocumentKind): SiteContent {
 export function normalizeContent(content: SiteContent): SiteContent {
   const next = structuredClone(content);
   const clean = (value: unknown, key = ''): unknown => {
-    if (value === undefined || value === null && ['price', 'yearlyPrice'].includes(key)) return undefined;
-    if (typeof value === 'string' && !value.trim() && ['href', 'src', 'url', 'siteUrl', 'contactEmail', 'canonical', 'ogImage', 'twitterImage', 'favicon', 'defaultOgImage', 'referenceId', 'videoUrl'].includes(key)) return undefined;
+    if (value === undefined || (value === null && ['price', 'yearlyPrice'].includes(key))) return undefined;
+    if (
+      typeof value === 'string' &&
+      !value.trim() &&
+      [
+        'href',
+        'src',
+        'url',
+        'siteUrl',
+        'contactEmail',
+        'canonical',
+        'ogImage',
+        'twitterImage',
+        'favicon',
+        'defaultOgImage',
+        'referenceId',
+        'videoUrl',
+      ].includes(key)
+    )
+      return undefined;
     if (Array.isArray(value)) return value.map((entry) => clean(entry));
     if (value && typeof value === 'object') {
-      const result = Object.fromEntries(Object.entries(value).map(([name, child]) => [name, clean(child, name)]).filter(([, child]) => child !== undefined));
-      if (['cta', 'secondaryCta', 'primaryCta', 'headerCta'].includes(key) && (!result.href || !result.label)) return undefined;
+      const result = Object.fromEntries(
+        Object.entries(value)
+          .map(([name, child]) => [name, clean(child, name)])
+          .filter(([, child]) => child !== undefined),
+      );
+      if (['cta', 'secondaryCta', 'primaryCta', 'headerCta'].includes(key) && (!result.href || !result.label))
+        return undefined;
       if (['media', 'cover', 'logo'].includes(key) && !result.src) return undefined;
       return result;
     }

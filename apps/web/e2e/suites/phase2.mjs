@@ -4,7 +4,10 @@ import { base, check, eventually, finish, launch, out, visible, watchConsole } f
 // re-encoded on a canvas, «ارسال تصویر به صورت فایل», files dropped on the chat), voice-note
 // speeds and new notes that are never kept blank. The project limit needs a real plan: the live
 // flow covers it.
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64');
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==',
+  'base64',
+);
 const PDF = Buffer.from(`%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\n${' '.repeat(120)}\n%%EOF\n`);
 
 const browser = await launch();
@@ -55,17 +58,27 @@ const rows = preview.getByRole('list', { name: 'فایل‌های پیوست' })
 check(await eventually(async () => (await rows.count()) === 2), 'each picked file is listed');
 check(await visible(rows.filter({ hasText: 'منظره.png' }).getByText(/مگابایت|کیلوبایت/)), 'with its size');
 check(
-  await eventually(async () => rows.filter({ hasText: 'منظره.png' }).locator('img').evaluate((image) => image.complete && image.naturalWidth > 0)),
+  await eventually(async () =>
+    rows
+      .filter({ hasText: 'منظره.png' })
+      .locator('img')
+      .evaluate((image) => image.complete && image.naturalWidth > 0),
+  ),
   'a picture shows its thumbnail',
 );
 check((await chat.getByText('برنامه.pdf').count()) === 0, 'nothing is sent while the preview is open');
 await preview.getByRole('button', { name: 'حذف برنامه.pdf' }).click();
 check(await eventually(async () => (await rows.count()) === 1), 'a file can be taken out of the preview');
 check(await visible(preview.getByRole('button', { name: 'افزودن فایل' })), '«افزودن فایل» adds more');
-await preview.getByTestId('attachment-add-input').setInputFiles({ name: 'پیوست دوم.pdf', mimeType: 'application/pdf', buffer: PDF });
+await preview
+  .getByTestId('attachment-add-input')
+  .setInputFiles({ name: 'پیوست دوم.pdf', mimeType: 'application/pdf', buffer: PDF });
 check(await eventually(async () => (await rows.count()) === 2), '…and the added file joins the queue');
 const asFile = preview.getByRole('checkbox', { name: 'ارسال تصویر به صورت فایل' });
-check((await asFile.getAttribute('aria-checked')) === 'false', '«ارسال تصویر به صورت فایل» is offered, off by default');
+check(
+  (await asFile.getAttribute('aria-checked')) === 'false',
+  '«ارسال تصویر به صورت فایل» is offered, off by default',
+);
 await preview.getByPlaceholder('درج عنوان برای تصویر...').fill('نمای کلی پروژه');
 await page.screenshot({ path: `${out}/p2_preview.png` });
 await preview.getByRole('button', { name: 'ارسال', exact: true }).click();
@@ -73,47 +86,95 @@ check(await eventually(async () => (await preview.count()) === 0), 'the preview 
 
 // Photos are re-encoded on a canvas (WebP) and scaled to at most 2560 px before any upload.
 const sentPhoto = chat.getByRole('img', { name: 'منظره.webp' });
-check(await eventually(async () => sentPhoto.evaluate((image) => image.complete && image.naturalWidth === 2560), 10_000), 'the photo is compressed to WebP and scaled down to 2560 px');
-const photoBubble = chat.locator('div.group\\/message').filter({ has: page.getByRole('img', { name: 'منظره.webp' }) }).last();
+check(
+  await eventually(
+    async () => sentPhoto.evaluate((image) => image.complete && image.naturalWidth === 2560),
+    10_000,
+  ),
+  'the photo is compressed to WebP and scaled down to 2560 px',
+);
+const photoBubble = chat
+  .locator('div.group\\/message')
+  .filter({ has: page.getByRole('img', { name: 'منظره.webp' }) })
+  .last();
 check(await visible(photoBubble.getByText('نمای کلی پروژه')), 'the caption sits under the photo');
-check(await visible(photoBubble.getByRole('button', { name: 'دانلود منظره.webp' })), 'a photo can still be downloaded');
-check(await visible(chat.getByRole('button', { name: 'دانلود پیوست دوم.pdf' })), 'the document goes as a file card');
+check(
+  await visible(photoBubble.getByRole('button', { name: 'دانلود منظره.webp' })),
+  'a photo can still be downloaded',
+);
+check(
+  await visible(chat.getByRole('button', { name: 'دانلود پیوست دوم.pdf' })),
+  'the document goes as a file card',
+);
 
 // «ارسال تصویر به صورت فایل»: the picture goes as it is, as a document card, not an inline photo.
-await page.getByTestId('chat-file-input').setInputFiles({ name: 'نقشه.png', mimeType: 'image/png', buffer: PNG });
+await page
+  .getByTestId('chat-file-input')
+  .setInputFiles({ name: 'نقشه.png', mimeType: 'image/png', buffer: PNG });
 await asFile.click();
-check(await eventually(async () => (await asFile.getAttribute('aria-checked')) === 'true'), 'the box can be ticked');
+check(
+  await eventually(async () => (await asFile.getAttribute('aria-checked')) === 'true'),
+  'the box can be ticked',
+);
 await preview.getByRole('button', { name: 'ارسال', exact: true }).click();
-check(await visible(chat.getByRole('button', { name: 'دانلود نقشه.png' })), 'a picture sent as a file keeps its name, as a download card');
+check(
+  await visible(chat.getByRole('button', { name: 'دانلود نقشه.png' })),
+  'a picture sent as a file keeps its name, as a download card',
+);
 check((await chat.getByRole('img', { name: 'نقشه.png' }).count()) === 0, '…with no inline photo');
 
 // Files dropped anywhere on the conversation open the same preview.
 await chat.evaluate((section) => {
   const transfer = new DataTransfer();
   transfer.items.add(new File(['دو خط'], 'یادداشت جلسه.txt', { type: 'text/plain' }));
-  section.dispatchEvent(new DragEvent('dragover', { dataTransfer: transfer, bubbles: true, cancelable: true }));
+  section.dispatchEvent(
+    new DragEvent('dragover', { dataTransfer: transfer, bubbles: true, cancelable: true }),
+  );
   section.dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true }));
 });
-check(await eventually(async () => (await rows.filter({ hasText: 'یادداشت جلسه.txt' }).count()) === 1), 'a dropped file opens the preview');
-check((await preview.getByRole('checkbox', { name: 'ارسال تصویر به صورت فایل' }).count()) === 0, 'no picture, no «به صورت فایل» box');
+check(
+  await eventually(async () => (await rows.filter({ hasText: 'یادداشت جلسه.txt' }).count()) === 1),
+  'a dropped file opens the preview',
+);
+check(
+  (await preview.getByRole('checkbox', { name: 'ارسال تصویر به صورت فایل' }).count()) === 0,
+  'no picture, no «به صورت فایل» box',
+);
 await preview.getByRole('button', { name: 'انصراف' }).click();
-check(await eventually(async () => (await preview.count()) === 0 && (await chat.getByText('یادداشت جلسه.txt').count()) === 0), '«انصراف» sends nothing');
+check(
+  await eventually(
+    async () => (await preview.count()) === 0 && (await chat.getByText('یادداشت جلسه.txt').count()) === 0,
+  ),
+  '«انصراف» sends nothing',
+);
 
 /* ---------- 2. Voice-note speeds ---------- */
 
 const speed = chat.getByRole('button', { name: /^سرعت پیام صوتی/ }).first();
 check(((await speed.getAttribute('aria-label')) ?? '').endsWith('۱×'), 'a voice note plays at ۱× by default');
 await speed.click();
-check(await eventually(async () => ((await speed.getAttribute('aria-label')) ?? '').endsWith('۱٫۵×')), '۱× → ۱٫۵×');
+check(
+  await eventually(async () => ((await speed.getAttribute('aria-label')) ?? '').endsWith('۱٫۵×')),
+  '۱× → ۱٫۵×',
+);
 await speed.click();
-check(await eventually(async () => ((await speed.getAttribute('aria-label')) ?? '').endsWith('۲×')), '۱٫۵× → ۲×');
+check(
+  await eventually(async () => ((await speed.getAttribute('aria-label')) ?? '').endsWith('۲×')),
+  '۱٫۵× → ۲×',
+);
 const voice = speed.locator('..');
 await voice.getByRole('button', { name: /^پخش پیام صوتی/ }).click();
 const position = voice.getByRole('slider');
-check(await eventually(async () => Number(await position.getAttribute('aria-valuenow')) >= 3, 2_000), 'at ۲× three seconds play in about one and a half');
+check(
+  await eventually(async () => Number(await position.getAttribute('aria-valuenow')) >= 3, 2_000),
+  'at ۲× three seconds play in about one and a half',
+);
 await voice.getByRole('button', { name: /^توقف پیام صوتی/ }).click();
 await speed.click();
-check(await eventually(async () => ((await speed.getAttribute('aria-label')) ?? '').endsWith('۱×')), '۲× → back to ۱×');
+check(
+  await eventually(async () => ((await speed.getAttribute('aria-label')) ?? '').endsWith('۱×')),
+  '۲× → back to ۱×',
+);
 
 /* ---------- 3. Blank notes are never kept ---------- */
 
@@ -132,7 +193,10 @@ check((await list.getByText('بدون عنوان').count()) === 0, '…leaving n
 await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
 await page.getByRole('textbox', { name: /عنوان/ }).first().fill('   ');
 await notebook.getByRole('navigation', { name: 'دسته‌ها' }).getByRole('button', { name: /^کاری/ }).click();
-await notebook.getByRole('navigation', { name: 'دسته‌ها' }).getByRole('button', { name: /^همه یادداشت‌ها/ }).click();
+await notebook
+  .getByRole('navigation', { name: 'دسته‌ها' })
+  .getByRole('button', { name: /^همه یادداشت‌ها/ })
+  .click();
 check(await eventually(async () => (await list.count()) === before), 'spaces alone do not keep a note');
 
 await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
@@ -140,11 +204,20 @@ await rail.getByRole('link', { name: 'گفتگوها' }).click();
 await page.waitForURL('**/chats');
 await rail.getByRole('link', { name: 'یادداشت‌ها' }).click();
 await page.waitForURL('**/notes');
-check(await eventually(async () => (await list.count()) === before), 'leaving the notebook drops a blank draft too');
+check(
+  await eventually(async () => (await list.count()) === before),
+  'leaving the notebook drops a blank draft too',
+);
 
 await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
 await page.getByRole('textbox', { name: /عنوان/ }).first().fill('یادداشتی که می‌ماند');
 await list.nth(1).getByRole('button').click();
-check(await eventually(async () => (await list.count()) === before + 1 && (await list.getByText('یادداشتی که می‌ماند').count()) === 1), 'a note with words in it stays');
+check(
+  await eventually(
+    async () =>
+      (await list.count()) === before + 1 && (await list.getByText('یادداشتی که می‌ماند').count()) === 1,
+  ),
+  'a note with words in it stays',
+);
 
 await finish(browser);

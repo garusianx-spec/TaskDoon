@@ -1,18 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import type { AvatarTone,WorkspaceDraft } from '@taskin/contracts';
+import type { AvatarTone, WorkspaceDraft } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { toPersianDigits } from '@taskin/jalali';
 import { monogram } from '@taskin/text';
 import { useNamespacedId } from '@/hooks/useId';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
-import { Button,Input,Modal,Textarea } from '@/components/ui';
+import { Button, Input, Modal, Textarea } from '@/components/ui';
 import { FileUploader } from '@/components/shared/FileUploader';
-import { CheckIcon,GridIcon,ImageIcon,TrashIcon } from '@/components/icons';
-import { WORKSPACE_TONES,WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
-import { readWorkspaceIcon,WORKSPACE_ICON_TYPES,workspaceIconError } from '@/features/workspace/lib/workspace-icon';
+import { CheckIcon, GridIcon, ImageIcon, TrashIcon } from '@/components/icons';
+import { WORKSPACE_TONES, WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
+import {
+  readWorkspaceIcon,
+  WORKSPACE_ICON_TYPES,
+  workspaceIconError,
+} from '@/features/workspace/lib/workspace-icon';
 
 export interface CreateWorkspaceModalProps {
   readonly open: boolean;
@@ -41,7 +45,13 @@ const TONE_LABELS: Readonly<Record<AvatarTone, string>> = {
  * is a two-letter monogram generated from the name as it is typed, on the chosen colour.
  * On submit the workspace is registered and becomes the active one.
  */
-export function CreateWorkspaceModal({ open, onClose, onSubmit, requirePassword = false, allowIcon = true }: CreateWorkspaceModalProps) {
+export function CreateWorkspaceModal({
+  open,
+  onClose,
+  onSubmit,
+  requirePassword = false,
+  allowIcon = true,
+}: CreateWorkspaceModalProps) {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [description, setDescription] = useState('');
@@ -69,7 +79,9 @@ export function CreateWorkspaceModal({ open, onClose, onSubmit, requirePassword 
 
   const nameError = touched && !name.trim() ? 'نام فضای کاری الزامی است.' : undefined;
   const passwordError =
-    requirePassword && touched && password.length < MIN_PASSWORD ? `رمز مدیر دست‌کم ${toPersianDigits(MIN_PASSWORD)} نویسه باشد.` : undefined;
+    requirePassword && touched && password.length < MIN_PASSWORD
+      ? `رمز مدیر دست‌کم ${toPersianDigits(MIN_PASSWORD)} نویسه باشد.`
+      : undefined;
 
   const onPickIcon = async (file: File) => {
     const error = workspaceIconError(file);
@@ -85,7 +97,12 @@ export function CreateWorkspaceModal({ open, onClose, onSubmit, requirePassword 
   const submit = () => {
     setTouched(true);
     if (!name.trim() || (requirePassword && password.length < MIN_PASSWORD)) return;
-    const draft = { name: name.trim(), description: description.trim(), tone, iconUrl: allowIcon ? iconUrl : null };
+    const draft = {
+      name: name.trim(),
+      description: description.trim(),
+      tone,
+      iconUrl: allowIcon ? iconUrl : null,
+    };
     if (requirePassword) onSubmit(draft, password);
     else onSubmit(draft);
   };
@@ -127,7 +144,12 @@ export function CreateWorkspaceModal({ open, onClose, onSubmit, requirePassword 
                   {iconUrl ? 'تغییر تصویر' : 'بارگذاری تصویر'}
                 </FileUploader>
                 {iconUrl && (
-                  <Button size="xs" variant="ghost" iconStart={<TrashIcon size={14} />} onClick={() => setIconUrl(null)}>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    iconStart={<TrashIcon size={14} />}
+                    onClick={() => setIconUrl(null)}
+                  >
                     حذف تصویر
                   </Button>
                 )}
@@ -139,7 +161,9 @@ export function CreateWorkspaceModal({ open, onClose, onSubmit, requirePassword 
               </p>
             ) : (
               <p className="text-micro text-fg-tertiary">
-                {allowIcon ? 'بدون تصویر، دو حرف اول نام به‌عنوان نشان نمایش داده می‌شود.' : 'دو حرف اول نام به‌عنوان نشان نمایش داده می‌شود.'}
+                {allowIcon
+                  ? 'بدون تصویر، دو حرف اول نام به‌عنوان نشان نمایش داده می‌شود.'
+                  : 'دو حرف اول نام به‌عنوان نشان نمایش داده می‌شود.'}
               </p>
             )}
           </div>
@@ -182,7 +206,12 @@ export function CreateWorkspaceModal({ open, onClose, onSubmit, requirePassword 
         {!iconUrl && (
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 text-body-sm font-medium text-fg-secondary">رنگ نشان</legend>
-            <div role="radiogroup" aria-label="رنگ نشان" onKeyDown={tones.onKeyDown} className="flex flex-wrap gap-2">
+            <div
+              role="radiogroup"
+              aria-label="رنگ نشان"
+              onKeyDown={tones.onKeyDown}
+              className="flex flex-wrap gap-2"
+            >
               {WORKSPACE_TONES.map((entry, index) => {
                 const selected = entry === tone;
                 return (

@@ -1,22 +1,16 @@
 'use client';
 
+import { useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import {
-useImperativeHandle,
-useLayoutEffect,
-useRef,
-useState,
-type KeyboardEvent
-} from 'react';
-import {
-blockId,
-checklistEntry,
-normaliseNoteBlocks,
-parseNoteBlocks,
-serialiseNoteBlocks,
-type ChecklistEntry,
-type NoteBlock,
+  blockId,
+  checklistEntry,
+  normaliseNoteBlocks,
+  parseNoteBlocks,
+  serialiseNoteBlocks,
+  type ChecklistEntry,
+  type NoteBlock,
 } from '@taskin/text';
-import { type NoteBlockEditorHandle,type NoteBlockEditorProps } from '@/features/notes/types/block-editor';
+import { type NoteBlockEditorHandle, type NoteBlockEditorProps } from '@/features/notes/types/block-editor';
 import type { ForwardedRef } from 'react';
 
 type FocusTarget = { readonly id: string; readonly at: number | 'end' };
@@ -26,7 +20,10 @@ const CHECKLIST_SHORTCUT = /^\s*(?:[-*]\s)?\[([ xX]?)\]\s$/;
 /** List continuation for plain Markdown lists inside text blocks. */
 const LIST_PREFIX = /^(\s*)([-*] |(\d+)[.)] )/;
 
-export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, ref: ForwardedRef<NoteBlockEditorHandle>) {
+export function useNoteBlocks(
+  { initialBody, onChange }: NoteBlockEditorProps,
+  ref: ForwardedRef<NoteBlockEditorHandle>,
+) {
   const [blocks, setBlocks] = useState<readonly NoteBlock[]>(() => parseNoteBlocks(initialBody));
   const fields = useRef(new Map<string, HTMLInputElement | HTMLTextAreaElement>());
   const pendingFocus = useRef<FocusTarget | null>(null);
@@ -70,14 +67,21 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
     return true;
   };
 
-  const updateBlock = (id: string, update: (block: NoteBlock) => readonly NoteBlock[]): readonly NoteBlock[] =>
-    blocks.flatMap((block) => (block.id === id ? update(block) : [block]));
+  const updateBlock = (
+    id: string,
+    update: (block: NoteBlock) => readonly NoteBlock[],
+  ): readonly NoteBlock[] => blocks.flatMap((block) => (block.id === id ? update(block) : [block]));
 
   const updateItem = (listId: string, itemId: string, patch: Partial<ChecklistEntry>) =>
     commit(
       updateBlock(listId, (block) =>
         block.kind === 'checklist'
-          ? [{ ...block, items: block.items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)) }]
+          ? [
+              {
+                ...block,
+                items: block.items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)),
+              },
+            ]
           : [block],
       ),
     );
@@ -111,7 +115,10 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
   };
 
   const setText = (id: string, text: string, caret: number) =>
-    commit(updateBlock(id, (block) => (block.kind === 'text' ? [{ ...block, text }] : [block])), { id, at: caret });
+    commit(
+      updateBlock(id, (block) => (block.kind === 'text' ? [{ ...block, text }] : [block])),
+      { id, at: caret },
+    );
 
   useImperativeHandle(ref, () => ({
     focus() {
@@ -125,7 +132,11 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
       if (!id) return;
       const { selectionStart: start, selectionEnd: end, value } = field;
       const selected = value.slice(start, end) || placeholder;
-      setText(id, `${value.slice(0, start)}${marker}${selected}${marker}${value.slice(end)}`, start + marker.length + selected.length);
+      setText(
+        id,
+        `${value.slice(0, start)}${marker}${selected}${marker}${value.slice(end)}`,
+        start + marker.length + selected.length,
+      );
     },
     prefixLines(prefix) {
       const field = activeTextarea();
@@ -144,7 +155,8 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
     insertChecklistItem() {
       const focused = document.activeElement;
       const owner = blocks.find(
-        (block) => block.kind === 'checklist' && block.items.some((item) => fields.current.get(item.id) === focused),
+        (block) =>
+          block.kind === 'checklist' && block.items.some((item) => fields.current.get(item.id) === focused),
       );
       if (owner && owner.kind === 'checklist') {
         const index = owner.items.findIndex((item) => fields.current.get(item.id) === focused);
@@ -152,7 +164,12 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
         commit(
           updateBlock(owner.id, (block) =>
             block.kind === 'checklist'
-              ? [{ ...block, items: [...block.items.slice(0, index + 1), entry, ...block.items.slice(index + 1)] }]
+              ? [
+                  {
+                    ...block,
+                    items: [...block.items.slice(0, index + 1), entry, ...block.items.slice(index + 1)],
+                  },
+                ]
               : [block],
           ),
           { id: entry.id, at: 0 },
@@ -172,7 +189,14 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
     const line = value.slice(0, selectionStart).split('\n').length - 1;
     const lineText = value.split('\n')[line] ?? '';
     const shortcut = CHECKLIST_SHORTCUT.exec(lineText);
-    if (shortcut && selectionStart === value.split('\n').slice(0, line + 1).join('\n').length) {
+    if (
+      shortcut &&
+      selectionStart ===
+        value
+          .split('\n')
+          .slice(0, line + 1)
+          .join('\n').length
+    ) {
       // Commit the typed text first so the split works on what is on screen.
       const typed = { ...block, text: value };
       const lines = value.split('\n');
@@ -182,7 +206,9 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
           candidate.id !== typed.id
             ? [candidate]
             : [
-                ...(line > 0 ? [{ kind: 'text' as const, id: typed.id, text: lines.slice(0, line).join('\n') }] : []),
+                ...(line > 0
+                  ? [{ kind: 'text' as const, id: typed.id, text: lines.slice(0, line).join('\n') }]
+                  : []),
                 { kind: 'checklist' as const, id: blockId('b'), items: [entry] },
                 ...(line < lines.length - 1
                   ? [{ kind: 'text' as const, id: blockId('b'), text: lines.slice(line + 1).join('\n') }]
@@ -196,40 +222,50 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
     commit(updateBlock(block.id, () => [{ ...block, text: value }]));
   };
 
-  const onTextKeyDown = (block: Extract<NoteBlock, { kind: 'text' }>) => (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    const field = event.currentTarget;
-    const { selectionStart, selectionEnd, value } = field;
+  const onTextKeyDown =
+    (block: Extract<NoteBlock, { kind: 'text' }>) => (event: KeyboardEvent<HTMLTextAreaElement>) => {
+      const field = event.currentTarget;
+      const { selectionStart, selectionEnd, value } = field;
 
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'b' || event.key === 'i')) {
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'b' || event.key === 'i')) {
+        event.preventDefault();
+        const marker = event.key === 'b' ? '**' : '*';
+        const selected =
+          value.slice(selectionStart, selectionEnd) || (event.key === 'b' ? 'متن پررنگ' : 'متن مورب');
+        setText(
+          block.id,
+          `${value.slice(0, selectionStart)}${marker}${selected}${marker}${value.slice(selectionEnd)}`,
+          selectionStart + marker.length + selected.length,
+        );
+        return;
+      }
+
+      if (event.key === 'ArrowUp' && !value.slice(0, selectionStart).includes('\n')) {
+        if (moveFocus(block.id, -1)) event.preventDefault();
+        return;
+      }
+      if (event.key === 'ArrowDown' && !value.slice(selectionEnd).includes('\n')) {
+        if (moveFocus(block.id, 1)) event.preventDefault();
+        return;
+      }
+
+      if (event.key !== 'Enter' || event.shiftKey || selectionStart !== selectionEnd) return;
+      const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+      const match = LIST_PREFIX.exec(value.slice(lineStart, selectionStart));
+      if (!match) return;
       event.preventDefault();
-      const marker = event.key === 'b' ? '**' : '*';
-      const selected = value.slice(selectionStart, selectionEnd) || (event.key === 'b' ? 'متن پررنگ' : 'متن مورب');
-      setText(block.id, `${value.slice(0, selectionStart)}${marker}${selected}${marker}${value.slice(selectionEnd)}`, selectionStart + marker.length + selected.length);
-      return;
-    }
-
-    if (event.key === 'ArrowUp' && !value.slice(0, selectionStart).includes('\n')) {
-      if (moveFocus(block.id, -1)) event.preventDefault();
-      return;
-    }
-    if (event.key === 'ArrowDown' && !value.slice(selectionEnd).includes('\n')) {
-      if (moveFocus(block.id, 1)) event.preventDefault();
-      return;
-    }
-
-    if (event.key !== 'Enter' || event.shiftKey || selectionStart !== selectionEnd) return;
-    const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
-    const match = LIST_PREFIX.exec(value.slice(lineStart, selectionStart));
-    if (!match) return;
-    event.preventDefault();
-    const [prefix, indent = '', marker = '', number] = match;
-    if (value.slice(lineStart + prefix.length, selectionStart).trim() === '') {
-      setText(block.id, value.slice(0, lineStart) + value.slice(selectionStart), lineStart);
-      return;
-    }
-    const insert = `\n${indent}${number !== undefined ? `${Number(number) + 1}. ` : marker}`;
-    setText(block.id, value.slice(0, selectionStart) + insert + value.slice(selectionStart), selectionStart + insert.length);
-  };
+      const [prefix, indent = '', marker = '', number] = match;
+      if (value.slice(lineStart + prefix.length, selectionStart).trim() === '') {
+        setText(block.id, value.slice(0, lineStart) + value.slice(selectionStart), lineStart);
+        return;
+      }
+      const insert = `\n${indent}${number !== undefined ? `${Number(number) + 1}. ` : marker}`;
+      setText(
+        block.id,
+        value.slice(0, selectionStart) + insert + value.slice(selectionStart),
+        selectionStart + insert.length,
+      );
+    };
 
   const onItemKeyDown =
     (list: Extract<NoteBlock, { kind: 'checklist' }>, item: ChecklistEntry, index: number) =>
@@ -247,7 +283,9 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
           const remainingItems = list.items.filter((entry) => entry.id !== item.id);
           const trailing = list.items.slice(index + 1);
           const textBlock =
-            after?.kind === 'text' && trailing.length === 0 ? after : { kind: 'text' as const, id: blockId('b'), text: '' };
+            after?.kind === 'text' && trailing.length === 0
+              ? after
+              : { kind: 'text' as const, id: blockId('b'), text: '' };
           commit(
             [
               ...blocks.slice(0, listIndex),
@@ -293,7 +331,9 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
                 ...list,
                 items: list.items
                   .filter((entry) => entry.id !== item.id)
-                  .map((entry) => (entry.id === previous.id ? { ...entry, text: previous.text + item.text } : entry)),
+                  .map((entry) =>
+                    entry.id === previous.id ? { ...entry, text: previous.text + item.text } : entry,
+                  ),
               },
             ]),
             { id: previous.id, at: previous.text.length },
@@ -325,6 +365,19 @@ export function useNoteBlocks({ initialBody, onChange }: NoteBlockEditorProps, r
 
   const onlyBlock = blocks.length === 1 && blocks[0]?.kind === 'text' && blocks[0].text === '';
 
-  const focusText = (blockId: string) => { activeText.current = blockId; };
-  return { blocks, register, onTextChange, onTextKeyDown, updateItem, onItemKeyDown, commit, updateBlock, onlyBlock, focusText };
+  const focusText = (blockId: string) => {
+    activeText.current = blockId;
+  };
+  return {
+    blocks,
+    register,
+    onTextChange,
+    onTextKeyDown,
+    updateItem,
+    onItemKeyDown,
+    commit,
+    updateBlock,
+    onlyBlock,
+    focusText,
+  };
 }

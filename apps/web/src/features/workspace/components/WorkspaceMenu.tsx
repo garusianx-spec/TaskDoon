@@ -4,8 +4,8 @@ import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { PopoverDivider } from '@/components/ui';
-import { MenuItem,MenuList } from '@/components/ui/Menu';
-import { AddIcon,SettingsIcon } from '@/components/icons';
+import { MenuItem, MenuList } from '@/components/ui/Menu';
+import { AddIcon, SettingsIcon } from '@/components/icons';
 import { WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
 
 export interface WorkspaceMenuProps {
@@ -53,7 +53,7 @@ export function WorkspaceMenu({ close }: WorkspaceMenuProps) {
               {workspace.suspended ? (
                 <span className="text-micro font-normal text-status-blocked">معلق؛ فعلاً در دسترس نیست</span>
               ) : (
-                <span className="numeric text-micro font-normal text-fg-tertiary">
+                <span className="text-micro font-normal text-fg-tertiary numeric">
                   {`${formatCount(workspace.memberCount)} عضو، طرح ${workspace.plan}`}
                 </span>
               )}

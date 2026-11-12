@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect,useRef,type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -117,7 +117,7 @@ export function Modal({
           />
         </header>
 
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+        <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-thin sm:px-6">{children}</div>
 
         {footer && (
           <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-secondary bg-sunken px-5 py-4 sm:px-6">

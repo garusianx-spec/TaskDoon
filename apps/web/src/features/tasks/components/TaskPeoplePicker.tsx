@@ -3,14 +3,9 @@
 import type { User } from '@taskin/contracts';
 import { directory } from '@/store/directory';
 import { userById } from '@/store/selectors';
-import {
-Avatar,Popover
-} from '@/components/ui';
-import { MenuItem,MenuList } from '@/components/ui/Menu';
-import {
-UserAddIcon
-} from '@/components/icons';
-
+import { Avatar, Popover } from '@/components/ui';
+import { MenuItem, MenuList } from '@/components/ui/Menu';
+import { UserAddIcon } from '@/components/icons';
 
 interface PeoplePickerProps {
   readonly selectedIds: readonly string[];
@@ -20,10 +15,14 @@ interface PeoplePickerProps {
   readonly single?: boolean;
 }
 
-export function PeoplePicker({ selectedIds, onToggle, label, emptyLabel, single = false }: PeoplePickerProps) {
-  const selected = selectedIds
-    .map((id) => userById(id))
-    .filter((user): user is User => user !== undefined);
+export function PeoplePicker({
+  selectedIds,
+  onToggle,
+  label,
+  emptyLabel,
+  single = false,
+}: PeoplePickerProps) {
+  const selected = selectedIds.map((id) => userById(id)).filter((user): user is User => user !== undefined);
 
   return (
     <Popover

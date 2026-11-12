@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect,useRef,type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -70,7 +70,7 @@ export function BottomSheet({ open, onClose, title, description, children, class
             </p>
           )}
         </div>
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-3 pb-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-3 pb-4 scrollbar-thin">{children}</div>
       </div>
     </div>,
     document.body,

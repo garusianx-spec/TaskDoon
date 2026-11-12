@@ -33,7 +33,10 @@ export function SessionsDrawer({
       className="sm:!w-[min(44rem,100vw)]"
       footer={
         user && (
-          <Link href={`/admin/users/${user.id}`} className="text-body-sm font-medium text-fg-brand hover:underline">
+          <Link
+            href={`/admin/users/${user.id}`}
+            className="text-body-sm font-medium text-fg-brand hover:underline"
+          >
             مشاهده پروفایل کامل
           </Link>
         )

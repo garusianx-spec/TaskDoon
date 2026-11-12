@@ -106,7 +106,11 @@ function summary(h) {
     return BUCKETS - 1;
   };
   let max = 0;
-  for (let i = BUCKETS - 1; i >= 0; i -= 1) if (h[i] > 0) { max = i; break; }
+  for (let i = BUCKETS - 1; i >= 0; i -= 1)
+    if (h[i] > 0) {
+      max = i;
+      break;
+    }
   return count === 0 ? { count } : { count, p50: at(0.5), p95: at(0.95), p99: at(0.99), max };
 }
 
@@ -122,7 +126,16 @@ async function worker() {
   const fanout = histogram();
   const connectTime = histogram();
   const handshakeTime = histogram();
-  const counts = { sent: 0, acked: 0, rejected: new Map(), timedOut: 0, delivered: 0, reads: 0, dropped: new Map(), events: new Map() };
+  const counts = {
+    sent: 0,
+    acked: 0,
+    rejected: new Map(),
+    timedOut: 0,
+    delivered: 0,
+    reads: 0,
+    dropped: new Map(),
+    events: new Map(),
+  };
   const ackedByConversation = new Map();
   // A busy load generator inflates what it measures: report its own event-loop delay.
   const loopDelay = monitorEventLoopDelay({ resolution: 10 });
@@ -153,7 +166,14 @@ async function worker() {
   function connectOne(assignment) {
     return new Promise((resolve) => {
       const started = now();
-      const socket = io(assignment.node, { path: '/rt', transports: ['websocket'], auth: { token: assignment.token }, reconnection: false, forceNew: true, timeout: 30_000 });
+      const socket = io(assignment.node, {
+        path: '/rt',
+        transports: ['websocket'],
+        auth: { token: assignment.token },
+        reconnection: false,
+        forceNew: true,
+        timeout: 30_000,
+      });
       const client = { socket, conversationId: assignment.conversationId, connected: false };
       socket.once('connect_error', (error) => {
         socket.close();
@@ -161,18 +181,20 @@ async function worker() {
       });
       socket.once('connect', () => {
         record(handshakeTime, now() - started);
-        socket.timeout(30_000).emit('workspace:subscribe', { workspaceId: assignment.workspaceId }, (error, response) => {
-          if (error || !response.ok) {
-            socket.close();
-            resolve({ error: error ? 'subscribe timeout' : response.code });
-            return;
-          }
-          record(connectTime, now() - started);
-          client.connected = true;
-          attach(client);
-          clients.push(client);
-          resolve({ client });
-        });
+        socket
+          .timeout(30_000)
+          .emit('workspace:subscribe', { workspaceId: assignment.workspaceId }, (error, response) => {
+            if (error || !response.ok) {
+              socket.close();
+              resolve({ error: error ? 'subscribe timeout' : response.code });
+              return;
+            }
+            record(connectTime, now() - started);
+            client.connected = true;
+            attach(client);
+            clients.push(client);
+            resolve({ client });
+          });
       });
     });
   }
@@ -183,7 +205,12 @@ async function worker() {
     const measuring = phase === 'measure';
     const started = now();
     counts.sent += measuring ? 1 : 0;
-    const body = { conversationId: client.conversationId, clientMsgId: randomUUID(), kind: 'text', text: `load ${measuring ? 'm' : 'w'} ${started}` };
+    const body = {
+      conversationId: client.conversationId,
+      clientMsgId: randomUUID(),
+      kind: 'text',
+      text: `load ${measuring ? 'm' : 'w'} ${started}`,
+    };
     client.socket.timeout(10_000).emit('message:send', body, (error, response) => {
       if (!measuring) return;
       if (error) counts.timedOut += 1;
@@ -206,12 +233,23 @@ async function worker() {
       for (const [index, assignment] of message.assignments.entries()) {
         const due = started + (index / perSecond) * 1000;
         if (due > now()) await sleep(due - now());
-        pending.push(connectOne({ ...assignment, token: tokens[index] }).then((result) => result.error && tally(errors, result.error)));
+        pending.push(
+          connectOne({ ...assignment, token: tokens[index] }).then(
+            (result) => result.error && tally(errors, result.error),
+          ),
+        );
       }
       await Promise.all(pending);
       const connectedByConversation = new Map();
       for (const client of clients) tally(connectedByConversation, client.conversationId);
-      process.send({ type: 'connected', connected: clients.length, errors: [...errors], connectTime, handshakeTime, connectedByConversation: [...connectedByConversation] });
+      process.send({
+        type: 'connected',
+        connected: clients.length,
+        errors: [...errors],
+        connectTime,
+        handshakeTime,
+        connectedByConversation: [...connectedByConversation],
+      });
     } else if (message.type === 'phase') {
       phase = message.phase;
       if (phase === 'measure') {
@@ -246,13 +284,22 @@ async function worker() {
         type: 'report',
         ack,
         fanout,
-        counts: { ...counts, rejected: [...counts.rejected], dropped: [...counts.dropped], events: [...counts.events] },
+        counts: {
+          ...counts,
+          rejected: [...counts.rejected],
+          dropped: [...counts.dropped],
+          events: [...counts.events],
+        },
         ackedByConversation: [...ackedByConversation],
         stillConnected: clients.filter((client) => client.connected).length,
         cpuSeconds: cpuDuringMeasure ? (cpuDuringMeasure.user + cpuDuringMeasure.system) / 1e6 : null,
         // The histogram counts the 10 ms sampling interval itself; report only the delay beyond it.
         loopDelayMs: Object.fromEntries(
-          [['p50', loopDelay.percentile(50)], ['p99', loopDelay.percentile(99)], ['max', loopDelay.max]].map(([name, ns]) => [name, Math.max(0, ns / 1e6 - 10)]),
+          [
+            ['p50', loopDelay.percentile(50)],
+            ['p99', loopDelay.percentile(99)],
+            ['max', loopDelay.max],
+          ].map(([name, ns]) => [name, Math.max(0, ns / 1e6 - 10)]),
         ),
       });
     } else if (message.type === 'close') {
@@ -269,10 +316,16 @@ async function worker() {
 async function rest(path, bearer, init = {}) {
   const response = await fetch(`${settings.edge}/api/v1${path}`, {
     ...init,
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${bearer}`, 'idempotency-key': randomUUID(), ...(init.headers ?? {}) },
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${bearer}`,
+      'idempotency-key': randomUUID(),
+      ...(init.headers ?? {}),
+    },
   });
   const body = response.status === 204 ? null : await response.json();
-  if (!response.ok) throw new Error(`${init.method ?? 'GET'} ${path}: ${response.status} ${JSON.stringify(body)}`);
+  if (!response.ok)
+    throw new Error(`${init.method ?? 'GET'} ${path}: ${response.status} ${JSON.stringify(body)}`);
   return body;
 }
 
@@ -312,7 +365,9 @@ async function seed(db) {
 
   const owners = Array.from({ length: workspaceCount }, (_, w) => userIds[w * settings.workspaceSize]);
   const ownerTokens = await Promise.all(owners.map((owner) => token(owner)));
-  const workspaces = await pool(ownerTokens, 16, (bearer, w) => rest('/workspaces', bearer, { method: 'POST', body: JSON.stringify({ name: `بار ${run}-${w}` }) }));
+  const workspaces = await pool(ownerTokens, 16, (bearer, w) =>
+    rest('/workspaces', bearer, { method: 'POST', body: JSON.stringify({ name: `بار ${run}-${w}` }) }),
+  );
   const workspaceIds = workspaces.map((workspace) => workspace.id);
 
   const memberWorkspace = [];
@@ -338,7 +393,12 @@ async function seed(db) {
     memberRows.conversation.push(conversationId);
     memberRows.user.push(userIds[index]);
     memberRows.role.push(inWorkspace % settings.groupSize === 0 ? 'owner' : 'member');
-    assignments.push({ userId: userIds[index], workspaceId: workspaceIds[w], conversationId, node: settings.nodes[index % settings.nodes.length] });
+    assignments.push({
+      userId: userIds[index],
+      workspaceId: workspaceIds[w],
+      conversationId,
+      node: settings.nodes[index % settings.nodes.length],
+    });
   }
   await db.query(
     `insert into workspace_members (workspace_id, user_id, role_id)
@@ -359,14 +419,27 @@ async function seed(db) {
   );
 
   // Task fixtures for the REST traffic: one project with 30 cards in each of the first workspaces.
-  const restTargets = await pool(workspaceIds.slice(0, settings.restWorkspaces), 4, async (workspaceId, w) => {
-    const bearer = ownerTokens[w];
-    const project = await rest(`/workspaces/${workspaceId}/projects`, bearer, { method: 'POST', body: JSON.stringify({ key: 'LOAD', name: 'پروژه بار' }) });
-    const tasks = await pool(Array.from({ length: 30 }, (_, i) => i), 4, (i) =>
-      rest(`/workspaces/${workspaceId}/tasks`, bearer, { method: 'POST', body: JSON.stringify({ projectId: project.id, title: `کارت ${i + 1}`, priority: 'medium' }) }),
-    );
-    return { workspaceId, projectId: project.id, taskIds: tasks.map((task) => task.id), bearer };
-  });
+  const restTargets = await pool(
+    workspaceIds.slice(0, settings.restWorkspaces),
+    4,
+    async (workspaceId, w) => {
+      const bearer = ownerTokens[w];
+      const project = await rest(`/workspaces/${workspaceId}/projects`, bearer, {
+        method: 'POST',
+        body: JSON.stringify({ key: 'LOAD', name: 'پروژه بار' }),
+      });
+      const tasks = await pool(
+        Array.from({ length: 30 }, (_, i) => i),
+        4,
+        (i) =>
+          rest(`/workspaces/${workspaceId}/tasks`, bearer, {
+            method: 'POST',
+            body: JSON.stringify({ projectId: project.id, title: `کارت ${i + 1}`, priority: 'medium' }),
+          }),
+      );
+      return { workspaceId, projectId: project.id, taskIds: tasks.map((task) => task.id), bearer };
+    },
+  );
   return { workspaceCount, conversationCount: conversationRows.id.length, assignments, restTargets };
 }
 
@@ -389,8 +462,19 @@ async function restTraffic(targets, seconds) {
         : roll < 0.65
           ? ['list', `/workspaces/${target.workspaceId}/tasks?projectId=${target.projectId}&limit=50`, {}]
           : roll < 0.85
-            ? ['detail', `/workspaces/${target.workspaceId}/tasks/${target.taskIds[i % target.taskIds.length]}`, {}]
-            : ['create', `/workspaces/${target.workspaceId}/tasks`, { method: 'POST', body: JSON.stringify({ projectId: target.projectId, title: `کارت بار ${i}` }) }];
+            ? [
+                'detail',
+                `/workspaces/${target.workspaceId}/tasks/${target.taskIds[i % target.taskIds.length]}`,
+                {},
+              ]
+            : [
+                'create',
+                `/workspaces/${target.workspaceId}/tasks`,
+                {
+                  method: 'POST',
+                  body: JSON.stringify({ projectId: target.projectId, title: `کارت بار ${i}` }),
+                },
+              ];
     const sent = now();
     inFlight.push(
       rest(path, target.bearer, init).then(
@@ -421,7 +505,11 @@ function hostCpu() {
 
 function dockerStats() {
   return new Promise((resolve) => {
-    execFile('docker', ['stats', '--no-stream', '--format', '{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}'], (error, stdout) => resolve(error ? `(docker stats unavailable: ${error.message})` : stdout.trim()));
+    execFile(
+      'docker',
+      ['stats', '--no-stream', '--format', '{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}'],
+      (error, stdout) => resolve(error ? `(docker stats unavailable: ${error.message})` : stdout.trim()),
+    );
   });
 }
 
@@ -432,14 +520,21 @@ async function coordinator() {
   await db.connect();
   const seeded = await seed(db);
   await db.end();
-  log(`seeded ${seeded.assignments.length} users in ${seeded.workspaceCount} workspaces, ${seeded.conversationCount} groups, ${seeded.restTargets.length} projects for REST`);
+  log(
+    `seeded ${seeded.assignments.length} users in ${seeded.workspaceCount} workspaces, ${seeded.conversationCount} groups, ${seeded.restTargets.length} projects for REST`,
+  );
 
-  const children = Array.from({ length: settings.workers }, () => fork(new URL(import.meta.url).pathname, process.argv.slice(2), { env: { ...process.env, CHAT_LOAD_WORKER: '1' } }));
+  const children = Array.from({ length: settings.workers }, () =>
+    fork(new URL(import.meta.url).pathname, process.argv.slice(2), {
+      env: { ...process.env, CHAT_LOAD_WORKER: '1' },
+    }),
+  );
   const inbox = children.map((child) => {
     const queue = [];
     const waiters = [];
     child.on('message', (message) => (waiters.length > 0 ? waiters.shift()(message) : queue.push(message)));
-    return () => (queue.length > 0 ? Promise.resolve(queue.shift()) : new Promise((resolve) => waiters.push(resolve)));
+    return () =>
+      queue.length > 0 ? Promise.resolve(queue.shift()) : new Promise((resolve) => waiters.push(resolve));
   });
   const collect = (type) =>
     Promise.all(
@@ -452,20 +547,30 @@ async function coordinator() {
     );
   await collect('ready');
 
-  log(`connecting ${seeded.assignments.length} sockets at ${settings.connectRate}/s over ${settings.nodes.join(', ')}`);
+  log(
+    `connecting ${seeded.assignments.length} sockets at ${settings.connectRate}/s over ${settings.nodes.join(', ')}`,
+  );
   const connectStarted = now();
-  children.forEach((child, w) => child.send({ type: 'connect', assignments: seeded.assignments.filter((_, index) => index % settings.workers === w) }));
+  children.forEach((child, w) =>
+    child.send({
+      type: 'connect',
+      assignments: seeded.assignments.filter((_, index) => index % settings.workers === w),
+    }),
+  );
   const connected = await collect('connected');
   const connectedByConversation = new Map();
   const connectErrors = new Map();
   for (const report of connected) {
-    for (const [conversationId, n] of report.connectedByConversation) connectedByConversation.set(conversationId, (connectedByConversation.get(conversationId) ?? 0) + n);
+    for (const [conversationId, n] of report.connectedByConversation)
+      connectedByConversation.set(conversationId, (connectedByConversation.get(conversationId) ?? 0) + n);
     for (const [code, n] of report.errors) connectErrors.set(code, (connectErrors.get(code) ?? 0) + n);
   }
   const connectedTotal = connected.reduce((sum, report) => sum + report.connected, 0);
   const connectTime = connected.reduce((into, report) => merge(into, report.connectTime), histogram());
   const handshakeTime = connected.reduce((into, report) => merge(into, report.handshakeTime), histogram());
-  log(`connected ${connectedTotal}/${seeded.assignments.length} in ${((now() - connectStarted) / 1000).toFixed(1)} s; handshake ${JSON.stringify(summary(handshakeTime))}; handshake+subscribe ${JSON.stringify(summary(connectTime))}${connectErrors.size ? `; errors ${JSON.stringify([...connectErrors])}` : ''}`);
+  log(
+    `connected ${connectedTotal}/${seeded.assignments.length} in ${((now() - connectStarted) / 1000).toFixed(1)} s; handshake ${JSON.stringify(summary(handshakeTime))}; handshake+subscribe ${JSON.stringify(summary(connectTime))}${connectErrors.size ? `; errors ${JSON.stringify([...connectErrors])}` : ''}`,
+  );
   const idleStats = await dockerStats();
 
   log(`REST baseline, no chat traffic: ${settings.restRate} req/s for 15 s`);
@@ -493,18 +598,45 @@ async function coordinator() {
   const sum = (field) => reports.reduce((total, report) => total + report.counts[field], 0);
   const mergeTally = (field) => {
     const into = new Map();
-    for (const report of reports) for (const [key, n] of report.counts[field]) into.set(key, (into.get(key) ?? 0) + n);
+    for (const report of reports)
+      for (const [key, n] of report.counts[field]) into.set(key, (into.get(key) ?? 0) + n);
     return Object.fromEntries(into);
   };
   let expected = 0;
-  for (const report of reports) for (const [conversationId, n] of report.ackedByConversation) expected += n * ((connectedByConversation.get(conversationId) ?? 1) - 1);
+  for (const report of reports)
+    for (const [conversationId, n] of report.ackedByConversation)
+      expected += n * ((connectedByConversation.get(conversationId) ?? 1) - 1);
   const result = {
     settings,
-    sockets: { target: seeded.assignments.length, connected: connectedTotal, perNode: Math.round(connectedTotal / settings.nodes.length), stillConnected: reports.reduce((total, report) => total + report.stillConnected, 0), connectErrors: Object.fromEntries(connectErrors), handshakeMs: summary(handshakeTime), handshakeAndSubscribeMs: summary(connectTime) },
-    messages: { sent: sum('sent'), acked: sum('acked'), perSecond: +(sum('acked') / settings.duration).toFixed(1), rejected: mergeTally('rejected'), timedOut: sum('timedOut'), ackMs: summary(ack) },
-    fanout: { expected, delivered: sum('delivered'), ratio: expected ? +(sum('delivered') / expected).toFixed(6) : null, perSecond: +(sum('delivered') / settings.duration).toFixed(1), fanoutMs: summary(fanout), readsSent: sum('reads') },
+    sockets: {
+      target: seeded.assignments.length,
+      connected: connectedTotal,
+      perNode: Math.round(connectedTotal / settings.nodes.length),
+      stillConnected: reports.reduce((total, report) => total + report.stillConnected, 0),
+      connectErrors: Object.fromEntries(connectErrors),
+      handshakeMs: summary(handshakeTime),
+      handshakeAndSubscribeMs: summary(connectTime),
+    },
+    messages: {
+      sent: sum('sent'),
+      acked: sum('acked'),
+      perSecond: +(sum('acked') / settings.duration).toFixed(1),
+      rejected: mergeTally('rejected'),
+      timedOut: sum('timedOut'),
+      ackMs: summary(ack),
+    },
+    fanout: {
+      expected,
+      delivered: sum('delivered'),
+      ratio: expected ? +(sum('delivered') / expected).toFixed(6) : null,
+      perSecond: +(sum('delivered') / settings.duration).toFixed(1),
+      fanoutMs: summary(fanout),
+      readsSent: sum('reads'),
+    },
     eventsReceived: mergeTally('events'),
-    generatorLoopDelayMs: reports.map((report) => Object.fromEntries(Object.entries(report.loopDelayMs).map(([k, v]) => [k, +v.toFixed(1)]))),
+    generatorLoopDelayMs: reports.map((report) =>
+      Object.fromEntries(Object.entries(report.loopDelayMs).map(([k, v]) => [k, +v.toFixed(1)])),
+    ),
     drops: mergeTally('dropped'),
     rest: {
       rate: settings.restRate,
@@ -516,8 +648,13 @@ async function coordinator() {
     docker: { idle: idleStats, underLoad: loadStats },
     host: {
       cpus: (await import('node:os')).availableParallelism(),
-      busyShare: cpuBefore && cpuAfter ? +(1 - (cpuAfter.idle - cpuBefore.idle) / (cpuAfter.total - cpuBefore.total)).toFixed(3) : null,
-      generatorCpuCores: +(reports.reduce((total, report) => total + (report.cpuSeconds ?? 0), 0) / settings.duration).toFixed(2),
+      busyShare:
+        cpuBefore && cpuAfter
+          ? +(1 - (cpuAfter.idle - cpuBefore.idle) / (cpuAfter.total - cpuBefore.total)).toFixed(3)
+          : null,
+      generatorCpuCores: +(
+        reports.reduce((total, report) => total + (report.cpuSeconds ?? 0), 0) / settings.duration
+      ).toFixed(2),
     },
   };
   console.log(JSON.stringify(result, null, 2));

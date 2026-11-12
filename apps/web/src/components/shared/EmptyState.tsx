@@ -10,7 +10,14 @@ export interface EmptyStateProps {
   readonly compact?: boolean;
 }
 
-export function EmptyState({ icon, title, description, action, className, compact = false }: EmptyStateProps) {
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  className,
+  compact = false,
+}: EmptyStateProps) {
   return (
     <div
       className={cn(
@@ -28,8 +35,12 @@ export function EmptyState({ icon, title, description, action, className, compac
       >
         {icon}
       </span>
-      <h3 className={cn('font-semibold text-fg-primary', compact ? 'text-body-sm' : 'text-title')}>{title}</h3>
-      <p className={cn('max-w-sm text-fg-tertiary', compact ? 'text-caption' : 'text-body-sm')}>{description}</p>
+      <h3 className={cn('font-semibold text-fg-primary', compact ? 'text-body-sm' : 'text-title')}>
+        {title}
+      </h3>
+      <p className={cn('max-w-sm text-fg-tertiary', compact ? 'text-caption' : 'text-body-sm')}>
+        {description}
+      </p>
       {action && <div className="mt-1">{action}</div>}
     </div>
   );

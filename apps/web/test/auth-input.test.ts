@@ -1,5 +1,5 @@
-import { describe,expect,it } from 'vitest';
-import { challengeTiming,maskedMobile,otpDigits } from '@/features/auth/lib/auth-input';
+import { describe, expect, it } from 'vitest';
+import { challengeTiming, maskedMobile, otpDigits } from '@/features/auth/lib/auth-input';
 
 describe('authentication input and challenge boundaries', () => {
   it('accepts Persian, Arabic and Latin digits including formatted paste', () => {
@@ -9,7 +9,12 @@ describe('authentication input and challenge boundaries', () => {
   });
 
   it('honors backend-returned length and independent expiry/resend intervals', () => {
-    expect(challengeTiming({ challengeId: 'example', codeLength: 8, expiresInSeconds: 180, resendInSeconds: 45 }, 1000)).toEqual({ codeLength: 8, expiresAt: 181000, resendAt: 46000 });
+    expect(
+      challengeTiming(
+        { challengeId: 'example', codeLength: 8, expiresInSeconds: 180, resendInSeconds: 45 },
+        1000,
+      ),
+    ).toEqual({ codeLength: 8, expiresAt: 181000, resendAt: 46000 });
     expect(otpDigits('123456789', 4)).toBe('1234');
   });
 

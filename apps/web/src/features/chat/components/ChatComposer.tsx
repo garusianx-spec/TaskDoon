@@ -1,11 +1,11 @@
 'use client';
 
-import { useRef,useState } from 'react';
+import { useRef, useState } from 'react';
 import { toPersianDigits } from '@taskin/jalali';
 import { cn } from '@/lib/utils';
-import { type Recorded,useVoiceRecorder } from '@/features/chat/hooks/useVoiceRecorder';
-import { IconButton,Tooltip } from '@/components/ui';
-import { ClockIcon,CloseIcon,EmojiIcon,MicrophoneIcon,PaperclipIcon,SendIcon } from '@/components/icons';
+import { type Recorded, useVoiceRecorder } from '@/features/chat/hooks/useVoiceRecorder';
+import { IconButton, Tooltip } from '@/components/ui';
+import { ClockIcon, CloseIcon, EmojiIcon, MicrophoneIcon, PaperclipIcon, SendIcon } from '@/components/icons';
 import { ScheduleMessageDialog } from '@/features/chat/components/ScheduleMessageDialog';
 
 export interface ChatComposerProps {
@@ -34,7 +34,16 @@ const EMOJI_PALETTE = ['👍', '🙏', '🔥', '✅', '👀', '🎉', '❤️', 
  * Message composer. Enter sends, Shift+Enter inserts a newline, and the textarea grows with
  * the content up to six lines before scrolling.
  */
-export function ChatComposer({ onSend, replyPreview, onCancelReply, conversationTitle, onTyping, onAttach, onVoice, onSchedule }: ChatComposerProps) {
+export function ChatComposer({
+  onSend,
+  replyPreview,
+  onCancelReply,
+  conversationTitle,
+  onTyping,
+  onAttach,
+  onVoice,
+  onSchedule,
+}: ChatComposerProps) {
   const [draft, setDraft] = useState('');
   const [scheduling, setScheduling] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -107,12 +116,7 @@ export function ChatComposer({ onSend, replyPreview, onCancelReply, conversation
             </span>
             <span className="truncate text-caption text-fg-tertiary">{replyPreview.preview}</span>
           </span>
-          <IconButton
-            label="لغو پاسخ"
-            icon={<CloseIcon size={16} />}
-            size="xs"
-            onClick={onCancelReply}
-          />
+          <IconButton label="لغو پاسخ" icon={<CloseIcon size={16} />} size="xs" onClick={onCancelReply} />
         </div>
       )}
 
@@ -149,7 +153,13 @@ export function ChatComposer({ onSend, replyPreview, onCancelReply, conversation
         </div>
 
         <Tooltip content="پیوست فایل">
-          <IconButton label="پیوست فایل" icon={<PaperclipIcon size={20} />} size="sm" onClick={() => fileRef.current?.click()} disabled={recording !== null} />
+          <IconButton
+            label="پیوست فایل"
+            icon={<PaperclipIcon size={20} />}
+            size="sm"
+            onClick={() => fileRef.current?.click()}
+            disabled={recording !== null}
+          />
         </Tooltip>
         <input
           ref={fileRef}
@@ -172,11 +182,18 @@ export function ChatComposer({ onSend, replyPreview, onCancelReply, conversation
           برای ارسال، کلید Enter و برای رفتن به خط جدید، Shift به همراه Enter را بزنید.
         </span>
         {recording && (
-          <div role="status" aria-live="polite" className="flex min-h-9 flex-1 items-center gap-2 px-1 text-body-sm text-fg-secondary">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex min-h-9 flex-1 items-center gap-2 px-1 text-body-sm text-fg-secondary"
+          >
             <span className="size-2.5 animate-pulse rounded-full bg-status-blocked" aria-hidden="true" />
-            <span className="numeric font-medium">{`در حال ضبط ${toPersianDigits(Math.floor(recording.seconds / 60))}:${toPersianDigits(String(recording.seconds % 60).padStart(2, '0'))}`}</span>
+            <span className="font-medium numeric">{`در حال ضبط ${toPersianDigits(Math.floor(recording.seconds / 60))}:${toPersianDigits(String(recording.seconds % 60).padStart(2, '0'))}`}</span>
             <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-sunken" aria-hidden="true">
-              <span className="block h-full rounded-full bg-brand-solid transition-[width] duration-75" style={{ width: `${Math.min(100, Math.round(recording.level * 300))}%` }} />
+              <span
+                className="block h-full rounded-full bg-brand-solid transition-[width] duration-75"
+                style={{ width: `${Math.min(100, Math.round(recording.level * 300))}%` }}
+              />
             </span>
             <IconButton label="لغو ضبط" icon={<CloseIcon size={18} />} size="xs" onClick={recorder.cancel} />
           </div>
@@ -232,7 +249,13 @@ export function ChatComposer({ onSend, replyPreview, onCancelReply, conversation
         )}
 
         {recording ? (
-          <IconButton label="ارسال پیام صوتی" icon={<SendIcon size={20} />} size="sm" variant="primary" onClick={() => void finishRecording()} />
+          <IconButton
+            label="ارسال پیام صوتی"
+            icon={<SendIcon size={20} />}
+            size="sm"
+            variant="primary"
+            onClick={() => void finishRecording()}
+          />
         ) : (
           <IconButton
             label="ارسال پیام"

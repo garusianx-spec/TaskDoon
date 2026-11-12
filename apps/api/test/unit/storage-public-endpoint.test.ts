@@ -17,7 +17,13 @@ const source = {
 
 describe('public media endpoint', () => {
   it('uses the production origin when no public endpoint was supplied', () => {
-    const env = loadEnv({ ...source, NODE_ENV: 'production', SMS_PROVIDERS: 'kavenegar', KAVENEGAR_API_KEY: 'test', JWT_PRIVATE_JWKS: '[]' });
+    const env = loadEnv({
+      ...source,
+      NODE_ENV: 'production',
+      SMS_PROVIDERS: 'kavenegar',
+      KAVENEGAR_API_KEY: 'test',
+      JWT_PRIVATE_JWKS: '[]',
+    });
     expect(env.S3_PUBLIC_ENDPOINT).toBe('https://taskdoone.ir');
     expect(env.S3_FORCE_PATH_STYLE).toBe(true);
     expect(env.S3_ENDPOINT).toBe('http://minio:9000');
@@ -25,14 +31,22 @@ describe('public media endpoint', () => {
 
   it('preserves local fallback and explicit deployment overrides', () => {
     expect(loadEnv(source).S3_PUBLIC_ENDPOINT).toBeUndefined();
-    expect(loadEnv({ ...source, S3_PUBLIC_ENDPOINT: 'https://localhost:8443' }).S3_PUBLIC_ENDPOINT).toBe('https://localhost:8443');
+    expect(loadEnv({ ...source, S3_PUBLIC_ENDPOINT: 'https://localhost:8443' }).S3_PUBLIC_ENDPOINT).toBe(
+      'https://localhost:8443',
+    );
   });
 
   it('signs POST, download and multipart requests for the public bucket path', async () => {
-    const storage = new StorageService(new AppConfig(loadEnv({ ...source, S3_PUBLIC_ENDPOINT: 'https://taskdoone.ir' })));
+    const storage = new StorageService(
+      new AppConfig(loadEnv({ ...source, S3_PUBLIC_ENDPOINT: 'https://taskdoone.ir' })),
+    );
     try {
       const key = 'workspaces/example/media/voice.m4a';
-      const post = await storage.presignPost(key, { maxBytes: 1024, contentTypePrefix: 'audio/', expiresInSeconds: 60 });
+      const post = await storage.presignPost(key, {
+        maxBytes: 1024,
+        contentTypePrefix: 'audio/',
+        expiresInSeconds: 60,
+      });
       expect(post.url).toMatch(/^https:\/\/taskdoone\.ir\/taskin-files\/?$/);
       expect(post.fields.key).toBe(key);
       const get = new URL(await storage.presignGet(key, 60, 'voice.m4a', 'audio/mp4', 'inline'));

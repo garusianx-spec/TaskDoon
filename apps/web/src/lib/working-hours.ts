@@ -12,7 +12,15 @@ export const WORK_DAYS: readonly { readonly id: WorkDay; readonly label: string 
 ];
 
 /** `Date#getDay()` order: 0 is Sunday. */
-const BY_DAY: readonly WorkDay[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const BY_DAY: readonly WorkDay[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+];
 
 /** What a member has before saving their own (the API's defaults too). */
 export const DEFAULT_WORKING_HOURS: WorkingHours = {
@@ -26,7 +34,8 @@ export const DEFAULT_WORKING_HOURS: WorkingHours = {
 /** An auto-reply answers each person at most once in this window. */
 export const AUTO_REPLY_WINDOW_MS = 24 * 3600 * 1000;
 
-const hhmm = (date: Date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+const hhmm = (date: Date) =>
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
 /**
  * Whether `at` (on this device's clock) falls inside the working hours, as the API decides it in

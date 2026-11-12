@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import type { PlatformModerationResult,PlatformUserSummary } from '@taskin/contracts';
+import type { PlatformModerationResult, PlatformUserSummary } from '@taskin/contracts';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { problemMessage } from '@/lib/api-problem';
-import { Button,Checkbox,Modal,Textarea } from '@/components/ui';
+import { Button, Checkbox, Modal, Textarea } from '@/components/ui';
 import { KeyIcon } from '@/components/icons';
 
 /**
@@ -47,7 +47,11 @@ export function ForcePasswordResetDialog({
     setError(null);
     try {
       const result = await call(() =>
-        adminApi.setPasswordResetRequired(user.id, { required: require, ...(require ? { signOut } : {}), ...(reason.trim() ? { reason: reason.trim() } : {}) }),
+        adminApi.setPasswordResetRequired(user.id, {
+          required: require,
+          ...(require ? { signOut } : {}),
+          ...(reason.trim() ? { reason: reason.trim() } : {}),
+        }),
       );
       reset();
       onDone(result);
@@ -90,14 +94,26 @@ export function ForcePasswordResetDialog({
             label={
               <span className="flex flex-col gap-0.5">
                 <span className="text-body-sm font-medium text-fg-primary">خروج از همه نشست‌ها</span>
-                <span className="text-caption text-fg-tertiary">همه دستگاه‌ها فوراً از حساب خارج می‌شوند.</span>
+                <span className="text-caption text-fg-tertiary">
+                  همه دستگاه‌ها فوراً از حساب خارج می‌شوند.
+                </span>
               </span>
             }
           />
         )}
-        <Textarea label="دلیل (اختیاری)" hint="در گزارش بازرسی ثبت می‌شود." rows={2} maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} />
+        <Textarea
+          label="دلیل (اختیاری)"
+          hint="در گزارش بازرسی ثبت می‌شود."
+          rows={2}
+          maxLength={500}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+        />
         {error && (
-          <p role="alert" className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked">
+          <p
+            role="alert"
+            className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked"
+          >
             {error}
           </p>
         )}

@@ -1,6 +1,5 @@
-import type { BoardColumn,TagTone,Task } from '@taskin/contracts';
+import type { BoardColumn, TagTone, Task } from '@taskin/contracts';
 import type { ColumnDisposition } from '@/store/workspace-reducer';
-
 
 export interface KanbanBoardProps {
   /** The cards to show — already narrowed by the sidebar's filters and the header search. */

@@ -1,15 +1,19 @@
-import { formatJalali,formatTime } from '@taskin/jalali';
+import { formatJalali, formatTime } from '@taskin/jalali';
 import { seededUnit } from '@/lib/format';
-import type { AttachmentKind,Message } from '@taskin/contracts';
-import { describeLink,extractUrls } from '@/lib/links';
+import type { AttachmentKind, Message } from '@taskin/contracts';
+import { describeLink, extractUrls } from '@/lib/links';
 
-import type { SharedFile,SharedAudio,SharedLinkEntry } from '@/features/chat/types/shared-media';
+import type { SharedFile, SharedAudio, SharedLinkEntry } from '@/features/chat/types/shared-media';
 
 /** Deterministic pseudo-waveform for audio files, which (unlike voice memos) ship none. */
 const syntheticWaveform = (seed: string): readonly number[] =>
-  Array.from({ length: 40 }, (_, index) => Math.round((0.25 + seededUnit(`${seed}-${index}`) * 0.75) * 100) / 100);
+  Array.from(
+    { length: 40 },
+    (_, index) => Math.round((0.25 + seededUnit(`${seed}-${index}`) * 0.75) * 100) / 100,
+  );
 
-export const stamp = (message: Message): string => `${formatJalali(message.sentAt, 'day-month')}، ${formatTime(message.sentAt)}`;
+export const stamp = (message: Message): string =>
+  `${formatJalali(message.sentAt, 'day-month')}، ${formatTime(message.sentAt)}`;
 
 const MEDIA_KINDS: readonly AttachmentKind[] = ['image', 'video'];
 
@@ -49,7 +53,8 @@ export function categorise(thread: readonly Message[]) {
           name: attachment.name,
         });
       } else files.push({ message, attachment });
-      if (body.caption) for (const url of extractUrls(body.caption)) links.push({ message, link: describeLink(url) });
+      if (body.caption)
+        for (const url of extractUrls(body.caption)) links.push({ message, link: describeLink(url) });
     } else if (body.kind === 'text') {
       for (const url of extractUrls(body.text)) links.push({ message, link: describeLink(url) });
     }

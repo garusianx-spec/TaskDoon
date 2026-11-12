@@ -1,12 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import {
-CalendarIcon,FlagIcon,
-MilestoneIcon,
-NotificationIcon
-} from '@/components/icons';
-
+import { CalendarIcon, FlagIcon, MilestoneIcon, NotificationIcon } from '@/components/icons';
 
 export function Legend() {
   const entries = [

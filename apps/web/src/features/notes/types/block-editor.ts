@@ -1,5 +1,3 @@
-
-
 export interface NoteBlockEditorHandle {
   /** Wraps the selection in the active text block (`**`, `*`). */
   readonly wrap: (marker: string, placeholder: string) => void;

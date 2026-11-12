@@ -2,19 +2,17 @@
 
 import type { Task } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
-import {
-JALALI_WEEKDAYS_SHORT,formatJalali,toPersianDigits
-} from '@taskin/jalali';
+import { JALALI_WEEKDAYS_SHORT, formatJalali, toPersianDigits } from '@taskin/jalali';
 import { formatCount } from '@/lib/format';
-import { statusLabel,statusTone } from '@/data/reference';
-import { projectById,usersByIds } from '@/store/selectors';
-import { AvatarStack,Badge,Button } from '@/components/ui';
+import { statusLabel, statusTone } from '@/data/reference';
+import { projectById, usersByIds } from '@/store/selectors';
+import { AvatarStack, Badge, Button } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { ChevronBackwardIcon,ChevronForwardIcon,GanttIcon } from '@/components/icons';
+import { ChevronBackwardIcon, ChevronForwardIcon, GanttIcon } from '@/components/icons';
 
 import { useGanttTimeline } from '@/features/board/hooks/useGanttTimeline';
 import { GanttTooltip } from '@/features/board/components/GanttTooltip';
-import { BAR_TONE,GRID_TEMPLATE } from '@/features/board/lib/gantt-layout';
+import { BAR_TONE, GRID_TEMPLATE } from '@/features/board/lib/gantt-layout';
 
 export interface GanttViewProps {
   readonly tasks: readonly Task[];
@@ -41,7 +39,20 @@ export interface GanttViewProps {
  *   z-30  the calendar header — `sticky top-0`, above everything as rows scroll under it
  */
 export function GanttView({ tasks, onOpenTask, selectedTaskId }: GanttViewProps) {
-  const { scrollerRef, onScroll, hovered, setHovered, tooltipId, scrollDays, scrollToToday, showTooltip, days, rows, firstDay, lastDay } = useGanttTimeline(tasks);
+  const {
+    scrollerRef,
+    onScroll,
+    hovered,
+    setHovered,
+    tooltipId,
+    scrollDays,
+    scrollToToday,
+    showTooltip,
+    days,
+    rows,
+    firstDay,
+    lastDay,
+  } = useGanttTimeline(tasks);
 
   if (tasks.length === 0) {
     return (
@@ -58,7 +69,7 @@ export function GanttView({ tasks, onOpenTask, selectedTaskId }: GanttViewProps)
       <div className="flex flex-wrap items-center gap-2 border-b border-secondary px-4 py-3">
         <h3 className="text-title-sm font-semibold text-fg-primary">نمای گانت شمسی</h3>
         {firstDay && lastDay && (
-          <span className="numeric text-caption text-fg-tertiary">
+          <span className="text-caption text-fg-tertiary numeric">
             {`${formatJalali(firstDay.iso, 'medium')} تا ${formatJalali(lastDay.iso, 'medium')}`}
           </span>
         )}
@@ -85,7 +96,11 @@ export function GanttView({ tasks, onOpenTask, selectedTaskId }: GanttViewProps)
         </div>
       </div>
 
-      <div ref={scrollerRef} onScroll={onScroll} className="scrollbar-thin flex-1 overflow-auto overscroll-x-contain">
+      <div
+        ref={scrollerRef}
+        onScroll={onScroll}
+        className="flex-1 overflow-auto overscroll-x-contain scrollbar-thin"
+      >
         <div className="w-max min-w-full">
           {/* Header row: day numbers + weekday initials */}
           <div
@@ -111,10 +126,7 @@ export function GanttView({ tasks, onOpenTask, selectedTaskId }: GanttViewProps)
               >
                 <span className="text-fg-quaternary">{JALALI_WEEKDAYS_SHORT[day.weekdayIndex]}</span>
                 <span
-                  className={cn(
-                    'numeric font-semibold',
-                    day.isToday ? 'text-fg-brand' : 'text-fg-secondary',
-                  )}
+                  className={cn('font-semibold numeric', day.isToday ? 'text-fg-brand' : 'text-fg-secondary')}
                 >
                   {toPersianDigits(day.jalali.day)}
                 </span>
@@ -150,8 +162,10 @@ export function GanttView({ tasks, onOpenTask, selectedTaskId }: GanttViewProps)
                     style={{ gridRow: 1, gridColumn: 1 }}
                   >
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-caption font-semibold text-fg-primary">{task.title}</span>
-                      <span className="numeric truncate text-micro text-fg-tertiary">
+                      <span className="truncate text-caption font-semibold text-fg-primary">
+                        {task.title}
+                      </span>
+                      <span className="truncate text-micro text-fg-tertiary numeric">
                         {`${task.code}، ${project?.name ?? ''}`}
                       </span>
                     </span>
@@ -211,7 +225,7 @@ export function GanttView({ tasks, onOpenTask, selectedTaskId }: GanttViewProps)
       </div>
 
       <footer className="flex flex-wrap items-center gap-3 border-t border-secondary px-4 py-2.5">
-        <span className="numeric text-caption text-fg-tertiary">
+        <span className="text-caption text-fg-tertiary numeric">
           {`${formatCount(rows.length)} وظیفه در بازه نمایش`}
         </span>
         <div className="flex flex-wrap items-center gap-2">

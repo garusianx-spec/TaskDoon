@@ -1,12 +1,11 @@
 'use client';
 
-import type { Conversation,Message } from '@taskin/contracts';
+import type { Conversation, Message } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
-import { messagePreview,userById } from '@/store/selectors';
-import { Avatar,CountPill,IconButton,RelativeTime } from '@/components/ui';
-import { HashIcon,MicrophoneIcon,MuteIcon,PaperclipIcon,PinIcon } from '@/components/icons';
-
+import { messagePreview, userById } from '@/store/selectors';
+import { Avatar, CountPill, IconButton, RelativeTime } from '@/components/ui';
+import { HashIcon, MicrophoneIcon, MuteIcon, PaperclipIcon, PinIcon } from '@/components/icons';
 
 interface ConversationRowProps {
   readonly conversation: Conversation;
@@ -77,11 +76,13 @@ export function ConversationRow({
               >
                 {conversation.title}
               </span>
-              {conversation.muted && <MuteIcon size={13} className="shrink-0 text-fg-quaternary" label="بی‌صدا" />}
+              {conversation.muted && (
+                <MuteIcon size={13} className="shrink-0 text-fg-quaternary" label="بی‌صدا" />
+              )}
               {last && (
                 <RelativeTime
                   iso={last.sentAt}
-                  className="numeric ms-auto shrink-0 text-micro text-fg-quaternary"
+                  className="ms-auto shrink-0 text-micro text-fg-quaternary numeric"
                 />
               )}
             </span>

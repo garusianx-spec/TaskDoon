@@ -1,15 +1,15 @@
 'use client';
 
 import type {
-PermissionActionId,
-PermissionMatrix,
-PermissionModuleId,
-RoleDescriptor
+  PermissionActionId,
+  PermissionMatrix,
+  PermissionModuleId,
+  RoleDescriptor,
 } from '@taskin/contracts';
-import { PERMISSION_ACTIONS,PERMISSION_MODULES } from '@/data/reference';
+import { PERMISSION_ACTIONS, PERMISSION_MODULES } from '@/data/reference';
 import { formatCount } from '@/lib/format';
-import { Badge,Button,Switch,Tooltip } from '@/components/ui';
-import { CheckIcon,CloseIcon,LockIcon } from '@/components/icons';
+import { Badge, Button, Switch, Tooltip } from '@/components/ui';
+import { CheckIcon, CloseIcon, LockIcon } from '@/components/icons';
 
 export interface PermissionMatrixTableProps {
   readonly role: RoleDescriptor;
@@ -52,10 +52,7 @@ export function PermissionMatrixTable({
     return { all: values.every(Boolean), some: values.some(Boolean) };
   };
 
-  const totalGranted = PERMISSION_MODULES.reduce(
-    (sum, module) => sum + moduleState(module.id).count,
-    0,
-  );
+  const totalGranted = PERMISSION_MODULES.reduce((sum, module) => sum + moduleState(module.id).count, 0);
   const totalCells = PERMISSION_MODULES.length * PERMISSION_ACTIONS.length;
 
   return (
@@ -95,7 +92,7 @@ export function PermissionMatrixTable({
         </div>
       </div>
 
-      <div className="scrollbar-thin overflow-x-auto rounded-xl border border-secondary bg-surface shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-secondary bg-surface shadow-xs scrollbar-thin">
         <table className="w-full min-w-[46rem] border-collapse">
           <caption className="sr-only">
             {`ماتریس دسترسی نقش ${role.name} — ردیف‌ها ماژول‌ها و ستون‌ها اقدام‌ها هستند`}
@@ -113,7 +110,9 @@ export function PermissionMatrixTable({
                 return (
                   <th key={action.id} scope="col" className="px-3 py-2.5 text-center">
                     <div className="flex flex-col items-center gap-1.5">
-                      <span className="text-title-sm font-semibold text-fg-secondary">{action.shortName}</span>
+                      <span className="text-title-sm font-semibold text-fg-secondary">
+                        {action.shortName}
+                      </span>
                       <Tooltip content={`اعمال «${action.name}» برای همه ماژول‌ها`}>
                         <Switch
                           size="sm"

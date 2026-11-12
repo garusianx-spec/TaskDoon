@@ -1,13 +1,13 @@
 'use client';
 
-import { useMemo,useState } from 'react';
-import type { Task,TaskDependencyType,TaskLink } from '@taskin/contracts';
+import { useMemo, useState } from 'react';
+import type { Task, TaskDependencyType, TaskLink } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
-import { DEPENDENCY_KINDS,dependencyKindLabel,linkProblem,openBlockers } from '@/features/agile/lib/agile';
-import { statusLabel,statusTone } from '@/data/reference';
+import { DEPENDENCY_KINDS, dependencyKindLabel, linkProblem, openBlockers } from '@/features/agile/lib/agile';
+import { statusLabel, statusTone } from '@/data/reference';
 import { useWorkspace } from '@/store/WorkspaceProvider';
-import { Badge,Button,IconButton,Select } from '@/components/ui';
-import { AddIcon,CloseIcon,LinkIcon,LockIcon } from '@/components/icons';
+import { Badge, Button, IconButton, Select } from '@/components/ui';
+import { AddIcon, CloseIcon, LinkIcon, LockIcon } from '@/components/icons';
 
 /**
  * The task's links to other tasks of its project, grouped by relation, with add and remove.
@@ -26,7 +26,10 @@ export function DependencyManager({ task }: { readonly task: Task }) {
   const blockers = openBlockers(task, state.tasks);
   // Candidates: live tasks of the same project not linked yet.
   const candidates = state.tasks.filter(
-    (entry) => entry.projectId === task.projectId && entry.id !== task.id && !links.some((link) => link.taskId === entry.id),
+    (entry) =>
+      entry.projectId === task.projectId &&
+      entry.id !== task.id &&
+      !links.some((link) => link.taskId === entry.id),
   );
 
   const reset = () => {
@@ -60,7 +63,13 @@ export function DependencyManager({ task }: { readonly task: Task }) {
           </Badge>
         )}
         {!adding && (
-          <Button size="xs" variant="secondary" className="ms-auto" iconStart={<LinkIcon size={14} />} onClick={() => setAdding(true)}>
+          <Button
+            size="xs"
+            variant="secondary"
+            className="ms-auto"
+            iconStart={<LinkIcon size={14} />}
+            onClick={() => setAdding(true)}
+          >
             افزودن وابستگی
           </Button>
         )}
@@ -80,7 +89,12 @@ export function DependencyManager({ task }: { readonly task: Task }) {
             <span className="text-caption font-medium text-fg-tertiary">{dependencyKindLabel(id)}</span>
             <ul className="flex flex-col gap-1.5">
               {group.map((link) => (
-                <LinkRow key={link.id} link={link} current={byId.get(link.taskId)} onRemove={() => dispatch({ type: 'remove-task-link', taskId: task.id, linkId: link.id })} />
+                <LinkRow
+                  key={link.id}
+                  link={link}
+                  current={byId.get(link.taskId)}
+                  onRemove={() => dispatch({ type: 'remove-task-link', taskId: task.id, linkId: link.id })}
+                />
               ))}
             </ul>
           </div>
@@ -110,7 +124,10 @@ export function DependencyManager({ task }: { readonly task: Task }) {
                 setOtherId(next);
                 setProblem(null);
               }}
-              options={candidates.map((entry) => ({ value: entry.id, label: `${entry.code} · ${entry.title}` }))}
+              options={candidates.map((entry) => ({
+                value: entry.id,
+                label: `${entry.code} · ${entry.title}`,
+              }))}
             />
           </div>
           {problem && (
@@ -132,19 +149,39 @@ export function DependencyManager({ task }: { readonly task: Task }) {
   );
 }
 
-function LinkRow({ link, current, onRemove }: { readonly link: TaskLink; readonly current: Task | undefined; readonly onRemove: () => void }) {
+function LinkRow({
+  link,
+  current,
+  onRemove,
+}: {
+  readonly link: TaskLink;
+  readonly current: Task | undefined;
+  readonly onRemove: () => void;
+}) {
   // The task on hand is fresher than the link's copy (its status changes as people work).
   const status = current?.status ?? link.status;
   const title = current?.title ?? link.title;
   const code = current?.code ?? link.code;
   return (
     <li className="flex items-center gap-2 rounded-lg border border-secondary bg-surface px-2 py-1.5">
-      <span className="numeric latin-inline shrink-0 text-micro font-medium text-fg-quaternary">{code}</span>
-      <span className={cn('min-w-0 flex-1 truncate text-caption', status === 'done' ? 'text-fg-tertiary line-through' : 'text-fg-primary')}>{title}</span>
+      <span className="shrink-0 text-micro font-medium text-fg-quaternary numeric latin-inline">{code}</span>
+      <span
+        className={cn(
+          'min-w-0 flex-1 truncate text-caption',
+          status === 'done' ? 'text-fg-tertiary line-through' : 'text-fg-primary',
+        )}
+      >
+        {title}
+      </span>
       <Badge tone={statusTone(status)} size="sm" dot>
         {statusLabel(status)}
       </Badge>
-      <IconButton label={`حذف پیوند با ${code}`} icon={<CloseIcon size={14} />} size="xs" onClick={onRemove} />
+      <IconButton
+        label={`حذف پیوند با ${code}`}
+        icon={<CloseIcon size={14} />}
+        size="xs"
+        onClick={onRemove}
+      />
     </li>
   );
 }

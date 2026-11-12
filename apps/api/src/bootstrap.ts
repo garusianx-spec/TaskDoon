@@ -35,7 +35,8 @@ export async function createApp(env: Env, options: AppModuleOptions = {}): Promi
       setup: (clsService: ClsService, request: RequestWithLogContext & { ip?: string }) => {
         const cls = clsService as ClsService<RequestContextStore>;
         const { requestId, traceId } = ensureLogContext(request);
-        const traceparent = typeof request.headers.traceparent === 'string' ? request.headers.traceparent : undefined;
+        const traceparent =
+          typeof request.headers.traceparent === 'string' ? request.headers.traceparent : undefined;
         cls.set('requestId', requestId);
         cls.set('traceId', traceId);
         if (traceparent) cls.set('traceparent', traceparent);
@@ -50,7 +51,10 @@ export async function createApp(env: Env, options: AppModuleOptions = {}): Promi
   // A JSON API: nothing to render, frame or load, ever.
   app.use(
     helmet({
-      contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } },
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] },
+      },
       crossOriginResourcePolicy: { policy: 'same-site' },
     }),
   );
@@ -58,7 +62,15 @@ export async function createApp(env: Env, options: AppModuleOptions = {}): Promi
     origin: [...config.allowedOrigins],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'If-Match', 'X-CSRF-Token', 'X-Request-Id', 'traceparent'],
+    allowedHeaders: [
+      'Authorization',
+      'Content-Type',
+      'Idempotency-Key',
+      'If-Match',
+      'X-CSRF-Token',
+      'X-Request-Id',
+      'traceparent',
+    ],
     exposedHeaders: ['X-Request-Id', 'Retry-After', 'Idempotent-Replayed', 'ETag'],
     maxAge: 600,
   });

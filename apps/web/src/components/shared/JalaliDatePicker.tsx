@@ -1,21 +1,21 @@
 'use client';
 
 import { jalaliFromIsoDate } from '@/lib/jalali';
-import { useMemo,useRef,useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
-JALALI_WEEKDAYS,
-JALALI_WEEKDAYS_SHORT,
-buildMonthGrid,
-formatJalali,
-gregorianToJalali,
-fromISODate,
-shiftJalaliMonth,
-toISODate,
-toPersianDigits,
+  JALALI_WEEKDAYS,
+  JALALI_WEEKDAYS_SHORT,
+  buildMonthGrid,
+  formatJalali,
+  gregorianToJalali,
+  fromISODate,
+  shiftJalaliMonth,
+  toISODate,
+  toPersianDigits,
 } from '@taskin/jalali';
-import { Button,Popover } from '@/components/ui';
-import { CalendarIcon,ChevronBackwardIcon,ChevronForwardIcon } from '@/components/icons';
+import { Button, Popover } from '@/components/ui';
+import { CalendarIcon, ChevronBackwardIcon, ChevronForwardIcon } from '@/components/icons';
 
 export interface JalaliDatePickerProps {
   readonly value: string | null;
@@ -32,7 +32,13 @@ export interface JalaliDatePickerProps {
  * day / one week, PageUp/PageDown by one month, and the month header announces the change.
  * "هفته قبل" navigation in RTL means ArrowRight moves to the previous day.
  */
-export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = false }: JalaliDatePickerProps) {
+export function JalaliDatePicker({
+  value,
+  onChange,
+  label,
+  timeZone,
+  disabled = false,
+}: JalaliDatePickerProps) {
   const todayIso = toISODate(new Date(), timeZone);
   const selected = useMemo(() => jalaliFromIsoDate(value ?? todayIso), [value, todayIso]);
   const [cursor, setCursor] = useState({ year: selected.year, month: selected.month });
@@ -51,7 +57,9 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
 
   const focusDay = (iso: string) => {
     setFocusedDate(iso);
-    requestAnimationFrame(() => gridRef.current?.querySelector<HTMLButtonElement>(`[data-date="${iso}"]`)?.focus());
+    requestAnimationFrame(() =>
+      gridRef.current?.querySelector<HTMLButtonElement>(`[data-date="${iso}"]`)?.focus(),
+    );
   };
 
   const step = (delta: number, moveFocus = false) => {
@@ -59,7 +67,8 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
     setCursor({ year: next.year, month: next.month });
     const day = jalaliFromIsoDate(focusedDate).day;
     const currentMonth = buildMonthGrid(next.year, next.month).filter((cell) => cell.inCurrentMonth);
-    const target = currentMonth.find((cell) => cell.jalali.day === day) ?? currentMonth[currentMonth.length - 1];
+    const target =
+      currentMonth.find((cell) => cell.jalali.day === day) ?? currentMonth[currentMonth.length - 1];
     if (target) {
       if (moveFocus) focusDay(target.iso);
       else setFocusedDate(target.iso);
@@ -89,7 +98,7 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
           )}
         >
           <CalendarIcon size={18} className="shrink-0 text-fg-quaternary" />
-          <span className="numeric flex-1 truncate font-medium text-fg-primary">
+          <span className="flex-1 truncate font-medium text-fg-primary numeric">
             {value ? formatJalali(fromISODate(value), 'medium') : 'انتخاب تاریخ'}
           </span>
         </button>
@@ -106,7 +115,7 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
             >
               <ChevronBackwardIcon size={18} />
             </button>
-            <span aria-live="polite" className="numeric text-title-sm font-semibold text-fg-primary">
+            <span aria-live="polite" className="text-title-sm font-semibold text-fg-primary numeric">
               {monthLabel}
             </span>
             <button
@@ -180,7 +189,7 @@ export function JalaliDatePicker({ value, onChange, label, timeZone, disabled = 
                     close();
                   }}
                   className={cn(
-                    'numeric flex h-11 min-w-0 items-center justify-center rounded-lg text-body-sm font-medium transition-colors',
+                    'flex h-11 min-w-0 items-center justify-center rounded-lg text-body-sm font-medium transition-colors numeric',
                     !cell.inCurrentMonth && 'text-fg-disabled',
                     cell.inCurrentMonth && !isSelected && 'text-fg-primary hover:bg-hover',
                     isWeekend && cell.inCurrentMonth && !isSelected && 'text-status-blocked',

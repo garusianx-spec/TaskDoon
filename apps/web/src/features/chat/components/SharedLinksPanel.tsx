@@ -4,9 +4,7 @@ import { stamp } from '@/features/chat/lib/shared-media';
 
 import { userById } from '@/store/selectors';
 import { EmptyState } from '@/components/shared/EmptyState';
-import {
-LinkIcon
-} from '@/components/icons';
+import { LinkIcon } from '@/components/icons';
 
 import type { SharedLinkEntry } from '@/features/chat/types/shared-media';
 
@@ -42,7 +40,7 @@ export function LinksPanel({ links }: { readonly links: readonly SharedLinkEntry
                   {`${link.siteName}، `}
                   <span className="latin-inline">{link.host}</span>
                 </span>
-                <span className="numeric truncate text-micro text-fg-quaternary">{`${sender?.fullName ?? ''}، ${stamp(message)}`}</span>
+                <span className="truncate text-micro text-fg-quaternary numeric">{`${sender?.fullName ?? ''}، ${stamp(message)}`}</span>
               </span>
               <span className="sr-only">(در زبانه جدید باز می‌شود)</span>
             </a>

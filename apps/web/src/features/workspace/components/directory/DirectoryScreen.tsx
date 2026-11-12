@@ -1,18 +1,18 @@
 'use client';
 
-import { useMemo,useState } from 'react';
-import type { DepartmentId,RoleId,User } from '@taskin/contracts';
-import { DEPARTMENTS,ROLES,roleLabel } from '@/data/reference';
+import { useMemo, useState } from 'react';
+import type { DepartmentId, RoleId, User } from '@taskin/contracts';
+import { DEPARTMENTS, ROLES, roleLabel } from '@/data/reference';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { useLive,useWorkspace } from '@/store/WorkspaceProvider';
+import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { AppShell } from '@/components/layout/AppShell';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { PendingInvitationRow } from '@/features/workspace/components/directory/PendingInvitationRow';
 import { RemoveMemberDialog } from '@/features/workspace/components/directory/RemoveMemberDialog';
-import { Avatar,Badge,Button,Input,Select } from '@/components/ui';
+import { Avatar, Badge, Button, Input, Select } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { CallIcon,PeopleIcon,SearchIcon,SmsIcon,TrashIcon,UserAddIcon } from '@/components/icons';
+import { CallIcon, PeopleIcon, SearchIcon, SmsIcon, TrashIcon, UserAddIcon } from '@/components/icons';
 
 type DepartmentFilter = DepartmentId | 'all';
 type RoleFilter = RoleId | 'all';
@@ -33,32 +33,38 @@ function DirectoryContent() {
   const [removing, setRemoving] = useState<User | null>(null);
 
   // Removing someone needs members:delete (the owner's alone by default) and a higher rank than theirs.
-  const rankOf = (roleId: RoleId) => ROLES.find((entry) => entry.id === roleId)?.rank ?? Number.MAX_SAFE_INTEGER;
+  const rankOf = (roleId: RoleId) =>
+    ROLES.find((entry) => entry.id === roleId)?.rank ?? Number.MAX_SAFE_INTEGER;
   const myRank = isWorkspaceOwner ? 0 : rankOf(currentUser.role);
   const canRemoveMembers = isWorkspaceOwner || state.permissions[currentUser.role].members.delete;
   const canRemove = (user: User) =>
-    canRemoveMembers && user.id !== currentUser.id && user.id !== activeWorkspace.ownerId && (isWorkspaceOwner || rankOf(user.role) > myRank);
+    canRemoveMembers &&
+    user.id !== currentUser.id &&
+    user.id !== activeWorkspace.ownerId &&
+    (isWorkspaceOwner || rankOf(user.role) > myRank);
   const [department, setDepartment] = useState<DepartmentFilter>('all');
   const [role, setRole] = useState<RoleFilter>('all');
 
   const members = useMemo(() => {
     const normalised = query.trim().toLowerCase();
     // The signed-in member's presence is edited from their profile, so it comes from state.
-    return state.users.map((user) => (user.id === currentUser.id ? currentUser : user)).filter((user) => {
-      if (department !== 'all' && user.department !== department) return false;
-      if (role !== 'all' && user.role !== role) return false;
-      if (!normalised) return true;
-      return `${user.fullName} ${user.jobTitle} ${user.email}`.toLowerCase().includes(normalised);
-    });
+    return state.users
+      .map((user) => (user.id === currentUser.id ? currentUser : user))
+      .filter((user) => {
+        if (department !== 'all' && user.department !== department) return false;
+        if (role !== 'all' && user.role !== role) return false;
+        if (!normalised) return true;
+        return `${user.fullName} ${user.jobTitle} ${user.email}`.toLowerCase().includes(normalised);
+      });
   }, [state.users, query, department, role, currentUser]);
 
   return (
-    <div className="scrollbar-thin h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto scrollbar-thin">
       <header className="border-b border-secondary bg-surface px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
           <div className="flex flex-col">
             <h1 className="text-heading-sm font-bold text-fg-primary">اعضای سازمان</h1>
-            <span className="numeric text-caption text-fg-tertiary">
+            <span className="text-caption text-fg-tertiary numeric">
               {`${formatCount(state.users.length)} نفر در ${formatCount(DEPARTMENTS.length)} دپارتمان`}
             </span>
           </div>
@@ -181,11 +187,11 @@ function DirectoryContent() {
                     )}
                   >
                     <SmsIcon size={16} className="shrink-0 text-fg-quaternary" />
-                    <span className="latin-inline truncate">{user.email}</span>
+                    <span className="truncate latin-inline">{user.email}</span>
                   </a>
                   <span className="flex items-center gap-2 px-1.5 py-1 text-caption text-fg-secondary">
                     <CallIcon size={16} className="shrink-0 text-fg-quaternary" />
-                    <span className="numeric truncate">{user.phone}</span>
+                    <span className="truncate numeric">{user.phone}</span>
                   </span>
                 </div>
               </li>
@@ -199,7 +205,8 @@ function DirectoryContent() {
         requirePassword={live !== null}
         onClose={() => setRemoving(null)}
         onConfirm={(password) => {
-          if (removing) dispatch({ type: 'remove-member', userId: removing.id, ...(password ? { password } : {}) });
+          if (removing)
+            dispatch({ type: 'remove-member', userId: removing.id, ...(password ? { password } : {}) });
           setRemoving(null);
         }}
       />

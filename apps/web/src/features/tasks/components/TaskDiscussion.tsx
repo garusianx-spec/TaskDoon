@@ -1,19 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import type { Task,User } from '@taskin/contracts';
+import type { Task, User } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { userById } from '@/store/selectors';
-import {
-Avatar,IconButton,RelativeTime,Textarea
-} from '@/components/ui';
-import {
-CloseIcon,MessagesIcon,SendIcon
-} from '@/components/icons';
+import { Avatar, IconButton, RelativeTime, Textarea } from '@/components/ui';
+import { CloseIcon, MessagesIcon, SendIcon } from '@/components/icons';
 import { type TaskInspectorProps } from '@/features/tasks/types/inspector';
 
-export function TaskDiscussion({ currentUser, comments, onAddComment }: { readonly currentUser: User; readonly comments: Task["comments"]; readonly onAddComment: TaskInspectorProps["onAddComment"] }) {
+export function TaskDiscussion({
+  currentUser,
+  comments,
+  onAddComment,
+}: {
+  readonly currentUser: User;
+  readonly comments: Task['comments'];
+  readonly onAddComment: TaskInspectorProps['onAddComment'];
+}) {
   const [comment, setComment] = useState('');
   const [replyToId, setReplyToId] = useState<string | null>(null);
 
@@ -30,9 +34,7 @@ export function TaskDiscussion({ currentUser, comments, onAddComment }: { readon
       <div className="mb-2 flex items-center gap-2">
         <MessagesIcon size={16} className="text-fg-tertiary" />
         <h3 className="text-title-sm font-semibold text-fg-primary">نظرات و گزارش‌ها</h3>
-        <span className="numeric text-caption text-fg-tertiary">
-          {formatCount(comments.length)}
-        </span>
+        <span className="text-caption text-fg-tertiary numeric">{formatCount(comments.length)}</span>
       </div>
       <p className="mb-3 text-micro text-fg-tertiary">
         دیدگاه‌ها، گزارش پیشرفت و گفتگوی مربوط به وظیفه را در همین بخش بنویسید.
@@ -61,13 +63,10 @@ export function TaskDiscussion({ currentUser, comments, onAddComment }: { readon
                   <span className="text-caption font-semibold text-fg-primary">
                     {author?.fullName ?? 'کاربر'}
                   </span>
-                  <RelativeTime
-                    iso={entry.createdAt}
-                    className="numeric text-micro text-fg-quaternary"
-                  />
+                  <RelativeTime iso={entry.createdAt} className="text-micro text-fg-quaternary numeric" />
                 </div>
                 {parentAuthor && (
-                  <p className="border-s-2 border-brand-300 ps-2 text-micro text-fg-tertiary">
+                  <p className="border-brand-300 border-s-2 ps-2 text-micro text-fg-tertiary">
                     {`در پاسخ به ${parentAuthor.fullName}`}
                   </p>
                 )}

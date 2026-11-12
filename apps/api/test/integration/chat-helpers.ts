@@ -1,11 +1,28 @@
 import { randomUUID } from 'node:crypto';
-import type { ConversationDetail, CreateConversationBody, MessagePage, SendMessageBody, SentMessage } from '@taskin/contracts';
+import type {
+  ConversationDetail,
+  CreateConversationBody,
+  MessagePage,
+  SendMessageBody,
+  SentMessage,
+} from '@taskin/contracts';
 import { TokenService } from '../../src/modules/auth/token.service.js';
 import { bearer, idempotencyKey, type Session, type TestApp } from './harness.js';
 import { expectStatus, wsPath } from './work-helpers.js';
 
-export async function createConversation(t: TestApp, as: Session, workspaceId: string, body: CreateConversationBody, status = 201): Promise<ConversationDetail> {
-  const response = await t.http().post(`${wsPath(workspaceId)}/conversations`).set(bearer(as)).set('Idempotency-Key', idempotencyKey()).send(body);
+export async function createConversation(
+  t: TestApp,
+  as: Session,
+  workspaceId: string,
+  body: CreateConversationBody,
+  status = 201,
+): Promise<ConversationDetail> {
+  const response = await t
+    .http()
+    .post(`${wsPath(workspaceId)}/conversations`)
+    .set(bearer(as))
+    .set('Idempotency-Key', idempotencyKey())
+    .send(body);
   expectStatus(response, status);
   return response.body as ConversationDetail;
 }
@@ -28,8 +45,17 @@ export async function sendRest(
   return response.body as SentMessage;
 }
 
-export async function history(t: TestApp, as: Session, workspaceId: string, conversationId: string, query = ''): Promise<MessagePage> {
-  const response = await t.http().get(`${wsPath(workspaceId)}/conversations/${conversationId}/messages${query ? `?${query}` : ''}`).set(bearer(as));
+export async function history(
+  t: TestApp,
+  as: Session,
+  workspaceId: string,
+  conversationId: string,
+  query = '',
+): Promise<MessagePage> {
+  const response = await t
+    .http()
+    .get(`${wsPath(workspaceId)}/conversations/${conversationId}/messages${query ? `?${query}` : ''}`)
+    .set(bearer(as));
   expectStatus(response, 200);
   return response.body as MessagePage;
 }
@@ -61,7 +87,14 @@ export async function seedMembers(t: TestApp, workspaceId: string, count: number
   return Promise.all(
     rows.map(async ({ id }) => {
       const sessionId = randomUUID();
-      const { token } = await tokens.signAccess({ userId: id, sessionId, amr: ['otp'], authTime: Math.floor(Date.now() / 1000), securityVersion: 1, stepUpAt: null });
+      const { token } = await tokens.signAccess({
+        userId: id,
+        sessionId,
+        amr: ['otp'],
+        authTime: Math.floor(Date.now() / 1000),
+        securityVersion: 1,
+        stepUpAt: null,
+      });
       return { userId: id, sessionId, accessToken: token };
     }),
   );

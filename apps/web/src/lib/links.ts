@@ -47,7 +47,13 @@ export function describeLink(url: string): SharedLink {
   const siteName = KNOWN_SITES.find((site) => site.host.test(host))?.name ?? host;
   // The last segment that carries words, not an opaque id (`k9Qe7`) or a bare version tag.
   const segments = parsed.pathname.split('/').filter(Boolean);
-  const descriptive = [...segments].reverse().find((segment) => /[-_]|[^\x00-\x7F]/.test(segment) || segment.length > 12);
-  const title = descriptive ? humanise(descriptive) : (segments.length ? humanise(segments[segments.length - 1] ?? '') : host);
+  const descriptive = [...segments]
+    .reverse()
+    .find((segment) => /[-_]|[^\x00-\x7F]/.test(segment) || segment.length > 12);
+  const title = descriptive
+    ? humanise(descriptive)
+    : segments.length
+      ? humanise(segments[segments.length - 1] ?? '')
+      : host;
   return { url, host, siteName, title };
 }

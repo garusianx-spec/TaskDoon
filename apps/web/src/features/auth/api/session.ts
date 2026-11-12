@@ -1,5 +1,5 @@
-import type { AuthSession,MeUser,OtpChallenge,OtpVerifyResult } from '@taskin/contracts';
-import { ApiProblem,http,installCredentials } from '@/lib/api-client';
+import type { AuthSession, MeUser, OtpChallenge, OtpVerifyResult } from '@taskin/contracts';
+import { ApiProblem, http, installCredentials } from '@/lib/api-client';
 
 /**
  * The signed-in session (RFC §5.1). The access token lives in memory only; the refresh token is
@@ -58,8 +58,15 @@ export const session = {
   },
 
   /** Signs in, or says a new number must pick a name first (`signupToken`). */
-  async verifyCode(challengeId: string, code: string): Promise<{ readonly signupToken: string } | AdminPasswordChallenge | LiveSession> {
-    const result = await http.post<OtpVerifyResult>('/auth/otp/verify', { challengeId, code, deviceLabel: deviceLabel() }, { authenticated: false });
+  async verifyCode(
+    challengeId: string,
+    code: string,
+  ): Promise<{ readonly signupToken: string } | AdminPasswordChallenge | LiveSession> {
+    const result = await http.post<OtpVerifyResult>(
+      '/auth/otp/verify',
+      { challengeId, code, deviceLabel: deviceLabel() },
+      { authenticated: false },
+    );
     if (result.status === 'signup_required') return { signupToken: result.signupToken };
     if (result.status === 'password_required' || result.status === 'admin_setup_required') {
       end();
@@ -70,14 +77,24 @@ export const session = {
 
   /** Completes the second factor. A temporary challenge is never an API credential. */
   async completeAdminPassword(temporaryToken: string, password: string): Promise<LiveSession> {
-    return adopt(await http.post<AuthSession>('/auth/admin/password', { temporaryToken, password, deviceLabel: deviceLabel() }, { authenticated: false }));
+    return adopt(
+      await http.post<AuthSession>(
+        '/auth/admin/password',
+        { temporaryToken, password, deviceLabel: deviceLabel() },
+        { authenticated: false },
+      ),
+    );
   },
 
   requestAdminSetup(temporaryToken: string): Promise<void> {
     return http.post<void>('/auth/admin/setup/request', { temporaryToken }, { authenticated: false });
   },
   async completeAdminSetup(temporaryToken: string, code: string, newPassword: string): Promise<void> {
-    await http.post<void>('/auth/admin/setup/complete', { temporaryToken, code, newPassword }, { authenticated: false });
+    await http.post<void>(
+      '/auth/admin/setup/complete',
+      { temporaryToken, code, newPassword },
+      { authenticated: false },
+    );
     end();
   },
 
@@ -86,7 +103,11 @@ export const session = {
   },
 
   async completeAdminRecovery(temporaryToken: string, code: string, newPassword: string): Promise<void> {
-    await http.post<void>('/auth/admin/recovery/complete', { temporaryToken, code, newPassword }, { authenticated: false });
+    await http.post<void>(
+      '/auth/admin/recovery/complete',
+      { temporaryToken, code, newPassword },
+      { authenticated: false },
+    );
     end();
   },
 
@@ -100,7 +121,13 @@ export const session = {
 
   /** The alternative to the SMS code, for an account that has set a password. */
   async passwordSignIn(phone: string, password: string): Promise<LiveSession> {
-    return adopt(await http.post<AuthSession>('/auth/password/login', { phone, password, deviceLabel: deviceLabel() }, { authenticated: false }));
+    return adopt(
+      await http.post<AuthSession>(
+        '/auth/password/login',
+        { phone, password, deviceLabel: deviceLabel() },
+        { authenticated: false },
+      ),
+    );
   },
 
   /** «فراموشی رمز عبور»: texts a reset code (the same answer whether or not the number has an account). */
@@ -110,7 +137,11 @@ export const session = {
 
   /** A new password with that code. Every session of the account ends; sign in again afterwards. */
   async resetPassword(challengeId: string, code: string, newPassword: string): Promise<void> {
-    await http.post<void>('/auth/password/recover', { challengeId, code, newPassword }, { authenticated: false });
+    await http.post<void>(
+      '/auth/password/recover',
+      { challengeId, code, newPassword },
+      { authenticated: false },
+    );
   },
 
   /** Texts a code to this account's own phone, to confirm a session opened with the password. */
@@ -123,7 +154,13 @@ export const session = {
   },
 
   async signUp(signupToken: string, fullName: string): Promise<LiveSession> {
-    return adopt(await http.post<AuthSession>('/auth/signup', { signupToken, fullName, deviceLabel: deviceLabel() }, { authenticated: false }));
+    return adopt(
+      await http.post<AuthSession>(
+        '/auth/signup',
+        { signupToken, fullName, deviceLabel: deviceLabel() },
+        { authenticated: false },
+      ),
+    );
   },
 
   /** Owners and admins need a password (a second factor, never a way to sign in). */
@@ -203,7 +240,12 @@ function end(): void {
 function refresh(): Promise<boolean> {
   inFlight ??= (async () => {
     try {
-      adopt(await http.post<AuthSession>('/auth/refresh', undefined, { headers: csrfHeader(), authenticated: false }));
+      adopt(
+        await http.post<AuthSession>('/auth/refresh', undefined, {
+          headers: csrfHeader(),
+          authenticated: false,
+        }),
+      );
       return true;
     } catch (error) {
       // A network failure keeps the session (the next call retries); a refusal ends it.

@@ -20,18 +20,18 @@ No endpoints, permissions, database schema or migrations were added. Profile ide
 
 ## Verification
 
-| Check | Result |
-|---|---|
-| All workspace lint | Passed |
-| All workspace typecheck | Passed |
-| API unit tests | 214 passed |
-| Web unit/component tests | 101 passed |
-| Shared Jalali/text tests | 13 passed |
-| Full API integration | 307 passed across 28 files, with two workers |
-| Demo production build | Passed |
-| Full demo Playwright | 492 passed across 18 suites; zero console problems |
-| Final affected demo suites after custom-notebook reconciliation | 196 passed across 4 suites; zero console problems |
-| Focused live Playwright and direct database assertions | 22 passed; zero console problems |
+| Check                                                           | Result                                             |
+| --------------------------------------------------------------- | -------------------------------------------------- |
+| All workspace lint                                              | Passed                                             |
+| All workspace typecheck                                         | Passed                                             |
+| API unit tests                                                  | 214 passed                                         |
+| Web unit/component tests                                        | 101 passed                                         |
+| Shared Jalali/text tests                                        | 13 passed                                          |
+| Full API integration                                            | 307 passed across 28 files, with two workers       |
+| Demo production build                                           | Passed                                             |
+| Full demo Playwright                                            | 492 passed across 18 suites; zero console problems |
+| Final affected demo suites after custom-notebook reconciliation | 196 passed across 4 suites; zero console problems  |
+| Focused live Playwright and direct database assertions          | 22 passed; zero console problems                   |
 
 The new demo suite covers profile validation, immediate name updates, cancellation, desktop hierarchy, all four note categories, Save/reset/focus, reopening content and 375px layout. The live helper is part of the existing two-person flow and checks delayed API responses, real persistence after reload and category changes during note creation. It restores the original profile name so later flow fixtures remain valid.
 

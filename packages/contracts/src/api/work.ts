@@ -146,8 +146,7 @@ export interface UpdateColumnBody {
 
 /** What happens to the cards of a column being deleted. */
 export type ColumnDisposition =
-  | { readonly kind: 'migrate'; readonly targetColumnId: string }
-  | { readonly kind: 'archive' };
+  { readonly kind: 'migrate'; readonly targetColumnId: string } | { readonly kind: 'archive' };
 
 export interface DeleteColumnBody {
   /** Required unless the column is empty. */

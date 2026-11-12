@@ -9,15 +9,35 @@ import type { RealtimeEnvelope } from '@taskin/contracts';
  */
 export type BusOperation =
   /** Emits to every local socket in any of `rooms`, except those in any of `except`. */
-  | { readonly op: 'emit'; readonly rooms: readonly string[]; readonly except?: readonly string[]; readonly envelope: RealtimeEnvelope }
+  | {
+      readonly op: 'emit';
+      readonly rooms: readonly string[];
+      readonly except?: readonly string[];
+      readonly envelope: RealtimeEnvelope;
+    }
   /** The sockets of `userIds` whose live workspace is `workspaceId` join `rooms`. */
-  | { readonly op: 'join'; readonly workspaceId: string; readonly userIds: readonly string[]; readonly rooms: readonly string[] }
+  | {
+      readonly op: 'join';
+      readonly workspaceId: string;
+      readonly userIds: readonly string[];
+      readonly rooms: readonly string[];
+    }
   /** The sockets of `userIds` (every socket when `null`) leave `rooms`. */
   | { readonly op: 'leave'; readonly userIds: readonly string[] | null; readonly rooms: readonly string[] }
   /** Recomputes the project and conversation rooms of these users (all, when `null`) in the workspace. */
-  | { readonly op: 'rescope'; readonly workspaceId: string; readonly userIds: readonly string[] | null; readonly reason: string }
+  | {
+      readonly op: 'rescope';
+      readonly workspaceId: string;
+      readonly userIds: readonly string[] | null;
+      readonly reason: string;
+    }
   /** These users (all, when `null`) lost the workspace: tell them, and leave its rooms. */
-  | { readonly op: 'evict'; readonly workspaceId: string; readonly userIds: readonly string[] | null; readonly reason: 'removed' | 'deleted' }
+  | {
+      readonly op: 'evict';
+      readonly workspaceId: string;
+      readonly userIds: readonly string[] | null;
+      readonly reason: 'removed' | 'deleted';
+    }
   /** These sessions were signed out: tell their sockets, then disconnect them. */
   | { readonly op: 'revoke'; readonly sessionIds: readonly string[]; readonly reason: string };
 

@@ -16,12 +16,12 @@ x-ci-daemon-env: &ci-daemon-env
   S3_SECRET_KEY: taskin-dev-secret
   SMTP_URL: smtp://mailpit:1025
   PUBLIC_WEB_ORIGIN: http://localhost:3000
-  COOKIE_SECURE: "false"
+  COOKIE_SECURE: 'false'
   OTP_PEPPER: development-only-pepper-change-me-please
   APP_ENCRYPTION_KEY: ZGV2ZWxvcG1lbnQtb25seS1rZXktY2hhbmdlLW1lISE=
   SMS_PROVIDERS: console
-  LOG_PRETTY: "false"
-  PORT: "4000"
+  LOG_PRETTY: 'false'
+  PORT: '4000'
 
 x-api-health: &api-health
   test:
@@ -42,7 +42,7 @@ services:
     environment: !override
       <<: *ci-daemon-env
       APP_ROLE: http
-      TRUST_PROXY: "1"
+      TRUST_PROXY: '1'
       THROTTLE_IP_PER_MINUTE: ${THROTTLE_IP_PER_MINUTE:-300}
     healthcheck: *api-health
   api-ws-1:

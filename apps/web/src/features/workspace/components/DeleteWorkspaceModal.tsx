@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect,useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Workspace } from '@taskin/contracts';
-import { Button,Checkbox,Input,Modal } from '@/components/ui';
+import { Button, Checkbox, Input, Modal } from '@/components/ui';
 import { WarningIcon } from '@/components/icons';
 
 export interface DeleteWorkspaceModalProps {
@@ -18,7 +18,12 @@ export interface DeleteWorkspaceModalProps {
  * workspace's exact name and acknowledges the consequence — two deliberate acts, so it can
  * never happen from a stray click or a reflexive Enter. The overlay does not dismiss it.
  */
-export function DeleteWorkspaceModal({ workspace, onClose, onConfirm, requirePassword = false }: DeleteWorkspaceModalProps) {
+export function DeleteWorkspaceModal({
+  workspace,
+  onClose,
+  onConfirm,
+  requirePassword = false,
+}: DeleteWorkspaceModalProps) {
   const [typed, setTyped] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
   const [password, setPassword] = useState('');

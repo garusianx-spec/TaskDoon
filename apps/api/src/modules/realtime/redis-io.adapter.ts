@@ -52,7 +52,11 @@ export class RedisIoAdapter extends IoAdapter {
       this.clients.push(client);
     }
     const prefix = redis.key('sio');
-    server.adapter(config.env.RT_ADAPTER === 'redis-sharded' ? createShardedAdapter(pub, sub, { channelPrefix: prefix }) : createAdapter(pub, sub, { key: prefix }));
+    server.adapter(
+      config.env.RT_ADAPTER === 'redis-sharded'
+        ? createShardedAdapter(pub, sub, { channelPrefix: prefix })
+        : createAdapter(pub, sub, { key: prefix }),
+    );
 
     const guard = this.context.get(JwtAuthGuard);
     const logger = new Logger('RedisIoAdapter');
@@ -81,7 +85,10 @@ export class RedisIoAdapter extends IoAdapter {
             next(handshakeError(error.code));
             return;
           }
-          logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'handshake check unavailable');
+          logger.warn(
+            { error: error instanceof Error ? error.message : String(error) },
+            'handshake check unavailable',
+          );
           next(handshakeError('SERVICE_UNAVAILABLE'));
         });
     });

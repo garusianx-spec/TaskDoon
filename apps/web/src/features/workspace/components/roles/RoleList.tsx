@@ -1,14 +1,10 @@
 'use client';
 
-import type {
-PermissionMatrix,RoleDescriptor,
-RoleId
-} from '@taskin/contracts';
-import { PERMISSION_ACTIONS,PERMISSION_MODULES } from '@/data/reference';
+import type { PermissionMatrix, RoleDescriptor, RoleId } from '@taskin/contracts';
+import { PERMISSION_ACTIONS, PERMISSION_MODULES } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { LockIcon } from '@/components/icons';
-
 
 export interface RoleListProps {
   readonly roles: readonly RoleDescriptor[];
@@ -22,7 +18,12 @@ export function RoleList({ roles, activeRole, onSelect, permissions }: RoleListP
   const totalCells = PERMISSION_MODULES.length * PERMISSION_ACTIONS.length;
 
   return (
-    <ul className="flex flex-col gap-1" role="tablist" aria-label="نقش‌های سازمان" aria-orientation="vertical">
+    <ul
+      className="flex flex-col gap-1"
+      role="tablist"
+      aria-label="نقش‌های سازمان"
+      aria-orientation="vertical"
+    >
       {roles
         .slice()
         .sort((a, b) => a.rank - b.rank)
@@ -30,8 +31,7 @@ export function RoleList({ roles, activeRole, onSelect, permissions }: RoleListP
           const active = role.id === activeRole;
           const granted = PERMISSION_MODULES.reduce(
             (sum, module) =>
-              sum +
-              PERMISSION_ACTIONS.filter((action) => permissions[role.id][module.id][action.id]).length,
+              sum + PERMISSION_ACTIONS.filter((action) => permissions[role.id][module.id][action.id]).length,
             0,
           );
 
@@ -60,14 +60,12 @@ export function RoleList({ roles, activeRole, onSelect, permissions }: RoleListP
                     {role.name}
                   </span>
                   {role.locked && <LockIcon size={13} className="shrink-0 text-fg-quaternary" />}
-                  <span className="numeric ms-auto shrink-0 text-micro text-fg-tertiary">
+                  <span className="ms-auto shrink-0 text-micro text-fg-tertiary numeric">
                     {`${formatCount(role.memberCount)} نفر`}
                   </span>
                 </span>
-                <span className="line-clamp-2 text-micro leading-5 text-fg-tertiary">
-                  {role.description}
-                </span>
-                <span className="numeric text-micro font-medium text-fg-quaternary">
+                <span className="line-clamp-2 text-micro leading-5 text-fg-tertiary">{role.description}</span>
+                <span className="text-micro font-medium text-fg-quaternary numeric">
                   {`${formatCount(granted)}/${formatCount(totalCells)} دسترسی فعال`}
                 </span>
               </button>

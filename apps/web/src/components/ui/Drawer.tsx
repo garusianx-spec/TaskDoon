@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect,useRef,type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -76,7 +76,7 @@ export function Drawer({ open, onClose, title, children, header, footer, classNa
           {title}
         </h2>
         {header}
-        <div className="scrollbar-thin flex-1 overflow-y-auto">{children}</div>
+        <div className="flex-1 overflow-y-auto scrollbar-thin">{children}</div>
         {footer && <div className="border-t border-secondary bg-sunken p-4">{footer}</div>}
       </aside>
     </>

@@ -1,13 +1,8 @@
 'use client';
 
-import { useRef,useState,type ClipboardEvent,type KeyboardEvent } from 'react';
-import type { DepartmentId,InvitationRecipient,RoleId } from '@taskin/contracts';
-import {
-looksLikePhone,
-normaliseIranMobile,
-parseRecipient,
-splitRecipients
-} from '@taskin/text';
+import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import type { DepartmentId, InvitationRecipient, RoleId } from '@taskin/contracts';
+import { looksLikePhone, normaliseIranMobile, parseRecipient, splitRecipients } from '@taskin/text';
 import { useNamespacedId } from '@/hooks/useId';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { directory } from '@/store/directory';
@@ -18,7 +13,13 @@ const COMMIT_KEYS = ['Enter', ',', '،', ';', '؛', ' '];
 
 /** Addresses of existing members, read when the recipient is added. */
 const memberEmails = () => new Set(directory.users().map((user) => user.email.toLowerCase()));
-const memberMobiles = () => new Set(directory.users().map((user) => normaliseIranMobile(user.phone)).filter(Boolean));
+const memberMobiles = () =>
+  new Set(
+    directory
+      .users()
+      .map((user) => normaliseIranMobile(user.phone))
+      .filter(Boolean),
+  );
 
 /** A rejected entry and why — rendered with the entry bidi-isolated inside Persian copy. */
 interface Problem {
@@ -26,7 +27,11 @@ interface Problem {
   readonly reason: string;
 }
 
-export function useInvitationForm({ open, invitations, onSubmit }: Pick<InviteMemberModalProps, 'open' | 'invitations' | 'onSubmit'>) {
+export function useInvitationForm({
+  open,
+  invitations,
+  onSubmit,
+}: Pick<InviteMemberModalProps, 'open' | 'invitations' | 'onSubmit'>) {
   const [recipients, setRecipients] = useState<readonly InvitationRecipient[]>([]);
   const [pendingText, setPendingText] = useState('');
   const [problems, setProblems] = useState<readonly Problem[]>([]);
@@ -110,5 +115,26 @@ export function useInvitationForm({ open, invitations, onSubmit }: Pick<InviteMe
   const byEmail = recipients.filter((entry) => entry.channel === 'email').length;
   const bySms = recipients.length - byEmail;
 
-  return { recipients, setRecipients, pendingText, setPendingText, problems, role, setRole, department, setDepartment, message, setMessage, inputRef, id, commit, onKeyDown, onPaste, submit, emptyError, byEmail, bySms };
+  return {
+    recipients,
+    setRecipients,
+    pendingText,
+    setPendingText,
+    problems,
+    role,
+    setRole,
+    department,
+    setDepartment,
+    message,
+    setMessage,
+    inputRef,
+    id,
+    commit,
+    onKeyDown,
+    onPaste,
+    submit,
+    emptyError,
+    byEmail,
+    bySms,
+  };
 }

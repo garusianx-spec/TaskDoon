@@ -1,6 +1,6 @@
 'use client';
 
-import { Button,Modal,type ModalProps } from '@/components/ui';
+import { Button, Modal, type ModalProps } from '@/components/ui';
 
 export interface ConfirmDialogProps extends Omit<ModalProps, 'footer'> {
   readonly confirmLabel: string;
@@ -9,7 +9,14 @@ export interface ConfirmDialogProps extends Omit<ModalProps, 'footer'> {
   readonly confirmDisabled?: boolean;
 }
 
-export function ConfirmDialog({ confirmLabel, onConfirm, busy = false, confirmDisabled = false, onClose, ...modal }: ConfirmDialogProps) {
+export function ConfirmDialog({
+  confirmLabel,
+  onConfirm,
+  busy = false,
+  confirmDisabled = false,
+  onClose,
+  ...modal
+}: ConfirmDialogProps) {
   return (
     <Modal
       size="sm"
@@ -17,8 +24,12 @@ export function ConfirmDialog({ confirmLabel, onConfirm, busy = false, confirmDi
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>انصراف</Button>
-          <Button variant="destructive" disabled={confirmDisabled} loading={busy} onClick={onConfirm}>{confirmLabel}</Button>
+          <Button variant="secondary" disabled={busy} onClick={onClose}>
+            انصراف
+          </Button>
+          <Button variant="destructive" disabled={confirmDisabled} loading={busy} onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
         </>
       }
     />

@@ -24,11 +24,14 @@ import { check, eventually, finish, launch, out, visible, watchConsole } from '.
 const base = process.env.BASE_URL ?? 'http://localhost:3000';
 const apiLog = process.env.API_LOG;
 if (!apiLog) {
-  console.error('Set API_LOG to the file the API logs to: the console SMS driver writes sign-in codes there.');
+  console.error(
+    'Set API_LOG to the file the API logs to: the console SMS driver writes sign-in codes there.',
+  );
   process.exit(2);
 }
 const grantCommand =
-  process.env.GRANT_PLATFORM_ADMIN ?? `node ${fileURLToPath(new URL('../../../api/dist/cli/platform-admin.js', import.meta.url))} grant`;
+  process.env.GRANT_PLATFORM_ADMIN ??
+  `node ${fileURLToPath(new URL('../../../api/dist/cli/platform-admin.js', import.meta.url))} grant`;
 
 const OTP = /"text":"کد ورود شما به تسک‌دون: (\d{6})"/g;
 const INVITE = /"text":"[^"]*?https?:\/\/[^"\s]+\/invite\?token=([^"\s&]+)"/g;
@@ -75,7 +78,11 @@ async function api(method, path, { token, body, idempotent } = {}) {
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (token) headers.authorization = `Bearer ${token}`;
   if (idempotent) headers['idempotency-key'] = randomUUID();
-  const response = await fetch(`${base}/api/v1${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const response = await fetch(`${base}/api/v1${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null };
 }
@@ -86,9 +93,13 @@ async function signUp(phone, fullName) {
   const challenge = await api('POST', '/auth/otp/request', { body: { phone } });
   if (challenge.status !== 200) throw new Error(`otp/request ${challenge.status}`);
   const code = await smsAfter(from, OTP, 'sign-in code');
-  const verify = await api('POST', '/auth/otp/verify', { body: { challengeId: challenge.body.challengeId, code } });
+  const verify = await api('POST', '/auth/otp/verify', {
+    body: { challengeId: challenge.body.challengeId, code },
+  });
   if (verify.body?.status !== 'signup_required') throw new Error(`otp/verify ${verify.status}`);
-  const signup = await api('POST', '/auth/signup', { body: { signupToken: verify.body.signupToken, fullName } });
+  const signup = await api('POST', '/auth/signup', {
+    body: { signupToken: verify.body.signupToken, fullName },
+  });
   if (signup.status !== 201) throw new Error(`signup ${signup.status}`);
   return signup.body;
 }
@@ -96,14 +107,34 @@ async function signUp(phone, fullName) {
 /* ---------- Setup through the API: the watched workspace, its member, and her own workspace ---------- */
 
 const owner = await signUp(ownerPhone, ownerName);
-check((await api('POST', '/auth/password', { token: owner.accessToken, body: { newPassword: `Malek-Ramz-${runId}!` } })).status === 204, 'the owner sets a password');
-const watched = await api('POST', '/workspaces', { token: owner.accessToken, body: { name: watchedName }, idempotent: true });
+check(
+  (
+    await api('POST', '/auth/password', {
+      token: owner.accessToken,
+      body: { newPassword: `Malek-Ramz-${runId}!` },
+    })
+  ).status === 204,
+  'the owner sets a password',
+);
+const watched = await api('POST', '/workspaces', {
+  token: owner.accessToken,
+  body: { name: watchedName },
+  idempotent: true,
+});
 check(watched.status === 201, '…and creates the workspace to be watched');
 const watchedId = watched.body.id;
 
 const member = await signUp(memberPhone, memberName);
-check((await api('POST', '/auth/password', { token: member.accessToken, body: { newPassword: MEMBER_PASSWORD } })).status === 204, 'the member sets a password');
-const own = await api('POST', '/workspaces', { token: member.accessToken, body: { name: ownName }, idempotent: true });
+check(
+  (await api('POST', '/auth/password', { token: member.accessToken, body: { newPassword: MEMBER_PASSWORD } }))
+    .status === 204,
+  'the member sets a password',
+);
+const own = await api('POST', '/workspaces', {
+  token: member.accessToken,
+  body: { name: ownName },
+  idempotent: true,
+});
 check(own.status === 201, '…and has a workspace of her own');
 const ownId = own.body.id;
 
@@ -115,7 +146,15 @@ const invited = await api('POST', `/workspaces/${watchedId}/invitations`, {
 });
 check(invited.status === 201, 'the owner invites her');
 const inviteToken = await smsAfter(inviteFrom, INVITE, 'invitation link');
-check((await api('POST', '/invitations/accept', { token: member.accessToken, body: { token: decodeURIComponent(inviteToken) } })).status === 200, '…and she joins');
+check(
+  (
+    await api('POST', '/invitations/accept', {
+      token: member.accessToken,
+      body: { token: decodeURIComponent(inviteToken) },
+    })
+  ).status === 200,
+  '…and she joins',
+);
 
 const browser = await launch();
 const viewport = { width: 1440, height: 900 };
@@ -130,12 +169,18 @@ await memberPage.getByRole('button', { name: 'ورود با رمز عبور' }).
 await memberPage.getByRole('textbox', { name: 'شماره موبایل' }).fill(memberPhone);
 await memberPage.getByLabel('رمز عبور', { exact: true }).fill(MEMBER_PASSWORD);
 await memberPage.getByRole('button', { name: 'ورود', exact: true }).click();
-check(await visible(memberPage.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000), 'her browser opens the workspace app');
+check(
+  await visible(memberPage.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000),
+  'her browser opens the workspace app',
+);
 const activeIs = (name) => memberPage.getByRole('button', { name: new RegExp(`فضای کاری فعال: ${name}`) });
 const switcher = () => memberPage.getByRole('button', { name: /تعویض فضای کاری/ });
 if (!(await visible(activeIs(watchedName), 3_000))) {
   await switcher().click();
-  await memberPage.getByRole('menu', { name: 'تعویض فضای کاری' }).getByRole('menuitem', { name: new RegExp(watchedName) }).click();
+  await memberPage
+    .getByRole('menu', { name: 'تعویض فضای کاری' })
+    .getByRole('menuitem', { name: new RegExp(watchedName) })
+    .click();
 }
 check(await visible(activeIs(watchedName), 30_000), '…on the watched workspace');
 
@@ -156,10 +201,16 @@ const nameBox = page.getByRole('textbox', { name: 'نام و نام خانواد
 await nameBox.waitFor({ timeout: 15_000 });
 await nameBox.fill(operatorName);
 await page.getByRole('button', { name: 'ساخت حساب و ورود' }).click();
-check(await visible(page.getByRole('heading', { name: `${operatorName}، خوش آمدید` }), 15_000), 'the operator signs up');
+check(
+  await visible(page.getByRole('heading', { name: `${operatorName}، خوش آمدید` }), 15_000),
+  'the operator signs up',
+);
 execSync(`${grantCommand} ${operatorPhone}`, { stdio: 'inherit' });
 await page.goto(`${base}/admin`);
-check(await visible(page.getByRole('heading', { name: 'رمز عبور مدیر را تعیین کنید' }), 30_000), '/admin asks her to set a password');
+check(
+  await visible(page.getByRole('heading', { name: 'رمز عبور مدیر را تعیین کنید' }), 30_000),
+  '/admin asks her to set a password',
+);
 await page.getByLabel('رمز عبور', { exact: true }).fill(OPERATOR_PASSWORD);
 await page.getByRole('button', { name: 'ذخیره و ادامه' }).click();
 const nav = page.getByRole('navigation', { name: 'بخش‌های پنل مدیریت' });
@@ -196,32 +247,61 @@ check(await confirmSuspend.isDisabled(), '…and cannot go ahead without a reaso
 await suspend.getByLabel('دلیل تعلیق').fill(REASON);
 await page.screenshot({ path: `${out}/admin_workspace_suspend.png` });
 await confirmSuspend.click();
-check(await visible(page.getByRole('status').filter({ hasText: `${watchedName} معلق شد` }), 10_000), 'the list says it was suspended');
+check(
+  await visible(page.getByRole('status').filter({ hasText: `${watchedName} معلق شد` }), 10_000),
+  'the list says it was suspended',
+);
 check(await visible(row.getByText('معلق / مسدود', { exact: true })), '…and shows «معلق / مسدود»');
 
-check(await visible(memberPage.getByText(SUSPENDED).first(), 20_000), 'the member’s open app says the workspace was suspended');
+check(
+  await visible(memberPage.getByText(SUSPENDED).first(), 20_000),
+  'the member’s open app says the workspace was suspended',
+);
 check(await visible(activeIs(ownName), 20_000), '…and moves her to her own workspace');
 await switcher().click();
-const suspendedItem = memberPage.getByRole('menu', { name: 'تعویض فضای کاری' }).getByRole('menuitem', { name: new RegExp(watchedName) });
-check(await visible(suspendedItem.getByText('معلق؛ فعلاً در دسترس نیست')), '…where the suspended one is listed as unavailable');
+const suspendedItem = memberPage
+  .getByRole('menu', { name: 'تعویض فضای کاری' })
+  .getByRole('menuitem', { name: new RegExp(watchedName) });
+check(
+  await visible(suspendedItem.getByText('معلق؛ فعلاً در دسترس نیست')),
+  '…where the suspended one is listed as unavailable',
+);
 check(await suspendedItem.isDisabled(), '…and cannot be opened');
 await memberPage.screenshot({ path: `${out}/member_workspace_suspended.png` });
 await memberPage.keyboard.press('Escape');
 const refused = await api('GET', `/workspaces/${watchedId}`, { token: member.accessToken });
-check(refused.status === 403 && refused.body?.code === 'WORKSPACE_SUSPENDED', 'the API answers WORKSPACE_SUSPENDED');
-check((await api('GET', `/workspaces/${ownId}`, { token: member.accessToken })).status === 200, '…while her own workspace answers as always');
+check(
+  refused.status === 403 && refused.body?.code === 'WORKSPACE_SUSPENDED',
+  'the API answers WORKSPACE_SUSPENDED',
+);
+check(
+  (await api('GET', `/workspaces/${ownId}`, { token: member.accessToken })).status === 200,
+  '…while her own workspace answers as always',
+);
 
 /* ---------- The detail page: the suspension, lifting it, the quota ---------- */
 
 menu = await menuOf();
 await menu.getByRole('menuitem', { name: 'مشاهده جزئیات و اعضا' }).click();
-check(await visible(page.getByRole('heading', { level: 1, name: watchedName }), 10_000), '«مشاهده جزئیات و اعضا» opens the workspace');
+check(
+  await visible(page.getByRole('heading', { level: 1, name: watchedName }), 10_000),
+  '«مشاهده جزئیات و اعضا» opens the workspace',
+);
 check(await visible(page.getByRole('note').getByText(REASON)), '…which shows why it is suspended');
 await page.getByRole('button', { name: 'رفع تعلیق', exact: true }).click();
 const lift = page.getByRole('alertdialog', { name: `رفع تعلیق ${watchedName}` });
 await lift.getByRole('button', { name: 'رفع تعلیق', exact: true }).click();
-check(await visible(page.getByRole('status').filter({ hasText: 'تعلیق فضای کاری برداشته شد' }), 10_000), '«رفع تعلیق» is confirmed');
-check(await eventually(async () => (await api('GET', `/workspaces/${watchedId}`, { token: member.accessToken })).status === 200, 10_000), '…and the members are let back in');
+check(
+  await visible(page.getByRole('status').filter({ hasText: 'تعلیق فضای کاری برداشته شد' }), 10_000),
+  '«رفع تعلیق» is confirmed',
+);
+check(
+  await eventually(
+    async () => (await api('GET', `/workspaces/${watchedId}`, { token: member.accessToken })).status === 200,
+    10_000,
+  ),
+  '…and the members are let back in',
+);
 
 const quota = page.getByRole('region', { name: 'سهمیه‌ها و پلن' });
 check(await visible(quota, 10_000), 'the quota panel shows the plan, the limits and what is used');
@@ -232,7 +312,12 @@ await page.screenshot({ path: `${out}/admin_workspace_quota.png`, fullPage: true
 await quota.getByRole('button', { name: 'ذخیره پلن و سهمیه‌ها' }).click();
 check(await visible(quota.getByText('پلن و سهمیه‌ها ذخیره شد.'), 10_000), 'a project limit is overridden');
 check(
-  await eventually(async () => (await api('GET', `/workspaces/${watchedId}`, { token: owner.accessToken })).body?.limits?.maxProjects === 9, 10_000),
+  await eventually(
+    async () =>
+      (await api('GET', `/workspaces/${watchedId}`, { token: owner.accessToken })).body?.limits
+        ?.maxProjects === 9,
+    10_000,
+  ),
   '…and the owner’s workspace is held to it',
 );
 
@@ -241,18 +326,36 @@ check(
 await page.getByRole('button', { name: 'انتقال مالکیت', exact: true }).click();
 const transfer = page.getByRole('alertdialog', { name: `انتقال مالکیت ${watchedName}` });
 check(await visible(transfer), 'the transfer dialog lists the members');
-check(await transfer.getByRole('radio', { name: new RegExp(ownerName) }).isDisabled(), '…the current owner cannot be picked');
+check(
+  await transfer.getByRole('radio', { name: new RegExp(ownerName) }).isDisabled(),
+  '…the current owner cannot be picked',
+);
 await transfer.getByRole('radio', { name: new RegExp(memberName) }).check();
 await transfer.getByLabel('دلیل انتقال').fill('مالک قبلی در دسترس نیست');
 await transfer.getByRole('button', { name: 'انتقال مالکیت', exact: true }).click();
-check(await visible(page.getByRole('status').filter({ hasText: `مالکیت به ${memberName} منتقل شد` }), 10_000), 'ownership moves to the member');
-check(await eventually(async () => (await api('GET', `/workspaces/${watchedId}`, { token: member.accessToken })).body?.ownerId === member.user.id, 10_000), '…who now owns it');
+check(
+  await visible(page.getByRole('status').filter({ hasText: `مالکیت به ${memberName} منتقل شد` }), 10_000),
+  'ownership moves to the member',
+);
+check(
+  await eventually(
+    async () =>
+      (await api('GET', `/workspaces/${watchedId}`, { token: member.accessToken })).body?.ownerId ===
+      member.user.id,
+    10_000,
+  ),
+  '…who now owns it',
+);
 
 /* ---------- The audit log ---------- */
 
 await nav.getByRole('link', { name: 'گزارش بازرسی' }).click();
 const audit = page.getByRole('region', { name: 'رویدادهای گزارش بازرسی' });
-const entry = audit.getByRole('row').filter({ hasText: 'تعلیق فضای کاری' }).filter({ hasText: REASON }).first();
+const entry = audit
+  .getByRole('row')
+  .filter({ hasText: 'تعلیق فضای کاری' })
+  .filter({ hasText: REASON })
+  .first();
 check(await visible(entry, 10_000), 'the audit log records the suspension with its reason');
 check(/trace [0-9a-f]{32}/.test((await entry.textContent()) ?? ''), '…and its trace id');
 for (const action of ['رفع تعلیق فضای کاری', 'تغییر پلن و سهمیه‌ها', 'انتقال مالکیت']) {

@@ -5,7 +5,6 @@ import { useWorkspace } from '@/store/WorkspaceProvider';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { TaskSidebar } from '@/features/board/components/TaskSidebar';
 
-
 export function TaskSidebarContainer({
   tasks,
   currentUserId,

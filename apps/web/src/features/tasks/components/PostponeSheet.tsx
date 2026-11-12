@@ -1,11 +1,11 @@
 'use client';
 
 import type { Task } from '@taskin/contracts';
-import { addDays,formatJalali } from '@taskin/jalali';
+import { addDays, formatJalali } from '@taskin/jalali';
 import { directory } from '@/store/directory';
-import { Avatar,BottomSheet } from '@/components/ui';
-import { MenuItem,MenuList } from '@/components/ui/Menu';
-import { CalendarIcon,ClockIcon,UserAddIcon } from '@/components/icons';
+import { Avatar, BottomSheet } from '@/components/ui';
+import { MenuItem, MenuList } from '@/components/ui/Menu';
+import { CalendarIcon, ClockIcon, UserAddIcon } from '@/components/icons';
 
 export interface PostponeSheetProps {
   readonly task: Task | null;
@@ -44,7 +44,7 @@ export function PostponeSheet({ task, onClose, onPostpone, onReassign }: Postpon
             >
               <span className="flex flex-col">
                 <span>{preset.label}</span>
-                <span className="numeric text-micro font-normal text-fg-tertiary">
+                <span className="text-micro font-normal text-fg-tertiary numeric">
                   {formatJalali(nextDate, 'medium')}
                 </span>
               </span>
@@ -55,7 +55,9 @@ export function PostponeSheet({ task, onClose, onPostpone, onReassign }: Postpon
         <p className="px-2.5 pb-1 pt-3 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
           ارجاع به همکار
         </p>
-        {directory.users().filter((user) => !task.assigneeIds.includes(user.id))
+        {directory
+          .users()
+          .filter((user) => !task.assigneeIds.includes(user.id))
           .slice(0, 5)
           .map((user) => (
             <MenuItem

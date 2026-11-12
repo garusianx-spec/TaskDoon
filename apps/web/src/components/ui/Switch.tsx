@@ -1,9 +1,9 @@
 'use client';
 
-import { forwardRef,type ReactNode } from 'react';
+import { forwardRef, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useNamespacedId } from '@/hooks/useId';
-import { LockIcon,MinusIcon } from '@/components/icons';
+import { LockIcon, MinusIcon } from '@/components/icons';
 
 export type SwitchSize = 'sm' | 'md';
 

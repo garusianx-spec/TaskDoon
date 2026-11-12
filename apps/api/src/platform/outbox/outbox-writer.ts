@@ -28,7 +28,11 @@ export interface OutboxEventMap {
   'member.joined': { readonly workspaceId: string; readonly userId: string };
   'member.removed': { readonly workspaceId: string; readonly userId: string };
   'rbac.changed': { readonly workspaceId: string; readonly userIds?: readonly string[] };
-  'session.revoked': { readonly userId: string; readonly sessionIds: readonly string[]; readonly reason: string };
+  'session.revoked': {
+    readonly userId: string;
+    readonly sessionIds: readonly string[];
+    readonly reason: string;
+  };
 
   /* M2: projects, board and tasks. */
   'project.created': { readonly projectId: string };
@@ -37,9 +41,23 @@ export interface OutboxEventMap {
   'project.deleted': { readonly projectId: string };
   /** Back from the trash. */
   'project.restored': { readonly projectId: string };
-  'project.member.changed': { readonly projectId: string; readonly userId: string; readonly role: string | null };
-  'board.column.added': { readonly workflowId: string; readonly projectId: string; readonly columnId: string; readonly version: number };
-  'board.column.updated': { readonly workflowId: string; readonly projectId: string; readonly columnId: string; readonly version: number };
+  'project.member.changed': {
+    readonly projectId: string;
+    readonly userId: string;
+    readonly role: string | null;
+  };
+  'board.column.added': {
+    readonly workflowId: string;
+    readonly projectId: string;
+    readonly columnId: string;
+    readonly version: number;
+  };
+  'board.column.updated': {
+    readonly workflowId: string;
+    readonly projectId: string;
+    readonly columnId: string;
+    readonly version: number;
+  };
   'board.column.removed': {
     readonly workflowId: string;
     readonly projectId: string;
@@ -51,8 +69,18 @@ export interface OutboxEventMap {
     readonly taskIds: readonly string[];
     readonly resync: boolean;
   };
-  'task.created': { readonly taskId: string; readonly projectId: string; readonly columnId: string; readonly version: number };
-  'task.updated': { readonly taskId: string; readonly projectId: string; readonly version: number; readonly fields: readonly string[] };
+  'task.created': {
+    readonly taskId: string;
+    readonly projectId: string;
+    readonly columnId: string;
+    readonly version: number;
+  };
+  'task.updated': {
+    readonly taskId: string;
+    readonly projectId: string;
+    readonly version: number;
+    readonly fields: readonly string[];
+  };
   'task.moved': {
     readonly taskId: string;
     readonly projectId: string;
@@ -65,23 +93,43 @@ export interface OutboxEventMap {
   /** Feed events: in-app notifications and the activity feed are fanned out from these. */
   'task.assigned': TaskFeedPayload & { readonly assigneeIds: readonly string[] };
   'task.status_changed': TaskFeedPayload & { readonly from: string; readonly to: string };
-  'task.commented': TaskFeedPayload & { readonly commentId: string; readonly excerpt: string; readonly replyToAuthorId: string | null };
+  'task.commented': TaskFeedPayload & {
+    readonly commentId: string;
+    readonly excerpt: string;
+    readonly replyToAuthorId: string | null;
+  };
   'task.file_attached': TaskFeedPayload & { readonly attachmentId: string; readonly fileName: string };
   /** An upload completed: the worker scans it, then marks it ready. */
   'file.uploaded': { readonly attachmentId: string };
   /** Schedules (or, with `remindAt: null`, cancels) the reminder of this event version. */
-  'calendar.event.changed': { readonly eventId: string; readonly version: number; readonly remindAt: string | null };
+  'calendar.event.changed': {
+    readonly eventId: string;
+    readonly version: number;
+    readonly remindAt: string | null;
+  };
   'calendar.event.deleted': { readonly eventId: string };
   'note.task_linked': { readonly noteId: string; readonly taskId: string; readonly ownerId: string };
 
   /* M3: chat. The messages themselves are broadcast directly; these carry what must not be lost. */
-  'conversation.created': { readonly conversationId: string; readonly kind: string; readonly memberIds: readonly string[] };
+  'conversation.created': {
+    readonly conversationId: string;
+    readonly kind: string;
+    readonly memberIds: readonly string[];
+  };
   'conversation.updated': { readonly conversationId: string; readonly fields: readonly string[] };
   /** A member joined, rejoined or changed role. */
-  'conversation.member.added': { readonly conversationId: string; readonly userId: string; readonly role: string };
+  'conversation.member.added': {
+    readonly conversationId: string;
+    readonly userId: string;
+    readonly role: string;
+  };
   'conversation.member.removed': { readonly conversationId: string; readonly userId: string };
   /** Phase 3.2: a message scheduled for later; the relay turns it into a delayed dispatch job. */
-  'message.scheduled': { readonly scheduledId: string; readonly authorId: string; readonly scheduledAt: string };
+  'message.scheduled': {
+    readonly scheduledId: string;
+    readonly authorId: string;
+    readonly scheduledAt: string;
+  };
   /** Only for messages with mentions or a reply: their notifications. */
   'message.posted': {
     readonly conversationId: string;

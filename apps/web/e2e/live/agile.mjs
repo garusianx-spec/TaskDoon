@@ -42,7 +42,11 @@ async function api(method, path, { body, idempotent } = {}) {
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (token) headers.authorization = `Bearer ${token}`;
   if (idempotent) headers['idempotency-key'] = randomUUID();
-  const response = await fetch(`${base}/api/v1${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const response = await fetch(`${base}/api/v1${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null };
 }
@@ -52,25 +56,44 @@ async function api(method, path, { body, idempotent } = {}) {
 const from = statSync(apiLog).size;
 const challenge = await api('POST', '/auth/otp/request', { body: { phone } });
 const code = await smsAfter(from, OTP, 'sign-in code');
-const verified = await api('POST', '/auth/otp/verify', { body: { challengeId: challenge.body.challengeId, code } });
-const signedUp = await api('POST', '/auth/signup', { body: { signupToken: verified.body.signupToken, fullName: `مدیر چابک ${runId}` } });
+const verified = await api('POST', '/auth/otp/verify', {
+  body: { challengeId: challenge.body.challengeId, code },
+});
+const signedUp = await api('POST', '/auth/signup', {
+  body: { signupToken: verified.body.signupToken, fullName: `مدیر چابک ${runId}` },
+});
 token = signedUp.body.accessToken;
 await api('POST', '/auth/password', { body: { newPassword: PASSWORD } });
-const workspace = (await api('POST', '/workspaces', { body: { name: `فضای چابک ${runId}` }, idempotent: true })).body;
+const workspace = (
+  await api('POST', '/workspaces', { body: { name: `فضای چابک ${runId}` }, idempotent: true })
+).body;
 const ws = `/workspaces/${workspace.id}`;
-const project = (await api('POST', `${ws}/projects`, { body: { key: `AG${runId}`, name: projectName }, idempotent: true })).body;
-const createTask = async (body) => (await api('POST', `${ws}/tasks`, { body: { projectId: project.id, ...body }, idempotent: true })).body;
-const database = await createTask({ title: 'طراحی پایگاه داده', type: 'bug', severity: 'high', estimatedMinutes: 120 });
+const project = (
+  await api('POST', `${ws}/projects`, { body: { key: `AG${runId}`, name: projectName }, idempotent: true })
+).body;
+const createTask = async (body) =>
+  (await api('POST', `${ws}/tasks`, { body: { projectId: project.id, ...body }, idempotent: true })).body;
+const database = await createTask({
+  title: 'طراحی پایگاه داده',
+  type: 'bug',
+  severity: 'high',
+  estimatedMinutes: 120,
+});
 const service = await createTask({ title: 'پیاده‌سازی سرویس گزارش' });
 const screen = await createTask({ title: 'صفحه تنظیمات گزارش' });
-check(project?.id && database?.type === 'bug' && service?.type === 'task', 'account, project and tasks set up through the API');
+check(
+  project?.id && database?.type === 'bug' && service?.type === 'task',
+  'account, project and tasks set up through the API',
+);
 const task = async (id) => (await api('GET', `${ws}/tasks/${id}`)).body;
 const agile = (id) => `${ws}/projects/${project.id}/tasks/${id}`;
 
 /* ---------- Sign in and open the project board ---------- */
 
 const browser = await launch();
-const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'fa-IR' })).newPage();
+const page = await (
+  await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'fa-IR' })
+).newPage();
 watchConsole(page);
 await page.goto(`${base}/tasks`);
 await page.getByRole('button', { name: 'ورود با رمز عبور' }).click({ timeout: 30_000 });
@@ -78,7 +101,11 @@ await page.getByRole('textbox', { name: 'شماره موبایل' }).fill(phone)
 await page.getByLabel('رمز عبور', { exact: true }).fill(PASSWORD);
 await page.getByRole('button', { name: 'ورود', exact: true }).click();
 check(await visible(page.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000), 'signed in');
-await page.getByRole('navigation', { name: 'درخت پروژه‌ها' }).getByRole('button', { name: projectName }).first().click();
+await page
+  .getByRole('navigation', { name: 'درخت پروژه‌ها' })
+  .getByRole('button', { name: projectName })
+  .first()
+  .click();
 
 const board = page.getByRole('application', { name: 'بورد کانبان وظایف' });
 const card = (title) => board.getByRole('group', { name: title });
@@ -100,8 +127,22 @@ const pick = async (scope, combobox, option) => {
   await page.getByRole('option', { name: option }).first().click();
 };
 
-check(await eventually(async () => (await card(/طراحی پایگاه داده/).getByRole('img', { name: /باگ.*زیاد/ }).count()) === 1, 15_000), 'a bug from the API shows its glyph and severity');
-check((await card(/پیاده‌سازی سرویس گزارش/).getByRole('img').count()) === 0, 'a plain task shows none');
+check(
+  await eventually(
+    async () =>
+      (await card(/طراحی پایگاه داده/)
+        .getByRole('img', { name: /باگ.*زیاد/ })
+        .count()) === 1,
+    15_000,
+  ),
+  'a bug from the API shows its glyph and severity',
+);
+check(
+  (await card(/پیاده‌سازی سرویس گزارش/)
+    .getByRole('img')
+    .count()) === 0,
+  'a plain task shows none',
+);
 
 /* ---------- Type in the composer ---------- */
 
@@ -124,28 +165,55 @@ check(
 
 await openCard(/پیاده‌سازی سرویس گزارش/);
 const estimate = dialog.getByLabel('برآورد زمان وظیفه');
-check((await dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0, 'task details have no time tracking section');
-check((await dialog.getByRole('button', { name: 'ثبت زمان', exact: true }).count()) === 0, 'task details have no worklog action');
-check(await visible(dialog.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true })), 'the due date remains editable');
+check(
+  (await dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0,
+  'task details have no time tracking section',
+);
+check(
+  (await dialog.getByRole('button', { name: 'ثبت زمان', exact: true }).count()) === 0,
+  'task details have no worklog action',
+);
+check(
+  await visible(dialog.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true })),
+  'the due date remains editable',
+);
 await estimate.fill('2h');
 await estimate.press('Enter');
-check(await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'), 'estimate «2h» reads «۲ ساعت»');
+check(
+  await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'),
+  'estimate «2h» reads «۲ ساعت»',
+);
 await estimate.fill('abc');
 await estimate.press('Tab');
 check(await visible(dialog.getByText(/مثلاً «۲ ساعت»/)), 'an unreadable estimate duration is refused');
 await estimate.fill('۲ ساعت');
-check((await estimate.getAttribute('aria-invalid')) !== 'true', 'corrective input clears the estimate error immediately');
+check(
+  (await estimate.getAttribute('aria-invalid')) !== 'true',
+  'corrective input clears the estimate error immediately',
+);
 await estimate.press('Tab');
-check((await estimate.getAttribute('aria-invalid')) !== 'true', 'returning to the exact formatted estimate remains valid after blur');
+check(
+  (await estimate.getAttribute('aria-invalid')) !== 'true',
+  'returning to the exact formatted estimate remains valid after blur',
+);
 await saveDialog();
-check(await eventually(async () => (await task(service.id)).estimatedMinutes === 120, 15_000), 'the corrected original estimate is saved');
+check(
+  await eventually(async () => (await task(service.id)).estimatedMinutes === 120, 15_000),
+  'the corrected original estimate is saved',
+);
 await openCard(/پیاده‌سازی سرویس گزارش/);
-check(await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'), 'the corrected estimate persists on reopening');
+check(
+  await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'),
+  'the corrected estimate persists on reopening',
+);
 await estimate.fill('1h');
 await estimate.press('Enter');
 check((await task(service.id)).estimatedMinutes === 120, 'the changed estimate waits for Save Changes');
 await saveDialog();
-check(await eventually(async () => (await task(service.id)).estimatedMinutes === 60, 15_000), 'the estimate is saved');
+check(
+  await eventually(async () => (await task(service.id)).estimatedMinutes === 60, 15_000),
+  'the estimate is saved',
+);
 
 /* ---------- Dependencies ---------- */
 
@@ -162,21 +230,44 @@ check(
   }, 15_000),
   'the link is stored, from this task’s side',
 );
-check(await eventually(async () => (await deps.textContent()).includes(service.code), 15_000), '…and listed in the dialog');
+check(
+  await eventually(async () => (await deps.textContent()).includes(service.code), 15_000),
+  '…and listed in the dialog',
+);
 await closeDialog();
-check(await eventually(async () => (await card(/صفحه تنظیمات گزارش/).getByText('مسدود', { exact: true }).count()) === 1, 15_000), 'the blocked card shows its pill');
+check(
+  await eventually(
+    async () =>
+      (await card(/صفحه تنظیمات گزارش/)
+        .getByText('مسدود', { exact: true })
+        .count()) === 1,
+    15_000,
+  ),
+  'the blocked card shows its pill',
+);
 
 await openCard(/پیاده‌سازی سرویس گزارش/);
 deps = dialog.getByRole('region', { name: 'وابستگی‌های وظیفه' });
-check(await eventually(async () => (await deps.textContent()).includes(screen.code), 15_000), 'the other end lists the link too');
+check(
+  await eventually(async () => (await deps.textContent()).includes(screen.code), 15_000),
+  'the other end lists the link too',
+);
 await deps.getByRole('button', { name: 'افزودن وابستگی' }).click();
 await pick(deps, 'نوع رابطه', 'مسدود شده توسط');
 await pick(deps, 'وظیفه پیوندی', new RegExp(database.code));
 await deps.getByRole('button', { name: 'پیوند', exact: true }).click();
-check(await eventually(async () => (await task(service.id)).blockedByIds.includes(database.id), 15_000), 'a second link: the service waits on the database');
+check(
+  await eventually(async () => (await task(service.id)).blockedByIds.includes(database.id), 15_000),
+  'a second link: the service waits on the database',
+);
 await closeDialog();
-const cycle = await api('POST', `${agile(database.id)}/dependencies`, { body: { targetTaskId: screen.id, type: 'blocked_by' } });
-check(cycle.status === 409 && cycle.body.code === 'DEPENDENCY_CYCLE', 'the API refuses database ← screen, which would close a cycle');
+const cycle = await api('POST', `${agile(database.id)}/dependencies`, {
+  body: { targetTaskId: screen.id, type: 'blocked_by' },
+});
+check(
+  cycle.status === 409 && cycle.body.code === 'DEPENDENCY_CYCLE',
+  'the API refuses database ← screen, which would close a cycle',
+);
 
 /* ---------- Done while blocked: allowed, with a warning ---------- */
 
@@ -184,7 +275,10 @@ await board.getByRole('checkbox', { name: /صفحه تنظیمات گزارش/ }
 const notice = page.getByRole('status').filter({ hasText: 'هنوز منتظر' });
 check(await visible(notice), 'completing a blocked task warns');
 check((await notice.textContent()).includes(service.code), '…naming the unfinished blocker');
-check(await eventually(async () => (await task(screen.id)).status === 'done', 15_000), '…and the task is done all the same');
+check(
+  await eventually(async () => (await task(screen.id)).status === 'done', 15_000),
+  '…and the task is done all the same',
+);
 await notice.getByRole('button', { name: 'بستن هشدار' }).click();
 
 /* ---------- Backlog ---------- */
@@ -193,27 +287,56 @@ await openCard(/طراحی پایگاه داده/);
 await dialog.getByRole('button', { name: 'انتقال به بک‌لاگ' }).click();
 check((await task(database.id)).isBacklog === false, 'the backlog move waits for Save Changes');
 await saveDialog();
-check(await eventually(async () => (await task(database.id)).isBacklog === true, 15_000), 'moved to the backlog');
+check(
+  await eventually(async () => (await task(database.id)).isBacklog === true, 15_000),
+  'moved to the backlog',
+);
 check(await eventually(async () => (await card(/طراحی پایگاه داده/).count()) === 0), 'it leaves the board');
 await page.getByRole('tab', { name: 'بک‌لاگ' }).click();
 const backlog = page.getByRole('region', { name: 'بک‌لاگ' });
 check(await visible(backlog.getByText('طراحی پایگاه داده')), 'the backlog lists it');
 await page.screenshot({ path: `${out}/live_agile_backlog.png` });
 await backlog.getByRole('button', { name: `انتقال ${database.code} به بورد` }).click();
-check(await eventually(async () => (await task(database.id)).isBacklog === false, 15_000), '«انتقال به بورد» puts it back');
+check(
+  await eventually(async () => (await task(database.id)).isBacklog === false, 15_000),
+  '«انتقال به بورد» puts it back',
+);
 await page.getByRole('tab', { name: 'بورد' }).click();
 
 /* ---------- Everything survives a reload ---------- */
 
 await page.reload();
-await page.getByRole('navigation', { name: 'درخت پروژه‌ها' }).getByRole('button', { name: projectName }).first().click({ timeout: 30_000 });
-check(await eventually(async () => (await card(/طراحی پایگاه داده/).count()) === 1, 15_000), 'after a reload the database task is on the board');
-check((await card(/خروجی PDF گزارش/).getByRole('img', { name: 'ویژگی' }).count()) === 1, '…the feature keeps its glyph');
-check((await card(/پیاده‌سازی سرویس گزارش/).getByText('مسدود', { exact: true }).count()) === 1, '…and the service is still blocked by the database');
+await page
+  .getByRole('navigation', { name: 'درخت پروژه‌ها' })
+  .getByRole('button', { name: projectName })
+  .first()
+  .click({ timeout: 30_000 });
+check(
+  await eventually(async () => (await card(/طراحی پایگاه داده/).count()) === 1, 15_000),
+  'after a reload the database task is on the board',
+);
+check(
+  (await card(/خروجی PDF گزارش/)
+    .getByRole('img', { name: 'ویژگی' })
+    .count()) === 1,
+  '…the feature keeps its glyph',
+);
+check(
+  (await card(/پیاده‌سازی سرویس گزارش/)
+    .getByText('مسدود', { exact: true })
+    .count()) === 1,
+  '…and the service is still blocked by the database',
+);
 await page.screenshot({ path: `${out}/live_agile_board.png` });
 await openCard(/پیاده‌سازی سرویس گزارش/);
-check(await eventually(async () => (await estimate.inputValue()) === '۱ ساعت'), 'the saved estimate survives a reload');
-check((await dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0, 'time tracking remains absent after reload');
+check(
+  await eventually(async () => (await estimate.inputValue()) === '۱ ساعت'),
+  'the saved estimate survives a reload',
+);
+check(
+  (await dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0,
+  'time tracking remains absent after reload',
+);
 await closeDialog();
 
 await finish(browser);

@@ -1,14 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import type { PlanLimits,PlatformPlanOption,PlatformWorkspaceQuota,WorkspaceLimitOverrides } from '@taskin/contracts';
+import type {
+  PlanLimits,
+  PlatformPlanOption,
+  PlatformWorkspaceQuota,
+  WorkspaceLimitOverrides,
+} from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
 import { toLatinDigits } from '@taskin/text';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { bytesLabel } from '@/features/admin/lib/format';
 import { problemMessage } from '@/lib/api-problem';
-import { Badge,Button,Checkbox,Input,ProgressBar,Select,Textarea } from '@/components/ui';
+import { Badge, Button, Checkbox, Input, ProgressBar, Select, Textarea } from '@/components/ui';
 import { Panel } from '@/features/admin/components/AdminUi';
 
 type LimitKey = keyof PlanLimits;
@@ -87,7 +92,8 @@ export function WorkspaceQuotaPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const plan = planOptions.find((option) => option.id === planId)?.limits ?? quota.effective;
 
-  const update = (key: LimitKey, patch: Partial<Row>) => setRows((current) => ({ ...current, [key]: { ...current[key], ...patch } }));
+  const update = (key: LimitKey, patch: Partial<Row>) =>
+    setRows((current) => ({ ...current, [key]: { ...current[key], ...patch } }));
 
   /** The overrides as the API takes them, or a message saying which value is not right. */
   const collect = (): { overrides: WorkspaceLimitOverrides | null } | { problem: string } => {
@@ -101,7 +107,8 @@ export function WorkspaceQuotaPanel({
       }
       const amount = Number(toLatinDigits(row.value.trim()));
       const value = Math.round(amount * spec.unit);
-      if (!row.value.trim() || !Number.isFinite(amount) || value < 1) return { problem: `مقدار «${spec.label}» باید عددی بزرگ‌تر از صفر باشد.` };
+      if (!row.value.trim() || !Number.isFinite(amount) || value < 1)
+        return { problem: `مقدار «${spec.label}» باید عددی بزرگ‌تر از صفر باشد.` };
       overrides[spec.key] = value;
     }
     return { overrides: Object.keys(overrides).length > 0 ? (overrides as WorkspaceLimitOverrides) : null };
@@ -118,7 +125,11 @@ export function WorkspaceQuotaPanel({
     setNotice(null);
     try {
       const result = await call(() =>
-        adminApi.setWorkspaceLimits(workspaceId, { ...(planId !== quota.planId ? { planId } : {}), overrides: collected.overrides, reason: reason.trim() }),
+        adminApi.setWorkspaceLimits(workspaceId, {
+          ...(planId !== quota.planId ? { planId } : {}),
+          overrides: collected.overrides,
+          reason: reason.trim(),
+        }),
       );
       setNotice(result.changed ? 'پلن و سهمیه‌ها ذخیره شد.' : 'تغییری نبود؛ همه چیز همان است که بود.');
       setReason('');
@@ -130,10 +141,30 @@ export function WorkspaceQuotaPanel({
     }
   };
 
-  const usage: readonly { readonly label: string; readonly used: number; readonly limit: number | null; readonly format: (value: number) => string }[] = [
-    { label: 'اعضا', used: quota.usage.members, limit: quota.effective.maxMembers, format: (value) => toPersianDigits(value) },
-    { label: 'پروژه‌ها', used: quota.usage.projects, limit: quota.effective.maxProjects, format: (value) => toPersianDigits(value) },
-    { label: 'فضای ذخیره‌سازی', used: quota.usage.storageUsedBytes, limit: quota.effective.storageBytes, format: bytesLabel },
+  const usage: readonly {
+    readonly label: string;
+    readonly used: number;
+    readonly limit: number | null;
+    readonly format: (value: number) => string;
+  }[] = [
+    {
+      label: 'اعضا',
+      used: quota.usage.members,
+      limit: quota.effective.maxMembers,
+      format: (value) => toPersianDigits(value),
+    },
+    {
+      label: 'پروژه‌ها',
+      used: quota.usage.projects,
+      limit: quota.effective.maxProjects,
+      format: (value) => toPersianDigits(value),
+    },
+    {
+      label: 'فضای ذخیره‌سازی',
+      used: quota.usage.storageUsedBytes,
+      limit: quota.effective.storageBytes,
+      format: bytesLabel,
+    },
   ];
 
   return (
@@ -146,7 +177,13 @@ export function WorkspaceQuotaPanel({
               {entry.format(entry.used)} از {entry.limit === null ? 'نامحدود' : entry.format(entry.limit)}
             </span>
             {entry.limit !== null && (
-              <ProgressBar value={Math.min(entry.used, entry.limit)} max={Math.max(entry.limit, 1)} label={`مصرف ${entry.label}`} tone={entry.used >= entry.limit ? 'blocked' : 'brand'} showFraction={false} />
+              <ProgressBar
+                value={Math.min(entry.used, entry.limit)}
+                max={Math.max(entry.limit, 1)}
+                label={`مصرف ${entry.label}`}
+                tone={entry.used >= entry.limit ? 'blocked' : 'brand'}
+                showFraction={false}
+              />
             )}
           </div>
         ))}
@@ -165,12 +202,19 @@ export function WorkspaceQuotaPanel({
         </div>
 
         <fieldset className="flex flex-col gap-2" disabled={readOnly}>
-          <legend className="mb-1 text-body-sm font-medium text-fg-secondary">سقف‌ها (پیش‌فرض: همان پلن)</legend>
+          <legend className="mb-1 text-body-sm font-medium text-fg-secondary">
+            سقف‌ها (پیش‌فرض: همان پلن)
+          </legend>
           {LIMITS.map((spec) => {
             const row = rows[spec.key];
             return (
-              <div key={spec.key} className="flex flex-wrap items-center gap-3 rounded-lg border border-secondary px-3 py-2">
-                <span className="min-w-[10rem] flex-1 text-body-sm font-medium text-fg-primary">{spec.label}</span>
+              <div
+                key={spec.key}
+                className="flex flex-wrap items-center gap-3 rounded-lg border border-secondary px-3 py-2"
+              >
+                <span className="min-w-[10rem] flex-1 text-body-sm font-medium text-fg-primary">
+                  {spec.label}
+                </span>
                 <span className="text-caption text-fg-tertiary">پلن: {show(spec, plan[spec.key])}</span>
                 <Checkbox
                   size="sm"
@@ -209,7 +253,11 @@ export function WorkspaceQuotaPanel({
                     placeholder={spec.unitLabel}
                   />
                 )}
-                {row.custom && <Badge size="sm" tone="brand">سفارشی</Badge>}
+                {row.custom && (
+                  <Badge size="sm" tone="brand">
+                    سفارشی
+                  </Badge>
+                )}
               </div>
             );
           })}
@@ -217,14 +265,27 @@ export function WorkspaceQuotaPanel({
 
         {!readOnly && (
           <>
-            <Textarea label="دلیل تغییر" hint="الزامی؛ در گزارش بازرسی ثبت می‌شود." rows={2} maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} />
+            <Textarea
+              label="دلیل تغییر"
+              hint="الزامی؛ در گزارش بازرسی ثبت می‌شود."
+              rows={2}
+              maxLength={500}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
             {error && (
-              <p role="alert" className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked">
+              <p
+                role="alert"
+                className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked"
+              >
                 {error}
               </p>
             )}
             {notice && (
-              <p role="status" className="rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done">
+              <p
+                role="status"
+                className="rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done"
+              >
                 {notice}
               </p>
             )}

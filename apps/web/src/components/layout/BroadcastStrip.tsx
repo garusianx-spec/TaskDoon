@@ -1,11 +1,13 @@
 'use client';
 
 import type { BroadcastLevel } from '@taskin/contracts';
-import { CloseIcon,NotificationIcon,WarningIcon } from '@/components/icons';
+import { CloseIcon, NotificationIcon, WarningIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
 export const BROADCAST_LEVEL_LABELS: Readonly<Record<BroadcastLevel, string>> = {
-  info: 'اطلاع‌رسانی', warning: 'هشدار', critical: 'فوری',
+  info: 'اطلاع‌رسانی',
+  warning: 'هشدار',
+  critical: 'فوری',
 };
 const TONES: Readonly<Record<BroadcastLevel, string>> = {
   info: 'border-brand bg-brand-subtle text-fg-brand',
@@ -14,7 +16,12 @@ const TONES: Readonly<Record<BroadcastLevel, string>> = {
 };
 
 /** The actual banner and the admin preview render the same text and level treatment. */
-export function BroadcastStrip({ message, level, onDismiss, preview = false }: {
+export function BroadcastStrip({
+  message,
+  level,
+  onDismiss,
+  preview = false,
+}: {
   readonly message: string;
   readonly level: BroadcastLevel;
   readonly onDismiss?: () => void;
@@ -40,7 +47,7 @@ export function BroadcastStrip({ message, level, onDismiss, preview = false }: {
           aria-label="بستن اطلاعیه"
           title="بستن اطلاعیه"
           onClick={onDismiss}
-          className="flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-surface/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-current focus-visible:outline-offset-2"
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-surface/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
         >
           <CloseIcon size={18} />
         </button>

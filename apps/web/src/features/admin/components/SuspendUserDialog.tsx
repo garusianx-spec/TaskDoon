@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import type { PlatformModerationResult,PlatformUserSummary } from '@taskin/contracts';
+import type { PlatformModerationResult, PlatformUserSummary } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { problemMessage } from '@/lib/api-problem';
-import { Button,Modal,Textarea } from '@/components/ui';
-import { CheckCircleIcon,LockIcon } from '@/components/icons';
+import { Button, Modal, Textarea } from '@/components/ui';
+import { CheckCircleIcon, LockIcon } from '@/components/icons';
 
 const MIN_REASON = 3;
 const MAX_REASON = 500;
@@ -49,7 +49,11 @@ export function SuspendUserDialog({
     setBusy(true);
     setError(null);
     try {
-      const result = await call(() => (suspend ? adminApi.suspend(user.id, reason.trim()) : adminApi.unsuspend(user.id, reason.trim() || undefined)));
+      const result = await call(() =>
+        suspend
+          ? adminApi.suspend(user.id, reason.trim())
+          : adminApi.unsuspend(user.id, reason.trim() || undefined),
+      );
       setReason('');
       onDone(result);
     } catch (failure) {
@@ -77,7 +81,12 @@ export function SuspendUserDialog({
           <Button variant="secondary" onClick={close} disabled={busy}>
             انصراف
           </Button>
-          <Button variant={suspend ? 'destructive' : 'primary'} loading={busy} disabled={!ready} onClick={() => void confirm()}>
+          <Button
+            variant={suspend ? 'destructive' : 'primary'}
+            loading={busy}
+            disabled={!ready}
+            onClick={() => void confirm()}
+          >
             {suspend ? 'تعلیق کاربر' : 'رفع تعلیق'}
           </Button>
         </>
@@ -88,17 +97,26 @@ export function SuspendUserDialog({
           <ul className="flex list-disc flex-col gap-1 ps-5 text-body-sm text-fg-secondary">
             <li>
               همه نشست‌ها فوراً بسته می‌شوند
-              {user.activeSessionCount > 0 ? ` (${toPersianDigits(user.activeSessionCount)} نشست فعال)` : ''} و اتصال‌های زنده قطع می‌شود.
+              {user.activeSessionCount > 0
+                ? ` (${toPersianDigits(user.activeSessionCount)} نشست فعال)`
+                : ''}{' '}
+              و اتصال‌های زنده قطع می‌شود.
             </li>
             <li>ورود با کد پیامکی یا رمز عبور رد می‌شود و پیام «حساب معلق است» به کاربر نشان داده می‌شود.</li>
             <li>این اقدام با دلیل آن در گزارش بازرسی ثبت می‌شود.</li>
           </ul>
         ) : (
-          <p className="text-body-sm text-fg-secondary">نشست‌هایی که هنگام تعلیق بسته شدند باز نمی‌شوند؛ کاربر باید دوباره وارد شود.</p>
+          <p className="text-body-sm text-fg-secondary">
+            نشست‌هایی که هنگام تعلیق بسته شدند باز نمی‌شوند؛ کاربر باید دوباره وارد شود.
+          </p>
         )}
         <Textarea
           label={suspend ? 'دلیل تعلیق' : 'توضیح (اختیاری)'}
-          hint={suspend ? `الزامی، دست‌کم ${toPersianDigits(MIN_REASON)} نویسه؛ در گزارش بازرسی ثبت می‌شود.` : 'در گزارش بازرسی ثبت می‌شود.'}
+          hint={
+            suspend
+              ? `الزامی، دست‌کم ${toPersianDigits(MIN_REASON)} نویسه؛ در گزارش بازرسی ثبت می‌شود.`
+              : 'در گزارش بازرسی ثبت می‌شود.'
+          }
           rows={3}
           maxLength={MAX_REASON}
           required={suspend}
@@ -107,7 +125,10 @@ export function SuspendUserDialog({
           data-autofocus
         />
         {error && (
-          <p role="alert" className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked">
+          <p
+            role="alert"
+            className="rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked"
+          >
             {error}
           </p>
         )}

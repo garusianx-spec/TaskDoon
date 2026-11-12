@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback,useEffect,useRef,useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { isProblem } from '@/lib/api-client';
 import { problemMessage } from '@/lib/api-problem';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
@@ -20,7 +20,11 @@ export interface AdminLoad<T> {
  */
 export function useAdminLoad<T>(key: string | null, load: () => Promise<T>): AdminLoad<T> {
   const { call, generation } = useAdmin();
-  const [state, setState] = useState<{ data: T | null; error: string | null; loading: boolean }>({ data: null, error: null, loading: key !== null });
+  const [state, setState] = useState<{ data: T | null; error: string | null; loading: boolean }>({
+    data: null,
+    error: null,
+    loading: key !== null,
+  });
   const [nonce, setNonce] = useState(0);
   const loadRef = useRef(load);
   useIsomorphicLayoutEffect(() => {
@@ -40,8 +44,17 @@ export function useAdminLoad<T>(key: string | null, load: () => Promise<T>): Adm
         if (ticket === latest.current) setState({ data, error: null, loading: false });
       },
       (error: unknown) => {
-        if (ticket !== latest.current || isProblem(error, 'STEP_UP_REQUIRED') || isProblem(error, 'SMS_CONFIRMATION_REQUIRED')) return;
-        setState((current) => ({ ...current, error: problemMessage(error, 'بارگذاری این بخش ممکن نشد.'), loading: false }));
+        if (
+          ticket !== latest.current ||
+          isProblem(error, 'STEP_UP_REQUIRED') ||
+          isProblem(error, 'SMS_CONFIRMATION_REQUIRED')
+        )
+          return;
+        setState((current) => ({
+          ...current,
+          error: problemMessage(error, 'بارگذاری این بخش ممکن نشد.'),
+          loading: false,
+        }));
       },
     );
   }, [key, generation, nonce, call]);

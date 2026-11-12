@@ -3,13 +3,16 @@
 import { cn } from '@/lib/utils';
 import { ClockTime } from '@/components/ui';
 import { StoredVoicePlayer } from '@/features/chat/components/VoicePlayer';
-import {
-DoubleCheckIcon,WarningIcon
-} from '@/components/icons';
-import { FileCard,PhotoCard } from '@/features/chat/components/MessageAttachments';
+import { DoubleCheckIcon, WarningIcon } from '@/components/icons';
+import { FileCard, PhotoCard } from '@/features/chat/components/MessageAttachments';
 import { type MessageBubbleProps } from '@/features/chat/types/message-bubble';
 
-export function MessageContent({ message, outgoing, author, repliedTo }: Pick<MessageBubbleProps, "message" | "outgoing" | "author" | "repliedTo">) {
+export function MessageContent({
+  message,
+  outgoing,
+  author,
+  repliedTo,
+}: Pick<MessageBubbleProps, 'message' | 'outgoing' | 'author' | 'repliedTo'>) {
   return (
     <div
       className={cn(
@@ -48,18 +51,22 @@ export function MessageContent({ message, outgoing, author, repliedTo }: Pick<Me
 
       {message.body.kind === 'file' &&
         (message.body.attachment.kind === 'image' && !message.body.asFile ? (
-          <PhotoCard attachment={message.body.attachment} caption={message.body.caption} outgoing={outgoing} />
+          <PhotoCard
+            attachment={message.body.attachment}
+            caption={message.body.caption}
+            outgoing={outgoing}
+          />
         ) : (
           // A picture sent as a file is a document like any other: no inline preview.
-          <FileCard attachment={message.body.attachment} caption={message.body.caption} outgoing={outgoing} preview={!message.body.asFile} />
+          <FileCard
+            attachment={message.body.attachment}
+            caption={message.body.caption}
+            outgoing={outgoing}
+            preview={!message.body.asFile}
+          />
         ))}
 
-      <div
-        className={cn(
-          'mt-1 flex items-center gap-1',
-          outgoing ? 'justify-start' : 'justify-end',
-        )}
-      >
+      <div className={cn('mt-1 flex items-center gap-1', outgoing ? 'justify-start' : 'justify-end')}>
         {message.edited && (
           <span className={cn('text-micro', outgoing ? 'text-fg-on-brand/70' : 'text-fg-quaternary')}>
             ویرایش‌شده
@@ -67,7 +74,7 @@ export function MessageContent({ message, outgoing, author, repliedTo }: Pick<Me
         )}
         <ClockTime
           iso={message.sentAt}
-          className={cn('numeric text-micro', outgoing ? 'text-fg-on-brand/70' : 'text-fg-quaternary')}
+          className={cn('text-micro numeric', outgoing ? 'text-fg-on-brand/70' : 'text-fg-quaternary')}
         />
         {outgoing &&
           (message.failed ? (

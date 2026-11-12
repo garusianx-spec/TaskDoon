@@ -90,7 +90,9 @@ export class RealtimeClient {
         return;
       }
       if (code === 'AUTH_EXPIRED') {
-        void this.hooks.refreshToken().then((ok) => (ok ? this.scheduleRetry(0) : this.hooks.onRejected(code)));
+        void this.hooks
+          .refreshToken()
+          .then((ok) => (ok ? this.scheduleRetry(0) : this.hooks.onRejected(code)));
         return;
       }
       // Refused by middleware (e.g. SERVICE_UNAVAILABLE): Socket.IO does not retry these.
@@ -148,7 +150,9 @@ export class RealtimeClient {
     const socket = this.socket;
     const workspaceId = this.workspaceId;
     if (!socket || !workspaceId) return;
-    await this.call<{ readonly online: readonly string[] }>((live, ack) => live.emit('workspace:subscribe', { workspaceId }, ack));
+    await this.call<{ readonly online: readonly string[] }>((live, ack) =>
+      live.emit('workspace:subscribe', { workspaceId }, ack),
+    );
     // Back after a drop: ask for what was missed while away.
     if (this.connectedOnce) {
       const resume = this.hooks.resumeFrom();
@@ -170,9 +174,13 @@ export class RealtimeClient {
     emit: (socket: RealtimeSocket, ack: (response: WsAck<T>) => void) => void,
   ): Promise<WsAck<T>> {
     const socket = this.socket;
-    if (!socket?.connected) return Promise.resolve({ ok: false, code: 'SERVICE_UNAVAILABLE', message: 'offline' });
+    if (!socket?.connected)
+      return Promise.resolve({ ok: false, code: 'SERVICE_UNAVAILABLE', message: 'offline' });
     return new Promise((resolve) => {
-      const timer = setTimeout(() => resolve({ ok: false, code: 'SERVICE_UNAVAILABLE', message: 'timeout' }), ACK_TIMEOUT_MS);
+      const timer = setTimeout(
+        () => resolve({ ok: false, code: 'SERVICE_UNAVAILABLE', message: 'timeout' }),
+        ACK_TIMEOUT_MS,
+      );
       emit(socket, (response) => {
         clearTimeout(timer);
         resolve(response);

@@ -1,6 +1,12 @@
-import type { ConversationKind,PlatformSessionStatus,PlatformUserStatus,PlatformWorkspaceStatus,ProjectRole } from '@taskin/contracts';
+import type {
+  ConversationKind,
+  PlatformSessionStatus,
+  PlatformUserStatus,
+  PlatformWorkspaceStatus,
+  ProjectRole,
+} from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
-import { formatJalali,formatTime } from '@taskin/jalali';
+import { formatJalali, formatTime } from '@taskin/jalali';
 import { formatMobile } from '@taskin/text';
 import type { BadgeTone } from '@/components/ui';
 
@@ -14,14 +20,18 @@ export function dateTimeLabel(iso: string): string {
   return `${formatJalali(iso, 'medium')}، ${formatTime(iso)}`;
 }
 
-export const USER_STATUS: Readonly<Record<PlatformUserStatus, { readonly label: string; readonly tone: BadgeTone }>> = {
+export const USER_STATUS: Readonly<
+  Record<PlatformUserStatus, { readonly label: string; readonly tone: BadgeTone }>
+> = {
   active: { label: 'فعال', tone: 'success' },
   suspended: { label: 'معلق / مسدود', tone: 'warning' },
   deleted: { label: 'حذف‌شده', tone: 'error' },
 };
 
 /** Phase 3: a workspace's state, as the admin list and detail show it. */
-export const WORKSPACE_STATUS: Readonly<Record<PlatformWorkspaceStatus, { readonly label: string; readonly tone: BadgeTone }>> = {
+export const WORKSPACE_STATUS: Readonly<
+  Record<PlatformWorkspaceStatus, { readonly label: string; readonly tone: BadgeTone }>
+> = {
   active: { label: 'فعال', tone: 'success' },
   suspended: { label: 'معلق / مسدود', tone: 'warning' },
   deleted: { label: 'حذف‌شده', tone: 'error' },
@@ -38,13 +48,17 @@ export function bytesLabel(bytes: number): string {
   return `${round(bytes / 1024)} کیلوبایت`;
 }
 
-export const MEMBER_STATUS: Readonly<Record<'active' | 'suspended' | 'left', { readonly label: string; readonly tone: BadgeTone }>> = {
+export const MEMBER_STATUS: Readonly<
+  Record<'active' | 'suspended' | 'left', { readonly label: string; readonly tone: BadgeTone }>
+> = {
   active: { label: 'عضو فعال', tone: 'success' },
   suspended: { label: 'معلق', tone: 'warning' },
   left: { label: 'خارج‌شده', tone: 'neutral' },
 };
 
-export const SESSION_STATUS: Readonly<Record<PlatformSessionStatus, { readonly label: string; readonly tone: BadgeTone }>> = {
+export const SESSION_STATUS: Readonly<
+  Record<PlatformSessionStatus, { readonly label: string; readonly tone: BadgeTone }>
+> = {
   active: { label: 'فعال', tone: 'success' },
   revoked: { label: 'پایان‌یافته', tone: 'error' },
   expired: { label: 'منقضی', tone: 'neutral' },
@@ -59,13 +73,29 @@ export const REVOKE_REASONS: Readonly<Record<string, string>> = {
   expired: 'انقضا',
 };
 
-export const DEVICE_TYPES: Readonly<Record<string, string>> = { mobile: 'موبایل', tablet: 'تبلت', desktop: 'رایانه' };
+export const DEVICE_TYPES: Readonly<Record<string, string>> = {
+  mobile: 'موبایل',
+  tablet: 'تبلت',
+  desktop: 'رایانه',
+};
 
-export const CONVERSATION_KINDS: Readonly<Record<ConversationKind, string>> = { direct: 'گفتگوی مستقیم', group: 'گروه', channel: 'کانال' };
+export const CONVERSATION_KINDS: Readonly<Record<ConversationKind, string>> = {
+  direct: 'گفتگوی مستقیم',
+  group: 'گروه',
+  channel: 'کانال',
+};
 
-export const CONVERSATION_ROLES: Readonly<Record<string, string>> = { owner: 'سازنده', admin: 'مدیر', member: 'عضو' };
+export const CONVERSATION_ROLES: Readonly<Record<string, string>> = {
+  owner: 'سازنده',
+  admin: 'مدیر',
+  member: 'عضو',
+};
 
-export const PROJECT_ROLES: Readonly<Record<ProjectRole, string>> = { lead: 'سرپرست', contributor: 'مشارکت‌کننده', viewer: 'بیننده' };
+export const PROJECT_ROLES: Readonly<Record<ProjectRole, string>> = {
+  lead: 'سرپرست',
+  contributor: 'مشارکت‌کننده',
+  viewer: 'بیننده',
+};
 
 /** The platform audit log's verbs. */
 export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {

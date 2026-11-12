@@ -1,13 +1,10 @@
 'use client';
 
-import { useState,type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import type { NoteCategory } from '@taskin/contracts';
 import { formatCount } from '@/lib/format';
-import { Button,Input,Modal,Popover } from '@/components/ui';
-import {
-AddIcon,FolderAddIcon,TrashIcon
-} from '@/components/icons';
-
+import { Button, Input, Modal, Popover } from '@/components/ui';
+import { AddIcon, FolderAddIcon, TrashIcon } from '@/components/icons';
 
 /**
  * Asks before a notebook goes. Nothing is deleted on the first click; and deleting a notebook
@@ -96,7 +93,8 @@ export function CreateCategoryButton({
             event.preventDefault();
             const name = label.trim();
             if (!name) return setError('نام دسته را وارد کنید.');
-            if (categories.some((category) => category.label.trim() === name)) return setError('دسته‌ای با این نام وجود دارد.');
+            if (categories.some((category) => category.label.trim() === name))
+              return setError('دسته‌ای با این نام وجود دارد.');
             onCreate(name);
             close();
           }}

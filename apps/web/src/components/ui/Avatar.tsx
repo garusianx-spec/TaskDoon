@@ -1,4 +1,4 @@
-import type { AvatarTone,PresenceState } from '@taskin/contracts';
+import type { AvatarTone, PresenceState } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { toPersianDigits } from '@taskin/jalali';
 
@@ -68,10 +68,7 @@ export function Avatar({
   decorative = false,
 }: AvatarProps) {
   return (
-    <span
-      className={cn('relative inline-flex shrink-0', className)}
-      title={decorative ? undefined : name}
-    >
+    <span className={cn('relative inline-flex shrink-0', className)} title={decorative ? undefined : name}>
       <span
         aria-hidden={decorative || undefined}
         role={decorative ? undefined : 'img'}
@@ -131,7 +128,7 @@ export function AvatarStack({ members, max = 3, size = 'sm', className }: Avatar
       {overflow > 0 && (
         <span
           className={cn(
-            'numeric -ms-1.5 inline-flex items-center justify-center rounded-full bg-sunken font-semibold text-fg-tertiary ring-2 ring-surface',
+            '-ms-1.5 inline-flex items-center justify-center rounded-full bg-sunken font-semibold text-fg-tertiary ring-2 ring-surface numeric',
             SIZES[size],
           )}
           aria-hidden="true"
@@ -147,7 +144,7 @@ export function AvatarStack({ members, max = 3, size = 'sm', className }: Avatar
           tone={member.avatarTone}
           size={size}
           decorative
-          className={cn(index > 0 || overflow > 0 ? '-ms-1.5' : '', 'ring-2 ring-surface rounded-full')}
+          className={cn(index > 0 || overflow > 0 ? '-ms-1.5' : '', 'rounded-full ring-2 ring-surface')}
         />
       ))}
     </span>

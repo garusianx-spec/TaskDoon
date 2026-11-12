@@ -27,7 +27,20 @@ const config: Config = {
       colors: {
         /* Accent ramp — re-pointed by [data-accent]; components never name a palette. */
         brand: ramp('brand', ['25', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900']),
-        gray: ramp('gray', ['25', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']),
+        gray: ramp('gray', [
+          '25',
+          '50',
+          '100',
+          '200',
+          '300',
+          '400',
+          '500',
+          '600',
+          '700',
+          '800',
+          '900',
+          '950',
+        ]),
         success: ramp('success', ['50', '100', '200', '500', '600', '700', '900']),
         warning: ramp('warning', ['50', '100', '200', '500', '600', '700', '900']),
         error: ramp('error', ['50', '100', '200', '500', '600', '700', '900']),
@@ -61,16 +74,39 @@ const config: Config = {
 
         /* Task/Message status — `text-status-done`, `bg-status-done-subtle`, `border-status-done-line` */
         status: {
-          done: { DEFAULT: withAlpha('--status-done'), subtle: withAlpha('--status-done-bg'), line: withAlpha('--status-done-border') },
-          progress: { DEFAULT: withAlpha('--status-progress'), subtle: withAlpha('--status-progress-bg'), line: withAlpha('--status-progress-border') },
-          blocked: { DEFAULT: withAlpha('--status-blocked'), subtle: withAlpha('--status-blocked-bg'), line: withAlpha('--status-blocked-border') },
-          todo: { DEFAULT: withAlpha('--status-todo'), subtle: withAlpha('--status-todo-bg'), line: withAlpha('--status-todo-border') },
-          review: { DEFAULT: withAlpha('--status-review'), subtle: withAlpha('--status-review-bg'), line: withAlpha('--status-review-border') },
+          done: {
+            DEFAULT: withAlpha('--status-done'),
+            subtle: withAlpha('--status-done-bg'),
+            line: withAlpha('--status-done-border'),
+          },
+          progress: {
+            DEFAULT: withAlpha('--status-progress'),
+            subtle: withAlpha('--status-progress-bg'),
+            line: withAlpha('--status-progress-border'),
+          },
+          blocked: {
+            DEFAULT: withAlpha('--status-blocked'),
+            subtle: withAlpha('--status-blocked-bg'),
+            line: withAlpha('--status-blocked-border'),
+          },
+          todo: {
+            DEFAULT: withAlpha('--status-todo'),
+            subtle: withAlpha('--status-todo-bg'),
+            line: withAlpha('--status-todo-border'),
+          },
+          review: {
+            DEFAULT: withAlpha('--status-review'),
+            subtle: withAlpha('--status-review-bg'),
+            line: withAlpha('--status-review-border'),
+          },
         },
 
         /* Fixed tag tones for custom board columns and note colour tags. */
         tag: Object.fromEntries(
-          ['gray', 'blue', 'teal', 'green', 'amber', 'red', 'pink', 'violet'].map((tone) => [tone, tag(tone)]),
+          ['gray', 'blue', 'teal', 'green', 'amber', 'red', 'pink', 'violet'].map((tone) => [
+            tone,
+            tag(tone),
+          ]),
         ),
       },
       /* Border utilities get their own aliases so `border-primary` means "the primary
@@ -95,15 +131,15 @@ const config: Config = {
       },
       /* Persian text needs a touch more leading than Latin at the same optical size. */
       fontSize: {
-        'micro': ['0.6875rem', { lineHeight: '1.125rem', letterSpacing: '0' }],       // 11px — badges
-        'caption': ['0.75rem', { lineHeight: '1.25rem', letterSpacing: '0' }],        // 12px — micro-copy
-        'body-sm': ['0.8125rem', { lineHeight: '1.375rem', letterSpacing: '0' }],     // 13px — chat
-        'body': ['0.875rem', { lineHeight: '1.5rem', letterSpacing: '0' }],           // 14px — body / table
-        'title-sm': ['0.875rem', { lineHeight: '1.375rem', letterSpacing: '0' }],     // 14px — tab labels
-        'title': ['1rem', { lineHeight: '1.625rem', letterSpacing: '0' }],            // 16px — section titles
+        micro: ['0.6875rem', { lineHeight: '1.125rem', letterSpacing: '0' }], // 11px — badges
+        caption: ['0.75rem', { lineHeight: '1.25rem', letterSpacing: '0' }], // 12px — micro-copy
+        'body-sm': ['0.8125rem', { lineHeight: '1.375rem', letterSpacing: '0' }], // 13px — chat
+        body: ['0.875rem', { lineHeight: '1.5rem', letterSpacing: '0' }], // 14px — body / table
+        'title-sm': ['0.875rem', { lineHeight: '1.375rem', letterSpacing: '0' }], // 14px — tab labels
+        title: ['1rem', { lineHeight: '1.625rem', letterSpacing: '0' }], // 16px — section titles
         'heading-sm': ['1.125rem', { lineHeight: '1.75rem', letterSpacing: '-0.01em' }], // 18px
-        'heading': ['1.25rem', { lineHeight: '1.875rem', letterSpacing: '-0.01em' }], // 20px
-        'display': ['1.5rem', { lineHeight: '2.125rem', letterSpacing: '-0.02em' }],  // 24px — workspace header
+        heading: ['1.25rem', { lineHeight: '1.875rem', letterSpacing: '-0.01em' }], // 20px
+        display: ['1.5rem', { lineHeight: '2.125rem', letterSpacing: '-0.02em' }], // 24px — workspace header
       },
       boxShadow: {
         xs: 'var(--shadow-xs)',
@@ -113,7 +149,7 @@ const config: Config = {
         xl: 'var(--shadow-xl)',
       },
       spacing: {
-        rail: '4rem',      // 64px global navigation rail
+        rail: '4rem', // 64px global navigation rail
         sidebar: '18.75rem', // 300px contextual sidebar
         inspector: '23.75rem', // 380px right inspector
       },

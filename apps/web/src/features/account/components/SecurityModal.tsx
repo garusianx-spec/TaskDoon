@@ -1,11 +1,14 @@
 'use client';
 
-import type { LoginSession,User } from '@taskin/contracts';
+import type { LoginSession, User } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
-import { Button,Modal,SwitchField } from '@/components/ui';
+import { Button, Modal, SwitchField } from '@/components/ui';
 import { ShieldIcon } from '@/components/icons';
 import { ActiveSessions } from '@/features/account/components/ActiveSessions';
-import { PasswordManagement,type PasswordManagementSession } from '@/features/account/components/PasswordManagement';
+import {
+  PasswordManagement,
+  type PasswordManagementSession,
+} from '@/features/account/components/PasswordManagement';
 import { RecoveryEmail } from '@/features/account/components/RecoveryEmail';
 
 export interface SecurityModalProps {
@@ -65,7 +68,13 @@ export function SecurityModal({
     >
       <div className="flex flex-col gap-6">
         {live && <RecoveryEmail key={user.email ?? ''} email={user.email} open={open} />}
-        <PasswordManagement open={open} user={user} passwordChangedAt={passwordChangedAt} onPasswordChanged={onPasswordChanged} {...(live ? { live } : {})} />
+        <PasswordManagement
+          open={open}
+          user={user}
+          passwordChangedAt={passwordChangedAt}
+          onPasswordChanged={onPasswordChanged}
+          {...(live ? { live } : {})}
+        />
 
         {!live && (
           <section aria-label="ورود دومرحله‌ای" className="rounded-xl border border-secondary p-4">
@@ -84,7 +93,11 @@ export function SecurityModal({
           </section>
         )}
 
-        <ActiveSessions sessions={sessions} onRevokeSession={onRevokeSession} onRevokeOtherSessions={onRevokeOtherSessions} />
+        <ActiveSessions
+          sessions={sessions}
+          onRevokeSession={onRevokeSession}
+          onRevokeOtherSessions={onRevokeOtherSessions}
+        />
       </div>
     </Modal>
   );

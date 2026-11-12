@@ -75,47 +75,67 @@ export function parseMarkdown(source: string): readonly MarkdownBlock[] {
     const check = CHECKLIST.exec(text);
     if (check) {
       const item: ChecklistItem = { text: check[2] ?? '', done: check[1] !== ' ', line };
-      extend('checklist', () => ({ kind: 'checklist', items: [item] }), (block) => ({
-        kind: 'checklist',
-        items: [...block.items, item],
-      }));
+      extend(
+        'checklist',
+        () => ({ kind: 'checklist', items: [item] }),
+        (block) => ({
+          kind: 'checklist',
+          items: [...block.items, item],
+        }),
+      );
       return;
     }
 
     const bullet = BULLET.exec(text);
     if (bullet) {
       const item = bullet[1] ?? '';
-      extend('bullets', () => ({ kind: 'bullets', items: [item] }), (block) => ({
-        kind: 'bullets',
-        items: [...block.items, item],
-      }));
+      extend(
+        'bullets',
+        () => ({ kind: 'bullets', items: [item] }),
+        (block) => ({
+          kind: 'bullets',
+          items: [...block.items, item],
+        }),
+      );
       return;
     }
 
     const numbered = NUMBERED.exec(text);
     if (numbered) {
       const item = numbered[1] ?? '';
-      extend('numbers', () => ({ kind: 'numbers', items: [item] }), (block) => ({
-        kind: 'numbers',
-        items: [...block.items, item],
-      }));
+      extend(
+        'numbers',
+        () => ({ kind: 'numbers', items: [item] }),
+        (block) => ({
+          kind: 'numbers',
+          items: [...block.items, item],
+        }),
+      );
       return;
     }
 
     const quote = QUOTE.exec(text);
     if (quote) {
       const quoted = quote[1] ?? '';
-      extend('quote', () => ({ kind: 'quote', lines: [quoted] }), (block) => ({
-        kind: 'quote',
-        lines: [...block.lines, quoted],
-      }));
+      extend(
+        'quote',
+        () => ({ kind: 'quote', lines: [quoted] }),
+        (block) => ({
+          kind: 'quote',
+          lines: [...block.lines, quoted],
+        }),
+      );
       return;
     }
 
-    extend('paragraph', () => ({ kind: 'paragraph', lines: [text] }), (block) => ({
-      kind: 'paragraph',
-      lines: [...block.lines, text],
-    }));
+    extend(
+      'paragraph',
+      () => ({ kind: 'paragraph', lines: [text] }),
+      (block) => ({
+        kind: 'paragraph',
+        lines: [...block.lines, text],
+      }),
+    );
   });
 
   return blocks.filter((block) => block.kind !== 'paragraph' || block.lines.length > 0);
@@ -164,7 +184,10 @@ export function checklistProgress(source: string): { readonly done: number; read
  * Splits a note for "تبدیل یادداشت به وظیفه": open checklist items become subtasks, and the
  * rest of the text (ticked items included, as context) becomes the description.
  */
-export function splitForTask(source: string): { readonly description: string; readonly subtasks: readonly string[] } {
+export function splitForTask(source: string): {
+  readonly description: string;
+  readonly subtasks: readonly string[];
+} {
   const subtasks: string[] = [];
   const kept: string[] = [];
   for (const line of source.split('\n')) {
@@ -175,7 +198,13 @@ export function splitForTask(source: string): { readonly description: string; re
       kept.push(line);
     }
   }
-  return { description: kept.join('\n').replace(/\n{3,}/g, '\n\n').trim(), subtasks };
+  return {
+    description: kept
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim(),
+    subtasks,
+  };
 }
 
 /** Plain text for list previews and titles. */

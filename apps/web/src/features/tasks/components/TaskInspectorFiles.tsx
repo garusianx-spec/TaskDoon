@@ -4,26 +4,35 @@ import { useRef } from 'react';
 import type { Task } from '@taskin/contracts';
 import { formatJalali } from '@taskin/jalali';
 import { downloadAttachment } from '@/lib/download';
-import { formatCount,formatFileSize } from '@/lib/format';
+import { formatCount, formatFileSize } from '@/lib/format';
 import { userById } from '@/store/selectors';
-import {
-Button,
-IconButton
-} from '@/components/ui';
-import {
-DownloadIcon,PaperclipIcon,TrashIcon,ATTACHMENT_ICONS
-} from '@/components/icons';
+import { Button, IconButton } from '@/components/ui';
+import { DownloadIcon, PaperclipIcon, TrashIcon, ATTACHMENT_ICONS } from '@/components/icons';
 import { type TaskInspectorProps } from '@/features/tasks/types/inspector';
 
-export function TaskInspectorFiles({ attachments, fileBusy, saving, onAttachFiles, onRemoveAttachment, changeFiles, setError }: { readonly attachments: Task["attachments"]; readonly fileBusy: boolean; readonly saving: boolean; readonly onAttachFiles: TaskInspectorProps["onAttachFiles"]; readonly onRemoveAttachment: TaskInspectorProps["onRemoveAttachment"]; readonly changeFiles: (operation: () => Promise<void> | void) => Promise<void>; readonly setError: (error: string) => void }) {
+export function TaskInspectorFiles({
+  attachments,
+  fileBusy,
+  saving,
+  onAttachFiles,
+  onRemoveAttachment,
+  changeFiles,
+  setError,
+}: {
+  readonly attachments: Task['attachments'];
+  readonly fileBusy: boolean;
+  readonly saving: boolean;
+  readonly onAttachFiles: TaskInspectorProps['onAttachFiles'];
+  readonly onRemoveAttachment: TaskInspectorProps['onRemoveAttachment'];
+  readonly changeFiles: (operation: () => Promise<void> | void) => Promise<void>;
+  readonly setError: (error: string) => void;
+}) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   return (
     <section aria-label="مخزن فایل وظیفه">
       <div className="mb-2 flex items-center gap-2">
         <h3 className="text-title-sm font-semibold text-fg-primary">فایل‌ها</h3>
-        <span className="numeric text-caption text-fg-tertiary">
-          {formatCount(attachments.length)}
-        </span>
+        <span className="text-caption text-fg-tertiary numeric">{formatCount(attachments.length)}</span>
         <Button
           size="xs"
           variant="secondary"
@@ -75,7 +84,7 @@ export function TaskInspectorFiles({ attachments, fileBusy, saving, onAttachFile
                   <span className="truncate text-caption font-semibold text-fg-primary">
                     {attachment.name}
                   </span>
-                  <span className="numeric truncate text-micro text-fg-tertiary">
+                  <span className="truncate text-micro text-fg-tertiary numeric">
                     {`${formatFileSize(attachment.size)}، ${uploader?.fullName ?? ''}، ${formatJalali(attachment.uploadedAt, 'day-month')}`}
                   </span>
                 </span>
@@ -90,7 +99,9 @@ export function TaskInspectorFiles({ attachments, fileBusy, saving, onAttachFile
                   icon={<TrashIcon size={16} />}
                   size="xs"
                   className="hover:text-status-blocked"
-                  onClick={() => { if (onRemoveAttachment) void changeFiles(() => onRemoveAttachment(attachment.id)); }}
+                  onClick={() => {
+                    if (onRemoveAttachment) void changeFiles(() => onRemoveAttachment(attachment.id));
+                  }}
                   disabled={!onRemoveAttachment || fileBusy || saving}
                 />
               </li>

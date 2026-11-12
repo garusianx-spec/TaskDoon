@@ -40,12 +40,15 @@ export function ProgressBar({
         className="relative h-1.5 w-full min-w-10 flex-1 overflow-hidden rounded-full bg-sunken"
       >
         <span
-          className={cn('absolute inset-y-0 start-0 rounded-full transition-[width] duration-300', TONES[tone])}
+          className={cn(
+            'absolute inset-y-0 start-0 rounded-full transition-[width] duration-300',
+            TONES[tone],
+          )}
           style={{ width: `${percent}%` }}
         />
       </span>
       {showFraction && (
-        <span className="numeric shrink-0 text-micro font-medium text-fg-tertiary">
+        <span className="shrink-0 text-micro font-medium text-fg-tertiary numeric">
           {formatFraction(value, max)}
         </span>
       )}

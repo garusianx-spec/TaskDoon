@@ -3,17 +3,23 @@
 import type { TaskPriority } from '@taskin/contracts';
 import { TASK_PRIORITIES } from '@/data/reference';
 import { projectColumns } from '@/store/selectors';
-import { Checkbox,Select } from '@/components/ui';
+import { Checkbox, Select } from '@/components/ui';
 import { JalaliDatePicker } from '@/components/shared/JalaliDatePicker';
 import { ColumnDot } from '@/features/board/components/ColumnDot';
-import { IssueTypeSelect,SeveritySelect } from '@/features/agile/components/IssueFields';
-import {
-FlagIcon
-} from '@/components/icons';
+import { IssueTypeSelect, SeveritySelect } from '@/features/agile/components/IssueFields';
+import { FlagIcon } from '@/components/icons';
 import { type CreateTaskModalProps } from '@/features/tasks/types/create-task';
 import { type CreateTaskForm } from '@/features/tasks/hooks/useCreateTaskForm';
 
-export function TaskPlanningFields({ model, fixedProjectId, columns, timeZone }: { readonly model: CreateTaskForm } & Pick<CreateTaskModalProps, "fixedProjectId" | "columns" | "timeZone">) {
+export function TaskPlanningFields({
+  model,
+  fixedProjectId,
+  columns,
+  timeZone,
+}: { readonly model: CreateTaskForm } & Pick<
+  CreateTaskModalProps,
+  'fixedProjectId' | 'columns' | 'timeZone'
+>) {
   const { form, setForm, setSubmitError, today, boardColumns, columnValue, projects } = model;
   return (
     <>
@@ -29,7 +35,11 @@ export function TaskPlanningFields({ model, fixedProjectId, columns, timeZone }:
                 ...current,
                 projectId,
                 // Another project's custom column is not on this board; its status still holds.
-                boardColumnId: projectColumns(columns, projectId).some((column) => column.id === current.boardColumnId) ? current.boardColumnId : null,
+                boardColumnId: projectColumns(columns, projectId).some(
+                  (column) => column.id === current.boardColumnId,
+                )
+                  ? current.boardColumnId
+                  : null,
               }));
             }}
             options={projects.map((project) => ({
@@ -70,7 +80,6 @@ export function TaskPlanningFields({ model, fixedProjectId, columns, timeZone }:
             icon: <FlagIcon size={15} />,
           }))}
         />
-
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -80,7 +89,10 @@ export function TaskPlanningFields({ model, fixedProjectId, columns, timeZone }:
             label="انتخاب تاریخ شروع"
             value={form.startDate ?? today()}
             timeZone={timeZone}
-            onChange={(startDate) => { setSubmitError(null); setForm((current) => ({ ...current, startDate })); }}
+            onChange={(startDate) => {
+              setSubmitError(null);
+              setForm((current) => ({ ...current, startDate }));
+            }}
           />
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
@@ -89,7 +101,10 @@ export function TaskPlanningFields({ model, fixedProjectId, columns, timeZone }:
             label="انتخاب مهلت انجام"
             value={form.dueDate ?? today()}
             timeZone={timeZone}
-            onChange={(dueDate) => { setSubmitError(null); setForm((current) => ({ ...current, dueDate })); }}
+            onChange={(dueDate) => {
+              setSubmitError(null);
+              setForm((current) => ({ ...current, dueDate }));
+            }}
           />
         </div>
       </div>
@@ -101,7 +116,9 @@ export function TaskPlanningFields({ model, fixedProjectId, columns, timeZone }:
           hideLabel={false}
           size="md"
           value={form.type ?? 'task'}
-          onChange={(type) => setForm((current) => ({ ...current, type, ...(type === 'bug' ? {} : { severity: null }) }))}
+          onChange={(type) =>
+            setForm((current) => ({ ...current, type, ...(type === 'bug' ? {} : { severity: null }) }))
+          }
         />
         {form.type === 'bug' && (
           <SeveritySelect

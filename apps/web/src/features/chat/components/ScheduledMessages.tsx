@@ -3,12 +3,18 @@
 import type { ScheduledMessage } from '@taskin/contracts';
 import { formatJalali } from '@taskin/jalali';
 import { formatCount } from '@/lib/format';
-import { Badge,Button,Modal } from '@/components/ui';
+import { Badge, Button, Modal } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { ClockIcon,SendIcon,TrashIcon } from '@/components/icons';
+import { ClockIcon, SendIcon, TrashIcon } from '@/components/icons';
 
 /** The strip above the composer while this member has messages waiting in the conversation. */
-export function ScheduledMessagesBar({ count, onOpen }: { readonly count: number; readonly onOpen: () => void }) {
+export function ScheduledMessagesBar({
+  count,
+  onOpen,
+}: {
+  readonly count: number;
+  readonly onOpen: () => void;
+}) {
   return (
     <div className="shrink-0 border-t border-secondary bg-surface px-3 pt-2">
       <button
@@ -59,18 +65,32 @@ export function ScheduledMessagesModal({
       }
     >
       {entries.length === 0 ? (
-        <EmptyState icon={<ClockIcon size={26} />} title="پیامی در انتظار ارسال نیست" description="پیام‌های زمان‌بندی‌شده پس از ارسال از این فهرست بیرون می‌روند." />
+        <EmptyState
+          icon={<ClockIcon size={26} />}
+          title="پیامی در انتظار ارسال نیست"
+          description="پیام‌های زمان‌بندی‌شده پس از ارسال از این فهرست بیرون می‌روند."
+        />
       ) : (
         <ul aria-label="پیام‌های در انتظار ارسال" className="flex flex-col gap-2">
           {entries.map((entry) => (
-            <li key={entry.id} className="flex flex-col gap-2 rounded-xl border border-secondary bg-surface p-3">
-              <p className="line-clamp-3 whitespace-pre-wrap text-body-sm text-fg-primary">{entry.text || entry.attachmentName || 'فایل'}</p>
-              <p className="numeric flex items-center gap-1.5 text-caption text-fg-tertiary">
+            <li
+              key={entry.id}
+              className="flex flex-col gap-2 rounded-xl border border-secondary bg-surface p-3"
+            >
+              <p className="line-clamp-3 whitespace-pre-wrap text-body-sm text-fg-primary">
+                {entry.text || entry.attachmentName || 'فایل'}
+              </p>
+              <p className="flex items-center gap-1.5 text-caption text-fg-tertiary numeric">
                 <ClockIcon size={14} />
                 {`ارسال در ${formatJalali(entry.scheduledAt, 'full')}`}
               </p>
               <div className="flex flex-wrap justify-end gap-2">
-                <Button size="sm" variant="secondary" iconStart={<TrashIcon size={16} />} onClick={() => onCancel(entry.id)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  iconStart={<TrashIcon size={16} />}
+                  onClick={() => onCancel(entry.id)}
+                >
                   لغو / حذف
                 </Button>
                 <Button size="sm" iconStart={<SendIcon size={16} />} onClick={() => onSendNow(entry.id)}>

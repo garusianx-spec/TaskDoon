@@ -1,16 +1,20 @@
 'use client';
 
 import { formatCount } from '@/lib/format';
-import { AvatarStack,Badge,IconButton,Input,Tooltip } from '@/components/ui';
-import {
-ArrowBackwardIcon,
-HashIcon,
-InfoCircleIcon,SearchIcon
-} from '@/components/icons';
+import { AvatarStack, Badge, IconButton, Input, Tooltip } from '@/components/ui';
+import { ArrowBackwardIcon, HashIcon, InfoCircleIcon, SearchIcon } from '@/components/icons';
 import { type ChatViewProps } from '@/features/chat/types/chat-view';
 import { type ConversationTimelineState } from '@/features/chat/hooks/useConversationTimeline';
 
-export function ConversationHeader({ conversation, onOpenDetails, onBack, timeline }: Pick<ChatViewProps, "conversation" | "onOpenDetails"> & { readonly onBack: ChatViewProps["onBack"]; readonly timeline: ConversationTimelineState }) {
+export function ConversationHeader({
+  conversation,
+  onOpenDetails,
+  onBack,
+  timeline,
+}: Pick<ChatViewProps, 'conversation' | 'onOpenDetails'> & {
+  readonly onBack: ChatViewProps['onBack'];
+  readonly timeline: ConversationTimelineState;
+}) {
   const { members, searchOpen, setSearchOpen, inChatQuery, setInChatQuery, visibleThread } = timeline;
   return (
     <header className="flex shrink-0 flex-col gap-2 border-b border-secondary bg-surface px-3 py-2.5 sm:px-4">
@@ -42,7 +46,7 @@ export function ConversationHeader({ conversation, onOpenDetails, onBack, timeli
           )}
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-title-sm font-bold text-fg-primary">{conversation.title}</span>
-            <span className="numeric truncate text-micro text-fg-tertiary">
+            <span className="truncate text-micro text-fg-tertiary numeric">
               {conversation.kind === 'direct'
                 ? conversation.topic
                 : `${formatCount(members.length)} عضو، ${conversation.topic}`}

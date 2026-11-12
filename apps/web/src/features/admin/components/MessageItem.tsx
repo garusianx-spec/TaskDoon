@@ -8,8 +8,8 @@ import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { dateTimeLabel } from '@/features/admin/lib/format';
 import { problemMessage } from '@/lib/api-problem';
 import { formatFileSize } from '@/lib/format';
-import { Badge,Button } from '@/components/ui';
-import { DocumentIcon,ImageIcon,MicrophoneIcon } from '@/components/icons';
+import { Badge, Button } from '@/components/ui';
+import { DocumentIcon, ImageIcon, MicrophoneIcon } from '@/components/icons';
 
 /** `<@userId>` mention tokens as `@name`. */
 function withMentions(text: string, authors: Readonly<Record<string, string>>): string {
@@ -20,11 +20,21 @@ function withMentions(text: string, authors: Readonly<Record<string, string>>): 
  * One message as the inspector shows it. Files are fetched only when asked for, through the
  * admin link endpoint, so each one opened is recorded in the audit log.
  */
-export function MessageItem({ message, authors, targetUserId }: { readonly message: MessageView; readonly authors: Readonly<Record<string, string>>; readonly targetUserId: string | null }) {
+export function MessageItem({
+  message,
+  authors,
+  targetUserId,
+}: {
+  readonly message: MessageView;
+  readonly authors: Readonly<Record<string, string>>;
+  readonly targetUserId: string | null;
+}) {
   const author = message.authorId ? (authors[message.authorId] ?? 'عضو سابق') : 'سیستم';
   const highlighted = targetUserId !== null && message.authorId === targetUserId;
   return (
-    <li className={`rounded-lg border px-3 py-2 ${highlighted ? 'border-brand bg-brand-subtle/40' : 'border-secondary'}`}>
+    <li
+      className={`rounded-lg border px-3 py-2 ${highlighted ? 'border-brand bg-brand-subtle/40' : 'border-secondary'}`}
+    >
       <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-fg-tertiary">
         <span className="font-semibold text-fg-primary">{author}</span>
         <time dateTime={message.createdAt}>{dateTimeLabel(message.createdAt)}</time>
@@ -49,7 +59,13 @@ export function MessageItem({ message, authors, targetUserId }: { readonly messa
   );
 }
 
-function Attachment({ message, targetUserId }: { readonly message: MessageView; readonly targetUserId: string | null }) {
+function Attachment({
+  message,
+  targetUserId,
+}: {
+  readonly message: MessageView;
+  readonly targetUserId: string | null;
+}) {
   const { call } = useAdmin();
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,7 +74,10 @@ function Attachment({ message, targetUserId }: { readonly message: MessageView; 
   if (!attachment) return null;
   const voice = message.kind === 'voice';
   const image = attachment.kind === 'image';
-  const duration = typeof message.meta === 'object' && message.meta !== null && 'durationSec' in message.meta ? Number(message.meta.durationSec) : null;
+  const duration =
+    typeof message.meta === 'object' && message.meta !== null && 'durationSec' in message.meta
+      ? Number(message.meta.durationSec)
+      : null;
 
   const open = async () => {
     setBusy(true);
@@ -89,11 +108,17 @@ function Attachment({ message, targetUserId }: { readonly message: MessageView; 
           </Button>
         ) : null}
       </div>
-      {url && voice && <audio controls autoPlay src={url} className="w-full max-w-md" aria-label="پخش پیام صوتی" />}
+      {url && voice && (
+        <audio controls autoPlay src={url} className="w-full max-w-md" aria-label="پخش پیام صوتی" />
+      )}
       {url && image && (
         // A short-lived link from the object store: not something next/image can optimise.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={attachment.name} className="max-h-80 max-w-full self-start rounded-lg border border-secondary object-contain" />
+        <img
+          src={url}
+          alt={attachment.name}
+          className="max-h-80 max-w-full self-start rounded-lg border border-secondary object-contain"
+        />
       )}
       {error && (
         <p role="alert" className="text-caption text-status-blocked">

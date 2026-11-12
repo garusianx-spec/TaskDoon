@@ -23,10 +23,7 @@
     "node": "v22.23.3",
     "next": "15.5.25",
     "buildId": "c0a74d7da9bfa90ea9c497dbb22451075d0247b3b5c9808d29f28ef9a5bcaa7b",
-    "commands": [
-      "npm run test:e2e:marketing-auth",
-      "npm run test:e2e:auth-ui"
-    ],
+    "commands": ["npm run test:e2e:marketing-auth", "npm run test:e2e:auth-ui"],
     "notes": "Full pages include decoded images. Hero captures are untouched viewport images. Journey images clip the real rendered section at the submitted task state."
   },
   "before": {

@@ -7,26 +7,41 @@ import { roleLabel } from '@/data/reference';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
 import { ThemePicker } from '@/components/layout/ThemePicker';
-import { Avatar,Badge,Button,Popover } from '@/components/ui';
+import { Avatar, Badge, Button, Popover } from '@/components/ui';
 import { WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
 import { WorkspaceMenu } from '@/features/workspace/components/WorkspaceMenu';
 import {
-ChevronForwardIcon,
-ClockIcon,
-KeyIcon,
-LogoutIcon,
-NotebookIcon,
-PeopleIcon,
-SettingsIcon,
-ShieldIcon,
-UserAddIcon,
-UserIcon,
+  ChevronForwardIcon,
+  ClockIcon,
+  KeyIcon,
+  LogoutIcon,
+  NotebookIcon,
+  PeopleIcon,
+  SettingsIcon,
+  ShieldIcon,
+  UserAddIcon,
+  UserIcon,
 } from '@/components/icons';
 
 const LINKS = [
-  { href: '/notes', label: 'یادداشت‌ها', description: 'دسته‌های شخصی، کاری، ایده‌ها و صورت‌جلسه‌ها', Icon: NotebookIcon },
-  { href: '/directory', label: 'اعضای سازمان', description: 'فهرست همکاران و اطلاعات تماس', Icon: PeopleIcon },
-  { href: '/settings/roles', label: 'نقش‌ها و دسترسی‌ها', description: 'مدیریت سطوح دسترسی', Icon: ShieldIcon },
+  {
+    href: '/notes',
+    label: 'یادداشت‌ها',
+    description: 'دسته‌های شخصی، کاری، ایده‌ها و صورت‌جلسه‌ها',
+    Icon: NotebookIcon,
+  },
+  {
+    href: '/directory',
+    label: 'اعضای سازمان',
+    description: 'فهرست همکاران و اطلاعات تماس',
+    Icon: PeopleIcon,
+  },
+  {
+    href: '/settings/roles',
+    label: 'نقش‌ها و دسترسی‌ها',
+    description: 'مدیریت سطوح دسترسی',
+    Icon: ShieldIcon,
+  },
 ] as const;
 
 /** Mobile "بیشتر" tab: profile, theme switcher, notes, directory and account actions. */
@@ -43,7 +58,7 @@ function MoreContent() {
   const { open } = useOverlays();
 
   return (
-    <div className="scrollbar-thin h-full overflow-y-auto p-4">
+    <div className="h-full overflow-y-auto p-4 scrollbar-thin">
       <section className="mb-5 flex items-center gap-3 rounded-xl border border-secondary bg-surface p-4 shadow-xs">
         <Avatar
           name={currentUser.fullName}
@@ -68,7 +83,7 @@ function MoreContent() {
         <div className="flex min-w-0 flex-1 flex-col">
           <h2 className="text-caption font-medium text-fg-tertiary">فضای کاری فعال</h2>
           <p className="truncate text-body-sm font-semibold text-fg-primary">{activeWorkspace.name}</p>
-          <p className="numeric truncate text-micro text-fg-tertiary">
+          <p className="truncate text-micro text-fg-tertiary numeric">
             {`${formatCount(activeWorkspace.memberCount)} عضو، طرح ${activeWorkspace.plan}`}
           </p>
         </div>

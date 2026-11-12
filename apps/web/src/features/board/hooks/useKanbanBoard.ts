@@ -1,15 +1,23 @@
 'use client';
 
-import { useCallback,useEffect,useRef,useState } from 'react';
-import type { BoardColumn,Task } from '@taskin/contracts';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { BoardColumn, Task } from '@taskin/contracts';
 import { statusLabel } from '@/data/reference';
-import { columnForTask,tasksInColumn } from '@/store/selectors';
+import { columnForTask, tasksInColumn } from '@/store/selectors';
 import { useNamespacedId } from '@/hooks/useId';
 import { type KanbanBoardProps } from '@/features/board/types/kanban';
 
-export function useKanbanBoard({ tasks, allTasks, columns, onMoveTask, onRemoveColumn, onAnnounce }:
-  Pick<KanbanBoardProps, 'tasks' | 'allTasks' | 'columns' | 'onMoveTask' | 'onRemoveColumn' | 'onAnnounce'>,
-) {
+export function useKanbanBoard({
+  tasks,
+  allTasks,
+  columns,
+  onMoveTask,
+  onRemoveColumn,
+  onAnnounce,
+}: Pick<
+  KanbanBoardProps,
+  'tasks' | 'allTasks' | 'columns' | 'onMoveTask' | 'onRemoveColumn' | 'onAnnounce'
+>) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [grabbedId, setGrabbedId] = useState<string | null>(null);
@@ -113,5 +121,23 @@ export function useKanbanBoard({ tasks, allTasks, columns, onMoveTask, onRemoveC
     [grabbedId, columns, commitMove, onAnnounce],
   );
 
-  return { draggingId, setDraggingId, dropTarget, setDropTarget, grabbedId, renamingId, setRenamingId, deleting, setDeleting, boardRef, cardRefs, hintId, revealBoardEnd, columnLoad, requestDelete, commitMove, handleCardKeyDown };
+  return {
+    draggingId,
+    setDraggingId,
+    dropTarget,
+    setDropTarget,
+    grabbedId,
+    renamingId,
+    setRenamingId,
+    deleting,
+    setDeleting,
+    boardRef,
+    cardRefs,
+    hintId,
+    revealBoardEnd,
+    columnLoad,
+    requestDelete,
+    commitMove,
+    handleCardKeyDown,
+  };
 }

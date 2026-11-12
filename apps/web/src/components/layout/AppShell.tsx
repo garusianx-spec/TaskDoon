@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback,useEffect,useMemo,useState,type ReactNode } from 'react';
-import { usePathname,useRouter } from 'next/navigation';
-import { useLive,useWorkspace } from '@/store/WorkspaceProvider';
-import { conversationById,messagePreview,projectColumns,taskById,userById } from '@/store/selectors';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
+import { conversationById, messagePreview, projectColumns, taskById, userById } from '@/store/selectors';
 import { nextLocalId } from '@/store/ids';
 import { NavRail } from '@/components/layout/NavRail';
 import { TopAppBar } from '@/components/layout/TopAppBar';
@@ -56,9 +56,13 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
       ? conversationById(state.conversations, state.inspector.conversationId)
       : undefined;
 
-  const closeInspector = useCallback(() => { if (!taskBusy) dispatch({ type: 'close-inspector' }); }, [dispatch, taskBusy]);
+  const closeInspector = useCallback(() => {
+    if (!taskBusy) dispatch({ type: 'close-inspector' });
+  }, [dispatch, taskBusy]);
   // The chat message the inspected task came from: from the loaded history, else as the server described it.
-  const sourceMessage = inspectorTask?.sourceMessageId ? state.messages.find((message) => message.id === inspectorTask.sourceMessageId) : undefined;
+  const sourceMessage = inspectorTask?.sourceMessageId
+    ? state.messages.find((message) => message.id === inspectorTask.sourceMessageId)
+    : undefined;
   const sourceRef = inspectorTask?.sourceMessage;
   const sourceConversationId = sourceMessage?.conversationId ?? sourceRef?.conversationId ?? null;
   const sourceAuthorId = sourceMessage?.authorId ?? sourceRef?.authorId ?? null;
@@ -67,7 +71,9 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
         accessible: sourceMessage !== undefined || (sourceRef?.accessible ?? false),
         excerpt: sourceMessage ? messagePreview(sourceMessage) : (sourceRef?.excerpt ?? null),
         authorName: sourceAuthorId ? (userById(sourceAuthorId)?.fullName ?? null) : null,
-        conversationTitle: sourceConversationId ? (conversationById(state.conversations, sourceConversationId)?.title ?? null) : null,
+        conversationTitle: sourceConversationId
+          ? (conversationById(state.conversations, sourceConversationId)?.title ?? null)
+          : null,
         // A deleted message shows as a system line ("این پیام حذف شد.") once history is loaded.
         deleted: (sourceRef?.deleted ?? false) || sourceMessage?.body.kind === 'system',
       }
@@ -75,7 +81,10 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
   const live = useLive();
   const liveStore = live?.store ?? null;
   const sharedId = inspectorConversation?.id ?? null;
-  const loadShared = useMemo(() => (liveStore && sharedId ? () => liveStore.sharedMedia(sharedId) : undefined), [liveStore, sharedId]);
+  const loadShared = useMemo(
+    () => (liveStore && sharedId ? () => liveStore.sharedMedia(sharedId) : undefined),
+    [liveStore, sharedId],
+  );
 
   if (signedOut) return null;
 
@@ -175,14 +184,20 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
               })
             }
             onAttachFiles={async (files) => {
-              const picked = files.map((file) => ({ attachmentId: nextLocalId('att'), file, name: file.name, previewUrl: URL.createObjectURL(file) }));
+              const picked = files.map((file) => ({
+                attachmentId: nextLocalId('att'),
+                file,
+                name: file.name,
+                previewUrl: URL.createObjectURL(file),
+              }));
               if (liveStore) await liveStore.attachTaskFiles(inspectorTask.id, picked);
-              else dispatch({
-                type: 'attach-task-files',
-                taskId: inspectorTask.id,
-                authorId: currentUser.id,
-                files: picked,
-              });
+              else
+                dispatch({
+                  type: 'attach-task-files',
+                  taskId: inspectorTask.id,
+                  authorId: currentUser.id,
+                  files: picked,
+                });
             }}
             onRemoveAttachment={async (attachmentId) => {
               if (liveStore) await liveStore.removeTaskAttachment(inspectorTask.id, attachmentId);
@@ -191,7 +206,11 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
             source={taskSource}
             onOpenSource={() => {
               if (!sourceConversationId || !inspectorTask.sourceMessageId) return;
-              dispatch({ type: 'focus-message', conversationId: sourceConversationId, messageId: inspectorTask.sourceMessageId });
+              dispatch({
+                type: 'focus-message',
+                conversationId: sourceConversationId,
+                messageId: inspectorTask.sourceMessageId,
+              });
               if (!pathname.startsWith('/chats')) router.push('/chats');
             }}
           />

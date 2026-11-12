@@ -7,10 +7,9 @@ import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { useNamespacedId } from '@/hooks/useId';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
-import { Button,Modal,Select } from '@/components/ui';
+import { Button, Modal, Select } from '@/components/ui';
 import { ColumnDot } from '@/features/board/components/ColumnDot';
-import { ArchiveIcon,TaskSquareIcon,TrashIcon } from '@/components/icons';
-
+import { ArchiveIcon, TaskSquareIcon, TrashIcon } from '@/components/icons';
 
 interface DeleteColumnDialogProps {
   readonly column: BoardColumn | null;
@@ -73,7 +72,11 @@ export function DeleteColumnDialog({ column, columns, load, onClose, onConfirm }
           <Button
             variant="destructive"
             disabled={choice === 'migrate' && !targetId}
-            onClick={() => onConfirm(choice === 'migrate' ? { kind: 'migrate', targetColumnId: targetId } : { kind: 'archive' })}
+            onClick={() =>
+              onConfirm(
+                choice === 'migrate' ? { kind: 'migrate', targetColumnId: targetId } : { kind: 'archive' },
+              )
+            }
           >
             {choice === 'migrate' ? 'انتقال و حذف ستون' : 'بایگانی و حذف ستون'}
           </Button>

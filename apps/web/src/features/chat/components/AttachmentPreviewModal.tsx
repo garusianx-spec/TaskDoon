@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect,useRef,useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toPersianDigits } from '@taskin/jalali';
 import { attachmentKindOf } from '@/lib/attachments';
-import { formatCount,formatFileSize } from '@/lib/format';
-import { compressPhoto,isImageFile } from '@/lib/image-compress';
-import { Button,Checkbox,IconButton,Input,Modal } from '@/components/ui';
-import { AddIcon,ATTACHMENT_ICONS,PaperclipIcon,TrashIcon } from '@/components/icons';
+import { formatCount, formatFileSize } from '@/lib/format';
+import { compressPhoto, isImageFile } from '@/lib/image-compress';
+import { Button, Checkbox, IconButton, Input, Modal } from '@/components/ui';
+import { AddIcon, ATTACHMENT_ICONS, PaperclipIcon, TrashIcon } from '@/components/icons';
 
 /** One file as it leaves the preview: a photo already re-encoded, unless it goes "as a file". */
 export interface OutgoingFile {
@@ -31,7 +31,12 @@ export interface AttachmentPreviewModalProps {
  * under the first picture (the last file when there is none); and «ارسال تصویر به صورت فایل»,
  * which sends pictures as they are instead of as compressed photos.
  */
-export function AttachmentPreviewModal({ files, onFilesChange, onSend, maxBytes }: AttachmentPreviewModalProps) {
+export function AttachmentPreviewModal({
+  files,
+  onFilesChange,
+  onSend,
+  maxBytes,
+}: AttachmentPreviewModalProps) {
   const [caption, setCaption] = useState('');
   const [asFile, setAsFile] = useState(false);
   const [preparing, setPreparing] = useState(false);
@@ -58,7 +63,11 @@ export function AttachmentPreviewModal({ files, onFilesChange, onSend, maxBytes 
     const picked = [...(list ?? [])];
     if (picked.length === 0) return;
     const tooBig = picked.some((file) => file.size > maxBytes);
-    setError(tooBig ? `حجم هر فایل باید کمتر از ${toPersianDigits(Math.round(maxBytes / (1024 * 1024)))} مگابایت باشد.` : null);
+    setError(
+      tooBig
+        ? `حجم هر فایل باید کمتر از ${toPersianDigits(Math.round(maxBytes / (1024 * 1024)))} مگابایت باشد.`
+        : null,
+    );
     const accepted = picked.filter((file) => file.size > 0 && file.size <= maxBytes);
     if (accepted.length > 0) onFilesChange([...files, ...accepted]);
   };
@@ -68,11 +77,19 @@ export function AttachmentPreviewModal({ files, onFilesChange, onSend, maxBytes 
     setPreparing(true);
     const text = caption.trim() || null;
     // Photos are re-encoded here, before any upload is asked for; everything else goes as it is.
-    const prepared = await Promise.all(files.map((file) => (!asFile && isImageFile(file) ? compressPhoto(file) : Promise.resolve(file))));
+    const prepared = await Promise.all(
+      files.map((file) => (!asFile && isImageFile(file) ? compressPhoto(file) : Promise.resolve(file))),
+    );
     // The caption belongs to the (first) picture; with none, to the last file.
     const firstImage = files.findIndex(isImageFile);
     const captioned = firstImage >= 0 ? firstImage : files.length - 1;
-    onSend(prepared.map((file, index) => ({ file, caption: index === captioned ? text : null, asFile: asFile && isImageFile(file) })));
+    onSend(
+      prepared.map((file, index) => ({
+        file,
+        caption: index === captioned ? text : null,
+        asFile: asFile && isImageFile(file),
+      })),
+    );
     onFilesChange([]);
   };
 
@@ -98,11 +115,14 @@ export function AttachmentPreviewModal({ files, onFilesChange, onSend, maxBytes 
       <div className="flex flex-col gap-4">
         <ul aria-label="فایل‌های پیوست" className="flex flex-col gap-2">
           {files.map((file, index) => (
-            <li key={`${index}-${file.name}-${file.size}`} className="flex items-center gap-3 rounded-xl border border-secondary bg-sunken p-2">
+            <li
+              key={`${index}-${file.name}-${file.size}`}
+              className="flex items-center gap-3 rounded-xl border border-secondary bg-sunken p-2"
+            >
               <Thumbnail file={file} />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-body-sm font-semibold text-fg-primary">{file.name}</span>
-                <span className="numeric text-caption text-fg-tertiary">{formatFileSize(file.size)}</span>
+                <span className="text-caption text-fg-tertiary numeric">{formatFileSize(file.size)}</span>
               </span>
               <IconButton
                 label={`حذف ${file.name}`}
@@ -115,7 +135,12 @@ export function AttachmentPreviewModal({ files, onFilesChange, onSend, maxBytes 
         </ul>
 
         <div>
-          <Button variant="secondary" size="sm" iconStart={<AddIcon size={16} />} onClick={() => addRef.current?.click()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            iconStart={<AddIcon size={16} />}
+            onClick={() => addRef.current?.click()}
+          >
             افزودن فایل
           </Button>
           <input
@@ -153,7 +178,9 @@ export function AttachmentPreviewModal({ files, onFilesChange, onSend, maxBytes 
           placeholder="درج عنوان برای تصویر..."
         />
 
-        {hasImages && <Checkbox checked={asFile} onCheckedChange={setAsFile} label="ارسال تصویر به صورت فایل" />}
+        {hasImages && (
+          <Checkbox checked={asFile} onCheckedChange={setAsFile} label="ارسال تصویر به صورت فایل" />
+        )}
       </div>
     </Modal>
   );

@@ -5,12 +5,24 @@ import { Redis } from 'ioredis';
 import pg from 'pg';
 import supertest from 'supertest';
 import { inject } from 'vitest';
-import type { AuthSession, CreateInvitationsResult, OtpChallenge, OtpVerifyResult, WorkspaceView } from '@taskin/contracts';
+import type {
+  AuthSession,
+  CreateInvitationsResult,
+  OtpChallenge,
+  OtpVerifyResult,
+  WorkspaceView,
+} from '@taskin/contracts';
 import { createApp } from '../../src/bootstrap.js';
 import { type Env, envSchema } from '../../src/config/env.js';
 import { MailService } from '../../src/platform/mail/mail.js';
 import { OutboxRelay } from '../../src/platform/outbox/outbox-relay.js';
-import { type NotificationJobData, type NotificationJobs, Queues, type WorkJobData, type WorkJobs } from '../../src/platform/queue/queues.js';
+import {
+  type NotificationJobData,
+  type NotificationJobs,
+  Queues,
+  type WorkJobData,
+  type WorkJobs,
+} from '../../src/platform/queue/queues.js';
 import { type ConsoleSmsProvider, SmsService } from '../../src/platform/sms/sms.js';
 import { QueueWorkers } from '../../src/worker/workers.js';
 import { adminUrl, dbUrl, REDIS_URL, S3 } from './infra.js';
@@ -158,11 +170,18 @@ export async function createTestApp(overrides: Record<string, string> = {}): Pro
       const published = await app.get(OutboxRelay).drainOnce();
       const queues = app.get(Queues);
       const workers = app.get(QueueWorkers);
-      for (const job of await queues.notifications.getJobs(['waiting', 'prioritized', 'delayed'], 0, -1, true)) {
+      for (const job of await queues.notifications.getJobs(
+        ['waiting', 'prioritized', 'delayed'],
+        0,
+        -1,
+        true,
+      )) {
         await workers.runNotification(job.name as keyof NotificationJobs, job.data as NotificationJobData);
         await job.remove();
       }
-      const states = options.delayed ? (['waiting', 'prioritized', 'delayed'] as const) : (['waiting', 'prioritized'] as const);
+      const states = options.delayed
+        ? (['waiting', 'prioritized', 'delayed'] as const)
+        : (['waiting', 'prioritized'] as const);
       for (const job of await queues.work.getJobs([...states], 0, -1, true)) {
         await workers.runWork(job.name as keyof WorkJobs, job.data as WorkJobData);
         await job.remove();
@@ -195,7 +214,9 @@ export interface Peer {
  */
 export async function createPeer(t: TestApp, overrides: Record<string, string>): Promise<Peer> {
   const env = envSchema.parse({ ...t.settings, ...overrides });
-  const app = await createApp(env, { logDestination: new Writable({ write: (_chunk, _encoding, done) => done() }) });
+  const app = await createApp(env, {
+    logDestination: new Writable({ write: (_chunk, _encoding, done) => done() }),
+  });
   await app.listen(0, '127.0.0.1');
   const address = app.getHttpServer().address();
   const baseUrl = typeof address === 'object' && address ? `http://127.0.0.1:${address.port}` : '';
@@ -215,7 +236,9 @@ export async function createPeer(t: TestApp, overrides: Record<string, string>):
 
 function cookieHeader(setCookie: string[] | string | undefined): { cookies: string; csrf: string } {
   const list = Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : [];
-  const pairs = list.map((cookie) => cookie.split(';')[0] ?? '').filter((pair) => pair.includes('=') && !pair.endsWith('='));
+  const pairs = list
+    .map((cookie) => cookie.split(';')[0] ?? '')
+    .filter((pair) => pair.includes('=') && !pair.endsWith('='));
   const csrf = pairs.find((pair) => pair.includes('taskin_csrf='))?.split('=')[1] ?? '';
   return { cookies: pairs.join('; '), csrf };
 }
@@ -231,9 +254,17 @@ export function randomIp(): string {
  * cooldown (the limits themselves are exercised by the auth suite).
  */
 export async function requestOtp(t: TestApp, phone: string): Promise<OtpChallenge> {
-  await t.redis.del(`${t.env.REDIS_PREFIX}:otp:send:phone:${phone}:cooldown`, `${t.env.REDIS_PREFIX}:otp:send:phone:${phone}:hour`);
-  const response = await t.http().set('X-Forwarded-For', randomIp()).post('/api/v1/auth/otp/request').send({ phone: localForm(phone) });
-  if (response.status !== 200) throw new Error(`otp/request ${response.status}: ${JSON.stringify(response.body)}`);
+  await t.redis.del(
+    `${t.env.REDIS_PREFIX}:otp:send:phone:${phone}:cooldown`,
+    `${t.env.REDIS_PREFIX}:otp:send:phone:${phone}:hour`,
+  );
+  const response = await t
+    .http()
+    .set('X-Forwarded-For', randomIp())
+    .post('/api/v1/auth/otp/request')
+    .send({ phone: localForm(phone) });
+  if (response.status !== 200)
+    throw new Error(`otp/request ${response.status}: ${JSON.stringify(response.body)}`);
   return response.body as OtpChallenge;
 }
 
@@ -244,10 +275,16 @@ export function lastCode(t: TestApp, phone: string): string {
 }
 
 /** Signs in with an SMS code, creating the account (named `fullName`) on first use. */
-export async function signIn(t: TestApp, phone = randomPhone(), fullName = 'کاربر آزمایشی'): Promise<Session> {
+export async function signIn(
+  t: TestApp,
+  phone = randomPhone(),
+  fullName = 'کاربر آزمایشی',
+): Promise<Session> {
   const challenge = await requestOtp(t, phone);
   const client = t.http().set('X-Forwarded-For', randomIp());
-  const verify = await client.post('/api/v1/auth/otp/verify').send({ challengeId: challenge.challengeId, code: lastCode(t, phone) });
+  const verify = await client
+    .post('/api/v1/auth/otp/verify')
+    .send({ challengeId: challenge.challengeId, code: lastCode(t, phone) });
   if (verify.status !== 200) throw new Error(`otp/verify ${verify.status}: ${JSON.stringify(verify.body)}`);
   const result = verify.body as OtpVerifyResult;
   let session: AuthSession;
@@ -255,19 +292,30 @@ export async function signIn(t: TestApp, phone = randomPhone(), fullName = 'کا
   if (result.status === 'signed_in') {
     session = result.session;
   } else if (result.status === 'password_required') {
-    const completed = await client.post('/api/v1/auth/admin/password').send({ temporaryToken: result.temporaryToken, password: STRONG_PASSWORD });
-    if (completed.status !== 200) throw new Error(`admin/password ${completed.status}: ${JSON.stringify(completed.body)}`);
+    const completed = await client
+      .post('/api/v1/auth/admin/password')
+      .send({ temporaryToken: result.temporaryToken, password: STRONG_PASSWORD });
+    if (completed.status !== 200)
+      throw new Error(`admin/password ${completed.status}: ${JSON.stringify(completed.body)}`);
     session = completed.body as AuthSession;
     setCookie = completed.headers['set-cookie'];
   } else if (result.status === 'admin_setup_required') {
     throw new Error('Pending administrative accounts must complete phone/email/password setup explicitly.');
   } else {
-    const signup = await client.post('/api/v1/auth/signup').send({ signupToken: result.signupToken, fullName });
+    const signup = await client
+      .post('/api/v1/auth/signup')
+      .send({ signupToken: result.signupToken, fullName });
     if (signup.status !== 201) throw new Error(`signup ${signup.status}: ${JSON.stringify(signup.body)}`);
     session = signup.body as AuthSession;
     setCookie = signup.headers['set-cookie'];
   }
-  return { userId: session.user.id, phone, accessToken: session.accessToken, sessionId: session.sessionId, ...cookieHeader(setCookie) };
+  return {
+    userId: session.user.id,
+    phone,
+    accessToken: session.accessToken,
+    sessionId: session.sessionId,
+    ...cookieHeader(setCookie),
+  };
 }
 
 export function refreshCookies(session: Session, setCookie: string[] | string | undefined): void {
@@ -283,26 +331,45 @@ export const bearer = (session: Session) => ({ Authorization: `Bearer ${session.
 export const STRONG_PASSWORD = 'Rahnama-1405!';
 
 /** Sets the admin password (allowed right after an OTP sign-in) and steps up; returns the stepped-up session. */
-export async function withAdminPassword(t: TestApp, session: Session, password = STRONG_PASSWORD): Promise<Session> {
-  const set = await t.http().post('/api/v1/auth/password').set(bearer(session)).send({ newPassword: password });
+export async function withAdminPassword(
+  t: TestApp,
+  session: Session,
+  password = STRONG_PASSWORD,
+): Promise<Session> {
+  const set = await t
+    .http()
+    .post('/api/v1/auth/password')
+    .set(bearer(session))
+    .send({ newPassword: password });
   if (set.status !== 204) throw new Error(`password ${set.status}: ${JSON.stringify(set.body)}`);
   return stepUp(t, session, password);
 }
 
 export async function stepUp(t: TestApp, session: Session, password = STRONG_PASSWORD): Promise<Session> {
   const response = await t.http().post('/api/v1/auth/step-up').set(bearer(session)).send({ password });
-  if (response.status !== 200) throw new Error(`step-up ${response.status}: ${JSON.stringify(response.body)}`);
+  if (response.status !== 200)
+    throw new Error(`step-up ${response.status}: ${JSON.stringify(response.body)}`);
   return { ...session, accessToken: (response.body as AuthSession).accessToken };
 }
 
 let keySeq = 0;
-export const idempotencyKey = () => `test-${Date.now().toString(36)}-${(keySeq += 1)}-${randomBytes(3).toString('hex')}`;
+export const idempotencyKey = () =>
+  `test-${Date.now().toString(36)}-${(keySeq += 1)}-${randomBytes(3).toString('hex')}`;
 
 /** A signed-in owner (with admin password, stepped up) and their new workspace. */
-export async function ownerWithWorkspace(t: TestApp, name = 'هلدینگ راهنما'): Promise<{ owner: Session; workspace: WorkspaceView }> {
+export async function ownerWithWorkspace(
+  t: TestApp,
+  name = 'هلدینگ راهنما',
+): Promise<{ owner: Session; workspace: WorkspaceView }> {
   const owner = await withAdminPassword(t, await signIn(t, randomPhone(), 'مالک فضای کاری'));
-  const response = await t.http().post('/api/v1/workspaces').set(bearer(owner)).set('Idempotency-Key', idempotencyKey()).send({ name });
-  if (response.status !== 201) throw new Error(`create workspace ${response.status}: ${JSON.stringify(response.body)}`);
+  const response = await t
+    .http()
+    .post('/api/v1/workspaces')
+    .set(bearer(owner))
+    .set('Idempotency-Key', idempotencyKey())
+    .send({ name });
+  if (response.status !== 201)
+    throw new Error(`create workspace ${response.status}: ${JSON.stringify(response.body)}`);
   return { owner, workspace: response.body as WorkspaceView };
 }
 
@@ -333,7 +400,11 @@ export async function addMember(
   const accept = await t.http().post('/api/v1/invitations/accept').set(bearer(member)).send({ token });
   if (accept.status !== 200) throw new Error(`accept ${accept.status}: ${JSON.stringify(accept.body)}`);
   if (role === 'admin') {
-    const promote = await t.http().patch(`/api/v1/workspaces/${workspaceId}/members/${member.userId}`).set(bearer(owner)).send({ role: 'admin' });
+    const promote = await t
+      .http()
+      .patch(`/api/v1/workspaces/${workspaceId}/members/${member.userId}`)
+      .set(bearer(owner))
+      .send({ role: 'admin' });
     if (promote.status !== 200) throw new Error(`promote ${promote.status}: ${JSON.stringify(promote.body)}`);
   }
   return member;

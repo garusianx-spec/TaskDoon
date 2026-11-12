@@ -12,7 +12,9 @@ if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
   const { getNodeAutoInstrumentations } = await import('@opentelemetry/auto-instrumentations-node');
   const sdk = new NodeSDK({
     serviceName: process.env.OTEL_SERVICE_NAME ?? 'taskin-api',
-    instrumentations: [getNodeAutoInstrumentations({ '@opentelemetry/instrumentation-fs': { enabled: false } })],
+    instrumentations: [
+      getNodeAutoInstrumentations({ '@opentelemetry/instrumentation-fs': { enabled: false } }),
+    ],
   });
   sdk.start();
   const stop = () => void sdk.shutdown();

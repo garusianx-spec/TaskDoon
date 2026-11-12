@@ -5,18 +5,14 @@ import { z } from 'zod';
  * malformed value stops the process with a list of problems instead of failing on first use.
  */
 
-const bool = z
-  .enum(['true', 'false', '1', '0'])
-  .transform((value) => value === 'true' || value === '1');
+const bool = z.enum(['true', 'false', '1', '0']).transform((value) => value === 'true' || value === '1');
 
-const csv = z
-  .string()
-  .transform((value) =>
-    value
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0),
-  );
+const csv = z.string().transform((value) =>
+  value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0),
+);
 
 const smsProvider = z.enum(['console', 'kavenegar', 'smsir']);
 
@@ -47,7 +43,12 @@ export const envSchema = z
      */
     DATABASE_PLATFORM_ADMIN_URL: z.url().optional(),
     /** How long a password reset code a platform admin issued stays valid. */
-    PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(24 * 60).default(60),
+    PASSWORD_RESET_TTL_MINUTES: z.coerce
+      .number()
+      .int()
+      .min(5)
+      .max(24 * 60)
+      .default(60),
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(200).default(10),
 
     /** AOF, `noeviction`: queues, rate limits, idempotency, revocations, caches. */
@@ -148,7 +149,11 @@ export const envSchema = z
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
     if (env.SMS_PROVIDERS.includes('console')) {
-      ctx.addIssue({ code: 'custom', path: ['SMS_PROVIDERS'], message: 'the console SMS driver is not allowed in production' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMS_PROVIDERS'],
+        message: 'the console SMS driver is not allowed in production',
+      });
     }
     if (!env.JWT_PRIVATE_JWKS) {
       ctx.addIssue({ code: 'custom', path: ['JWT_PRIVATE_JWKS'], message: 'required in production' });
@@ -157,7 +162,11 @@ export const envSchema = z
       ctx.addIssue({ code: 'custom', path: ['COOKIE_SECURE'], message: 'must be true in production' });
     }
     if (env.SMS_PROVIDERS.includes('kavenegar') && !env.KAVENEGAR_API_KEY) {
-      ctx.addIssue({ code: 'custom', path: ['KAVENEGAR_API_KEY'], message: 'required when kavenegar is a provider' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['KAVENEGAR_API_KEY'],
+        message: 'required when kavenegar is a provider',
+      });
     }
     if (env.SMS_PROVIDERS.includes('smsir') && !env.SMSIR_API_KEY) {
       ctx.addIssue({ code: 'custom', path: ['SMSIR_API_KEY'], message: 'required when smsir is a provider' });
@@ -165,7 +174,8 @@ export const envSchema = z
   })
   .transform((env) => ({
     ...env,
-    S3_PUBLIC_ENDPOINT: env.S3_PUBLIC_ENDPOINT ?? (env.NODE_ENV === 'production' ? 'https://taskdoone.ir' : undefined),
+    S3_PUBLIC_ENDPOINT:
+      env.S3_PUBLIC_ENDPOINT ?? (env.NODE_ENV === 'production' ? 'https://taskdoone.ir' : undefined),
   }));
 
 export type Env = z.infer<typeof envSchema>;
@@ -181,5 +191,7 @@ export class InvalidConfigError extends Error {
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const result = envSchema.safeParse(source);
   if (result.success) return result.data;
-  throw new InvalidConfigError(result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`));
+  throw new InvalidConfigError(
+    result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
+  );
 }

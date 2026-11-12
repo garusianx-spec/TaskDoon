@@ -1,15 +1,9 @@
 'use client';
 
-import { forwardRef,type ButtonHTMLAttributes,type ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-export type ButtonVariant =
-  | 'primary'
-  | 'secondary'
-  | 'tertiary'
-  | 'ghost'
-  | 'destructive'
-  | 'link';
+export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'destructive' | 'link';
 
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
@@ -91,20 +85,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
 function Spinner() {
   return (
-    <svg
-      className="size-4 animate-spin"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-    >
+    <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.25" />
-      <path
-        d="M21 12a9 9 0 0 0-9-9"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
 }

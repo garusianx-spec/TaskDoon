@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { afterEach,test,vi } from 'vitest';
-import { useVoiceRecorder,type RecorderState } from '@/features/chat/hooks/useVoiceRecorder';
+import { afterEach, test, vi } from 'vitest';
+import { useVoiceRecorder, type RecorderState } from '@/features/chat/hooks/useVoiceRecorder';
 
 interface Hooks {
   useState(initial: RecorderState): [RecorderState, (value: RecorderState) => void];
@@ -15,7 +15,9 @@ vi.mock('react', () => ({
   useCallback: <T>(callback: T) => boundary.current!.useCallback(callback),
   useEffect: (effect: () => void | (() => void)) => boundary.current!.useEffect(effect),
 }));
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 type Stream = { getTracks(): { stop(): void }[] };
 interface Options {
@@ -48,9 +50,19 @@ function harness(options: Options = {}) {
   let contextClosed = 0;
   let recorder: Recorder | undefined;
   let constructorOptions: { mimeType?: string } | undefined;
-  const stream: Stream = { getTracks: () => [{ stop: () => { stoppedTracks += 1; } }] };
+  const stream: Stream = {
+    getTracks: () => [
+      {
+        stop: () => {
+          stoppedTracks += 1;
+        },
+      },
+    ],
+  };
   class Recorder {
-    static isTypeSupported(type: string) { return options.supports?.(type) ?? type === 'audio/webm;codecs=opus'; }
+    static isTypeSupported(type: string) {
+      return options.supports?.(type) ?? type === 'audio/webm;codecs=opus';
+    }
     state = 'inactive';
     mimeType = options.mimeType ?? 'audio/webm;codecs=opus';
     ondataavailable: ((event: { data: Blob }) => void) | null = null;
@@ -69,7 +81,9 @@ function harness(options: Options = {}) {
     stop() {
       this.state = 'inactive';
       queueMicrotask(() => {
-        this.ondataavailable?.({ data: new Blob(['final audio'], { type: options.chunkType ?? this.mimeType }) });
+        this.ondataavailable?.({
+          data: new Blob(['final audio'], { type: options.chunkType ?? this.mimeType }),
+        });
         this.onstop?.({});
       });
     }
@@ -79,30 +93,52 @@ function harness(options: Options = {}) {
     createAnalyser() {
       return { fftSize: 512, getByteTimeDomainData: (samples: Uint8Array) => samples.fill(128) };
     }
-    createMediaStreamSource() { return { connect() {} }; }
-    async close() { contextClosed += 1; }
+    createMediaStreamSource() {
+      return { connect() {} };
+    }
+    async close() {
+      contextClosed += 1;
+    }
   }
   boundary.current = {
     useState(initial: RecorderState) {
       state = initial;
-      return [state, (next: RecorderState) => { state = next; }];
+      return [
+        state,
+        (next: RecorderState) => {
+          state = next;
+        },
+      ];
     },
     useRef: (current: unknown) => ({ current }),
     useCallback: <T>(callback: T) => callback,
-    useEffect: (effect: () => void | (() => void)) => { cleanup = effect(); },
+    useEffect: (effect: () => void | (() => void)) => {
+      cleanup = effect();
+    },
   };
   const window = {
     isSecureContext: options.secure ?? true,
     MediaRecorder: options.noRecorder ? undefined : Recorder,
     AudioContext: options.noAudioContext ? undefined : Context,
-    setInterval: (callback: () => void) => { interval = callback; return 1; },
-    clearInterval: () => { interval = undefined; },
+    setInterval: (callback: () => void) => {
+      interval = callback;
+      return 1;
+    },
+    clearInterval: () => {
+      interval = undefined;
+    },
   };
-  const navigator = options.noMediaDevices ? {} : { mediaDevices: { async getUserMedia() {
-    requested += 1;
-    if (options.permissionError) throw options.permissionError;
-    return options.getStream ? options.getStream(stream) : stream;
-  } } };
+  const navigator = options.noMediaDevices
+    ? {}
+    : {
+        mediaDevices: {
+          async getUserMedia() {
+            requested += 1;
+            if (options.permissionError) throw options.permissionError;
+            return options.getStream ? options.getStream(stream) : stream;
+          },
+        },
+      };
   vi.stubGlobal('window', window);
   vi.stubGlobal('navigator', navigator);
   vi.stubGlobal('MediaRecorder', window.MediaRecorder);
@@ -110,20 +146,44 @@ function harness(options: Options = {}) {
   vi.stubGlobal('performance', { now: () => time });
   const hook = useVoiceRecorder();
   return {
-    hook, stream,
-    get state() { return state; },
-    get recorder() { assert.ok(recorder); return recorder; },
-    get constructorOptions() { assert.ok(constructorOptions); return constructorOptions; },
-    get requested() { return requested; },
-    get constructed() { return constructed; },
-    get stoppedTracks() { return stoppedTracks; },
-    get contextClosed() { return contextClosed; },
-    tick(ms: number) { time += ms; interval?.(); },
-    unmount() { cleanup?.(); },
+    hook,
+    stream,
+    get state() {
+      return state;
+    },
+    get recorder() {
+      assert.ok(recorder);
+      return recorder;
+    },
+    get constructorOptions() {
+      assert.ok(constructorOptions);
+      return constructorOptions;
+    },
+    get requested() {
+      return requested;
+    },
+    get constructed() {
+      return constructed;
+    },
+    get stoppedTracks() {
+      return stoppedTracks;
+    },
+    get contextClosed() {
+      return contextClosed;
+    },
+    tick(ms: number) {
+      time += ms;
+      interval?.();
+    },
+    unmount() {
+      cleanup?.();
+    },
   };
 }
 
-const flush = async () => { for (let i = 0; i < 8; i += 1) await Promise.resolve(); };
+const flush = async () => {
+  for (let i = 0; i < 8; i += 1) await Promise.resolve();
+};
 
 test('manual stop waits for the final audio chunk and keeps its negotiated MIME', async () => {
   const h = harness();
@@ -197,7 +257,10 @@ test('stopping after the recording limit resolves the already-finalized recordin
   h.tick(3_600_000);
   await flush();
   let resolved = false;
-  const pending = h.hook.stop().then((result) => { resolved = true; return result; });
+  const pending = h.hook.stop().then((result) => {
+    resolved = true;
+    return result;
+  });
   await flush();
   assert.equal(resolved, true, 'stop must not wait for an onstop event that already fired');
   const result = await pending;
@@ -208,7 +271,12 @@ test('stopping after the recording limit resolves the already-finalized recordin
 
 test('cancelling while the permission prompt is pending does not start a late recording', async () => {
   let grant: (() => void) | undefined;
-  const h = harness({ getStream: (stream) => new Promise((resolve) => { grant = () => resolve(stream); }) });
+  const h = harness({
+    getStream: (stream) =>
+      new Promise((resolve) => {
+        grant = () => resolve(stream);
+      }),
+  });
   const pending = h.hook.start();
   h.hook.cancel();
   grant!();
@@ -249,16 +317,18 @@ for (const [name, expected] of [
   });
 }
 
-
-test.each(['audio/aac', 'audio/ogg;codecs=opus'])('falls back to %s when it is the available audio format', async (mimeType) => {
-  const h = harness({ supports: (type) => type === mimeType, mimeType });
-  await h.hook.start();
-  h.tick(1500);
-  const result = await h.hook.stop();
-  assert.ok(result);
-  assert.equal(result.blob.type, mimeType);
-  assert.equal(h.constructorOptions.mimeType, mimeType);
-});
+test.each(['audio/aac', 'audio/ogg;codecs=opus'])(
+  'falls back to %s when it is the available audio format',
+  async (mimeType) => {
+    const h = harness({ supports: (type) => type === mimeType, mimeType });
+    await h.hook.start();
+    h.tick(1500);
+    const result = await h.hook.stop();
+    assert.ok(result);
+    assert.equal(result.blob.type, mimeType);
+    assert.equal(h.constructorOptions.mimeType, mimeType);
+  },
+);
 
 test('recorder errors remain visible and release the microphone', async () => {
   const h = harness();
@@ -272,7 +342,12 @@ test('recorder errors remain visible and release the microphone', async () => {
 
 test('repeated clicks during a permission prompt request only one microphone stream', async () => {
   let grant: (() => void) | undefined;
-  const h = harness({ getStream: (stream) => new Promise((resolve) => { grant = () => resolve(stream); }) });
+  const h = harness({
+    getStream: (stream) =>
+      new Promise((resolve) => {
+        grant = () => resolve(stream);
+      }),
+  });
   const first = h.hook.start();
   await h.hook.start();
   grant!();
@@ -300,12 +375,15 @@ test('recordings with no determinable MIME are rejected rather than mislabeled a
   assert.equal(h.stoppedTracks, 1);
 });
 
-test.each([{ noRecorder: true }, { noMediaDevices: true }])('unsupported media APIs report an error without requesting permission (%j)', async (options) => {
-  const h = harness(options);
-  await h.hook.start();
-  assert.equal(h.state.phase, 'error');
-  assert.equal(h.requested, 0);
-});
+test.each([{ noRecorder: true }, { noMediaDevices: true }])(
+  'unsupported media APIs report an error without requesting permission (%j)',
+  async (options) => {
+    const h = harness(options);
+    await h.hook.start();
+    assert.equal(h.state.phase, 'error');
+    assert.equal(h.requested, 0);
+  },
+);
 
 test('a too-short recording is discarded after its tracks are released', async () => {
   const h = harness();

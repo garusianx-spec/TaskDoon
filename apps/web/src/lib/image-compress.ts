@@ -19,7 +19,8 @@ export const isImageFile = (file: Blob): boolean => file.type.startsWith('image/
  * a format the canvas redraws faithfully, cannot be decoded, or the new copy is no smaller.
  */
 export async function compressPhoto(file: File): Promise<File> {
-  if (!COMPRESSIBLE.has(file.type) || file.size <= SMALL_BYTES || typeof document === 'undefined') return file;
+  if (!COMPRESSIBLE.has(file.type) || file.size <= SMALL_BYTES || typeof document === 'undefined')
+    return file;
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
@@ -33,16 +34,26 @@ export async function compressPhoto(file: File): Promise<File> {
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     const context = canvas.getContext('2d');
     if (!context) return file;
-    const blob = (await encode(canvas, context, bitmap, 'image/webp')) ?? (await encode(canvas, context, bitmap, 'image/jpeg'));
+    const blob =
+      (await encode(canvas, context, bitmap, 'image/webp')) ??
+      (await encode(canvas, context, bitmap, 'image/jpeg'));
     if (!blob || blob.size >= file.size) return file;
     const extension = blob.type === 'image/webp' ? 'webp' : 'jpg';
-    return new File([blob], `${baseName(file.name)}.${extension}`, { type: blob.type, lastModified: file.lastModified });
+    return new File([blob], `${baseName(file.name)}.${extension}`, {
+      type: blob.type,
+      lastModified: file.lastModified,
+    });
   } finally {
     bitmap.close();
   }
 }
 
-async function encode(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, bitmap: ImageBitmap, type: 'image/webp' | 'image/jpeg'): Promise<Blob | null> {
+async function encode(
+  canvas: HTMLCanvasElement,
+  context: CanvasRenderingContext2D,
+  bitmap: ImageBitmap,
+  type: 'image/webp' | 'image/jpeg',
+): Promise<Blob | null> {
   context.clearRect(0, 0, canvas.width, canvas.height);
   if (type === 'image/jpeg') {
     // JPEG has no transparency: see-through areas turn white rather than black.

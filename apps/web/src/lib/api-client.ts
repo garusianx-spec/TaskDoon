@@ -65,7 +65,12 @@ export function newIdempotencyKey(): string {
   return crypto.randomUUID();
 }
 
-async function send(method: string, path: string, options: RequestOptions, idempotencyKey: string | null): Promise<Response> {
+async function send(
+  method: string,
+  path: string,
+  options: RequestOptions,
+  idempotencyKey: string | null,
+): Promise<Response> {
   const headers: Record<string, string> = { accept: 'application/json', ...options.headers };
   if (options.body !== undefined) headers['content-type'] = 'application/json';
   if (idempotencyKey) headers['idempotency-key'] = idempotencyKey;
@@ -103,25 +108,38 @@ export async function request<T>(method: string, path: string, options: RequestO
   const parsed: unknown = text ? JSON.parse(text) : null;
   if (!response.ok) {
     const body = isProblemBody(parsed) ? parsed : null;
-    throw new ApiProblem(response.status, body?.code ?? 'INTERNAL', body?.detail ?? body?.title ?? response.statusText, body);
+    throw new ApiProblem(
+      response.status,
+      body?.code ?? 'INTERNAL',
+      body?.detail ?? body?.title ?? response.statusText,
+      body,
+    );
   }
   return parsed as T;
 }
 
 function isProblemBody(value: unknown): value is ProblemBody {
-  return typeof value === 'object' && value !== null && typeof (value as { code?: unknown }).code === 'string';
+  return (
+    typeof value === 'object' && value !== null && typeof (value as { code?: unknown }).code === 'string'
+  );
 }
 
 export const http = {
   get: <T>(path: string, options?: RequestOptions) => request<T>('GET', path, options),
-  post: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('POST', path, { ...options, body }),
-  put: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('PUT', path, { ...options, body }),
-  patch: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('PATCH', path, { ...options, body }),
-  delete: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('DELETE', path, { ...options, body }),
+  post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>('POST', path, { ...options, body }),
+  put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>('PUT', path, { ...options, body }),
+  patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>('PATCH', path, { ...options, body }),
+  delete: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>('DELETE', path, { ...options, body }),
 };
 
 /** Query strings without empty values. */
-export function query(params: Readonly<Record<string, string | number | boolean | null | undefined>>): string {
+export function query(
+  params: Readonly<Record<string, string | number | boolean | null | undefined>>,
+): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') search.set(key, String(value));

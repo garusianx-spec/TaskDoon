@@ -1,5 +1,5 @@
 import type { OtpChallenge } from '@taskin/contracts';
-import { normaliseIranMobile,toLatinDigits } from '@taskin/text';
+import { normaliseIranMobile, toLatinDigits } from '@taskin/text';
 
 export function otpDigits(value: string, length: number): string {
   return toLatinDigits(value).replace(/\D/g, '').slice(0, length);
@@ -12,7 +12,11 @@ export function maskedMobile(value: string): string {
 }
 
 export function challengeTiming(challenge: OtpChallenge, receivedAt: number) {
-  return { codeLength: challenge.codeLength, resendAt: receivedAt + challenge.resendInSeconds * 1000, expiresAt: receivedAt + challenge.expiresInSeconds * 1000 };
+  return {
+    codeLength: challenge.codeLength,
+    resendAt: receivedAt + challenge.resendInSeconds * 1000,
+    expiresAt: receivedAt + challenge.expiresInSeconds * 1000,
+  };
 }
 
 export const MIN_PASSWORD = 8;

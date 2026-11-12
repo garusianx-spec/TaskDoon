@@ -12,7 +12,12 @@ let departments: readonly Department[] = DEPARTMENTS;
  * component below it reads them, so they always match what the reducer holds — the demo fixtures
  * or what the API returned.
  */
-export function setDirectory(nextUsers: readonly User[], nextProjects: readonly Project[], nextFormer: readonly User[] = [], nextDepartments: readonly Department[] = DEPARTMENTS): void {
+export function setDirectory(
+  nextUsers: readonly User[],
+  nextProjects: readonly Project[],
+  nextFormer: readonly User[] = [],
+  nextDepartments: readonly Department[] = DEPARTMENTS,
+): void {
   users = nextUsers;
   projects = nextProjects;
   former = nextFormer;

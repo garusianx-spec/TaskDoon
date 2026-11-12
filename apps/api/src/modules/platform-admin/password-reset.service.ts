@@ -50,7 +50,10 @@ export class PasswordResetService {
         .for('update', { of: [passwordResetTokens, users] });
       if (!row?.usable || !row.active || isPrimaryOwner(row.phone)) throw new ApiError('RESET_TOKEN_INVALID');
 
-      await tx.update(passwordResetTokens).set({ usedAt: sql`now()` }).where(eq(passwordResetTokens.id, row.id));
+      await tx
+        .update(passwordResetTokens)
+        .set({ usedAt: sql`now()` })
+        .where(eq(passwordResetTokens.id, row.id));
       await this.passwords.store(unit, row.userId, passwordHash);
       await tx.update(users).set({ passwordResetRequired: false }).where(eq(users.id, row.userId));
       const signedOut = await this.sessions.revokeOthers(unit, row.userId, null, 'password_changed');
@@ -65,7 +68,11 @@ export class PasswordResetService {
         type: 'notification.sms',
         aggregateType: 'user',
         aggregateId: row.userId,
-        payload: { to: row.phone, template: 'alert', tokens: { event: 'رمز عبور حساب شما با کد بازنشانی تغییر کرد' } },
+        payload: {
+          to: row.phone,
+          template: 'alert',
+          tokens: { event: 'رمز عبور حساب شما با کد بازنشانی تغییر کرد' },
+        },
       });
     });
   }

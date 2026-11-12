@@ -100,7 +100,12 @@ export class PlatformWorkspacesService {
 
   async list(
     admin: PlatformAdmin,
-    filters: { readonly q?: string; readonly status?: PlatformWorkspaceStatus; readonly cursor?: string; readonly limit?: number },
+    filters: {
+      readonly q?: string;
+      readonly status?: PlatformWorkspaceStatus;
+      readonly cursor?: string;
+      readonly limit?: number;
+    },
   ): Promise<PlatformWorkspacePage> {
     const limit = filters.limit ?? 50;
     const cursor = decodeCursor(filters.cursor);
@@ -110,48 +115,70 @@ export class PlatformWorkspacesService {
     if (filters.status === 'deleted') where.push(sql`w.deleted_at is not null`);
     if (filters.status === 'suspended') where.push(sql`w.deleted_at is null and w.suspended_at is not null`);
     if (filters.status === 'active') where.push(sql`w.deleted_at is null and w.suspended_at is null`);
-    if (cursor) where.push(sql`(w.created_at, w.id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)`);
-    const rows = await this.admins.read(admin, async (tx) =>
-      (
-        await tx.execute<WorkspaceRow>(sql`
+    if (cursor)
+      where.push(sql`(w.created_at, w.id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)`);
+    const rows = await this.admins.read(
+      admin,
+      async (tx) =>
+        (
+          await tx.execute<WorkspaceRow>(sql`
           select ${WORKSPACE_COLUMNS} from workspaces w ${WORKSPACE_JOINS}
           where ${where.length > 0 ? sql.join(where, sql` and `) : sql`true`}
           order by w.created_at desc, w.id desc
           limit ${limit + 1}`)
-      ).rows,
+        ).rows,
     );
     const page = rows.slice(0, limit);
     const last = page.at(-1);
     await this.auditLog.record(admin, {
       action: 'admin.workspaces.search',
-      metadata: { filters: { q: q ?? null, ...(filters.status ? { status: filters.status } : {}) }, results: page.length },
+      metadata: {
+        filters: { q: q ?? null, ...(filters.status ? { status: filters.status } : {}) },
+        results: page.length,
+      },
     });
-    return { items: page.map(summary), nextCursor: rows.length > limit && last ? encodeCursor(last.cursor_at, last.id) : null };
+    return {
+      items: page.map(summary),
+      nextCursor: rows.length > limit && last ? encodeCursor(last.cursor_at, last.id) : null,
+    };
   }
 
   async detail(admin: PlatformAdmin, workspaceId: string): Promise<PlatformWorkspaceDetail> {
-    const { workspace, roles, members, suspension, quota, planOptions } = await this.admins.read(admin, async (tx) => {
-      const [row] = (await tx.execute<WorkspaceRow>(sql`select ${WORKSPACE_COLUMNS} from workspaces w ${WORKSPACE_JOINS} where w.id = ${workspaceId}`)).rows;
-      if (!row) throw ApiError.notFound('The workspace');
-      const roleRows = await tx.execute<{ id: string; key: string; rank: number; is_locked: boolean; grants: string[] | null; member_count: string }>(sql`
+    const { workspace, roles, members, suspension, quota, planOptions } = await this.admins.read(
+      admin,
+      async (tx) => {
+        const [row] = (
+          await tx.execute<WorkspaceRow>(
+            sql`select ${WORKSPACE_COLUMNS} from workspaces w ${WORKSPACE_JOINS} where w.id = ${workspaceId}`,
+          )
+        ).rows;
+        if (!row) throw ApiError.notFound('The workspace');
+        const roleRows = await tx.execute<{
+          id: string;
+          key: string;
+          rank: number;
+          is_locked: boolean;
+          grants: string[] | null;
+          member_count: string;
+        }>(sql`
         select r.id, r.key, r.rank, r.is_locked,
           (select array_agg(rp.module::text || ':' || rp.action::text order by rp.module, rp.action) from role_permissions rp
            where rp.workspace_id = r.workspace_id and rp.role_id = r.id) as grants,
           (select count(*) from workspace_members wm where wm.workspace_id = r.workspace_id and wm.role_id = r.id and wm.status <> 'left') as member_count
         from roles r where r.workspace_id = ${workspaceId}
         order by r.rank, r.key`);
-      const memberRows = await tx.execute<{
-        user_id: string;
-        full_name: string;
-        phone: string;
-        role_key: string;
-        status: PlatformWorkspaceDetail['members'][number]['status'];
-        is_owner: boolean;
-        joined_at: string;
-        left_at: string | null;
-        account_status: 'active' | 'suspended' | 'deleted';
-        has_password: boolean;
-      }>(sql`
+        const memberRows = await tx.execute<{
+          user_id: string;
+          full_name: string;
+          phone: string;
+          role_key: string;
+          status: PlatformWorkspaceDetail['members'][number]['status'];
+          is_owner: boolean;
+          joined_at: string;
+          left_at: string | null;
+          account_status: 'active' | 'suspended' | 'deleted';
+          has_password: boolean;
+        }>(sql`
         select wm.user_id, u.full_name, u.phone, r.key as role_key, wm.status, w.owner_user_id = wm.user_id as is_owner, wm.joined_at, wm.left_at,
           case when u.deleted_at is not null then 'deleted' else u.status::text end as account_status, u.password_hash is not null as has_password
         from workspace_members wm
@@ -161,29 +188,47 @@ export class PlatformWorkspacesService {
         where wm.workspace_id = ${workspaceId}
         order by r.rank, wm.status = 'left', u.full_name
         limit 1000`);
-      // Phase 3: while suspended, the suspension that took effect (from the platform audit log).
-      const suspended = row.suspended_at && !row.deleted_at
-        ? (
-            await tx.execute<{ created_at: string; reason: string | null; admin_id: string | null; admin_name: string | null }>(sql`
+        // Phase 3: while suspended, the suspension that took effect (from the platform audit log).
+        const suspended =
+          row.suspended_at && !row.deleted_at
+            ? ((
+                await tx.execute<{
+                  created_at: string;
+                  reason: string | null;
+                  admin_id: string | null;
+                  admin_name: string | null;
+                }>(sql`
               select l.created_at, l.metadata ->> 'reason' as reason, l.admin_id, a.full_name as admin_name
               from platform_audit_logs l left join users a on a.id = l.admin_id
               where l.target_workspace_id = ${workspaceId} and l.action = 'admin.workspace.suspend' and coalesce((l.metadata ->> 'changed')::boolean, true)
               order by l.id desc limit 1`)
-          ).rows[0] ?? null
-        : null;
-      const [quotaRow] = (
-        await tx.execute<QuotaRow>(sql`
+              ).rows[0] ?? null)
+            : null;
+        const [quotaRow] = (
+          await tx.execute<QuotaRow>(sql`
           select pl.id as plan_id, pl.name as plan_name, pl.limits as plan_limits, w.limit_overrides, w.member_count, w.storage_used_bytes,
             (select count(*) from projects p where p.workspace_id = w.id and p.deleted_at is null) as projects
           from workspaces w join plans pl on pl.id = w.plan_id
           where w.id = ${workspaceId}`)
-      ).rows;
-      const plans = await tx.execute<{ id: string; name: string; limits: PlanLimits }>(
-        sql`select id, name, limits from plans order by (limits ->> 'maxMembers')::int, id`,
-      );
-      return { workspace: row, roles: roleRows.rows, members: memberRows.rows, suspension: suspended, quota: quotaRow, planOptions: plans.rows };
+        ).rows;
+        const plans = await tx.execute<{ id: string; name: string; limits: PlanLimits }>(
+          sql`select id, name, limits from plans order by (limits ->> 'maxMembers')::int, id`,
+        );
+        return {
+          workspace: row,
+          roles: roleRows.rows,
+          members: memberRows.rows,
+          suspension: suspended,
+          quota: quotaRow,
+          planOptions: plans.rows,
+        };
+      },
+    );
+    await this.auditLog.record(admin, {
+      action: 'admin.workspace.view',
+      resourceType: 'workspace',
+      resourceId: workspaceId,
     });
-    await this.auditLog.record(admin, { action: 'admin.workspace.view', resourceType: 'workspace', resourceId: workspaceId });
     return {
       ...summary(workspace),
       roles: roles.map((row) => ({
@@ -208,7 +253,14 @@ export class PlatformWorkspacesService {
         accountStatus: row.account_status,
         hasPassword: row.has_password,
       })),
-      suspension: suspension ? { at: iso(suspension.created_at), reason: suspension.reason, adminId: suspension.admin_id, adminName: suspension.admin_name } : null,
+      suspension: suspension
+        ? {
+            at: iso(suspension.created_at),
+            reason: suspension.reason,
+            adminId: suspension.admin_id,
+            adminName: suspension.admin_name,
+          }
+        : null,
       ...(quota
         ? {
             quota: {
@@ -216,7 +268,11 @@ export class PlatformWorkspacesService {
               planName: quota.plan_name,
               overrides: quota.limit_overrides,
               effective: mergeLimits(quota.plan_limits, quota.limit_overrides),
-              usage: { members: num(quota.member_count), storageUsedBytes: num(quota.storage_used_bytes), projects: num(quota.projects) },
+              usage: {
+                members: num(quota.member_count),
+                storageUsedBytes: num(quota.storage_used_bytes),
+                projects: num(quota.projects),
+              },
             },
           }
         : {}),
@@ -240,17 +296,26 @@ export class PlatformWorkspacesService {
     const where: SQL[] = [];
     if (filters.adminId) where.push(sql`l.admin_id = ${filters.adminId}`);
     if (filters.targetUserId) where.push(sql`l.target_user_id = ${filters.targetUserId}`);
-    if (filters.action) where.push(sql`(l.action = ${filters.action} or l.action like ${`${filters.action.replace(/_/g, '\\_')}.%`})`);
+    if (filters.action)
+      where.push(
+        sql`(l.action = ${filters.action} or l.action like ${`${filters.action.replace(/_/g, '\\_')}.%`})`,
+      );
     // Phase 3: what was done to a workspace, and (before the column existed) every look at it.
-    if (filters.workspaceId) where.push(sql`(l.target_workspace_id = ${filters.workspaceId} or (l.resource_type = 'workspace' and l.resource_id = ${filters.workspaceId}))`);
+    if (filters.workspaceId)
+      where.push(
+        sql`(l.target_workspace_id = ${filters.workspaceId} or (l.resource_type = 'workspace' and l.resource_id = ${filters.workspaceId}))`,
+      );
     if (filters.cursor) {
       const before = Number(Buffer.from(filters.cursor, 'base64url').toString('utf8'));
-      if (!Number.isSafeInteger(before) || before < 1) throw ApiError.validation([{ field: 'cursor', message: 'is not a cursor from this list' }]);
+      if (!Number.isSafeInteger(before) || before < 1)
+        throw ApiError.validation([{ field: 'cursor', message: 'is not a cursor from this list' }]);
       where.push(sql`l.id < ${before}`);
     }
-    const rows = await this.admins.read(admin, async (tx) =>
-      (
-        await tx.execute<AuditRow>(sql`
+    const rows = await this.admins.read(
+      admin,
+      async (tx) =>
+        (
+          await tx.execute<AuditRow>(sql`
           select l.id, l.admin_id, a.full_name as admin_name, l.target_user_id, t.full_name as target_name, l.action,
             l.resource_type, l.resource_id, host(l.ip) as ip, l.user_agent, l.request_id, l.trace_id, l.target_workspace_id, l.metadata, l.created_at
           from platform_audit_logs l
@@ -259,7 +324,7 @@ export class PlatformWorkspacesService {
           where ${where.length > 0 ? sql.join(where, sql` and `) : sql`true`}
           order by l.id desc
           limit ${limit + 1}`)
-      ).rows,
+        ).rows,
     );
     const page = rows.slice(0, limit);
     const last = page.at(-1);
@@ -281,7 +346,8 @@ export class PlatformWorkspacesService {
         metadata: row.metadata,
         createdAt: iso(row.created_at),
       })),
-      nextCursor: rows.length > limit && last ? Buffer.from(String(last.id), 'utf8').toString('base64url') : null,
+      nextCursor:
+        rows.length > limit && last ? Buffer.from(String(last.id), 'utf8').toString('base64url') : null,
     };
   }
 }

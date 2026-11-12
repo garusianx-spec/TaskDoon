@@ -1,6 +1,13 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { OtpChallenge, OtpVerifyResult, PlatformAuditPage, PlatformModerationResult, PlatformUserDetail, PlatformUserPage } from '@taskin/contracts';
+import type {
+  OtpChallenge,
+  OtpVerifyResult,
+  PlatformAuditPage,
+  PlatformModerationResult,
+  PlatformUserDetail,
+  PlatformUserPage,
+} from '@taskin/contracts';
 import {
   bearer,
   createTestApp,
@@ -51,7 +58,10 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
 
   /** Sends an admin request with its own request id, trace and address, and returns them. */
   const admin = (as: Session) => {
-    const ids = () => ({ requestId: `req-${randomBytes(6).toString('hex')}`, traceId: randomBytes(16).toString('hex') });
+    const ids = () => ({
+      requestId: `req-${randomBytes(6).toString('hex')}`,
+      traceId: randomBytes(16).toString('hex'),
+    });
     const send = (method: 'get' | 'post' | 'put', path: string, body?: Record<string, unknown>) => {
       const { requestId, traceId } = ids();
       const request = t
@@ -84,16 +94,35 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
       )
     ).rows[0];
   const sessionsOf = async (userId: string) =>
-    (await t.admin.query<{ id: string; revoked_at: Date | null; revoke_reason: string | null }>('select id, revoked_at, revoke_reason from auth_sessions where user_id = $1', [userId])).rows;
+    (
+      await t.admin.query<{ id: string; revoked_at: Date | null; revoke_reason: string | null }>(
+        'select id, revoked_at, revoke_reason from auth_sessions where user_id = $1',
+        [userId],
+      )
+    ).rows;
 
-  const refresh = (session: Session) => t.http().post('/api/v1/auth/refresh').set('Cookie', session.cookies).set('X-CSRF-Token', session.csrf).set('Origin', ORIGIN);
+  const refresh = (session: Session) =>
+    t
+      .http()
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', session.cookies)
+      .set('X-CSRF-Token', session.csrf)
+      .set('Origin', ORIGIN);
   const me = (session: Session) => t.http().get('/api/v1/me').set(bearer(session));
   const passwordLogin = (phone: string, password = STRONG_PASSWORD) =>
-    t.http().set('X-Forwarded-For', randomIp()).post('/api/v1/auth/password/login').send({ phone: localForm(phone), password });
+    t
+      .http()
+      .set('X-Forwarded-For', randomIp())
+      .post('/api/v1/auth/password/login')
+      .send({ phone: localForm(phone), password });
   /** Asks for a sign-in code and presents it, returning the raw answer. */
   const otpVerify = async (phone: string) => {
     const challenge = await requestOtp(t, phone);
-    return t.http().set('X-Forwarded-For', randomIp()).post('/api/v1/auth/otp/verify').send({ challengeId: challenge.challengeId, code: lastCode(t, phone) });
+    return t
+      .http()
+      .set('X-Forwarded-For', randomIp())
+      .post('/api/v1/auth/otp/verify')
+      .send({ challengeId: challenge.challengeId, code: lastCode(t, phone) });
   };
   /** Someone with a password and a second device, both signed in. */
   const member = async (name: string): Promise<{ first: Session; second: Session }> => {
@@ -134,9 +163,22 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
         expectStatus(fresh, 401);
         expect(fresh.body).toMatchObject({ code: 'STEP_UP_REQUIRED' });
       }
-      expectStatus(await t.http().post(`/api/v1/admin/users/${target.userId}/suspend`).send({ reason: 'بدون ورود' }), 401);
-      expect(await accountOf(target.userId)).toMatchObject({ status: 'active', password_reset_required: false });
-      expect((await t.admin.query("select count(*)::int as n from platform_audit_logs where action like 'admin.user.%' and target_user_id = $1", [target.userId])).rows[0]).toEqual({ n: 0 });
+      expectStatus(
+        await t.http().post(`/api/v1/admin/users/${target.userId}/suspend`).send({ reason: 'بدون ورود' }),
+        401,
+      );
+      expect(await accountOf(target.userId)).toMatchObject({
+        status: 'active',
+        password_reset_required: false,
+      });
+      expect(
+        (
+          await t.admin.query(
+            "select count(*)::int as n from platform_audit_logs where action like 'admin.user.%' and target_user_id = $1",
+            [target.userId],
+          )
+        ).rows[0],
+      ).toEqual({ n: 0 });
     });
 
     it('refuses new password-only admin sign-in and holds legacy sessions until SMS confirmation', async () => {
@@ -155,15 +197,30 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
 
     it('wants a reason for a suspension, and a yes or no for a password reset', async () => {
       const target = await signIn(t, randomPhone(), 'هدف اعتبارسنجی');
-      for (const body of [{}, { reason: '' }, { reason: '    ' }, { reason: ' ab ' }, { reason: 'x'.repeat(501) }, { reason: 42 }]) {
+      for (const body of [
+        {},
+        { reason: '' },
+        { reason: '    ' },
+        { reason: ' ab ' },
+        { reason: 'x'.repeat(501) },
+        { reason: 42 },
+      ]) {
         const response = await admin(operator).post(`/users/${target.userId}/suspend`, body);
         expectStatus(response, 400);
         expect(response.body).toMatchObject({ code: 'VALIDATION_FAILED' });
       }
-      for (const body of [{}, { required: 'yes' }, { required: true, signOut: 'no' }, { required: true, reason: 'x'.repeat(501) }]) {
+      for (const body of [
+        {},
+        { required: 'yes' },
+        { required: true, signOut: 'no' },
+        { required: true, reason: 'x'.repeat(501) },
+      ]) {
         expectStatus(await admin(operator).put(`/users/${target.userId}/password-reset-required`, body), 400);
       }
-      expectStatus(await admin(operator).post(`/users/${target.userId}/unsuspend`, { reason: 'x'.repeat(501) }), 400);
+      expectStatus(
+        await admin(operator).post(`/users/${target.userId}/unsuspend`, { reason: 'x'.repeat(501) }),
+        400,
+      );
       expectStatus(await admin(operator).post('/users/not-a-uuid/suspend', { reason: 'شناسه نادرست' }), 400);
       expect((await accountOf(target.userId))?.status).toBe('active');
     });
@@ -174,7 +231,9 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
         expectStatus(self, 403);
         expect(self.body).toMatchObject({ code: 'ADMIN_SELF_ACTION' });
       }
-      const protectedAdmin = await admin(operator).post(`/users/${peer.userId}/suspend`, { reason: 'تلاش برای قفل کردن مدیر' });
+      const protectedAdmin = await admin(operator).post(`/users/${peer.userId}/suspend`, {
+        reason: 'تلاش برای قفل کردن مدیر',
+      });
       expectStatus(protectedAdmin, 409);
       expect(protectedAdmin.body).toMatchObject({ code: 'ADMIN_TARGET_PROTECTED' });
       expect(await accountOf(peer.userId)).toMatchObject({ status: 'active' });
@@ -182,11 +241,20 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
 
       for (const act of actions(randomUUID())) expectStatus(await act(operator), 404);
       const gone = await signIn(t, randomPhone(), 'حساب حذف‌شده');
-      await t.admin.query("update users set status = 'deleted', deleted_at = now() where id = $1", [gone.userId]);
+      await t.admin.query("update users set status = 'deleted', deleted_at = now() where id = $1", [
+        gone.userId,
+      ]);
       for (const act of actions(gone.userId)) expectStatus(await act(operator), 404);
       // A refused action is not recorded: it did not happen.
       for (const userId of [operator.userId, peer.userId, gone.userId]) {
-        expect((await t.admin.query("select count(*)::int as n from platform_audit_logs where action like 'admin.user.%' and target_user_id = $1", [userId])).rows[0]).toEqual({ n: 0 });
+        expect(
+          (
+            await t.admin.query(
+              "select count(*)::int as n from platform_audit_logs where action like 'admin.user.%' and target_user_id = $1",
+              [userId],
+            )
+          ).rows[0],
+        ).toEqual({ n: 0 });
       }
     });
   });
@@ -203,7 +271,9 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
       socket = await connect(t.baseUrl, target.first.accessToken);
       open.push(socket);
       versionBefore = (await accountOf(target.first.userId))?.security_version ?? -1;
-      const request = admin(operator).post(`/users/${target.first.userId}/suspend`, { reason: '  ارسال پیام‌های تبلیغاتی انبوه  ' });
+      const request = admin(operator).post(`/users/${target.first.userId}/suspend`, {
+        reason: '  ارسال پیام‌های تبلیغاتی انبوه  ',
+      });
       const response = await request;
       expectStatus(response, 200);
       suspension = { requestId: request.requestId, traceId: request.traceId, body: result(response) };
@@ -211,14 +281,28 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
 
     it('suspends the account and ends every session in the same step', async () => {
       const { body } = suspension;
-      expect(body).toMatchObject({ changed: true, user: { id: target.first.userId, status: 'suspended', activeSessionCount: 0 } });
+      expect(body).toMatchObject({
+        changed: true,
+        user: { id: target.first.userId, status: 'suspended', activeSessionCount: 0 },
+      });
       expect(body.sessionsRevoked).toBeGreaterThanOrEqual(2);
-      expect(await accountOf(target.first.userId)).toMatchObject({ status: 'suspended', security_version: versionBefore + 1 });
+      expect(await accountOf(target.first.userId)).toMatchObject({
+        status: 'suspended',
+        security_version: versionBefore + 1,
+      });
       const sessions = await sessionsOf(target.first.userId);
       expect(sessions.length).toBe(body.sessionsRevoked);
-      expect(sessions.every((session) => session.revoked_at !== null && session.revoke_reason === 'admin_action')).toBe(true);
-      expect((await outboxEvents(t, 'session.revoked', target.first.userId)).map((event) => event.payload)).toContainEqual(
-        expect.objectContaining({ userId: target.first.userId, reason: 'admin_action', sessionIds: expect.arrayContaining([target.first.sessionId, target.second.sessionId]) }),
+      expect(
+        sessions.every((session) => session.revoked_at !== null && session.revoke_reason === 'admin_action'),
+      ).toBe(true);
+      expect(
+        (await outboxEvents(t, 'session.revoked', target.first.userId)).map((event) => event.payload),
+      ).toContainEqual(
+        expect.objectContaining({
+          userId: target.first.userId,
+          reason: 'admin_action',
+          sessionIds: expect.arrayContaining([target.first.sessionId, target.second.sessionId]),
+        }),
       );
     });
 
@@ -241,12 +325,21 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
       const login = await passwordLogin(target.first.phone);
       expectStatus(login, 401);
       expect(login.body).toMatchObject({ code: 'CREDENTIALS_INVALID' });
-      expectStatus(await t.http().post('/api/v1/auth/step-up').set(bearer(target.first)).send({ password: STRONG_PASSWORD }), 401);
+      expectStatus(
+        await t
+          .http()
+          .post('/api/v1/auth/step-up')
+          .set(bearer(target.first))
+          .send({ password: STRONG_PASSWORD }),
+        401,
+      );
 
       await t.flushNotifications();
       await socket.closed;
       expect(socket.events.map((envelope) => envelope.type)).toContain('session:revoked');
-      await expect(connect(t.baseUrl, target.first.accessToken)).rejects.toMatchObject({ code: 'SESSION_REVOKED' });
+      await expect(connect(t.baseUrl, target.first.accessToken)).rejects.toMatchObject({
+        code: 'SESSION_REVOKED',
+      });
     });
 
     it('records who, whom, why, from where, and the request and trace ids', async () => {
@@ -261,48 +354,94 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
           ip: ADMIN_IP,
           request_id: suspension.requestId,
           trace_id: suspension.traceId,
-          metadata: { reason: 'ارسال پیام‌های تبلیغاتی انبوه', previousStatus: 'active', sessionsRevoked: suspension.body.sessionsRevoked, changed: true },
+          metadata: {
+            reason: 'ارسال پیام‌های تبلیغاتی انبوه',
+            previousStatus: 'active',
+            sessionsRevoked: suspension.body.sessionsRevoked,
+            changed: true,
+          },
         },
       ]);
       // The ordinary audit trail has its twin, in the same transaction.
-      const twin = await t.admin.query('select actor_user_id, request_id, trace_id from audit_logs where action = $1 and resource_id = $2', ['platform.admin.user.suspend', target.first.userId]);
-      expect(twin.rows).toEqual([{ actor_user_id: operator.userId, request_id: suspension.requestId, trace_id: suspension.traceId }]);
+      const twin = await t.admin.query(
+        'select actor_user_id, request_id, trace_id from audit_logs where action = $1 and resource_id = $2',
+        ['platform.admin.user.suspend', target.first.userId],
+      );
+      expect(twin.rows).toEqual([
+        { actor_user_id: operator.userId, request_id: suspension.requestId, trace_id: suspension.traceId },
+      ]);
 
-      const page = (await admin(operator).get(`/audit?targetUserId=${target.first.userId}&action=admin.user.suspend`)).body as PlatformAuditPage;
+      const page = (
+        await admin(operator).get(`/audit?targetUserId=${target.first.userId}&action=admin.user.suspend`)
+      ).body as PlatformAuditPage;
       expect(page.items).toEqual([
-        expect.objectContaining({ adminId: operator.userId, adminName: 'ناظر پلتفرم', targetName: 'کاربر متخلف', ip: ADMIN_IP, requestId: suspension.requestId, traceId: suspension.traceId }),
+        expect.objectContaining({
+          adminId: operator.userId,
+          adminName: 'ناظر پلتفرم',
+          targetName: 'کاربر متخلف',
+          ip: ADMIN_IP,
+          requestId: suspension.requestId,
+          traceId: suspension.traceId,
+        }),
       ]);
     });
 
     it('shows the suspension in the directory: status, when, why and by whom', async () => {
       const detail = (await admin(operator).get(`/users/${target.first.userId}`)).body as PlatformUserDetail;
       expect(detail.status).toBe('suspended');
-      expect(detail.suspension).toMatchObject({ reason: 'ارسال پیام‌های تبلیغاتی انبوه', adminId: operator.userId, adminName: 'ناظر پلتفرم' });
+      expect(detail.suspension).toMatchObject({
+        reason: 'ارسال پیام‌های تبلیغاتی انبوه',
+        adminId: operator.userId,
+        adminName: 'ناظر پلتفرم',
+      });
       expect(Date.now() - Date.parse(detail.suspension?.at ?? '')).toBeLessThan(5 * 60_000);
-      const suspended = (await admin(operator).get(`/users?status=suspended&q=${target.first.phone.slice(-7)}`)).body as PlatformUserPage;
+      const suspended = (
+        await admin(operator).get(`/users?status=suspended&q=${target.first.phone.slice(-7)}`)
+      ).body as PlatformUserPage;
       expect(suspended.items.map((user) => user.id)).toEqual([target.first.userId]);
-      const active = (await admin(operator).get(`/users?status=active&q=${target.first.phone.slice(-7)}`)).body as PlatformUserPage;
+      const active = (await admin(operator).get(`/users?status=active&q=${target.first.phone.slice(-7)}`))
+        .body as PlatformUserPage;
       expect(active.items).toEqual([]);
       // Someone who was never suspended has no suspension to show.
-      expect(((await admin(operator).get(`/users/${outsider.userId}`)).body as PlatformUserDetail).suspension).toBeNull();
+      expect(
+        ((await admin(operator).get(`/users/${outsider.userId}`)).body as PlatformUserDetail).suspension,
+      ).toBeNull();
     });
 
     it('changes nothing when asked again, but still records the attempt', async () => {
-      const again = await admin(operator).post(`/users/${target.first.userId}/suspend`, { reason: 'تکرار تعلیق' });
+      const again = await admin(operator).post(`/users/${target.first.userId}/suspend`, {
+        reason: 'تکرار تعلیق',
+      });
       expectStatus(again, 200);
-      expect(result(again)).toMatchObject({ changed: false, sessionsRevoked: 0, user: { status: 'suspended' } });
+      expect(result(again)).toMatchObject({
+        changed: false,
+        sessionsRevoked: 0,
+        user: { status: 'suspended' },
+      });
       expect((await accountOf(target.first.userId))?.security_version).toBe(versionBefore + 1);
       const rows = await audits('admin.user.suspend', target.first.userId);
-      expect(rows.map((row) => row.metadata)).toEqual([expect.objectContaining({ changed: true }), { reason: 'تکرار تعلیق', previousStatus: 'suspended', sessionsRevoked: 0, changed: false }]);
+      expect(rows.map((row) => row.metadata)).toEqual([
+        expect.objectContaining({ changed: true }),
+        { reason: 'تکرار تعلیق', previousStatus: 'suspended', sessionsRevoked: 0, changed: false },
+      ]);
       // The suspension shown is still the one that took effect.
-      expect(((await admin(operator).get(`/users/${target.first.userId}`)).body as PlatformUserDetail).suspension?.reason).toBe('ارسال پیام‌های تبلیغاتی انبوه');
+      expect(
+        ((await admin(operator).get(`/users/${target.first.userId}`)).body as PlatformUserDetail).suspension
+          ?.reason,
+      ).toBe('ارسال پیام‌های تبلیغاتی انبوه');
     });
 
     it('lifts the suspension: the person signs in again, but ended sessions stay ended', async () => {
-      const lifted = admin(operator).post(`/users/${target.first.userId}/unsuspend`, { reason: 'پس از پیگیری پشتیبانی' });
+      const lifted = admin(operator).post(`/users/${target.first.userId}/unsuspend`, {
+        reason: 'پس از پیگیری پشتیبانی',
+      });
       const liftedResponse = await lifted;
       expectStatus(liftedResponse, 200);
-      expect(result(liftedResponse)).toMatchObject({ changed: true, sessionsRevoked: 0, user: { status: 'active' } });
+      expect(result(liftedResponse)).toMatchObject({
+        changed: true,
+        sessionsRevoked: 0,
+        user: { status: 'active' },
+      });
       expect((await accountOf(target.first.userId))?.status).toBe('active');
       expectStatus(await me(target.first), 401);
 
@@ -325,7 +464,11 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
       const again = await admin(operator).post(`/users/${target.first.userId}/unsuspend`);
       expectStatus(again, 200);
       expect(result(again).changed).toBe(false);
-      expect((await audits('admin.user.unsuspend', target.first.userId)).at(-1)?.metadata).toEqual({ reason: null, previousStatus: 'active', changed: false });
+      expect((await audits('admin.user.unsuspend', target.first.userId)).at(-1)?.metadata).toEqual({
+        reason: null,
+        previousStatus: 'active',
+        changed: false,
+      });
     });
   });
 
@@ -333,25 +476,48 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
     it('retires the password and signs every session out', async () => {
       const target = await member('رمز لو رفته');
       const versionBefore = (await accountOf(target.first.userId))?.security_version;
-      const forced = admin(operator).put(`/users/${target.first.userId}/password-reset-required`, { required: true, reason: 'نشت احتمالی رمز' });
+      const forced = admin(operator).put(`/users/${target.first.userId}/password-reset-required`, {
+        required: true,
+        reason: 'نشت احتمالی رمز',
+      });
       const forcedResponse = await forced;
       expectStatus(forcedResponse, 200);
       const body = result(forcedResponse);
-      expect(body).toMatchObject({ changed: true, user: { id: target.first.userId, status: 'active', passwordResetRequired: true, activeSessionCount: 0 } });
+      expect(body).toMatchObject({
+        changed: true,
+        user: {
+          id: target.first.userId,
+          status: 'active',
+          passwordResetRequired: true,
+          activeSessionCount: 0,
+        },
+      });
       expect(body.sessionsRevoked).toBeGreaterThanOrEqual(2);
-      expect(await accountOf(target.first.userId)).toMatchObject({ status: 'active', password_reset_required: true, security_version: versionBefore });
+      expect(await accountOf(target.first.userId)).toMatchObject({
+        status: 'active',
+        password_reset_required: true,
+        security_version: versionBefore,
+      });
       for (const session of [target.first, target.second]) expectStatus(await me(session), 401);
-      expect((await sessionsOf(target.first.userId)).every((session) => session.revoke_reason === 'admin_action')).toBe(true);
+      expect(
+        (await sessionsOf(target.first.userId)).every((session) => session.revoke_reason === 'admin_action'),
+      ).toBe(true);
 
       // The old password opens nothing; the person is told to set a new one.
       const login = await passwordLogin(target.first.phone);
       expectStatus(login, 409);
       expect(login.body).toMatchObject({ code: 'PASSWORD_RESET_REQUIRED' });
-      expect((await passwordLogin(target.first.phone, 'Not-The-Password-9')).body).toMatchObject({ code: 'CREDENTIALS_INVALID' });
+      expect((await passwordLogin(target.first.phone, 'Not-The-Password-9')).body).toMatchObject({
+        code: 'CREDENTIALS_INVALID',
+      });
       // An SMS sign-in still works, but cannot step up with the retired password.
       const back = await signIn(t, target.first.phone);
       expectStatus(await me(back), 200);
-      const stepUpRefused = await t.http().post('/api/v1/auth/step-up').set(bearer(back)).send({ password: STRONG_PASSWORD });
+      const stepUpRefused = await t
+        .http()
+        .post('/api/v1/auth/step-up')
+        .set(bearer(back))
+        .send({ password: STRONG_PASSWORD });
       expectStatus(stepUpRefused, 409);
       expect(stepUpRefused.body).toMatchObject({ code: 'PASSWORD_RESET_REQUIRED' });
 
@@ -365,31 +531,61 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
           ip: ADMIN_IP,
           request_id: forced.requestId,
           trace_id: forced.traceId,
-          metadata: { required: true, signOut: true, sessionsRevoked: body.sessionsRevoked, reason: 'نشت احتمالی رمز', changed: true },
+          metadata: {
+            required: true,
+            signOut: true,
+            sessionsRevoked: body.sessionsRevoked,
+            reason: 'نشت احتمالی رمز',
+            changed: true,
+          },
         },
       ]);
-      const twin = await t.admin.query('select request_id, trace_id from audit_logs where action = $1 and resource_id = $2', ['platform.admin.user.password_reset_required', target.first.userId]);
+      const twin = await t.admin.query(
+        'select request_id, trace_id from audit_logs where action = $1 and resource_id = $2',
+        ['platform.admin.user.password_reset_required', target.first.userId],
+      );
       expect(twin.rows).toEqual([{ request_id: forced.requestId, trace_id: forced.traceId }]);
     });
 
     it('can leave sessions signed in, and can lift the requirement', async () => {
       const target = await member('رمز تکراری');
-      const kept = await admin(operator).put(`/users/${target.first.userId}/password-reset-required`, { required: true, signOut: false });
+      const kept = await admin(operator).put(`/users/${target.first.userId}/password-reset-required`, {
+        required: true,
+        signOut: false,
+      });
       expectStatus(kept, 200);
-      expect(result(kept)).toMatchObject({ changed: true, sessionsRevoked: 0, user: { passwordResetRequired: true } });
+      expect(result(kept)).toMatchObject({
+        changed: true,
+        sessionsRevoked: 0,
+        user: { passwordResetRequired: true },
+      });
       expectStatus(await me(target.first), 200);
       expectStatus(await me(target.second), 200);
-      expect((await passwordLogin(target.first.phone)).body).toMatchObject({ code: 'PASSWORD_RESET_REQUIRED' });
+      expect((await passwordLogin(target.first.phone)).body).toMatchObject({
+        code: 'PASSWORD_RESET_REQUIRED',
+      });
 
-      const lifted = await admin(operator).put(`/users/${target.first.userId}/password-reset-required`, { required: false, reason: 'اشتباه در شناسایی' });
+      const lifted = await admin(operator).put(`/users/${target.first.userId}/password-reset-required`, {
+        required: false,
+        reason: 'اشتباه در شناسایی',
+      });
       expectStatus(lifted, 200);
-      expect(result(lifted)).toMatchObject({ changed: true, sessionsRevoked: 0, user: { passwordResetRequired: false } });
+      expect(result(lifted)).toMatchObject({
+        changed: true,
+        sessionsRevoked: 0,
+        user: { passwordResetRequired: false },
+      });
       expectStatus(await passwordLogin(target.first.phone), 200);
       // Lifting never signs anyone out, whatever `signOut` says.
-      const again = await admin(operator).put(`/users/${target.first.userId}/password-reset-required`, { required: false, signOut: true });
+      const again = await admin(operator).put(`/users/${target.first.userId}/password-reset-required`, {
+        required: false,
+        signOut: true,
+      });
       expect(result(again)).toMatchObject({ changed: false, sessionsRevoked: 0 });
       expectStatus(await me(target.first), 200);
-      expect((await audits('admin.user.password_reset_required', target.first.userId)).map((row) => row.metadata)).toEqual([
+      expect(
+        (await audits('admin.user.password_reset_required', target.first.userId)).map((row) => row.metadata),
+      ).toEqual([
         { required: true, signOut: false, sessionsRevoked: 0, reason: null, changed: true },
         { required: false, signOut: false, sessionsRevoked: 0, reason: 'اشتباه در شناسایی', changed: true },
         { required: false, signOut: false, sessionsRevoked: 0, reason: null, changed: false },
@@ -398,18 +594,37 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
 
     it('is settled by the person recovering the password with an SMS code', async () => {
       const target = await member('بازیابی پیامکی');
-      expectStatus(await admin(operator).put(`/users/${target.first.userId}/password-reset-required`, { required: true }), 200);
-      await t.redis.del(`${t.env.REDIS_PREFIX}:otp:send:phone:${target.first.phone}:cooldown`, `${t.env.REDIS_PREFIX}:otp:send:phone:${target.first.phone}:hour`);
-      const asked = await t.http().set('X-Forwarded-For', randomIp()).post('/api/v1/auth/password/forgot').send({ phone: localForm(target.first.phone) });
+      expectStatus(
+        await admin(operator).put(`/users/${target.first.userId}/password-reset-required`, {
+          required: true,
+        }),
+        200,
+      );
+      await t.redis.del(
+        `${t.env.REDIS_PREFIX}:otp:send:phone:${target.first.phone}:cooldown`,
+        `${t.env.REDIS_PREFIX}:otp:send:phone:${target.first.phone}:hour`,
+      );
+      const asked = await t
+        .http()
+        .set('X-Forwarded-For', randomIp())
+        .post('/api/v1/auth/password/forgot')
+        .send({ phone: localForm(target.first.phone) });
       expectStatus(asked, 200);
       const recovered = await t
         .http()
         .post('/api/v1/auth/password/recover')
-        .send({ challengeId: (asked.body as OtpChallenge).challengeId, code: lastCode(t, target.first.phone), newPassword: NEW_PASSWORD });
+        .send({
+          challengeId: (asked.body as OtpChallenge).challengeId,
+          code: lastCode(t, target.first.phone),
+          newPassword: NEW_PASSWORD,
+        });
       expectStatus(recovered, 204);
       expect((await accountOf(target.first.userId))?.password_reset_required).toBe(false);
       expectStatus(await passwordLogin(target.first.phone, NEW_PASSWORD), 200);
-      expect(((await admin(operator).get(`/users/${target.first.userId}`)).body as PlatformUserDetail).passwordResetRequired).toBe(false);
+      expect(
+        ((await admin(operator).get(`/users/${target.first.userId}`)).body as PlatformUserDetail)
+          .passwordResetRequired,
+      ).toBe(false);
     });
   });
 
@@ -418,8 +633,16 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
       const target = await member('نشست‌های چندگانه');
       const third = await signIn(t, target.first.phone);
       const active = async () =>
-        ((await admin(operator).get(`/users/${target.first.userId}/sessions?status=active`)).body as { id: string }[]).map((session) => session.id).sort();
-      expect(await active()).toEqual([target.first.sessionId, target.second.sessionId, third.sessionId].sort());
+        (
+          (await admin(operator).get(`/users/${target.first.userId}/sessions?status=active`)).body as {
+            id: string;
+          }[]
+        )
+          .map((session) => session.id)
+          .sort();
+      expect(await active()).toEqual(
+        [target.first.sessionId, target.second.sessionId, third.sessionId].sort(),
+      );
 
       expectStatus(await admin(operator).post(`/sessions/${third.sessionId}/revoke`), 204);
       expect(await active()).toEqual([target.first.sessionId, target.second.sessionId].sort());
@@ -434,7 +657,12 @@ describe('Platform super admin (phase 2): moderation and session control', () =>
       expectStatus(back, 200);
       const signedIn = back.body as OtpVerifyResult;
       expect(signedIn.status).toBe('signed_in');
-      const session: Session = { ...target.first, accessToken: signedIn.status === 'signed_in' ? signedIn.session.accessToken : '', cookies: '', csrf: '' };
+      const session: Session = {
+        ...target.first,
+        accessToken: signedIn.status === 'signed_in' ? signedIn.session.accessToken : '',
+        cookies: '',
+        csrf: '',
+      };
       refreshCookies(session, back.headers['set-cookie']);
       expectStatus(await refresh(session), 200);
     });

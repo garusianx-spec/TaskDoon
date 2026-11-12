@@ -1,13 +1,13 @@
 'use client';
 
-import { useCallback,useEffect,useMemo,useRef,useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { PlatformUserSummary } from '@taskin/contracts';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useNamespacedId } from '@/hooks/useId';
-import { IconButton,MenuItem,MenuList } from '@/components/ui';
-import { CheckCircleIcon,KeyIcon,LockIcon,MonitorIcon,MoreHorizontalIcon } from '@/components/icons';
+import { IconButton, MenuItem, MenuList } from '@/components/ui';
+import { CheckCircleIcon, KeyIcon, LockIcon, MonitorIcon, MoreHorizontalIcon } from '@/components/icons';
 
 export type UserAction = 'sessions' | 'suspend' | 'unsuspend' | 'require-reset' | 'lift-reset';
 
@@ -23,7 +23,15 @@ const GAP = 6;
  * Nobody moderates their own account, a deleted one cannot be moderated, and a platform admin
  * cannot be suspended here (the server refuses all three too).
  */
-export function UserActionsMenu({ user, selfId, onAction }: { readonly user: PlatformUserSummary; readonly selfId: string; readonly onAction: (action: UserAction) => void }) {
+export function UserActionsMenu({
+  user,
+  selfId,
+  onAction,
+}: {
+  readonly user: PlatformUserSummary;
+  readonly selfId: string;
+  readonly onAction: (action: UserAction) => void;
+}) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -69,7 +77,9 @@ export function UserActionsMenu({ user, selfId, onAction }: { readonly user: Pla
     document.addEventListener('keydown', onKeyDown);
     window.addEventListener('scroll', onMove, true);
     window.addEventListener('resize', onMove);
-    const frame = requestAnimationFrame(() => panelRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus());
+    const frame = requestAnimationFrame(() =>
+      panelRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus(),
+    );
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', onKeyDown);
@@ -115,20 +125,41 @@ export function UserActionsMenu({ user, selfId, onAction }: { readonly user: Pla
                 مشاهده نشست‌های فعال
               </MenuItem>
               {suspended ? (
-                <MenuItem icon={<CheckCircleIcon size={16} />} disabled={self || deleted} onSelect={() => choose('unsuspend')}>
+                <MenuItem
+                  icon={<CheckCircleIcon size={16} />}
+                  disabled={self || deleted}
+                  onSelect={() => choose('unsuspend')}
+                >
                   رفع تعلیق
                 </MenuItem>
               ) : (
-                <MenuItem icon={<LockIcon size={16} />} tone="danger" disabled={self || deleted || user.isPlatformAdmin} onSelect={() => choose('suspend')}>
-                  {self ? 'تعلیق کاربر (حساب خودتان)' : user.isPlatformAdmin ? 'تعلیق کاربر (مدیر پلتفرم)' : 'تعلیق کاربر'}
+                <MenuItem
+                  icon={<LockIcon size={16} />}
+                  tone="danger"
+                  disabled={self || deleted || user.isPlatformAdmin}
+                  onSelect={() => choose('suspend')}
+                >
+                  {self
+                    ? 'تعلیق کاربر (حساب خودتان)'
+                    : user.isPlatformAdmin
+                      ? 'تعلیق کاربر (مدیر پلتفرم)'
+                      : 'تعلیق کاربر'}
                 </MenuItem>
               )}
               {user.passwordResetRequired ? (
-                <MenuItem icon={<KeyIcon size={16} />} disabled={self || deleted} onSelect={() => choose('lift-reset')}>
+                <MenuItem
+                  icon={<KeyIcon size={16} />}
+                  disabled={self || deleted}
+                  onSelect={() => choose('lift-reset')}
+                >
                   لغو اجبار تغییر رمز
                 </MenuItem>
               ) : (
-                <MenuItem icon={<KeyIcon size={16} />} disabled={self || deleted} onSelect={() => choose('require-reset')}>
+                <MenuItem
+                  icon={<KeyIcon size={16} />}
+                  disabled={self || deleted}
+                  onSelect={() => choose('require-reset')}
+                >
                   {self ? 'اجبار به تغییر رمز عبور (حساب خودتان)' : 'اجبار به تغییر رمز عبور'}
                 </MenuItem>
               )}

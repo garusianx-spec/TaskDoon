@@ -3,12 +3,8 @@
 import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
-import { Avatar,Badge,Button,ClockTime } from '@/components/ui';
-import {
-RefreshIcon,TaskSquareIcon,
-TrashIcon,
-WarningIcon
-} from '@/components/icons';
+import { Avatar, Badge, Button, ClockTime } from '@/components/ui';
+import { RefreshIcon, TaskSquareIcon, TrashIcon, WarningIcon } from '@/components/icons';
 import { type MessageBubbleProps } from '@/features/chat/types/message-bubble';
 import { SystemLine } from '@/features/chat/components/SystemLine';
 import { MessageContent } from '@/features/chat/components/MessageContent';
@@ -82,29 +78,52 @@ export function MessageBubble({
                 پاسخ خودکار
               </Badge>
             )}
-            <ClockTime iso={message.sentAt} className="numeric text-micro text-fg-quaternary" />
+            <ClockTime iso={message.sentAt} className="text-micro text-fg-quaternary numeric" />
           </div>
         )}
 
         <div className={cn('flex items-center gap-1', outgoing ? 'flex-row-reverse' : 'flex-row')}>
           <MessageContent message={message} outgoing={outgoing} author={author} repliedTo={repliedTo} />
 
-          {!readOnly && <MessageQuickActions message={message} outgoing={outgoing} currentUserId={currentUserId} onReply={onReply} onConvertToTask={onConvertToTask} onToggleReaction={onToggleReaction} />}
+          {!readOnly && (
+            <MessageQuickActions
+              message={message}
+              outgoing={outgoing}
+              currentUserId={currentUserId}
+              onReply={onReply}
+              onConvertToTask={onConvertToTask}
+              onToggleReaction={onToggleReaction}
+            />
+          )}
         </div>
 
         {message.failed && !readOnly && (
-          <div role="group" aria-label="پیام ارسال نشد" className={cn('flex flex-wrap items-center gap-1.5', outgoing && 'justify-end')}>
+          <div
+            role="group"
+            aria-label="پیام ارسال نشد"
+            className={cn('flex flex-wrap items-center gap-1.5', outgoing && 'justify-end')}
+          >
             <span className="inline-flex items-center gap-1 text-caption font-medium text-status-blocked">
               <WarningIcon size={14} />
               ارسال نشد
             </span>
             {onResend && (
-              <Button size="xs" variant="secondary" iconStart={<RefreshIcon size={14} />} onClick={() => onResend(message.id)}>
+              <Button
+                size="xs"
+                variant="secondary"
+                iconStart={<RefreshIcon size={14} />}
+                onClick={() => onResend(message.id)}
+              >
                 ارسال دوباره
               </Button>
             )}
             {onDiscard && (
-              <Button size="xs" variant="ghost" iconStart={<TrashIcon size={14} />} onClick={() => onDiscard(message.id)}>
+              <Button
+                size="xs"
+                variant="ghost"
+                iconStart={<TrashIcon size={14} />}
+                onClick={() => onDiscard(message.id)}
+              >
                 حذف
               </Button>
             )}
@@ -124,7 +143,7 @@ export function MessageBubble({
                   aria-pressed={mine}
                   aria-label={`${reaction.emoji} — ${formatCount(reaction.userIds.length)} نفر`}
                   className={cn(
-                    'numeric inline-flex animate-scale-in items-center gap-1 rounded-full border px-1.5 py-0.5 text-micro transition-colors',
+                    'inline-flex animate-scale-in items-center gap-1 rounded-full border px-1.5 py-0.5 text-micro transition-colors numeric',
                     mine
                       ? 'border-brand bg-brand-subtle text-fg-brand'
                       : 'border-secondary bg-surface text-fg-tertiary hover:bg-hover',

@@ -1,11 +1,11 @@
 'use client';
 
-import type { ChatFilterId,Conversation,Message } from '@taskin/contracts';
+import type { ChatFilterId, Conversation, Message } from '@taskin/contracts';
 import { CHAT_FILTERS } from '@/data/reference';
 import { formatCount } from '@/lib/format';
-import { IconButton,Input,SegmentedControl } from '@/components/ui';
+import { IconButton, Input, SegmentedControl } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { MessagesIcon,SearchIcon,AddIcon } from '@/components/icons';
+import { MessagesIcon, SearchIcon, AddIcon } from '@/components/icons';
 import { ConversationRow } from '@/features/chat/components/ConversationRow';
 
 export interface ChatSidebarProps {
@@ -87,7 +87,7 @@ export function ChatSidebar({
           description="عبارت جستجو یا فیلتر انتخاب‌شده را تغییر دهید."
         />
       ) : (
-        <ul className="scrollbar-thin flex-1 overflow-y-auto p-2">
+        <ul className="flex-1 overflow-y-auto p-2 scrollbar-thin">
           {conversations.map((conversation) => (
             <ConversationRow
               key={conversation.id}

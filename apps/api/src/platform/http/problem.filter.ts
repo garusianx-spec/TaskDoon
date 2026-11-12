@@ -63,10 +63,16 @@ export function renderException(exception: unknown): Rendered {
   if (typeof exception === 'object' && exception !== null && 'type' in exception && 'status' in exception) {
     const status = Number((exception as { status: unknown }).status);
     if (status >= 400 && status < 500) {
-      return { code: 'VALIDATION_FAILED', status, detail: 'The request body could not be read.', unexpected: false };
+      return {
+        code: 'VALIDATION_FAILED',
+        status,
+        detail: 'The request body could not be read.',
+        unexpected: false,
+      };
     }
   }
-  if (isUnavailable(exception)) return { code: 'SERVICE_UNAVAILABLE', status: 503, headers: { 'Retry-After': '1' }, unexpected: true };
+  if (isUnavailable(exception))
+    return { code: 'SERVICE_UNAVAILABLE', status: 503, headers: { 'Retry-After': '1' }, unexpected: true };
   const pg = pgError(exception);
   if (pg) {
     switch (pg.code) {
@@ -74,7 +80,12 @@ export function renderException(exception: unknown): Rendered {
         return { code: 'CONFLICT', status: 409, detail: 'It already exists.', unexpected: false };
       case PG.foreignKeyViolation:
       case PG.restrictViolation:
-        return { code: 'CONFLICT', status: 409, detail: 'It is still referenced, or refers to something missing.', unexpected: false };
+        return {
+          code: 'CONFLICT',
+          status: 409,
+          detail: 'It is still referenced, or refers to something missing.',
+          unexpected: false,
+        };
       case PG.checkViolation:
       case PG.notNullViolation:
         return { code: 'VALIDATION_FAILED', status: 400, unexpected: false };
@@ -85,7 +96,12 @@ export function renderException(exception: unknown): Rendered {
       case PG.serializationFailure:
       case PG.deadlockDetected:
       case PG.lockNotAvailable:
-        return { code: 'SERVICE_UNAVAILABLE', status: 503, headers: { 'Retry-After': '1' }, unexpected: true };
+        return {
+          code: 'SERVICE_UNAVAILABLE',
+          status: 503,
+          headers: { 'Retry-After': '1' },
+          unexpected: true,
+        };
       case PG.insufficientPrivilege:
         // A row-level security refusal: application code tried to cross a tenant boundary.
         return { code: 'FORBIDDEN', status: 403, unexpected: true };

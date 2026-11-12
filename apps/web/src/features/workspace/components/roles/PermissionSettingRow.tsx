@@ -1,7 +1,6 @@
 'use client';
 
-import { Switch,Tooltip } from '@/components/ui';
-
+import { Switch, Tooltip } from '@/components/ui';
 
 interface SettingRowProps {
   readonly title: string;

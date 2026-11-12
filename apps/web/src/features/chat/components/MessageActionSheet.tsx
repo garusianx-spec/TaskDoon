@@ -2,12 +2,11 @@
 
 import type { Message } from '@taskin/contracts';
 import { BottomSheet } from '@/components/ui';
-import { MenuItem,MenuList } from '@/components/ui/Menu';
+import { MenuItem, MenuList } from '@/components/ui/Menu';
 import { messagePreview } from '@/store/selectors';
 import { truncate } from '@/lib/format';
 import { QUICK_REACTIONS } from '@/data/reference';
-import { ConvertToTaskIcon,CopyIcon,PinIcon,ReplyIcon } from '@/components/icons';
-
+import { ConvertToTaskIcon, CopyIcon, PinIcon, ReplyIcon } from '@/components/icons';
 
 export interface MessageActionSheetProps {
   readonly message: Message | null;

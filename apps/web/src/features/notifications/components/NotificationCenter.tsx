@@ -1,23 +1,16 @@
 'use client';
 
-import { useMemo,useState,type ReactNode } from 'react';
-import type { AppNotification,NotificationFilterId } from '@taskin/contracts';
+import { useMemo, useState, type ReactNode } from 'react';
+import type { AppNotification, NotificationFilterId } from '@taskin/contracts';
 import { NOTIFICATION_FILTERS } from '@/data/reference';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
-import { formatDateDivider,parseISODate,toISODate } from '@taskin/jalali';
-import { filterNotifications,isMentionNotification } from '@/store/selectors';
-import {
-Button,SegmentedControl,
-SlideOver
-} from '@/components/ui';
+import { formatDateDivider, parseISODate, toISODate } from '@taskin/jalali';
+import { filterNotifications, isMentionNotification } from '@/store/selectors';
+import { Button, SegmentedControl, SlideOver } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import {
-DoubleCheckIcon,
-MessagesIcon,
-NotificationIcon,TaskSquareIcon
-} from '@/components/icons';
+import { DoubleCheckIcon, MessagesIcon, NotificationIcon, TaskSquareIcon } from '@/components/icons';
 import { NotificationCard } from '@/features/notifications/components/NotificationCard';
 
 export interface NotificationCenterProps {
@@ -33,22 +26,43 @@ export interface NotificationCenterProps {
 /** Narrower views the quick actions open on top of the tabs. */
 type QuickView = 'mentioned-messages' | 'assigned-today';
 
-const EMPTY_COPY: Readonly<Record<NotificationFilterId | QuickView, { readonly title: string; readonly description: string }>> = {
-  all: { title: 'اعلانی ندارید', description: 'ارجاع وظایف، تغییر وضعیت‌ها و اشاره‌ها اینجا نمایش داده می‌شوند.' },
+const EMPTY_COPY: Readonly<
+  Record<NotificationFilterId | QuickView, { readonly title: string; readonly description: string }>
+> = {
+  all: {
+    title: 'اعلانی ندارید',
+    description: 'ارجاع وظایف، تغییر وضعیت‌ها و اشاره‌ها اینجا نمایش داده می‌شوند.',
+  },
   unread: { title: 'همه اعلان‌ها را خوانده‌اید', description: 'اعلان تازه‌ای در انتظار شما نیست.' },
-  mentions: { title: 'اشاره‌ای در کار نیست', description: 'وقتی کسی به شما اشاره کند یا به دیدگاهتان پاسخ دهد، اینجا می‌بینید.' },
-  'mentioned-messages': { title: 'پیامی با اشاره به شما نیست', description: 'وقتی کسی در گفتگو از شما نام ببرد، پیامش اینجا می‌آید.' },
-  'assigned-today': { title: 'امروز وظیفه‌ای به شما ارجاع نشده', description: 'وظایفی که امروز به شما سپرده شود، اینجا نمایش داده می‌شود.' },
+  mentions: {
+    title: 'اشاره‌ای در کار نیست',
+    description: 'وقتی کسی به شما اشاره کند یا به دیدگاهتان پاسخ دهد، اینجا می‌بینید.',
+  },
+  'mentioned-messages': {
+    title: 'پیامی با اشاره به شما نیست',
+    description: 'وقتی کسی در گفتگو از شما نام ببرد، پیامش اینجا می‌آید.',
+  },
+  'assigned-today': {
+    title: 'امروز وظیفه‌ای به شما ارجاع نشده',
+    description: 'وظایفی که امروز به شما سپرده شود، اینجا نمایش داده می‌شود.',
+  },
 };
 
-const QUICK_VIEWS: ReadonlyArray<{ readonly id: QuickView; readonly label: string; readonly icon: ReactNode }> = [
+const QUICK_VIEWS: ReadonlyArray<{
+  readonly id: QuickView;
+  readonly label: string;
+  readonly icon: ReactNode;
+}> = [
   { id: 'mentioned-messages', label: 'پیام‌های اشاره‌شده', icon: <MessagesIcon size={14} /> },
   { id: 'assigned-today', label: 'وظایف ارجاع‌شده امروز', icon: <TaskSquareIcon size={14} /> },
 ];
 
 function inQuickView(notification: AppNotification, view: QuickView, today: string): boolean {
-  if (view === 'mentioned-messages') return notification.event.kind === 'mention' && notification.target.kind === 'conversation';
-  return notification.event.kind === 'task-assigned' && toISODate(parseISODate(notification.createdAt)) === today;
+  if (view === 'mentioned-messages')
+    return notification.event.kind === 'mention' && notification.target.kind === 'conversation';
+  return (
+    notification.event.kind === 'task-assigned' && toISODate(parseISODate(notification.createdAt)) === today
+  );
 }
 
 /**
@@ -86,7 +100,11 @@ export function NotificationCenter({
   const quickCounts = useMemo(
     () =>
       Object.fromEntries(
-        QUICK_VIEWS.map(({ id }) => [id, notifications.filter((notification) => !notification.read && inQuickView(notification, id, today)).length]),
+        QUICK_VIEWS.map(({ id }) => [
+          id,
+          notifications.filter((notification) => !notification.read && inQuickView(notification, id, today))
+            .length,
+        ]),
       ) as Record<QuickView, number>,
     [notifications, today],
   );
@@ -98,7 +116,11 @@ export function NotificationCenter({
 
   // Bucket by local day so the list reads "امروز / دیروز / …" like the chat dividers.
   const groups = useMemo(() => {
-    const buckets: Array<{ readonly day: string; readonly label: string; readonly items: AppNotification[] }> = [];
+    const buckets: Array<{
+      readonly day: string;
+      readonly label: string;
+      readonly items: AppNotification[];
+    }> = [];
     for (const notification of visible) {
       const day = toISODate(parseISODate(notification.createdAt));
       const last = buckets[buckets.length - 1];
@@ -157,7 +179,7 @@ export function NotificationCenter({
                   {view.icon}
                   {view.label}
                   {count > 0 && (
-                    <span className="numeric rounded-full bg-brand-solid px-1.5 text-micro font-semibold text-fg-on-brand">
+                    <span className="rounded-full bg-brand-solid px-1.5 text-micro font-semibold text-fg-on-brand numeric">
                       {formatCount(count)}
                     </span>
                   )}
@@ -178,7 +200,11 @@ export function NotificationCenter({
       }
     >
       {visible.length === 0 ? (
-        <EmptyState icon={<NotificationIcon size={24} />} title={empty.title} description={empty.description} />
+        <EmptyState
+          icon={<NotificationIcon size={24} />}
+          title={empty.title}
+          description={empty.description}
+        />
       ) : (
         <div className="flex flex-col pb-3">
           {groups.map((group) => (

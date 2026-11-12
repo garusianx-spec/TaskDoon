@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { User } from '@taskin/contracts';
 import { formatCount } from '@/lib/format';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
-import { Button,Input,Modal } from '@/components/ui';
+import { Button, Input, Modal } from '@/components/ui';
 import { UserIcon } from '@/components/icons';
 
 /** Days a removed member's conversations and projects wait for them (the API's retention). */
@@ -43,7 +43,11 @@ export function RemoveMemberDialog({
           <Button variant="secondary" onClick={onClose}>
             انصراف
           </Button>
-          <Button variant="destructive" disabled={!ready} onClick={() => onConfirm(requirePassword ? password : undefined)}>
+          <Button
+            variant="destructive"
+            disabled={!ready}
+            onClick={() => onConfirm(requirePassword ? password : undefined)}
+          >
             حذف از فضای کاری
           </Button>
         </>

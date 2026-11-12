@@ -1,4 +1,4 @@
-import type { BoardColumn,TaskStatus } from '@taskin/contracts';
+import type { BoardColumn, TaskStatus } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { TAG_DOT } from '@/lib/tag-tone';
 
@@ -16,6 +16,17 @@ export function columnDotClass(column: BoardColumn): string {
   return column.tone ? TAG_DOT[column.tone] : STATUS_DOT[column.status];
 }
 
-export function ColumnDot({ column, className }: { readonly column: BoardColumn; readonly className?: string }) {
-  return <span className={cn('size-2 shrink-0 rounded-full', columnDotClass(column), className)} aria-hidden="true" />;
+export function ColumnDot({
+  column,
+  className,
+}: {
+  readonly column: BoardColumn;
+  readonly className?: string;
+}) {
+  return (
+    <span
+      className={cn('size-2 shrink-0 rounded-full', columnDotClass(column), className)}
+      aria-hidden="true"
+    />
+  );
 }

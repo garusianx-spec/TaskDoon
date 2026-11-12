@@ -8,21 +8,21 @@ import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
-import { CountPill,Dropdown,IconButton,Tooltip } from '@/components/ui';
+import { CountPill, Dropdown, IconButton, Tooltip } from '@/components/ui';
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { ProfileMenu } from '@/components/layout/ProfileMenu';
 import { QuickCreateMenu } from '@/components/layout/QuickCreateMenu';
 import {
-AddIcon,
-CalendarIcon,
-HomeIcon,
-MessagesIcon,
-NotebookIcon,
-NotificationIcon,
-PeopleIcon,
-SettingsIcon,
-TaskSquareIcon,
+  AddIcon,
+  CalendarIcon,
+  HomeIcon,
+  MessagesIcon,
+  NotebookIcon,
+  NotificationIcon,
+  PeopleIcon,
+  SettingsIcon,
+  TaskSquareIcon,
 } from '@/components/icons';
 
 const MODULE_ICONS: Readonly<Record<ModuleId, typeof HomeIcon>> = {
@@ -52,7 +52,9 @@ export function NavRail() {
 
       <div className="my-2 h-px w-8 bg-gray-200" aria-hidden="true" />
 
-      <h2 id="desktop-navigation-title" className="mb-1 text-caption font-medium text-fg-secondary">منو</h2>
+      <h2 id="desktop-navigation-title" className="mb-1 text-caption font-medium text-fg-secondary">
+        منو
+      </h2>
       <ul aria-labelledby="desktop-navigation-title" className="flex flex-1 flex-col items-center gap-1">
         {MODULES.map((module) => {
           const Icon = MODULE_ICONS[module.id];
@@ -78,7 +80,7 @@ export function NavRail() {
                     <CountPill
                       value={badge}
                       tone="error"
-                      className="absolute -top-1 -end-1 ring-2 ring-rail"
+                      className="absolute -end-1 -top-1 ring-2 ring-rail"
                     />
                   )}
                 </Link>
@@ -149,9 +151,7 @@ function NotificationsBell() {
     <span className="relative inline-flex">
       <IconButton
         label={
-          unreadNotifications > 0
-            ? `اعلان‌ها — ${formatCount(unreadNotifications)} خوانده‌نشده`
-            : 'اعلان‌ها'
+          unreadNotifications > 0 ? `اعلان‌ها — ${formatCount(unreadNotifications)} خوانده‌نشده` : 'اعلان‌ها'
         }
         icon={<NotificationIcon size={21} />}
         size="lg"
@@ -163,7 +163,7 @@ function NotificationsBell() {
         <CountPill
           value={formatCount(unreadNotifications)}
           tone="error"
-          className="pointer-events-none absolute -top-1 -end-1 ring-2 ring-rail"
+          className="pointer-events-none absolute -end-1 -top-1 ring-2 ring-rail"
         />
       )}
     </span>

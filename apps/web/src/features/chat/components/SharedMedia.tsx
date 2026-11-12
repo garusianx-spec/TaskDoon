@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect,useMemo,useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Message } from '@taskin/contracts';
 import { formatCount } from '@/lib/format';
 import { Tabs } from '@/components/ui';
 import { type SharedFile } from '@/features/chat/types/shared-media';
 import { categorise } from '@/features/chat/lib/shared-media';
 import { FilesPanel } from '@/features/chat/components/SharedFilesPanel';
-import { MediaPanel,MediaPreviewModal } from '@/features/chat/components/SharedMediaPanel';
+import { MediaPanel, MediaPreviewModal } from '@/features/chat/components/SharedMediaPanel';
 import { AudioPanel } from '@/features/chat/components/SharedAudioPanel';
 import { LinksPanel } from '@/features/chat/components/SharedLinksPanel';
 
@@ -17,7 +17,13 @@ export type SharedMediaTab = 'files' | 'media' | 'audio' | 'links';
  * "فایل‌های مشترک" in the conversation drawer: one tab per content type — documents,
  * photos & videos, audio and links — each with its count and its own empty state.
  */
-export function SharedMedia({ thread, load }: { readonly thread: readonly Message[]; readonly load?: () => Promise<readonly Message[]> }) {
+export function SharedMedia({
+  thread,
+  load,
+}: {
+  readonly thread: readonly Message[];
+  readonly load?: () => Promise<readonly Message[]>;
+}) {
   const [tab, setTab] = useState<SharedMediaTab>('files');
   const [preview, setPreview] = useState<SharedFile | null>(null);
   // Live, the server lists everything ever shared here (not only the loaded page of history);
@@ -45,7 +51,7 @@ export function SharedMedia({ thread, load }: { readonly thread: readonly Messag
         <h3 id="shared-media-title" className="text-title-sm font-semibold text-fg-primary">
           فایل‌های مشترک
         </h3>
-        <span className="numeric text-caption text-fg-tertiary">{formatCount(total)}</span>
+        <span className="text-caption text-fg-tertiary numeric">{formatCount(total)}</span>
       </div>
 
       <Tabs

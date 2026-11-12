@@ -1,6 +1,6 @@
 'use client';
 
-import { IconButton,Popover } from '@/components/ui';
+import { IconButton, Popover } from '@/components/ui';
 import { PaletteIcon } from '@/components/icons';
 import { ThemePicker } from '@/components/layout/ThemePicker';
 

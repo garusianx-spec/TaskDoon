@@ -1,4 +1,4 @@
-import { clsx,type ClassValue } from 'clsx';
+import { clsx, type ClassValue } from 'clsx';
 import { extendTailwindMerge } from 'tailwind-merge';
 
 // The app's Persian typography uses named sizes that Tailwind Merge would otherwise
@@ -6,7 +6,21 @@ import { extendTailwindMerge } from 'tailwind-merge';
 const merge = extendTailwindMerge({
   extend: {
     classGroups: {
-      'font-size': [{ text: ['micro', 'caption', 'body-sm', 'body', 'title-sm', 'title', 'heading-sm', 'heading', 'display'] }],
+      'font-size': [
+        {
+          text: [
+            'micro',
+            'caption',
+            'body-sm',
+            'body',
+            'title-sm',
+            'title',
+            'heading-sm',
+            'heading',
+            'display',
+          ],
+        },
+      ],
     },
   },
 });

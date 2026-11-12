@@ -4,16 +4,13 @@ import { stamp } from '@/features/chat/lib/shared-media';
 
 import type { Attachment } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
-import { formatFileSize,seededUnit } from '@/lib/format';
+import { formatFileSize, seededUnit } from '@/lib/format';
 import { downloadAttachment } from '@/lib/download';
 import { useFileUrl } from '@/store/files';
 import { userById } from '@/store/selectors';
-import { Button,Modal } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
-import {
-ATTACHMENT_ICONS,DownloadIcon,
-ImageIcon,PlayIcon
-} from '@/components/icons';
+import { ATTACHMENT_ICONS, DownloadIcon, ImageIcon, PlayIcon } from '@/components/icons';
 
 import type { SharedFile } from '@/features/chat/types/shared-media';
 
@@ -26,10 +23,21 @@ const PREVIEW_GRADIENTS: readonly string[] = [
   'from-tag-violet to-tag-pink',
 ];
 
-function MediaThumb({ attachment, large = false }: { readonly attachment: Attachment; readonly large?: boolean }) {
+function MediaThumb({
+  attachment,
+  large = false,
+}: {
+  readonly attachment: Attachment;
+  readonly large?: boolean;
+}) {
   const Icon = ATTACHMENT_ICONS[attachment.kind];
-  const gradient = PREVIEW_GRADIENTS[Math.floor(seededUnit(attachment.id) * PREVIEW_GRADIENTS.length)] ?? PREVIEW_GRADIENTS[0];
-  const url = useFileUrl(attachment.kind === 'image' || (attachment.kind === 'video' && large) ? attachment : null, 'inline');
+  const gradient =
+    PREVIEW_GRADIENTS[Math.floor(seededUnit(attachment.id) * PREVIEW_GRADIENTS.length)] ??
+    PREVIEW_GRADIENTS[0];
+  const url = useFileUrl(
+    attachment.kind === 'image' || (attachment.kind === 'video' && large) ? attachment : null,
+    'inline',
+  );
 
   if (url && attachment.kind === 'image') {
     // eslint-disable-next-line @next/next/no-img-element -- user uploads of unknown dimensions
@@ -90,7 +98,13 @@ export function MediaPanel({
   );
 }
 
-export function MediaPreviewModal({ entry, onClose }: { readonly entry: SharedFile | null; readonly onClose: () => void }) {
+export function MediaPreviewModal({
+  entry,
+  onClose,
+}: {
+  readonly entry: SharedFile | null;
+  readonly onClose: () => void;
+}) {
   const sender = entry ? userById(entry.message.authorId) : undefined;
   return (
     <Modal
@@ -99,7 +113,9 @@ export function MediaPreviewModal({ entry, onClose }: { readonly entry: SharedFi
       size="lg"
       title={entry?.attachment.name ?? ''}
       description={
-        entry ? `${formatFileSize(entry.attachment.size)}، ${sender?.fullName ?? ''}، ${stamp(entry.message)}` : undefined
+        entry
+          ? `${formatFileSize(entry.attachment.size)}، ${sender?.fullName ?? ''}، ${stamp(entry.message)}`
+          : undefined
       }
       icon={entry ? <ImageIcon size={20} /> : undefined}
       footer={
@@ -108,7 +124,10 @@ export function MediaPreviewModal({ entry, onClose }: { readonly entry: SharedFi
             <Button variant="secondary" onClick={onClose}>
               بستن
             </Button>
-            <Button iconStart={<DownloadIcon size={18} />} onClick={() => void downloadAttachment(entry.attachment)}>
+            <Button
+              iconStart={<DownloadIcon size={18} />}
+              onClick={() => void downloadAttachment(entry.attachment)}
+            >
               دانلود
             </Button>
           </>
@@ -125,7 +144,8 @@ export function MediaPreviewModal({ entry, onClose }: { readonly entry: SharedFi
           )}
           {!entry.attachment.url && (
             <p className="text-caption text-fg-tertiary">
-              پیش‌نمایش کامل پس از بارگذاری فایل روی سرور در دسترس است؛ در این نسخه نمایشی تصویر جایگزین نشان داده می‌شود.
+              پیش‌نمایش کامل پس از بارگذاری فایل روی سرور در دسترس است؛ در این نسخه نمایشی تصویر جایگزین نشان
+              داده می‌شود.
             </p>
           )}
         </div>

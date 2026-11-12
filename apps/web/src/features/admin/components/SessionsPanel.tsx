@@ -5,22 +5,32 @@ import type { PlatformSessionView } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
-import { dateTimeLabel,DEVICE_TYPES,REVOKE_REASONS,SESSION_STATUS } from '@/features/admin/lib/format';
+import { dateTimeLabel, DEVICE_TYPES, REVOKE_REASONS, SESSION_STATUS } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
-import { Badge,Button,Modal,SegmentedControl } from '@/components/ui';
-import { LogoutIcon,MonitorIcon,MobileIcon } from '@/components/icons';
-import { Loaded,Panel,TD,TH } from '@/features/admin/components/AdminUi';
-import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { Badge, Button, Modal, SegmentedControl } from '@/components/ui';
+import { LogoutIcon, MonitorIcon, MobileIcon } from '@/components/icons';
+import { Loaded, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { DataTable, TableFrame } from '@/components/shared/DataTable';
 
 type Filter = 'active' | 'revoked' | 'all';
 
 /** Session inspector: every signed-in device of a person, and ending one or all of them. */
-export function SessionsPanel({ userId, onChanged, initialFilter = 'all' }: { readonly userId: string; readonly onChanged: () => void; readonly initialFilter?: Filter }) {
+export function SessionsPanel({
+  userId,
+  onChanged,
+  initialFilter = 'all',
+}: {
+  readonly userId: string;
+  readonly onChanged: () => void;
+  readonly initialFilter?: Filter;
+}) {
   const { call } = useAdmin();
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const sessions = useAdminLoad(`${userId}:${filter}`, () => adminApi.sessions(userId, filter));
-  const [confirm, setConfirm] = useState<{ readonly kind: 'one'; readonly session: PlatformSessionView } | { readonly kind: 'all' } | null>(null);
+  const [confirm, setConfirm] = useState<
+    { readonly kind: 'one'; readonly session: PlatformSessionView } | { readonly kind: 'all' } | null
+  >(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -64,14 +74,22 @@ export function SessionsPanel({ userId, onChanged, initialFilter = 'all' }: { re
               { value: 'revoked', label: 'پایان‌یافته' },
             ]}
           />
-          <Button variant="destructive" size="sm" iconStart={<LogoutIcon size={16} />} onClick={() => setConfirm({ kind: 'all' })}>
+          <Button
+            variant="destructive"
+            size="sm"
+            iconStart={<LogoutIcon size={16} />}
+            onClick={() => setConfirm({ kind: 'all' })}
+          >
             پایان همه نشست‌ها
           </Button>
         </>
       }
     >
       {notice && (
-        <p role="status" className="mb-3 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done">
+        <p
+          role="status"
+          className="mb-3 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done"
+        >
           {notice}
         </p>
       )}
@@ -102,12 +120,25 @@ export function SessionsPanel({ userId, onChanged, initialFilter = 'all' }: { re
                           <MonitorIcon size={18} className="mt-0.5 shrink-0 text-fg-tertiary" />
                         )}
                         <div className="flex flex-col gap-0.5">
-                          <span className="font-medium">{[session.client, session.os].filter(Boolean).join(' · ') || session.deviceLabel || 'دستگاه ناشناس'}</span>
+                          <span className="font-medium">
+                            {[session.client, session.os].filter(Boolean).join(' · ') ||
+                              session.deviceLabel ||
+                              'دستگاه ناشناس'}
+                          </span>
                           <span className="text-caption text-fg-tertiary">
-                            {[session.deviceType ? DEVICE_TYPES[session.deviceType] : null, session.deviceLabel].filter(Boolean).join(' — ')}
+                            {[
+                              session.deviceType ? DEVICE_TYPES[session.deviceType] : null,
+                              session.deviceLabel,
+                            ]
+                              .filter(Boolean)
+                              .join(' — ')}
                           </span>
                           {session.userAgent && (
-                            <span dir="ltr" className="max-w-xs truncate text-start text-caption text-fg-quaternary" title={session.userAgent}>
+                            <span
+                              dir="ltr"
+                              className="max-w-xs truncate text-start text-caption text-fg-quaternary"
+                              title={session.userAgent}
+                            >
                               {session.userAgent}
                             </span>
                           )}
@@ -117,7 +148,11 @@ export function SessionsPanel({ userId, onChanged, initialFilter = 'all' }: { re
                     <td className={TD}>
                       <div className="flex flex-col gap-0.5" dir="ltr">
                         <span className="text-start">{session.ip ?? '—'}</span>
-                        {session.lastIp && session.lastIp !== session.ip && <span className="text-start text-caption text-fg-tertiary">last: {session.lastIp}</span>}
+                        {session.lastIp && session.lastIp !== session.ip && (
+                          <span className="text-start text-caption text-fg-tertiary">
+                            last: {session.lastIp}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className={TD}>{dateTimeLabel(session.createdAt)}</td>
@@ -126,11 +161,19 @@ export function SessionsPanel({ userId, onChanged, initialFilter = 'all' }: { re
                       <Badge tone={SESSION_STATUS[session.status].tone} size="sm">
                         {SESSION_STATUS[session.status].label}
                       </Badge>
-                      {session.revokeReason && <p className="mt-1 text-caption text-fg-tertiary">{REVOKE_REASONS[session.revokeReason] ?? session.revokeReason}</p>}
+                      {session.revokeReason && (
+                        <p className="mt-1 text-caption text-fg-tertiary">
+                          {REVOKE_REASONS[session.revokeReason] ?? session.revokeReason}
+                        </p>
+                      )}
                     </td>
                     <td className={TD}>
                       {session.status === 'active' && (
-                        <Button variant="secondary" size="xs" onClick={() => setConfirm({ kind: 'one', session })}>
+                        <Button
+                          variant="secondary"
+                          size="xs"
+                          onClick={() => setConfirm({ kind: 'one', session })}
+                        >
                           پایان نشست
                         </Button>
                       )}

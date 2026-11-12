@@ -1,24 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import type { Note,NoteCategory,TagTone } from '@taskin/contracts';
+import type { Note, NoteCategory, TagTone } from '@taskin/contracts';
 import { TAG_TONES } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { TAG_DOT } from '@/lib/tag-tone';
 import { notePreview } from '@taskin/text';
-import { Button,Tooltip } from '@/components/ui';
+import { Button, Tooltip } from '@/components/ui';
 import {
-AddIcon,
-BriefcaseIcon,
-CalendarIcon,FolderIcon,
-NotebookIcon,
-PinIcon,
-StarIcon,
-TrashIcon,
-UserIcon
+  AddIcon,
+  BriefcaseIcon,
+  CalendarIcon,
+  FolderIcon,
+  NotebookIcon,
+  PinIcon,
+  StarIcon,
+  TrashIcon,
+  UserIcon,
 } from '@/components/icons';
-import { DeleteCategoryDialog,CreateCategoryButton } from '@/features/notes/components/NoteCategoryActions';
+import { DeleteCategoryDialog, CreateCategoryButton } from '@/features/notes/components/NoteCategoryActions';
 
 /** Glyphs for the built-in categories; a team's own categories use a folder. */
 const CATEGORY_ICONS: Readonly<Record<string, typeof NotebookIcon>> = {
@@ -71,15 +72,16 @@ export function NotesSidebar({
   const countFor = (id: string) =>
     id === 'all' ? notes.length : notes.filter((note) => note.categoryId === id).length;
 
-  const entries: ReadonlyArray<{ readonly id: string; readonly label: string; readonly removable: boolean }> = [
-    { id: 'all', label: 'همه یادداشت‌ها', removable: false },
-    ...categories.map((category) => ({
-      id: category.id,
-      label: category.label,
-      // Built-ins too: only the «همه یادداشت‌ها» filter itself stays.
-      removable: true,
-    })),
-  ];
+  const entries: ReadonlyArray<{ readonly id: string; readonly label: string; readonly removable: boolean }> =
+    [
+      { id: 'all', label: 'همه یادداشت‌ها', removable: false },
+      ...categories.map((category) => ({
+        id: category.id,
+        label: category.label,
+        // Built-ins too: only the «همه یادداشت‌ها» filter itself stays.
+        removable: true,
+      })),
+    ];
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -90,14 +92,14 @@ export function NotesSidebar({
         </Button>
       </div>
 
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
         <nav aria-label="دسته‌ها" className="flex flex-col gap-0.5">
           <h3 className="px-2.5 pb-1 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
             دسته‌ها
           </h3>
           <CreateCategoryButton categories={categories} onCreate={onCreateCategory} />
           {entries.map(({ id, label, removable }) => {
-            const Icon = categoryIcon(categories.find(category => category.id === id)?.key ?? id);
+            const Icon = categoryIcon(categories.find((category) => category.id === id)?.key ?? id);
             const active = categoryId === id;
             return (
               <div key={id} className="relative flex items-center">
@@ -116,7 +118,7 @@ export function NotesSidebar({
                   <span className="flex-1 truncate">{label}</span>
                   <span
                     className={cn(
-                      'numeric rounded-full px-1.5 py-0.5 text-micro font-semibold',
+                      'rounded-full px-1.5 py-0.5 text-micro font-semibold numeric',
                       active ? 'bg-surface text-fg-brand' : 'bg-sunken text-fg-tertiary',
                     )}
                   >
@@ -204,7 +206,9 @@ export function NotesSidebar({
                   >
                     {note.title || 'بدون عنوان'}
                   </span>
-                  <span className="truncate text-micro text-fg-tertiary">{notePreview(note.body, 48) || '—'}</span>
+                  <span className="truncate text-micro text-fg-tertiary">
+                    {notePreview(note.body, 48) || '—'}
+                  </span>
                 </button>
               );
             })

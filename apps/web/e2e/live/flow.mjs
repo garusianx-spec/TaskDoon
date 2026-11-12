@@ -31,7 +31,9 @@ import { verifySettings } from './settings.mjs';
 const base = process.env.BASE_URL ?? 'http://localhost:3000';
 const apiLog = process.env.API_LOG;
 if (!apiLog) {
-  console.error('Set API_LOG to the file the API logs to: the console SMS driver writes sign-in codes and invitation links there.');
+  console.error(
+    'Set API_LOG to the file the API logs to: the console SMS driver writes sign-in codes and invitation links there.',
+  );
   process.exit(2);
 }
 
@@ -47,7 +49,10 @@ const guestName = `علی آزمون ${runId}`;
 const workspaceName = `فضای آزمون ${runId}`;
 const projectName = 'بازطراحی اپلیکیشن';
 const taskTitle = `بازبینی جریان ورود ${runId}`;
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64');
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==',
+  'base64',
+);
 
 const logSize = () => statSync(apiLog).size;
 
@@ -80,9 +85,13 @@ async function signIn(page, phone, fullName) {
 }
 
 // A fake microphone (a steady tone) for the voice note, granted without a prompt.
-const browser = await launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
+const browser = await launch({
+  args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+});
 const viewport = { width: 1440, height: 900 };
-const owner = await (await browser.newContext({ viewport, locale: 'fa-IR', permissions: ['microphone'] })).newPage();
+const owner = await (
+  await browser.newContext({ viewport, locale: 'fa-IR', permissions: ['microphone'] })
+).newPage();
 const guestContext = await browser.newContext({ viewport, locale: 'fa-IR' });
 const guest = await guestContext.newPage();
 watchConsole(owner);
@@ -114,15 +123,24 @@ try {
   /* ------------------------------------------------ owner: sign-up and first workspace */
 
   await owner.goto(`${base}/feed`);
-  check(await visible(owner.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000), 'signed out: the sign-in screen replaces the workspace');
+  check(
+    await visible(owner.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000),
+    'signed out: the sign-in screen replaces the workspace',
+  );
   check((await owner.locator('html').getAttribute('dir')) === 'rtl', 'the document is right-to-left');
   await signIn(owner, ownerPhone, ownerName);
-  check(await visible(owner.getByRole('heading', { name: `${ownerName}، خوش آمدید` }), 15_000), 'a new account is asked for its first workspace');
+  check(
+    await visible(owner.getByRole('heading', { name: `${ownerName}، خوش آمدید` }), 15_000),
+    'a new account is asked for its first workspace',
+  );
   await owner.getByRole('textbox', { name: 'نام فضای کاری' }).fill(workspaceName);
   await owner.getByLabel('رمز مدیر', { exact: true }).fill('Taskin-2026!');
   await owner.getByRole('button', { name: 'ساخت فضای کاری' }).click();
   check(await visible(railOf(owner), 20_000), 'the workspace loads after it is created');
-  check(await visible(owner.getByText(workspaceName).first()), `the new workspace «${workspaceName}» is the active one`);
+  check(
+    await visible(owner.getByText(workspaceName).first()),
+    `the new workspace «${workspaceName}» is the active one`,
+  );
   const font = await owner.evaluate(() => getComputedStyle(document.body).fontFamily);
   check(font.includes('IRANYekanX'), `IRANYekanX is the body font (${font})`);
 
@@ -131,12 +149,18 @@ try {
   await quickCreate(owner, 'پروژه جدید');
   let dialog = owner.getByRole('dialog', { name: 'پروژه جدید' });
   await dialog.getByLabel('نام پروژه').fill(projectName);
-  check((await dialog.getByLabel('کلید پروژه').inputValue()) === 'P1', 'a Persian project name gets the key P1');
+  check(
+    (await dialog.getByLabel('کلید پروژه').inputValue()) === 'P1',
+    'a Persian project name gets the key P1',
+  );
   await dialog.getByRole('button', { name: 'ایجاد پروژه' }).click();
   await owner.waitForURL('**/tasks');
   const tree = owner.getByRole('navigation', { name: 'درخت پروژه‌ها' });
   // Anchored: the owner's rows also carry a «حذف پروژه …» button (Phase 3.1).
-  check(await visible(tree.getByRole('button', { name: new RegExp(`^${projectName}`) })), 'the project appears in the project tree');
+  check(
+    await visible(tree.getByRole('button', { name: new RegExp(`^${projectName}`) })),
+    'the project appears in the project tree',
+  );
 
   await quickCreate(owner, 'دعوت همکار');
   dialog = owner.getByRole('dialog', { name: 'دعوت همکار' });
@@ -152,7 +176,10 @@ try {
 
   const invite = new URL(link);
   await guest.goto(`${base}${invite.pathname}${invite.search}`);
-  check(await visible(guest.getByRole('heading', { name: 'پیوستن به فضای کاری' }), 30_000), 'the invitation link asks the guest to sign in to join');
+  check(
+    await visible(guest.getByRole('heading', { name: 'پیوستن به فضای کاری' }), 30_000),
+    'the invitation link asks the guest to sign in to join',
+  );
   await signIn(guest, guestPhone, guestName);
   await guest.waitForURL('**/feed', { timeout: 20_000 });
   check(await visible(railOf(guest), 20_000), 'the guest lands on the desk');
@@ -163,12 +190,28 @@ try {
 
   await railOf(guest).getByRole('link', { name: 'پروژه‌ها و وظایف' }).click();
   await guest.waitForURL('**/tasks');
-  check(await eventually(async () => (await guest.getByRole('navigation', { name: 'درخت پروژه‌ها' }).getByRole('button', { name: new RegExp(projectName) }).count()) === 1, 10_000), 'the guest sees the project');
+  check(
+    await eventually(
+      async () =>
+        (await guest
+          .getByRole('navigation', { name: 'درخت پروژه‌ها' })
+          .getByRole('button', { name: new RegExp(projectName) })
+          .count()) === 1,
+      10_000,
+    ),
+    'the guest sees the project',
+  );
 
   await quickCreate(owner, 'وظیفه جدید');
   dialog = owner.getByRole('dialog', { name: 'تعریف وظیفه جدید' });
   await dialog.getByLabel('عنوان وظیفه').fill(taskTitle);
-  check(await eventually(async () => (await dialog.getByRole('checkbox', { name: guestName }).count()) === 1, 10_000), 'the owner can assign the new member');
+  check(
+    await eventually(
+      async () => (await dialog.getByRole('checkbox', { name: guestName }).count()) === 1,
+      10_000,
+    ),
+    'the owner can assign the new member',
+  );
   await dialog.getByRole('checkbox', { name: guestName }).click();
   await dialog.getByRole('button', { name: 'ایجاد وظیفه' }).click();
   // Phase 1 keeps the composer open until persistence finishes, then opens details.
@@ -177,7 +220,11 @@ try {
   await dialog.waitFor({ state: 'hidden' });
   const ownerTaskDetails = owner.getByRole('dialog', { name: 'جزئیات وظیفه', exact: true });
   await ownerTaskDetails.waitFor();
-  check((await ownerTaskDetails.getByRole('textbox', { name: 'عنوان وظیفه', exact: true }).inputValue()) === taskTitle, 'successful task creation opens its editable details');
+  check(
+    (await ownerTaskDetails.getByRole('textbox', { name: 'عنوان وظیفه', exact: true }).inputValue()) ===
+      taskTitle,
+    'successful task creation opens its editable details',
+  );
   const ownerCard = owner.getByRole('group', { name: new RegExp(taskTitle) });
   check(await visible(ownerCard), 'the task appears on the owner’s board');
   await ownerTaskDetails.getByRole('button', { name: 'بستن پنل جزئیات', exact: true }).click();
@@ -188,9 +235,25 @@ try {
 
   await ownerCard.getByRole('checkbox', { name: `انجام شد: ${taskTitle}`, exact: true }).click();
   const guestDone = guest.getByRole('region', { name: 'ستون انجام شد' });
-  check(await eventually(async () => (await guestDone.getByRole('group', { name: new RegExp(taskTitle) }).count()) === 1, 10_000), 'completing it moves it to «انجام شد» live for the guest');
+  check(
+    await eventually(
+      async () => (await guestDone.getByRole('group', { name: new RegExp(taskTitle) }).count()) === 1,
+      10_000,
+    ),
+    'completing it moves it to «انجام شد» live for the guest',
+  );
   await owner.reload();
-  check(await eventually(async () => (await owner.getByRole('region', { name: 'ستون انجام شد' }).getByRole('group', { name: new RegExp(taskTitle) }).count()) === 1, 15_000), 'the completion is stored: still done after a reload');
+  check(
+    await eventually(
+      async () =>
+        (await owner
+          .getByRole('region', { name: 'ستون انجام شد' })
+          .getByRole('group', { name: new RegExp(taskTitle) })
+          .count()) === 1,
+      15_000,
+    ),
+    'the completion is stored: still done after a reload',
+  );
   await owner.screenshot({ path: `${out}/live_board.png` });
 
   /* ------------------------------------------------ chat: live delivery, typing, receipts, reactions */
@@ -203,7 +266,10 @@ try {
   const ownerThread = owner.getByRole('region', { name: `گفتگوی ${guestName}` });
   check(await visible(ownerThread, 10_000), 'the direct chat opens for the owner');
   // Phase 3.1: the project opened its own channel with it, its creator in it.
-  check(await visible(owner.getByRole('button', { name: new RegExp(projectName) }).first(), 10_000), 'the project’s own channel is in the owner’s chat list');
+  check(
+    await visible(owner.getByRole('button', { name: new RegExp(projectName) }).first(), 10_000),
+    'the project’s own channel is in the owner’s chat list',
+  );
   const hello = `سلام ${guestName}، بورد را ببین.`;
   const ownerComposer = owner.getByRole('textbox', { name: `نوشتن پیام در ${guestName}` });
   await ownerComposer.fill(hello);
@@ -214,19 +280,43 @@ try {
   await guest.waitForURL('**/chats');
   const guestEntry = guest.getByRole('button', { name: new RegExp(ownerName) }).first();
   check(await visible(guestEntry, 10_000), 'the new chat appears live in the guest’s list');
-  check((await guest.getByRole('button', { name: new RegExp(projectName) }).count()) === 0, 'the project’s channel is its members’ only: not in the guest’s list');
+  check(
+    (await guest.getByRole('button', { name: new RegExp(projectName) }).count()) === 0,
+    'the project’s channel is its members’ only: not in the guest’s list',
+  );
   await guestEntry.click();
   const guestThread = guest.getByRole('region', { name: `گفتگوی ${ownerName}` });
   check(await visible(guestThread.getByText(hello), 10_000), 'the guest receives the message');
-  check(await eventually(async () => (await ownerThread.getByRole('img', { name: 'خوانده شد' }).count()) >= 1, 10_000), 'the owner sees the read receipt');
+  check(
+    await eventually(
+      async () => (await ownerThread.getByRole('img', { name: 'خوانده شد' }).count()) >= 1,
+      10_000,
+    ),
+    'the owner sees the read receipt',
+  );
 
   const guestComposer = guest.getByRole('textbox', { name: `نوشتن پیام در ${ownerName}` });
   await guestComposer.pressSequentially('دارم می‌نویسم', { delay: 30 });
-  check(await eventually(async () => ((await owner.getByTestId('typing-indicator').textContent()) ?? '').includes(`${guestName} در حال نوشتن است`), 10_000), 'the owner sees the guest typing');
+  check(
+    await eventually(
+      async () =>
+        ((await owner.getByTestId('typing-indicator').textContent()) ?? '').includes(
+          `${guestName} در حال نوشتن است`,
+        ),
+      10_000,
+    ),
+    'the owner sees the guest typing',
+  );
   await guestComposer.fill('دیدم، ممنون!');
   await guestComposer.press('Enter');
   check(await visible(ownerThread.getByText('دیدم، ممنون!'), 10_000), 'the owner receives the reply live');
-  check(await eventually(async () => ((await owner.getByTestId('typing-indicator').textContent()) ?? '') === '', 10_000), 'the typing line clears after the reply');
+  check(
+    await eventually(
+      async () => ((await owner.getByTestId('typing-indicator').textContent()) ?? '') === '',
+      10_000,
+    ),
+    'the typing line clears after the reply',
+  );
 
   const bubbleOf = (thread, text) => thread.locator('div.group\\/message').filter({ hasText: text }).last();
   const react = async (page, thread, text, label) => {
@@ -236,14 +326,42 @@ try {
     await page.getByRole('group', { name: 'واکنش سریع' }).getByRole('button', { name: label }).click();
   };
   await react(guest, guestThread, hello, 'واکنش قلب');
-  check(await eventually(async () => (await ownerThread.getByRole('button', { name: '❤️ — ۱ نفر' }).count()) === 1, 10_000), '❤️ from the guest shows live for the owner');
+  check(
+    await eventually(
+      async () => (await ownerThread.getByRole('button', { name: '❤️ — ۱ نفر' }).count()) === 1,
+      10_000,
+    ),
+    '❤️ from the guest shows live for the owner',
+  );
   await react(guest, guestThread, hello, 'واکنش نپسندیدم');
-  check(await eventually(async () => (await ownerThread.getByRole('button', { name: '👎 — ۱ نفر' }).count()) === 1, 10_000), '👎 from the guest shows live for the owner');
+  check(
+    await eventually(
+      async () => (await ownerThread.getByRole('button', { name: '👎 — ۱ نفر' }).count()) === 1,
+      10_000,
+    ),
+    '👎 from the guest shows live for the owner',
+  );
   await guestThread.getByRole('button', { name: '👎 — ۱ نفر' }).click();
-  check(await eventually(async () => (await ownerThread.getByRole('button', { name: /^👎/ }).count()) === 0, 10_000), 'toggling 👎 off removes it for the owner');
+  check(
+    await eventually(
+      async () => (await ownerThread.getByRole('button', { name: /^👎/ }).count()) === 0,
+      10_000,
+    ),
+    'toggling 👎 off removes it for the owner',
+  );
   await guest.reload();
   await guestEntry.click();
-  check(await eventually(async () => (await guest.getByRole('region', { name: `گفتگوی ${ownerName}` }).getByRole('button', { name: '❤️ — ۱ نفر' }).count()) === 1, 15_000), 'the ❤️ is stored: still there after a reload');
+  check(
+    await eventually(
+      async () =>
+        (await guest
+          .getByRole('region', { name: `گفتگوی ${ownerName}` })
+          .getByRole('button', { name: '❤️ — ۱ نفر' })
+          .count()) === 1,
+      15_000,
+    ),
+    'the ❤️ is stored: still there after a reload',
+  );
   await owner.screenshot({ path: `${out}/live_chat.png` });
 
   /* ------------------------------------------------ Phase 2: an unsent message, sent again once */
@@ -272,7 +390,10 @@ try {
     });
   });
   await owner.reload();
-  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click();
+  await owner
+    .getByRole('button', { name: new RegExp(guestName) })
+    .first()
+    .click();
   check(await eventually(() => relayed, 20_000), 'the owner’s socket reconnects through the relay');
   const unsent = `پیامی که پاسخش گم شد ${runId}`;
   loseNextAck = true;
@@ -280,17 +401,27 @@ try {
   await ownerComposer.press('Enter');
   check(await visible(guestThread.getByText(unsent), 10_000), 'the API stores the message: the guest has it');
   const unsentRow = ownerThread.getByRole('group', { name: 'پیام ارسال نشد' });
-  check(await visible(unsentRow, 20_000), 'with no acknowledgement the owner’s copy is marked «ارسال نشد», with «ارسال دوباره»');
+  check(
+    await visible(unsentRow, 20_000),
+    'with no acknowledgement the owner’s copy is marked «ارسال نشد», with «ارسال دوباره»',
+  );
   await owner.screenshot({ path: `${out}/live_unsent.png` });
   await unsentRow.getByRole('button', { name: 'ارسال دوباره' }).click();
   check(await eventually(async () => (await unsentRow.count()) === 0, 10_000), '«ارسال دوباره» goes through');
   check(
-    await eventually(async () => (await ownerThread.getByText(unsent).count()) === 1 && (await guestThread.getByText(unsent).count()) === 1),
+    await eventually(
+      async () =>
+        (await ownerThread.getByText(unsent).count()) === 1 &&
+        (await guestThread.getByText(unsent).count()) === 1,
+    ),
     'the resend keeps its client id: one message for both, not two',
   );
   await guest.reload();
   await guestEntry.click();
-  check(await eventually(async () => (await guestThread.getByText(unsent).count()) === 1, 15_000), 'the server holds it once: still one after a reload');
+  check(
+    await eventually(async () => (await guestThread.getByText(unsent).count()) === 1, 15_000),
+    'the server holds it once: still one after a reload',
+  );
 
   /* ------------------------------------------------ M4: files and images in the chat */
 
@@ -307,21 +438,32 @@ try {
   check(await visible(guestChat.getByText('گزارش فصل.pdf'), 15_000), 'the file arrives live for the guest');
   const shownImage = guestChat.getByRole('img', { name: 'نمودار.png' });
   check(
-    await eventually(async () => shownImage.evaluate((image) => image.complete && image.naturalWidth > 0).catch(() => false), 15_000),
+    await eventually(
+      async () => shownImage.evaluate((image) => image.complete && image.naturalWidth > 0).catch(() => false),
+      15_000,
+    ),
     'the image shows as a picture for the guest (a signed link to storage)',
   );
   const [download] = await Promise.all([
     guest.waitForEvent('download', { timeout: 15_000 }),
     guestChat.getByRole('button', { name: 'دانلود گزارش فصل.pdf' }).click(),
   ]);
-  check(download.suggestedFilename() === 'گزارش فصل.pdf', `the guest downloads it under its Persian name (${download.suggestedFilename()})`);
+  check(
+    download.suggestedFilename() === 'گزارش فصل.pdf',
+    `the guest downloads it under its Persian name (${download.suggestedFilename()})`,
+  );
 
   // Phase 2: «ارسال تصویر به صورت فایل» is stored with the message.
-  await owner.getByTestId('chat-file-input').setInputFiles({ name: 'نقشه.png', mimeType: 'image/png', buffer: PNG });
+  await owner
+    .getByTestId('chat-file-input')
+    .setInputFiles({ name: 'نقشه.png', mimeType: 'image/png', buffer: PNG });
   preview = owner.getByRole('dialog', { name: 'ارسال پیوست' });
   await preview.getByRole('checkbox', { name: 'ارسال تصویر به صورت فایل' }).click();
   await preview.getByRole('button', { name: 'ارسال', exact: true }).click();
-  check(await visible(guestChat.getByRole('button', { name: 'دانلود نقشه.png' }), 15_000), 'a picture sent as a file reaches the guest as a download card');
+  check(
+    await visible(guestChat.getByRole('button', { name: 'دانلود نقشه.png' }), 15_000),
+    'a picture sent as a file reaches the guest as a download card',
+  );
   check((await guestChat.getByRole('img', { name: 'نقشه.png' }).count()) === 0, '…not as an inline photo');
 
   /* ------------------------------------------------ M4: a voice note */
@@ -333,11 +475,23 @@ try {
   const guestVoice = guestChat.getByRole('button', { name: `پخش پیام صوتی ${ownerName}` });
   check(await visible(guestVoice, 15_000), 'the voice note arrives live for the guest');
   check(
-    await eventually(async () => ((await guestChat.locator('audio').last().getAttribute('src')) ?? '').startsWith('http'), 15_000),
+    await eventually(
+      async () => ((await guestChat.locator('audio').last().getAttribute('src')) ?? '').startsWith('http'),
+      15_000,
+    ),
     'the guest’s player streams the stored recording',
   );
   await guestChat.getByRole('button', { name: `سرعت پیام صوتی ${ownerName}: ۱×` }).click();
-  check(await eventually(async () => (await guestChat.locator('audio').last().evaluate((audio) => audio.playbackRate)) === 1.5), 'the speed button plays the recording at ۱٫۵×');
+  check(
+    await eventually(
+      async () =>
+        (await guestChat
+          .locator('audio')
+          .last()
+          .evaluate((audio) => audio.playbackRate)) === 1.5,
+    ),
+    'the speed button plays the recording at ۱٫۵×',
+  );
 
   /* ------------------------------------------------ M4: shared media from the server */
 
@@ -345,7 +499,10 @@ try {
   const details = guest.getByRole('complementary').filter({ hasText: 'فایل‌های مشترک' });
   check(await visible(details.getByText('گزارش فصل.pdf'), 10_000), 'the files tab lists the PDF');
   await details.getByRole('tab', { name: /^تصویر و ویدیو/ }).click();
-  check(await visible(details.getByRole('button', { name: 'پیش‌نمایش نمودار.png' })), 'the media tab shows the image');
+  check(
+    await visible(details.getByRole('button', { name: 'پیش‌نمایش نمودار.png' })),
+    'the media tab shows the image',
+  );
   await details.getByRole('tab', { name: /^صوت/ }).click();
   check(await visible(details.getByText('پیام صوتی').first()), 'the audio tab lists the voice note');
   await guest.keyboard.press('Escape');
@@ -358,18 +515,34 @@ try {
   dialog = guest.getByRole('dialog', { name: 'تبدیل پیام به وظیفه' });
   check(await visible(dialog), 'converting a message opens the task composer, pre-filled');
   await dialog.getByRole('button', { name: 'ایجاد وظیفه از پیام' }).click();
-  check(await visible(helloFor(guestChat).getByRole('button', { name: 'مشاهده وظیفه مرتبط' }), 15_000), 'the converted message carries a linked-task chip');
-  check(await visible(helloFor(ownerThread).getByRole('button', { name: 'مشاهده وظیفه مرتبط' }), 15_000), 'the chip appears live for the owner');
+  check(
+    await visible(helloFor(guestChat).getByRole('button', { name: 'مشاهده وظیفه مرتبط' }), 15_000),
+    'the converted message carries a linked-task chip',
+  );
+  check(
+    await visible(helloFor(ownerThread).getByRole('button', { name: 'مشاهده وظیفه مرتبط' }), 15_000),
+    'the chip appears live for the owner',
+  );
 
   // The task's «پیام مبدأ» leads back to the message, highlighted.
   const guestSource = guest.getByRole('region', { name: 'پیام مبدأ' });
   check(await visible(guestSource.getByText(hello), 10_000), 'the new task names its source message');
   await guestSource.getByRole('button', { name: 'نمایش پیام در گفتگو' }).click();
-  check(await eventually(async () => ((await guestChat.locator('[data-highlighted="true"]').textContent()) ?? '').includes(hello), 10_000), '«نمایش پیام در گفتگو» highlights the message');
+  check(
+    await eventually(
+      async () =>
+        ((await guestChat.locator('[data-highlighted="true"]').textContent()) ?? '').includes(hello),
+      10_000,
+    ),
+    '«نمایش پیام در گفتگو» highlights the message',
+  );
 
   await helloFor(ownerThread).getByRole('button', { name: 'مشاهده وظیفه مرتبط' }).click();
   const ownerSource = owner.getByRole('region', { name: 'پیام مبدأ' });
-  check(await visible(ownerSource.getByText(hello), 10_000), 'the owner opens the task from the chip, with its source');
+  check(
+    await visible(ownerSource.getByText(hello), 10_000),
+    'the owner opens the task from the chip, with its source',
+  );
 
   /* ------------------------------------------------ M4: subtask order and task files, stored */
 
@@ -379,56 +552,114 @@ try {
     await subtaskBox.press('Enter');
   }
   const handles = (page) => page.getByRole('button', { name: /^جابه‌جایی «/ });
-  const order = async (page) => (await handles(page).evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label') ?? ''))).map((label) => label.split('«')[1]?.split('»')[0]);
-  check(await eventually(async () => JSON.stringify(await order(owner)) === JSON.stringify(['اول', 'دوم', 'سوم']), 10_000), 'three subtasks added');
+  const order = async (page) =>
+    (
+      await handles(page).evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute('aria-label') ?? ''),
+      )
+    ).map((label) => label.split('«')[1]?.split('»')[0]);
+  check(
+    await eventually(
+      async () => JSON.stringify(await order(owner)) === JSON.stringify(['اول', 'دوم', 'سوم']),
+      10_000,
+    ),
+    'three subtasks added',
+  );
   // Wait for the server's ids (the rows are re-read after each add), then move «سوم» to the top.
   await owner.waitForTimeout(1_000);
   await owner.getByRole('button', { name: 'انتقال «سوم» به بالا' }).click();
   await owner.waitForTimeout(400);
   await owner.getByRole('button', { name: 'انتقال «سوم» به بالا' }).click();
-  check(await eventually(async () => JSON.stringify(await order(owner)) === JSON.stringify(['سوم', 'اول', 'دوم'])), 'the subtask moves to the top');
-  await owner.getByTestId('task-file-input').setInputFiles({ name: 'پیوست وظیفه.pdf', mimeType: 'application/pdf', buffer: PDF });
+  check(
+    await eventually(
+      async () => JSON.stringify(await order(owner)) === JSON.stringify(['سوم', 'اول', 'دوم']),
+    ),
+    'the subtask moves to the top',
+  );
+  await owner
+    .getByTestId('task-file-input')
+    .setInputFiles({ name: 'پیوست وظیفه.pdf', mimeType: 'application/pdf', buffer: PDF });
   check(await visible(owner.getByText('پیوست وظیفه.pdf')), 'a file attaches to the task');
   // Save is disabled during upload and resolves only after pending task edits persist.
   await ownerTaskDetails.getByRole('button', { name: 'ذخیره تغییرات', exact: true }).click();
   await ownerTaskDetails.waitFor({ state: 'hidden' });
   await owner.reload();
   await helloFor(ownerThread).getByRole('button', { name: 'مشاهده وظیفه مرتبط' }).click({ timeout: 20_000 });
-  check(await eventually(async () => JSON.stringify(await order(owner)) === JSON.stringify(['سوم', 'اول', 'دوم']), 10_000), 'the order is stored: the same after a reload');
-  check(await visible(owner.getByText('پیوست وظیفه.pdf'), 10_000), 'the task’s file is stored: still attached after a reload');
+  check(
+    await eventually(
+      async () => JSON.stringify(await order(owner)) === JSON.stringify(['سوم', 'اول', 'دوم']),
+      10_000,
+    ),
+    'the order is stored: the same after a reload',
+  );
+  check(
+    await visible(owner.getByText('پیوست وظیفه.pdf'), 10_000),
+    'the task’s file is stored: still attached after a reload',
+  );
   await helloFor(guestChat).getByRole('button', { name: 'مشاهده وظیفه مرتبط' }).click();
-  check(await eventually(async () => JSON.stringify(await order(guest)) === JSON.stringify(['سوم', 'اول', 'دوم']), 10_000), 'the guest sees the same order');
+  check(
+    await eventually(
+      async () => JSON.stringify(await order(guest)) === JSON.stringify(['سوم', 'اول', 'دوم']),
+      10_000,
+    ),
+    'the guest sees the same order',
+  );
   await guest.keyboard.press('Escape');
   await owner.keyboard.press('Escape');
   await owner.screenshot({ path: `${out}/live_m4.png` });
 
   /* ------------------------------------------------ notifications: quick views and mark all read */
 
-  await railOf(guest).getByRole('button', { name: /^اعلان‌ها/ }).click();
+  await railOf(guest)
+    .getByRole('button', { name: /^اعلان‌ها/ })
+    .click();
   const drawer = guest.getByRole('dialog', { name: 'اعلان‌ها' });
   check(await visible(drawer), 'the guest opens the notification centre');
   const cards = drawer.getByRole('listitem');
   await drawer.getByRole('button', { name: /^وظایف ارجاع‌شده امروز/ }).click();
-  check(await eventually(async () => (await cards.filter({ hasText: taskTitle }).count()) === 1, 10_000), '«وظایف ارجاع‌شده امروز» lists the assignment');
+  check(
+    await eventually(async () => (await cards.filter({ hasText: taskTitle }).count()) === 1, 10_000),
+    '«وظایف ارجاع‌شده امروز» lists the assignment',
+  );
   await drawer.getByRole('button', { name: /^پیام‌های اشاره‌شده/ }).click();
-  check((await drawer.getByRole('button', { name: /^پیام‌های اشاره‌شده/ }).getAttribute('aria-pressed')) === 'true', '«پیام‌های اشاره‌شده» switches the view');
+  check(
+    (await drawer.getByRole('button', { name: /^پیام‌های اشاره‌شده/ }).getAttribute('aria-pressed')) ===
+      'true',
+    '«پیام‌های اشاره‌شده» switches the view',
+  );
   await drawer.getByRole('tab', { name: /خوانده‌نشده/ }).click();
-  check(await eventually(async () => (await cards.count()) >= 1), 'the unread tab lists the new notifications');
+  check(
+    await eventually(async () => (await cards.count()) >= 1),
+    'the unread tab lists the new notifications',
+  );
   await drawer.getByRole('button', { name: 'علامت‌گذاری همه به‌عنوان خوانده‌شده' }).click();
-  check(await visible(drawer.getByText('همه اعلان‌ها را خوانده‌اید')), '«علامت‌گذاری همه به‌عنوان خوانده‌شده» empties the unread tab');
+  check(
+    await visible(drawer.getByText('همه اعلان‌ها را خوانده‌اید')),
+    '«علامت‌گذاری همه به‌عنوان خوانده‌شده» empties the unread tab',
+  );
   await guest.keyboard.press('Escape');
   await guest.waitForTimeout(500);
   await guest.reload();
   await railOf(guest).waitFor({ timeout: 20_000 });
   check(
-    await eventually(async () => !(await railOf(guest).getByRole('button', { name: /^اعلان‌ها/ }).getAttribute('aria-label')).includes('خوانده‌نشده'), 10_000),
+    await eventually(
+      async () =>
+        !(
+          await railOf(guest)
+            .getByRole('button', { name: /^اعلان‌ها/ })
+            .getAttribute('aria-label')
+        ).includes('خوانده‌نشده'),
+      10_000,
+    ),
     'the read state is stored: no unread badge after a reload',
   );
 
   /* ------------------------------------------------ Phase 3.2: the guest's out-of-office auto-reply */
 
   const openHours = async (page) => {
-    await railOf(page).getByRole('button', { name: /حساب کاربری/ }).click();
+    await railOf(page)
+      .getByRole('button', { name: /حساب کاربری/ })
+      .click();
     await page.getByRole('menuitem', { name: 'ساعات کاری و پاسخ خودکار' }).click();
     const settings = page.getByRole('dialog', { name: 'ساعات کاری و پاسخ خودکار' });
     await settings.waitFor();
@@ -437,7 +668,8 @@ try {
   let hours = await openHours(guest);
   await hours.getByRole('switch', { name: 'پاسخ خودکار خارج از ساعت کاری' }).click();
   // No working days at all: away all week.
-  for (const day of ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه']) await hours.getByRole('button', { name: day, exact: true }).click();
+  for (const day of ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه'])
+    await hours.getByRole('button', { name: day, exact: true }).click();
   const awayText = `در مرخصی هستم؛ ${runId}`;
   await hours.getByLabel('متن پاسخ خودکار').fill(awayText);
   await hours.getByRole('button', { name: 'ذخیره' }).click();
@@ -445,7 +677,13 @@ try {
   await guest.reload();
   hours = await openHours(guest);
   check(
-    await eventually(async () => (await hours.getByRole('switch', { name: 'پاسخ خودکار خارج از ساعت کاری' }).getAttribute('aria-checked')) === 'true', 10_000),
+    await eventually(
+      async () =>
+        (await hours
+          .getByRole('switch', { name: 'پاسخ خودکار خارج از ساعت کاری' })
+          .getAttribute('aria-checked')) === 'true',
+      10_000,
+    ),
     'the guest’s auto-reply is stored on the server: on after a reload',
   );
   check((await hours.getByLabel('متن پاسخ خودکار').inputValue()) === awayText, '…with their text');
@@ -453,12 +691,18 @@ try {
 
   await railOf(owner).getByRole('link', { name: 'گفتگوها' }).click();
   await owner.waitForURL('**/chats');
-  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click();
+  await owner
+    .getByRole('button', { name: new RegExp(guestName) })
+    .first()
+    .click();
   const awayComposer = owner.getByRole('textbox', { name: `نوشتن پیام در ${guestName}` });
   await awayComposer.fill('فردا جلسه داریم؟');
   await awayComposer.press('Enter');
   const autoReplies = ownerThread.locator('div.group\\/message').filter({ hasText: 'پاسخ خودکار' });
-  check(await eventually(async () => (await autoReplies.count()) === 1, 15_000), 'a direct message to the away guest gets their auto-reply, from the server');
+  check(
+    await eventually(async () => (await autoReplies.count()) === 1, 15_000),
+    'a direct message to the away guest gets their auto-reply, from the server',
+  );
   check(await visible(autoReplies.getByText(awayText)), '…with their text, under their name');
   await awayComposer.fill('باشد، بعداً هماهنگ می‌کنیم.');
   await awayComposer.press('Enter');
@@ -484,7 +728,9 @@ try {
   const timedToday = new Date(Date.now() + 65 * 60_000).getDate() === soon.getDate();
   if (timedToday) {
     await scheduleIn(timed, async (scheduler) => {
-      await scheduler.getByLabel('ساعت ارسال').fill(`${String(soon.getHours()).padStart(2, '0')}:${String(soon.getMinutes()).padStart(2, '0')}`);
+      await scheduler
+        .getByLabel('ساعت ارسال')
+        .fill(`${String(soon.getHours()).padStart(2, '0')}:${String(soon.getMinutes()).padStart(2, '0')}`);
     });
   }
   const now1 = `ارسال فوری ${runId}`;
@@ -495,52 +741,100 @@ try {
   check(await visible(waitingBar), 'the owner’s scheduled messages wait above the composer');
   check((await ownerThread.getByText(now1).count()) === 0, '…and are not in the thread');
   await owner.reload();
-  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click({ timeout: 20_000 });
+  await owner
+    .getByRole('button', { name: new RegExp(guestName) })
+    .first()
+    .click({ timeout: 20_000 });
   check(await visible(waitingBar, 20_000), 'they are stored on the server: still waiting after a reload');
   await railOf(guest).getByRole('link', { name: 'گفتگوها' }).click();
   await guest.waitForURL('**/chats');
-  await guest.getByRole('button', { name: new RegExp(ownerName) }).first().click();
+  await guest
+    .getByRole('button', { name: new RegExp(ownerName) })
+    .first()
+    .click();
   check(await visible(guestThread, 10_000), 'the guest has the direct chat open');
-  check((await guestThread.getByText(now1).count()) === 0, 'the guest does not see them before they are sent');
+  check(
+    (await guestThread.getByText(now1).count()) === 0,
+    'the guest does not see them before they are sent',
+  );
 
   await waitingBar.click();
   const waitingList = owner.getByRole('dialog', { name: 'پیام‌های زمان‌بندی‌شده' });
   const waitingItems = waitingList.getByRole('listitem');
-  check(await eventually(async () => (await waitingItems.count()) === (timedToday ? 3 : 2), 10_000), 'the list holds each of them');
+  check(
+    await eventually(async () => (await waitingItems.count()) === (timedToday ? 3 : 2), 10_000),
+    'the list holds each of them',
+  );
   await waitingItems.filter({ hasText: now1 }).getByRole('button', { name: 'ارسال فوری' }).click();
   check(await visible(guestThread.getByText(now1), 15_000), '«ارسال فوری»: the guest receives it live');
   check(await visible(ownerThread.getByText(now1), 10_000), '…and it is in the owner’s thread');
   await waitingItems.filter({ hasText: dropped }).getByRole('button', { name: 'لغو / حذف' }).click();
-  check(await eventually(async () => (await waitingItems.filter({ hasText: dropped }).count()) === 0, 10_000), '«لغو / حذف» takes it off the list');
+  check(
+    await eventually(async () => (await waitingItems.filter({ hasText: dropped }).count()) === 0, 10_000),
+    '«لغو / حذف» takes it off the list',
+  );
   await owner.keyboard.press('Escape');
   if (timedToday) {
-    check(await visible(guestThread.getByText(timed), 180_000), 'at its time the worker sends it: the guest receives it live');
-    check(await eventually(async () => (await waitingBar.count()) === 0, 15_000), '…and the owner’s list is empty');
+    check(
+      await visible(guestThread.getByText(timed), 180_000),
+      'at its time the worker sends it: the guest receives it live',
+    );
+    check(
+      await eventually(async () => (await waitingBar.count()) === 0, 15_000),
+      '…and the owner’s list is empty',
+    );
   }
-  check((await guestThread.getByText(dropped).count()) === 0 && (await ownerThread.getByText(dropped).count()) === 0, 'the cancelled one is never sent');
-  check((await autoReplies.count()) === 1, 'scheduled messages to the away guest do not set off another answer the same day');
+  check(
+    (await guestThread.getByText(dropped).count()) === 0 &&
+      (await ownerThread.getByText(dropped).count()) === 0,
+    'the cancelled one is never sent',
+  );
+  check(
+    (await autoReplies.count()) === 1,
+    'scheduled messages to the away guest do not set off another answer the same day',
+  );
   await owner.screenshot({ path: `${out}/live_scheduled.png` });
 
   /* ------------------------------------------------ profile menu: sign out clears the session */
 
-  await railOf(guest).getByRole('button', { name: /حساب کاربری/ }).click();
+  await railOf(guest)
+    .getByRole('button', { name: /حساب کاربری/ })
+    .click();
   await guest.getByRole('menuitem', { name: 'پروفایل من' }).click();
-  check(await visible(guest.getByRole('dialog', { name: 'پروفایل من' })), 'the profile menu opens «پروفایل من»');
+  check(
+    await visible(guest.getByRole('dialog', { name: 'پروفایل من' })),
+    'the profile menu opens «پروفایل من»',
+  );
   await guest.keyboard.press('Escape');
-  await railOf(guest).getByRole('button', { name: /حساب کاربری/ }).click();
+  await railOf(guest)
+    .getByRole('button', { name: /حساب کاربری/ })
+    .click();
   await guest.getByRole('menuitem', { name: 'خروج از حساب' }).click();
-  await guest.getByRole('dialog', { name: 'خروج از حساب کاربری' }).getByRole('button', { name: 'خروج از حساب' }).click();
-  check(await visible(guest.getByRole('heading', { name: 'ورود به تسک‌دون' }), 15_000), 'signing out shows the sign-in screen');
+  await guest
+    .getByRole('dialog', { name: 'خروج از حساب کاربری' })
+    .getByRole('button', { name: 'خروج از حساب' })
+    .click();
+  check(
+    await visible(guest.getByRole('heading', { name: 'ورود به تسک‌دون' }), 15_000),
+    'signing out shows the sign-in screen',
+  );
   const cookies = await guestContext.cookies();
-  check(!cookies.some((cookie) => /taskin_rt$/.test(cookie.name) && cookie.value), 'the refresh cookie is cleared');
+  check(
+    !cookies.some((cookie) => /taskin_rt$/.test(cookie.name) && cookie.value),
+    'the refresh cookie is cleared',
+  );
   await guest.reload();
-  check(await visible(guest.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000), 'the session stays gone after a reload');
+  check(
+    await visible(guest.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000),
+    'the session stays gone after a reload',
+  );
 
   /* ------------------------------------------------ Phase 2: a note is stored with its first words */
 
   const notePosts = [];
   const countNotePost = (request) => {
-    if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/notes')) notePosts.push(request.url());
+    if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/notes'))
+      notePosts.push(request.url());
   };
   owner.on('request', countNotePost);
   await railOf(owner).getByRole('link', { name: 'یادداشت‌ها' }).click();
@@ -558,19 +852,28 @@ try {
   await owner.waitForTimeout(1_500);
   check(notePosts.length === 1, '…and only one, however many keystrokes follow');
   check(
-    (await noteTitle.inputValue()) === 'جلسه هفتگی' && (await noteTitle.evaluate((element) => element === document.activeElement)),
+    (await noteTitle.inputValue()) === 'جلسه هفتگی' &&
+      (await noteTitle.evaluate((element) => element === document.activeElement)),
     'the editor keeps its text and focus while the note is stored',
   );
   await notebook.getByRole('button', { name: 'یادداشت جدید' }).click();
   await owner.waitForTimeout(1_000);
   await noteList.filter({ hasText: 'جلسه هفتگی' }).getByRole('button').click();
-  check(await eventually(async () => (await noteList.count()) === notesBefore + 1), 'switching away drops a blank draft');
+  check(
+    await eventually(async () => (await noteList.count()) === notesBefore + 1),
+    'switching away drops a blank draft',
+  );
   check(notePosts.length === 1, '…which never reached the server');
   owner.off('request', countNotePost);
   await owner.waitForTimeout(1_000);
   await owner.reload();
   check(
-    await eventually(async () => (await noteList.count()) === notesBefore + 1 && (await noteList.filter({ hasText: 'جلسه هفتگی' }).count()) === 1, 20_000),
+    await eventually(
+      async () =>
+        (await noteList.count()) === notesBefore + 1 &&
+        (await noteList.filter({ hasText: 'جلسه هفتگی' }).count()) === 1,
+      20_000,
+    ),
     'after a reload: the note with words, and no blank one',
   );
 
@@ -590,12 +893,21 @@ try {
     await dialog.getByRole('button', { name: 'ایجاد پروژه' }).click();
     await dialog.waitFor({ state: 'detached' });
   }
-  check(await eventually(async () => (await tree.getByRole('button', { name: /^پروژه (5|۵)/ }).count()) === 1, 15_000), 'five projects: the free plan is full');
+  check(
+    await eventually(
+      async () => (await tree.getByRole('button', { name: /^پروژه (5|۵)/ }).count()) === 1,
+      15_000,
+    ),
+    'five projects: the free plan is full',
+  );
   await quickCreate(owner, 'پروژه جدید');
   const limitAlert = owner.getByRole('alertdialog', { name: 'سقف پروژه‌های این فضای کاری پر شده است' });
   check(await visible(limitAlert), 'at the limit «پروژه جدید» shows an alert instead of the form');
   check((await owner.getByRole('dialog', { name: 'پروژه جدید' }).count()) === 0, '…and the form never opens');
-  check(await visible(limitAlert.getByText(/«رایگان» حداکثر ۵ پروژه/)), 'the alert names the plan and its limit');
+  check(
+    await visible(limitAlert.getByText(/«رایگان» حداکثر ۵ پروژه/)),
+    'the alert names the plan and its limit',
+  );
   await owner.screenshot({ path: `${out}/live_project_limit.png` });
   await limitAlert.getByRole('button', { name: 'متوجه شدم' }).click();
   check(await eventually(async () => (await limitAlert.count()) === 0), 'the alert closes');
@@ -607,7 +919,10 @@ try {
   await tree.getByRole('button', { name: /^حذف پروژه پروژه (5|۵)$/ }).click();
   dialog = owner.getByRole('dialog', { name: /^حذف پروژه «پروژه (5|۵)»$/ });
   await dialog.getByRole('button', { name: 'انتقال به سطل زباله' }).click();
-  check(await eventually(async () => (await lastProject.count()) === 0, 10_000), 'the owner moves a project to the trash: it leaves the tree');
+  check(
+    await eventually(async () => (await lastProject.count()) === 0, 10_000),
+    'the owner moves a project to the trash: it leaves the tree',
+  );
   await owner.getByRole('button', { name: 'آرشیو / سطل زباله' }).click();
   dialog = owner.getByRole('dialog', { name: 'آرشیو / سطل زباله' });
   const trashed = dialog.getByRole('listitem').filter({ hasText: /پروژه (5|۵)/ });
@@ -615,9 +930,15 @@ try {
   check(await visible(trashed.getByText('۴۰ روز تا پاک‌سازی')), '…restorable for 40 days');
   await owner.reload();
   await owner.getByRole('button', { name: 'آرشیو / سطل زباله' }).click();
-  check(await visible(dialog.getByRole('listitem').filter({ hasText: /پروژه (5|۵)/ }), 15_000), 'the deletion is stored: still in the trash after a reload');
+  check(
+    await visible(dialog.getByRole('listitem').filter({ hasText: /پروژه (5|۵)/ }), 15_000),
+    'the deletion is stored: still in the trash after a reload',
+  );
   await dialog.getByRole('button', { name: /^بازیابی پروژه (5|۵)$/ }).click();
-  check(await eventually(async () => (await lastProject.count()) === 1, 15_000), '«بازیابی» brings it back into the tree');
+  check(
+    await eventually(async () => (await lastProject.count()) === 1, 15_000),
+    '«بازیابی» brings it back into the tree',
+  );
   check(await visible(dialog.getByText('سطل زباله خالی است')), 'the trash is empty again');
   await owner.keyboard.press('Escape');
 
@@ -630,36 +951,71 @@ try {
   await dialog.getByLabel('رمز مدیر').fill('Taskin-2026!');
   // The row disappears optimistically. Wait for the durable removal before reloading,
   // otherwise navigation can interrupt the step-up → DELETE sequence.
-  const memberRemoved = owner.waitForResponse((response) =>
-    response.request().method() === 'DELETE'
-    && /^\/api\/v1\/workspaces\/[^/]+\/members\/[^/]+$/.test(new URL(response.url()).pathname)
-    && response.status() === 204,
+  const memberRemoved = owner.waitForResponse(
+    (response) =>
+      response.request().method() === 'DELETE' &&
+      /^\/api\/v1\/workspaces\/[^/]+\/members\/[^/]+$/.test(new URL(response.url()).pathname) &&
+      response.status() === 204,
   );
   await dialog.getByRole('button', { name: 'حذف از فضای کاری' }).click();
   await memberRemoved;
-  check(await eventually(async () => (await owner.getByRole('listitem').filter({ hasText: guestName }).count()) === 0, 15_000), 'the owner removes the guest from the workspace (with the admin password)');
+  check(
+    await eventually(
+      async () => (await owner.getByRole('listitem').filter({ hasText: guestName }).count()) === 0,
+      15_000,
+    ),
+    'the owner removes the guest from the workspace (with the admin password)',
+  );
   await railOf(owner).getByRole('link', { name: 'گفتگوها' }).click();
   await owner.waitForURL('**/chats');
   await owner.reload();
-  await owner.getByRole('button', { name: new RegExp(guestName) }).first().click({ timeout: 20_000 });
+  await owner
+    .getByRole('button', { name: new RegExp(guestName) })
+    .first()
+    .click({ timeout: 20_000 });
   const formerThread = owner.getByRole('region', { name: `گفتگوی ${guestName}` });
   const formerBubble = formerThread.locator('div.group\\/message').filter({ hasText: 'دیدم، ممنون!' }).last();
-  check(await visible(formerBubble, 15_000), 'their messages stay in the direct chat, still titled with their name');
+  check(
+    await visible(formerBubble, 15_000),
+    'their messages stay in the direct chat, still titled with their name',
+  );
   check(await visible(formerBubble.getByText('عضو سابق')), '…marked «عضو سابق», after a reload too');
   await owner.screenshot({ path: `${out}/live_former_member.png` });
 
   /* ------------------------------------------------ M4: a workspace icon, uploaded */
 
-  await railOf(owner).getByRole('button', { name: /^فضای کاری فعال/ }).click();
+  await railOf(owner)
+    .getByRole('button', { name: /^فضای کاری فعال/ })
+    .click();
   await owner.getByRole('menuitem', { name: 'ایجاد فضای کاری جدید' }).click();
   dialog = owner.getByRole('dialog', { name: 'ایجاد فضای کاری جدید' });
   await dialog.getByRole('textbox', { name: 'نام فضای کاری' }).fill(`فضای نشان‌دار ${runId}`);
-  await dialog.locator('input[type=file]').setInputFiles({ name: 'icon.png', mimeType: 'image/png', buffer: PNG });
+  await dialog
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'icon.png', mimeType: 'image/png', buffer: PNG });
   await dialog.getByRole('button', { name: 'ایجاد و ورود' }).click();
-  check(await eventually(async () => ((await railOf(owner).getByRole('button', { name: /^فضای کاری فعال/ }).textContent()) ?? '').includes('فضای نشان‌دار'), 20_000), 'the new workspace opens');
-  const icon = railOf(owner).getByRole('button', { name: /^فضای کاری فعال/ }).locator('img');
   check(
-    await eventually(async () => ((await icon.getAttribute('src').catch(() => null)) ?? '').startsWith('http') && (await icon.evaluate((image) => image.complete && image.naturalWidth > 0)), 20_000),
+    await eventually(
+      async () =>
+        (
+          (await railOf(owner)
+            .getByRole('button', { name: /^فضای کاری فعال/ })
+            .textContent()) ?? ''
+        ).includes('فضای نشان‌دار'),
+      20_000,
+    ),
+    'the new workspace opens',
+  );
+  const icon = railOf(owner)
+    .getByRole('button', { name: /^فضای کاری فعال/ })
+    .locator('img');
+  check(
+    await eventually(
+      async () =>
+        ((await icon.getAttribute('src').catch(() => null)) ?? '').startsWith('http') &&
+        (await icon.evaluate((image) => image.complete && image.naturalWidth > 0)),
+      20_000,
+    ),
     'its icon is the uploaded picture, served from storage',
   );
 } catch (error) {

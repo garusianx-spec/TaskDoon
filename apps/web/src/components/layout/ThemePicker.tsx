@@ -1,12 +1,12 @@
 'use client';
 
-import type { AccentDescriptor,AccentId,ThemeMode } from '@taskin/contracts';
-import { ACCENTS,THEME_MODES } from '@/lib/theme';
+import type { AccentDescriptor, AccentId, ThemeMode } from '@taskin/contracts';
+import { ACCENTS, THEME_MODES } from '@/lib/theme';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { cn } from '@/lib/utils';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
-import { Badge,Button,Checkbox } from '@/components/ui';
-import { CheckIcon,MonitorIcon,MoonIcon,SunIcon } from '@/components/icons';
+import { Badge, Button, Checkbox } from '@/components/ui';
+import { CheckIcon, MonitorIcon, MoonIcon, SunIcon } from '@/components/icons';
 
 const MODE_ICONS: Readonly<Record<ThemeMode, typeof SunIcon>> = {
   system: MonitorIcon,
@@ -43,7 +43,12 @@ export function ThemePicker({ className }: { readonly className?: string }) {
         <h3 className="px-1 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
           حالت نمایش
         </h3>
-        <div role="radiogroup" aria-label="حالت نمایش" onKeyDown={modes.onKeyDown} className="grid grid-cols-3 gap-1.5">
+        <div
+          role="radiogroup"
+          aria-label="حالت نمایش"
+          onKeyDown={modes.onKeyDown}
+          className="grid grid-cols-3 gap-1.5"
+        >
           {THEME_MODES.map(({ id, label }, index) => {
             const Icon = MODE_ICONS[id];
             const selected = theme.mode === id;
@@ -97,7 +102,10 @@ export function ThemePicker({ className }: { readonly className?: string }) {
         <h3 className="px-1 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
           {`پیش‌نمایش، ${resolvedMode === 'dark' ? 'حالت تیره' : 'حالت روشن'}`}
         </h3>
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-secondary bg-canvas p-2.5" aria-hidden="true">
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-xl border border-secondary bg-canvas p-2.5"
+          aria-hidden="true"
+        >
           <Button size="xs" tabIndex={-1}>
             دکمه اصلی
           </Button>
@@ -105,7 +113,13 @@ export function ThemePicker({ className }: { readonly className?: string }) {
             برچسب
           </Badge>
           <span className="text-caption font-semibold text-fg-brand">پیوند متنی</span>
-          <Checkbox checked onCheckedChange={() => undefined} size="sm" ariaLabel="نمونه" className="pointer-events-none" />
+          <Checkbox
+            checked
+            onCheckedChange={() => undefined}
+            size="sm"
+            ariaLabel="نمونه"
+            className="pointer-events-none"
+          />
         </div>
       </section>
     </div>
@@ -141,13 +155,16 @@ function AccentCard({ accent, selected, registerRef, onSelect }: AccentCardProps
       </span>
       <span className="flex items-center gap-1">
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className={cn('truncate text-caption font-semibold', selected ? 'text-fg-brand' : 'text-fg-primary')}>
+          <span
+            className={cn(
+              'truncate text-caption font-semibold',
+              selected ? 'text-fg-brand' : 'text-fg-primary',
+            )}
+          >
             {accent.name}
           </span>
           <span className="truncate text-micro text-fg-tertiary">
-            {accent.subtitle}
-            {' '}
-            <span className="latin-inline">{accent.primaryHex}</span>
+            {accent.subtitle} <span className="latin-inline">{accent.primaryHex}</span>
           </span>
         </span>
         {selected && <CheckIcon size={14} className="shrink-0 text-fg-brand" />}

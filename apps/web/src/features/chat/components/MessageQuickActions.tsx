@@ -3,16 +3,22 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { QUICK_REACTIONS } from '@/data/reference';
-import { IconButton,Popover,Tooltip } from '@/components/ui';
-import { MenuItem,MenuList } from '@/components/ui/Menu';
-import {
-ConvertToTaskIcon,
-CopyIcon,EmojiIcon,
-MoreHorizontalIcon,ReplyIcon
-} from '@/components/icons';
+import { IconButton, Popover, Tooltip } from '@/components/ui';
+import { MenuItem, MenuList } from '@/components/ui/Menu';
+import { ConvertToTaskIcon, CopyIcon, EmojiIcon, MoreHorizontalIcon, ReplyIcon } from '@/components/icons';
 import { type MessageBubbleProps } from '@/features/chat/types/message-bubble';
 
-export function MessageQuickActions({ message, outgoing, currentUserId, onReply, onConvertToTask, onToggleReaction }: Pick<MessageBubbleProps, "message" | "outgoing" | "currentUserId" | "onReply" | "onConvertToTask" | "onToggleReaction">) {
+export function MessageQuickActions({
+  message,
+  outgoing,
+  currentUserId,
+  onReply,
+  onConvertToTask,
+  onToggleReaction,
+}: Pick<
+  MessageBubbleProps,
+  'message' | 'outgoing' | 'currentUserId' | 'onReply' | 'onConvertToTask' | 'onToggleReaction'
+>) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <div
@@ -22,7 +28,7 @@ export function MessageQuickActions({ message, outgoing, currentUserId, onReply,
         'hidden items-center gap-0.5 opacity-0 transition-opacity lg:flex',
         // An unsent message has nothing on the server to reply to, react to or convert.
         message.failed && 'lg:hidden',
-        'group-hover/message:opacity-100 group-focus-within/message:opacity-100',
+        'group-focus-within/message:opacity-100 group-hover/message:opacity-100',
         menuOpen && 'opacity-100',
       )}
     >

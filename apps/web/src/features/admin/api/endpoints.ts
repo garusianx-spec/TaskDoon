@@ -1,6 +1,4 @@
-import type {
-ActiveBroadcasts,
-} from '@taskin/contracts';
+import type { ActiveBroadcasts } from '@taskin/contracts';
 import { http } from '@/lib/api-client';
 
 export const adminEndpoints = {

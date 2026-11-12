@@ -1,13 +1,13 @@
 'use client';
 
-import type { CalendarEventDraft,CalendarEventKind } from '@taskin/contracts';
+import type { CalendarEventDraft, CalendarEventKind } from '@taskin/contracts';
 import { CALENDAR_EVENT_KINDS } from '@/data/reference';
 import { directory } from '@/store/directory';
 import { formatJalali } from '@taskin/jalali';
-import { Avatar,Button,Checkbox,Input,Modal,SegmentedControl,Select,Textarea } from '@/components/ui';
+import { Avatar, Button, Checkbox, Input, Modal, SegmentedControl, Select, Textarea } from '@/components/ui';
 import { JalaliDatePicker } from '@/components/shared/JalaliDatePicker';
-import { CalendarIcon,ClockIcon,MilestoneIcon,NotificationIcon } from '@/components/icons';
-import { NO_PROJECT,TIME_SLOTS,useCalendarEventForm } from '@/features/calendar/hooks/useCalendarEventForm';
+import { CalendarIcon, ClockIcon, MilestoneIcon, NotificationIcon } from '@/components/icons';
+import { NO_PROJECT, TIME_SLOTS, useCalendarEventForm } from '@/features/calendar/hooks/useCalendarEventForm';
 
 export interface CalendarEventModalProps {
   readonly open: boolean;
@@ -29,9 +29,15 @@ const KIND_ICONS: Readonly<Record<CalendarEventKind, typeof CalendarIcon>> = {
  * Only the fields that apply to the chosen kind are shown: milestones are all-day and must
  * belong to a project; reminders have a time but no attendees.
  */
-export function CalendarEventModal({ open, initialDate, currentUserId, onClose, onSubmit }: CalendarEventModalProps) {
-  const { form, setForm, setTouched, set, endSlots, titleError, projectError, submit, slotOptions } = useCalendarEventForm({ open, initialDate, currentUserId, onSubmit });
-
+export function CalendarEventModal({
+  open,
+  initialDate,
+  currentUserId,
+  onClose,
+  onSubmit,
+}: CalendarEventModalProps) {
+  const { form, setForm, setTouched, set, endSlots, titleError, projectError, submit, slotOptions } =
+    useCalendarEventForm({ open, initialDate, currentUserId, onSubmit });
 
   return (
     <Modal
@@ -94,7 +100,11 @@ export function CalendarEventModal({ open, initialDate, currentUserId, onClose, 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <span className="text-body-sm font-medium text-fg-secondary">تاریخ</span>
-            <JalaliDatePicker label="انتخاب تاریخ رویداد" value={form.date} onChange={(date) => set('date', date)} />
+            <JalaliDatePicker
+              label="انتخاب تاریخ رویداد"
+              value={form.date}
+              onChange={(date) => set('date', date)}
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -170,7 +180,13 @@ export function CalendarEventModal({ open, initialDate, currentUserId, onClose, 
                       )
                     }
                   />
-                  <Avatar name={user.fullName} initials={user.initials} tone={user.avatarTone} size="xs" decorative />
+                  <Avatar
+                    name={user.fullName}
+                    initials={user.initials}
+                    tone={user.avatarTone}
+                    size="xs"
+                    decorative
+                  />
                   <span className="truncate text-caption font-medium text-fg-primary">
                     {user.id === currentUserId ? `${user.fullName} (شما)` : user.fullName}
                   </span>

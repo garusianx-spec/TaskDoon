@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import type { WorkDay,WorkingHours } from '@taskin/contracts';
+import type { WorkDay, WorkingHours } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
 import { cn } from '@/lib/utils';
-import { isWorkingTime,WORK_DAYS } from '@/lib/working-hours';
+import { isWorkingTime, WORK_DAYS } from '@/lib/working-hours';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
-import { Button,Input,Modal,SwitchField,Textarea } from '@/components/ui';
+import { Button, Input, Modal, SwitchField, Textarea } from '@/components/ui';
 import { ClockIcon } from '@/components/icons';
 
 const HH_MM = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
@@ -36,17 +36,20 @@ export function WorkingHoursModal({
   });
 
   const message = form.message.trim();
-  const error = !HH_MM.test(form.start) || !HH_MM.test(form.end)
-    ? 'ساعت شروع و پایان را کامل کنید.'
-    : form.start === form.end
-      ? 'ساعت پایان باید با ساعت شروع فرق کند.'
-      : message.length === 0
-        ? 'متن پاسخ خودکار را بنویسید.'
-        : null;
+  const error =
+    !HH_MM.test(form.start) || !HH_MM.test(form.end)
+      ? 'ساعت شروع و پایان را کامل کنید.'
+      : form.start === form.end
+        ? 'ساعت پایان باید با ساعت شروع فرق کند.'
+        : message.length === 0
+          ? 'متن پاسخ خودکار را بنویسید.'
+          : null;
   const toggleDay = (day: WorkDay) =>
     setForm((current) => ({
       ...current,
-      days: current.days.includes(day) ? current.days.filter((entry) => entry !== day) : WORK_DAYS.map((entry) => entry.id).filter((id) => id === day || current.days.includes(id)),
+      days: current.days.includes(day)
+        ? current.days.filter((entry) => entry !== day)
+        : WORK_DAYS.map((entry) => entry.id).filter((id) => id === day || current.days.includes(id)),
     }));
   const workingNow = !error && isWorkingTime(form, new Date());
 
@@ -96,7 +99,9 @@ export function WorkingHoursModal({
                   onClick={() => toggleDay(day.id)}
                   className={cn(
                     'rounded-full border px-3 py-1.5 text-body-sm transition-colors',
-                    on ? 'border-brand bg-brand-subtle font-semibold text-fg-brand' : 'border-primary bg-surface text-fg-secondary hover:bg-hover',
+                    on
+                      ? 'border-brand bg-brand-subtle font-semibold text-fg-brand'
+                      : 'border-primary bg-surface text-fg-secondary hover:bg-hover',
                   )}
                 >
                   {day.label}
@@ -104,11 +109,22 @@ export function WorkingHoursModal({
               );
             })}
           </div>
-          {form.days.length === 0 && <p className="text-caption text-fg-tertiary">بدون روز کاری: تمام هفته در دسترس نیستید (مثلاً در مرخصی).</p>}
+          {form.days.length === 0 && (
+            <p className="text-caption text-fg-tertiary">
+              بدون روز کاری: تمام هفته در دسترس نیستید (مثلاً در مرخصی).
+            </p>
+          )}
         </fieldset>
 
         <div className="grid grid-cols-2 gap-3">
-          <Input label="شروع ساعت کاری" type="time" dir="ltr" step={60} value={form.start} onChange={(event) => setForm((current) => ({ ...current, start: event.target.value }))} />
+          <Input
+            label="شروع ساعت کاری"
+            type="time"
+            dir="ltr"
+            step={60}
+            value={form.start}
+            onChange={(event) => setForm((current) => ({ ...current, start: event.target.value }))}
+          />
           <Input
             label="پایان ساعت کاری"
             type="time"

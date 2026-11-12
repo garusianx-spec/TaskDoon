@@ -2,7 +2,15 @@ import { readFile } from 'node:fs/promises';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { Test } from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { AuthSession, OtpVerifyResult, RoleView, TaskDetail, UploadTicket, UploadView, WorkflowView } from '@taskin/contracts';
+import type {
+  AuthSession,
+  OtpVerifyResult,
+  RoleView,
+  TaskDetail,
+  UploadTicket,
+  UploadView,
+  WorkflowView,
+} from '@taskin/contracts';
 import { OPENAPI_FILE } from '../../src/openapi.js';
 import {
   addMember,
@@ -59,7 +67,12 @@ describe('M1 checklist: audit trail and correlation', () => {
   });
 
   /** Sends one request with a fresh request id and trace, and records which route it exercised. */
-  async function traced(method: 'post' | 'put' | 'patch' | 'delete', template: string, path: string, setup: (request: Test) => Test = (r) => r) {
+  async function traced(
+    method: 'post' | 'put' | 'patch' | 'delete',
+    template: string,
+    path: string,
+    setup: (request: Test) => Test = (r) => r,
+  ) {
     const requestId = `req-${randomBytes(6).toString('hex')}`;
     const traceId = randomBytes(16).toString('hex');
     const request = t
@@ -69,7 +82,9 @@ describe('M1 checklist: audit trail and correlation', () => {
       .set('X-Request-Id', requestId)
       .set('traceparent', `00-${traceId}-${randomBytes(8).toString('hex')}-01`);
     const response = await setup(request);
-    expect(response.status, `${method.toUpperCase()} ${path}: ${JSON.stringify(response.body)}`).toBeLessThan(300);
+    expect(response.status, `${method.toUpperCase()} ${path}: ${JSON.stringify(response.body)}`).toBeLessThan(
+      300,
+    );
     expect(response.headers['x-request-id']).toBe(requestId);
     calls.push({ template: `${method.toUpperCase()} ${template}`, requestId, traceId });
     return response;
@@ -78,12 +93,17 @@ describe('M1 checklist: audit trail and correlation', () => {
   it('writes an audit row, with request id and trace id, for every mutating route', async () => {
     // Auth: sign-up through the OTP flow, then every other auth mutation.
     const phone = randomPhone();
-    const challenge = await traced('post', '/api/v1/auth/otp/request', '/api/v1/auth/otp/request', (r) => r.send({ phone: localForm(phone) }));
+    const challenge = await traced('post', '/api/v1/auth/otp/request', '/api/v1/auth/otp/request', (r) =>
+      r.send({ phone: localForm(phone) }),
+    );
     const verify = await traced('post', '/api/v1/auth/otp/verify', '/api/v1/auth/otp/verify', (r) =>
       r.send({ challengeId: challenge.body.challengeId, code: lastCode(t, phone) }),
     );
     const signup = await traced('post', '/api/v1/auth/signup', '/api/v1/auth/signup', (r) =>
-      r.send({ signupToken: (verify.body as Extract<OtpVerifyResult, { status: 'signup_required' }>).signupToken, fullName: 'سارا کاظمی' }),
+      r.send({
+        signupToken: (verify.body as Extract<OtpVerifyResult, { status: 'signup_required' }>).signupToken,
+        fullName: 'سارا کاظمی',
+      }),
     );
     let user: Session = {
       userId: (signup.body as AuthSession).user.id,
@@ -99,67 +119,160 @@ describe('M1 checklist: audit trail and correlation', () => {
     );
     refreshCookies(user, refreshed.headers['set-cookie']);
     user = { ...user, accessToken: (refreshed.body as AuthSession).accessToken };
-    await traced('post', '/api/v1/auth/password', '/api/v1/auth/password', (r) => r.set(bearer(user)).send({ newPassword: STRONG_PASSWORD }));
-    const stepped = await traced('post', '/api/v1/auth/step-up', '/api/v1/auth/step-up', (r) => r.set(bearer(user)).send({ password: STRONG_PASSWORD }));
+    await traced('post', '/api/v1/auth/password', '/api/v1/auth/password', (r) =>
+      r.set(bearer(user)).send({ newPassword: STRONG_PASSWORD }),
+    );
+    const stepped = await traced('post', '/api/v1/auth/step-up', '/api/v1/auth/step-up', (r) =>
+      r.set(bearer(user)).send({ password: STRONG_PASSWORD }),
+    );
     user = { ...user, accessToken: (stepped.body as AuthSession).accessToken };
-    await traced('patch', '/api/v1/me', '/api/v1/me', (r) => r.set(bearer(user)).send({ fullName: 'سارا کاظمی‌نژاد', email: 'sara@rahnama.ir' }));
+    await traced('patch', '/api/v1/me', '/api/v1/me', (r) =>
+      r.set(bearer(user)).send({ fullName: 'سارا کاظمی‌نژاد', email: 'sara@rahnama.ir' }),
+    );
     const extra = await signIn(t, phone);
-    await traced('delete', '/api/v1/auth/sessions/{id}', `/api/v1/auth/sessions/${extra.sessionId}`, (r) => r.set(bearer(user)));
+    await traced('delete', '/api/v1/auth/sessions/{id}', `/api/v1/auth/sessions/${extra.sessionId}`, (r) =>
+      r.set(bearer(user)),
+    );
     await signIn(t, phone);
-    await traced('delete', '/api/v1/auth/sessions', '/api/v1/auth/sessions?others=true', (r) => r.set(bearer(user)));
+    await traced('delete', '/api/v1/auth/sessions', '/api/v1/auth/sessions?others=true', (r) =>
+      r.set(bearer(user)),
+    );
 
     // Workspaces.
     const created = await traced('post', '/api/v1/workspaces', '/api/v1/workspaces', (r) =>
       r.set(bearer(user)).set('Idempotency-Key', idempotencyKey()).send({ name: 'ردیابی' }),
     );
     const ws = `/api/v1/workspaces/${created.body.id}`;
-    const ticket = (await traced('post', '/api/v1/uploads/workspace-icon', '/api/v1/uploads/workspace-icon', (r) => r.set(bearer(user)))).body as UploadTicket;
+    const ticket = (
+      await traced('post', '/api/v1/uploads/workspace-icon', '/api/v1/uploads/workspace-icon', (r) =>
+        r.set(bearer(user)),
+      )
+    ).body as UploadTicket;
     expect(ticket.key).toMatch(/^tmp\/icons\//);
-    await traced('patch', '/api/v1/workspaces/{workspaceId}', ws, (r) => r.set(bearer(user)).send({ description: 'برای آزمون ردیابی' }));
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/me/presence', `${ws}/me/presence`, (r) => r.set(bearer(user)).send({ presence: 'away' }));
-    const department = await traced('post', '/api/v1/workspaces/{workspaceId}/departments', `${ws}/departments`, (r) => r.set(bearer(user)).send({ name: 'حقوقی' }));
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/departments/{id}', `${ws}/departments/${department.body.id}`, (r) => r.set(bearer(user)).send({ position: 9 }));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/departments/{id}', `${ws}/departments/${department.body.id}`, (r) => r.set(bearer(user)));
+    await traced('patch', '/api/v1/workspaces/{workspaceId}', ws, (r) =>
+      r.set(bearer(user)).send({ description: 'برای آزمون ردیابی' }),
+    );
+    await traced('patch', '/api/v1/workspaces/{workspaceId}/me/presence', `${ws}/me/presence`, (r) =>
+      r.set(bearer(user)).send({ presence: 'away' }),
+    );
+    const department = await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/departments',
+      `${ws}/departments`,
+      (r) => r.set(bearer(user)).send({ name: 'حقوقی' }),
+    );
+    await traced(
+      'patch',
+      '/api/v1/workspaces/{workspaceId}/departments/{id}',
+      `${ws}/departments/${department.body.id}`,
+      (r) => r.set(bearer(user)).send({ position: 9 }),
+    );
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/departments/{id}',
+      `${ws}/departments/${department.body.id}`,
+      (r) => r.set(bearer(user)),
+    );
 
     // Invitations: one revoked, one accepted by a new member who is then changed and removed.
-    const revocable = await traced('post', '/api/v1/workspaces/{workspaceId}/invitations', `${ws}/invitations`, (r) =>
-      r.set(bearer(user)).set('Idempotency-Key', idempotencyKey()).send({ recipients: [{ address: 'temp@rahnama.ir' }], role: 'member' }),
+    const revocable = await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/invitations',
+      `${ws}/invitations`,
+      (r) =>
+        r
+          .set(bearer(user))
+          .set('Idempotency-Key', idempotencyKey())
+          .send({ recipients: [{ address: 'temp@rahnama.ir' }], role: 'member' }),
     );
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/invitations/{id}', `${ws}/invitations/${revocable.body.created[0].id}`, (r) => r.set(bearer(user)));
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/invitations/{id}',
+      `${ws}/invitations/${revocable.body.created[0].id}`,
+      (r) => r.set(bearer(user)),
+    );
     const joinerPhone = randomPhone();
     await invite(t, user, created.body.id, [localForm(joinerPhone)]);
     await t.flushNotifications();
-    const inviteSms = [...t.sms.sent].reverse().find((sms) => sms.to === joinerPhone && sms.template === 'invite');
+    const inviteSms = [...t.sms.sent]
+      .reverse()
+      .find((sms) => sms.to === joinerPhone && sms.template === 'invite');
     const token = new URL(inviteSms?.tokens.link ?? '').searchParams.get('token');
     const joiner = await withAdminPassword(t, await signIn(t, joinerPhone));
-    await traced('post', '/api/v1/invitations/accept', '/api/v1/invitations/accept', (r) => r.set(bearer(joiner)).send({ token }));
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/members/{userId}', `${ws}/members/${joiner.userId}`, (r) => r.set(bearer(user)).send({ role: 'admin' }));
+    await traced('post', '/api/v1/invitations/accept', '/api/v1/invitations/accept', (r) =>
+      r.set(bearer(joiner)).send({ token }),
+    );
+    await traced(
+      'patch',
+      '/api/v1/workspaces/{workspaceId}/members/{userId}',
+      `${ws}/members/${joiner.userId}`,
+      (r) => r.set(bearer(user)).send({ role: 'admin' }),
+    );
 
     // Roles.
     const roles = (await t.http().get(`${ws}/roles`).set(bearer(user))).body as RoleView[];
     const guest = roles.find((role) => role.key === 'guest') as RoleView;
-    await traced('put', '/api/v1/workspaces/{workspaceId}/roles/{roleId}/permissions', `${ws}/roles/${guest.id}/permissions`, (r) =>
-      r.set(bearer(user)).set('If-Match', `"${guest.version}"`).send({ permissions: guest.permissions }),
+    await traced(
+      'put',
+      '/api/v1/workspaces/{workspaceId}/roles/{roleId}/permissions',
+      `${ws}/roles/${guest.id}/permissions`,
+      (r) =>
+        r.set(bearer(user)).set('If-Match', `"${guest.version}"`).send({ permissions: guest.permissions }),
     );
-    await traced('post', '/api/v1/workspaces/{workspaceId}/roles/reset-defaults', `${ws}/roles/reset-defaults`, (r) => r.set(bearer(user)));
+    await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/roles/reset-defaults',
+      `${ws}/roles/reset-defaults`,
+      (r) => r.set(bearer(user)),
+    );
 
     // Projects, the board and tasks (M2).
     const idem = (r: Test) => r.set(bearer(user)).set('Idempotency-Key', idempotencyKey());
-    const project = (await traced('post', '/api/v1/workspaces/{workspaceId}/projects', `${ws}/projects`, (r) => idem(r).send({ key: 'TRC', name: 'ردیابی' }))).body;
+    const project = (
+      await traced('post', '/api/v1/workspaces/{workspaceId}/projects', `${ws}/projects`, (r) =>
+        idem(r).send({ key: 'TRC', name: 'ردیابی' }),
+      )
+    ).body;
     const pj = `${ws}/projects/${project.id}`;
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) => r.set(bearer(user)).send({ description: 'شرح پروژه' }));
-    await traced('put', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/members/{userId}', `${pj}/members/${joiner.userId}`, (r) =>
-      r.set(bearer(user)).send({ role: 'contributor' }),
+    await traced('patch', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) =>
+      r.set(bearer(user)).send({ description: 'شرح پروژه' }),
     );
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/members/{userId}', `${pj}/members/${joiner.userId}`, (r) => r.set(bearer(user)));
-    await traced('put', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/star', `${pj}/star`, (r) => r.set(bearer(user)));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/star', `${pj}/star`, (r) => r.set(bearer(user)));
-    const workflow = (await traced('post', '/api/v1/workspaces/{workspaceId}/workflow/columns', `${ws}/workflow/columns`, (r) => idem(r).send({ projectId: project.id, title: 'موقت' })))
-      .body as WorkflowView;
+    await traced(
+      'put',
+      '/api/v1/workspaces/{workspaceId}/projects/{projectId}/members/{userId}',
+      `${pj}/members/${joiner.userId}`,
+      (r) => r.set(bearer(user)).send({ role: 'contributor' }),
+    );
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/projects/{projectId}/members/{userId}',
+      `${pj}/members/${joiner.userId}`,
+      (r) => r.set(bearer(user)),
+    );
+    await traced('put', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/star', `${pj}/star`, (r) =>
+      r.set(bearer(user)),
+    );
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/star', `${pj}/star`, (r) =>
+      r.set(bearer(user)),
+    );
+    const workflow = (
+      await traced(
+        'post',
+        '/api/v1/workspaces/{workspaceId}/workflow/columns',
+        `${ws}/workflow/columns`,
+        (r) => idem(r).send({ projectId: project.id, title: 'موقت' }),
+      )
+    ).body as WorkflowView;
     const column = workflow.columns.find((entry) => entry.title === 'موقت');
     const col = `${ws}/workflow/columns/${column?.id}`;
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/workflow/columns/{columnId}', col, (r) => r.set(bearer(user)).send({ tone: 'red' }));
-    const label = (await traced('post', '/api/v1/workspaces/{workspaceId}/labels', `${ws}/labels`, (r) => r.set(bearer(user)).send({ name: 'برچسب' }))).body;
+    await traced('patch', '/api/v1/workspaces/{workspaceId}/workflow/columns/{columnId}', col, (r) =>
+      r.set(bearer(user)).send({ tone: 'red' }),
+    );
+    const label = (
+      await traced('post', '/api/v1/workspaces/{workspaceId}/labels', `${ws}/labels`, (r) =>
+        r.set(bearer(user)).send({ name: 'برچسب' }),
+      )
+    ).body;
 
     // Files: one completed upload, one abandoned.
     const planned = (
@@ -168,246 +281,607 @@ describe('M1 checklist: audit trail and correlation', () => {
       )
     ).body as UploadView;
     await postToStore(planned.plan, PDF, 'application/pdf');
-    await traced('post', '/api/v1/workspaces/{workspaceId}/files/uploads/{attachmentId}/complete', `${ws}/files/uploads/${planned.attachment.id}/complete`, (r) =>
-      r.set(bearer(user)).send({}),
+    await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/files/uploads/{attachmentId}/complete',
+      `${ws}/files/uploads/${planned.attachment.id}/complete`,
+      (r) => r.set(bearer(user)).send({}),
     );
-    const abandoned = (await idem(t.http().post(`${ws}/files/uploads`)).send({ fileName: 'رها.pdf', size: 10, contentType: 'application/pdf' })).body as UploadView;
-    await traced('post', '/api/v1/workspaces/{workspaceId}/files/uploads/{attachmentId}/abort', `${ws}/files/uploads/${abandoned.attachment.id}/abort`, (r) => r.set(bearer(user)));
+    const abandoned = (
+      await idem(t.http().post(`${ws}/files/uploads`)).send({
+        fileName: 'رها.pdf',
+        size: 10,
+        contentType: 'application/pdf',
+      })
+    ).body as UploadView;
+    await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/files/uploads/{attachmentId}/abort',
+      `${ws}/files/uploads/${abandoned.attachment.id}/abort`,
+      (r) => r.set(bearer(user)),
+    );
     await t.flushNotifications();
 
-    const task = (await traced('post', '/api/v1/workspaces/{workspaceId}/tasks', `${ws}/tasks`, (r) => idem(r).send({ projectId: project.id, title: 'ردیابی', labelIds: [label.id] })))
-      .body as TaskDetail;
+    const task = (
+      await traced('post', '/api/v1/workspaces/{workspaceId}/tasks', `${ws}/tasks`, (r) =>
+        idem(r).send({ projectId: project.id, title: 'ردیابی', labelIds: [label.id] }),
+      )
+    ).body as TaskDetail;
     const tk = `${ws}/tasks/${task.id}`;
-    const patched = (await traced('patch', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}', tk, (r) => r.set(bearer(user)).set('If-Match', `"${task.version}"`).send({ priority: 'high' })))
-      .body as TaskDetail;
+    const patched = (
+      await traced('patch', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}', tk, (r) =>
+        r.set(bearer(user)).set('If-Match', `"${task.version}"`).send({ priority: 'high' }),
+      )
+    ).body as TaskDetail;
     await traced('post', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/move', `${tk}/move`, (r) =>
       r.set(bearer(user)).send({ columnId: column?.id, expectedVersion: patched.version }),
     );
-    await traced('post', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/complete', `${tk}/complete`, (r) => r.set(bearer(user)).send({ completed: true }));
-    await traced('put', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/star', `${tk}/star`, (r) => r.set(bearer(user)));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/star', `${tk}/star`, (r) => r.set(bearer(user)));
-    const subtask = (await traced('post', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/subtasks', `${tk}/subtasks`, (r) => r.set(bearer(user)).send({ title: 'گام' }))).body;
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/subtasks/{subtaskId}', `${tk}/subtasks/${subtask.id}`, (r) => r.set(bearer(user)).send({ done: true }));
-    await traced('post', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/subtasks/{subtaskId}/move', `${tk}/subtasks/${subtask.id}/move`, (r) => r.set(bearer(user)).send({}));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/subtasks/{subtaskId}', `${tk}/subtasks/${subtask.id}`, (r) => r.set(bearer(user)));
-    const comment = (await traced('post', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/comments', `${tk}/comments`, (r) => r.set(bearer(user)).send({ body: 'نظر' }))).body;
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/comments/{commentId}', `${tk}/comments/${comment.id}`, (r) => r.set(bearer(user)).send({ body: 'نظر تازه' }));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/comments/{commentId}', `${tk}/comments/${comment.id}`, (r) => r.set(bearer(user)));
-    await traced('post', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/attachments', `${tk}/attachments`, (r) => r.set(bearer(user)).send({ attachmentId: planned.attachment.id }));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/attachments/{attachmentId}', `${tk}/attachments/${planned.attachment.id}`, (r) => r.set(bearer(user)));
+    await traced('post', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/complete', `${tk}/complete`, (r) =>
+      r.set(bearer(user)).send({ completed: true }),
+    );
+    await traced('put', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/star', `${tk}/star`, (r) =>
+      r.set(bearer(user)),
+    );
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/star', `${tk}/star`, (r) =>
+      r.set(bearer(user)),
+    );
+    const subtask = (
+      await traced(
+        'post',
+        '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/subtasks',
+        `${tk}/subtasks`,
+        (r) => r.set(bearer(user)).send({ title: 'گام' }),
+      )
+    ).body;
+    await traced(
+      'patch',
+      '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/subtasks/{subtaskId}',
+      `${tk}/subtasks/${subtask.id}`,
+      (r) => r.set(bearer(user)).send({ done: true }),
+    );
+    await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/subtasks/{subtaskId}/move',
+      `${tk}/subtasks/${subtask.id}/move`,
+      (r) => r.set(bearer(user)).send({}),
+    );
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/subtasks/{subtaskId}',
+      `${tk}/subtasks/${subtask.id}`,
+      (r) => r.set(bearer(user)),
+    );
+    const comment = (
+      await traced(
+        'post',
+        '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/comments',
+        `${tk}/comments`,
+        (r) => r.set(bearer(user)).send({ body: 'نظر' }),
+      )
+    ).body;
+    await traced(
+      'patch',
+      '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/comments/{commentId}',
+      `${tk}/comments/${comment.id}`,
+      (r) => r.set(bearer(user)).send({ body: 'نظر تازه' }),
+    );
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/comments/{commentId}',
+      `${tk}/comments/${comment.id}`,
+      (r) => r.set(bearer(user)),
+    );
+    await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/attachments',
+      `${tk}/attachments`,
+      (r) => r.set(bearer(user)).send({ attachmentId: planned.attachment.id }),
+    );
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/tasks/{taskId}/attachments/{attachmentId}',
+      `${tk}/attachments/${planned.attachment.id}`,
+      (r) => r.set(bearer(user)),
+    );
     // Agile tracking: worklogs and dependencies, addressed through the task's project.
     const ag = `${pj}/tasks/${task.id}`;
     const worklog = (
-      await traced('post', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/worklogs', `${ag}/worklogs`, (r) => idem(r).send({ durationMinutes: 45 }))
-    ).body;
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/worklogs/{worklogId}', `${ag}/worklogs/${worklog.id}`, (r) =>
-      r.set(bearer(user)),
-    );
-    const blocker = (await idem(t.http().post(`${ws}/tasks`)).send({ projectId: project.id, title: 'پیش‌نیاز' })).body as TaskDetail;
-    const dependency = (
-      await traced('post', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/dependencies', `${ag}/dependencies`, (r) =>
-        r.set(bearer(user)).send({ targetTaskId: blocker.id, type: 'blocked_by' }),
+      await traced(
+        'post',
+        '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/worklogs',
+        `${ag}/worklogs`,
+        (r) => idem(r).send({ durationMinutes: 45 }),
       )
     ).body;
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/dependencies/{dependencyId}', `${ag}/dependencies/${dependency.id}`, (r) =>
-      r.set(bearer(user)),
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/worklogs/{worklogId}',
+      `${ag}/worklogs/${worklog.id}`,
+      (r) => r.set(bearer(user)),
     );
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/workflow/columns/{columnId}', col, (r) => r.set(bearer(user)).send({}));
+    const blocker = (
+      await idem(t.http().post(`${ws}/tasks`)).send({ projectId: project.id, title: 'پیش‌نیاز' })
+    ).body as TaskDetail;
+    const dependency = (
+      await traced(
+        'post',
+        '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/dependencies',
+        `${ag}/dependencies`,
+        (r) => r.set(bearer(user)).send({ targetTaskId: blocker.id, type: 'blocked_by' }),
+      )
+    ).body;
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/dependencies/{dependencyId}',
+      `${ag}/dependencies/${dependency.id}`,
+      (r) => r.set(bearer(user)),
+    );
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/workflow/columns/{columnId}', col, (r) =>
+      r.set(bearer(user)).send({}),
+    );
     await traced('delete', '/api/v1/workspaces/{workspaceId}/tasks/{taskId}', tk, (r) => r.set(bearer(user)));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/labels/{labelId}', `${ws}/labels/${label.id}`, (r) => r.set(bearer(user)));
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/labels/{labelId}',
+      `${ws}/labels/${label.id}`,
+      (r) => r.set(bearer(user)),
+    );
 
     // Notes and the calendar.
-    const category = (await traced('post', '/api/v1/workspaces/{workspaceId}/note-categories', `${ws}/note-categories`, (r) => r.set(bearer(user)).send({ label: 'دفتر' }))).body;
+    const category = (
+      await traced('post', '/api/v1/workspaces/{workspaceId}/note-categories', `${ws}/note-categories`, (r) =>
+        r.set(bearer(user)).send({ label: 'دفتر' }),
+      )
+    ).body;
     const cat = `${ws}/note-categories/${category.id}`;
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/note-categories/{categoryId}', cat, (r) => r.set(bearer(user)).send({ position: 5 }));
-    const note = (await traced('post', '/api/v1/workspaces/{workspaceId}/notes', `${ws}/notes`, (r) => idem(r).send({ categoryId: category.id, title: 'یادداشت', body: '- [ ] کار' }))).body;
+    await traced('patch', '/api/v1/workspaces/{workspaceId}/note-categories/{categoryId}', cat, (r) =>
+      r.set(bearer(user)).send({ position: 5 }),
+    );
+    const note = (
+      await traced('post', '/api/v1/workspaces/{workspaceId}/notes', `${ws}/notes`, (r) =>
+        idem(r).send({ categoryId: category.id, title: 'یادداشت', body: '- [ ] کار' }),
+      )
+    ).body;
     const nt = `${ws}/notes/${note.id}`;
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/notes/{noteId}', nt, (r) => r.set(bearer(user)).set('If-Match', `"${note.version}"`).send({ pinned: true }));
-    await traced('post', '/api/v1/workspaces/{workspaceId}/notes/{noteId}/task', `${nt}/task`, (r) => idem(r).send({ projectId: project.id }));
+    await traced('patch', '/api/v1/workspaces/{workspaceId}/notes/{noteId}', nt, (r) =>
+      r.set(bearer(user)).set('If-Match', `"${note.version}"`).send({ pinned: true }),
+    );
+    await traced('post', '/api/v1/workspaces/{workspaceId}/notes/{noteId}/task', `${nt}/task`, (r) =>
+      idem(r).send({ projectId: project.id }),
+    );
     await traced('delete', '/api/v1/workspaces/{workspaceId}/notes/{noteId}', nt, (r) => r.set(bearer(user)));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/note-categories/{categoryId}', cat, (r) => r.set(bearer(user)));
-    const event = (await traced('post', '/api/v1/workspaces/{workspaceId}/calendar/events', `${ws}/calendar/events`, (r) => idem(r).send({ kind: 'meeting', title: 'جلسه', date: '2030-01-01', startTime: '09:00' }))).body;
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/note-categories/{categoryId}', cat, (r) =>
+      r.set(bearer(user)),
+    );
+    const event = (
+      await traced('post', '/api/v1/workspaces/{workspaceId}/calendar/events', `${ws}/calendar/events`, (r) =>
+        idem(r).send({ kind: 'meeting', title: 'جلسه', date: '2030-01-01', startTime: '09:00' }),
+      )
+    ).body;
     const ev = `${ws}/calendar/events/${event.id}`;
-    await traced('patch', '/api/v1/workspaces/{workspaceId}/calendar/events/{eventId}', ev, (r) => r.set(bearer(user)).set('If-Match', `"${event.version}"`).send({ title: 'جلسه ماهانه' }));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/calendar/events/{eventId}', ev, (r) => r.set(bearer(user)));
-    await traced('post', '/api/v1/me/notifications/read', '/api/v1/me/notifications/read', (r) => r.set(bearer(user)).send({ all: true }));
+    await traced('patch', '/api/v1/workspaces/{workspaceId}/calendar/events/{eventId}', ev, (r) =>
+      r.set(bearer(user)).set('If-Match', `"${event.version}"`).send({ title: 'جلسه ماهانه' }),
+    );
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/calendar/events/{eventId}', ev, (r) =>
+      r.set(bearer(user)),
+    );
+    await traced('post', '/api/v1/me/notifications/read', '/api/v1/me/notifications/read', (r) =>
+      r.set(bearer(user)).send({ all: true }),
+    );
 
     // Chat (M3).
     const cv = '/api/v1/workspaces/{workspaceId}/conversations';
-    const conversation = (await traced('post', cv, `${ws}/conversations`, (r) => idem(r).send({ kind: 'group', title: 'ردیابی', memberIds: [] }))).body;
+    const conversation = (
+      await traced('post', cv, `${ws}/conversations`, (r) =>
+        idem(r).send({ kind: 'group', title: 'ردیابی', memberIds: [] }),
+      )
+    ).body;
     const cn = `${ws}/conversations/${conversation.id}`;
     await traced('patch', `${cv}/{conversationId}`, cn, (r) => r.set(bearer(user)).send({ topic: 'موضوع' }));
-    await traced('put', `${cv}/{conversationId}/members/{userId}`, `${cn}/members/${joiner.userId}`, (r) => r.set(bearer(user)).send({}));
-    await traced('put', `${cv}/{conversationId}/me`, `${cn}/me`, (r) => r.set(bearer(user)).send({ pinned: true }));
+    await traced('put', `${cv}/{conversationId}/members/{userId}`, `${cn}/members/${joiner.userId}`, (r) =>
+      r.set(bearer(user)).send({}),
+    );
+    await traced('put', `${cv}/{conversationId}/me`, `${cn}/me`, (r) =>
+      r.set(bearer(user)).send({ pinned: true }),
+    );
     const message = (
-      await traced('post', `${cv}/{conversationId}/messages`, `${cn}/messages`, (r) => r.set(bearer(user)).send({ clientMsgId: randomUUID(), kind: 'text', text: 'پیام' }))
+      await traced('post', `${cv}/{conversationId}/messages`, `${cn}/messages`, (r) =>
+        r.set(bearer(user)).send({ clientMsgId: randomUUID(), kind: 'text', text: 'پیام' }),
+      )
     ).body;
     const mg = `${cn}/messages/${message.id}`;
-    await traced('patch', `${cv}/{conversationId}/messages/{messageId}`, mg, (r) => r.set(bearer(user)).send({ text: 'پیام ویرایش‌شده' }));
-    await traced('put', `${cv}/{conversationId}/messages/{messageId}/reactions/{emoji}`, `${mg}/reactions/${encodeURIComponent('👍')}`, (r) => r.set(bearer(user)));
-    await traced('delete', `${cv}/{conversationId}/messages/{messageId}/reactions/{emoji}`, `${mg}/reactions/${encodeURIComponent('👍')}`, (r) => r.set(bearer(user)));
-    await traced('post', `${cv}/{conversationId}/messages/{messageId}/task`, `${mg}/task`, (r) => idem(r).send({ projectId: project.id, title: 'از پیام' }));
-    await traced('post', `${cv}/{conversationId}/read`, `${cn}/read`, (r) => r.set(bearer(user)).send({ seq: 1 }));
+    await traced('patch', `${cv}/{conversationId}/messages/{messageId}`, mg, (r) =>
+      r.set(bearer(user)).send({ text: 'پیام ویرایش‌شده' }),
+    );
+    await traced(
+      'put',
+      `${cv}/{conversationId}/messages/{messageId}/reactions/{emoji}`,
+      `${mg}/reactions/${encodeURIComponent('👍')}`,
+      (r) => r.set(bearer(user)),
+    );
+    await traced(
+      'delete',
+      `${cv}/{conversationId}/messages/{messageId}/reactions/{emoji}`,
+      `${mg}/reactions/${encodeURIComponent('👍')}`,
+      (r) => r.set(bearer(user)),
+    );
+    await traced('post', `${cv}/{conversationId}/messages/{messageId}/task`, `${mg}/task`, (r) =>
+      idem(r).send({ projectId: project.id, title: 'از پیام' }),
+    );
+    await traced('post', `${cv}/{conversationId}/read`, `${cn}/read`, (r) =>
+      r.set(bearer(user)).send({ seq: 1 }),
+    );
     await traced('delete', `${cv}/{conversationId}/messages/{messageId}`, mg, (r) => r.set(bearer(user)));
     // Phase 3.2: scheduled messages (one sent at once, one cancelled) and working hours.
     const sm = '/api/v1/workspaces/{workspaceId}/scheduled-messages';
     const later = new Date(Date.now() + 3600_000).toISOString();
     const scheduleOne = (text: string) =>
-      traced('post', `${cv}/{conversationId}/scheduled-messages`, `${cn}/scheduled-messages`, (r) => r.set(bearer(user)).send({ clientMsgId: randomUUID(), kind: 'text', text, scheduledAt: later }));
+      traced('post', `${cv}/{conversationId}/scheduled-messages`, `${cn}/scheduled-messages`, (r) =>
+        r.set(bearer(user)).send({ clientMsgId: randomUUID(), kind: 'text', text, scheduledAt: later }),
+      );
     const soon = (await scheduleOne('زمان‌بندی‌شده')).body;
-    await traced('post', `${sm}/{scheduledId}/send`, `${ws}/scheduled-messages/${soon.id}/send`, (r) => r.set(bearer(user)));
-    const dropped = (await scheduleOne('لغوشده')).body;
-    await traced('delete', `${sm}/{scheduledId}`, `${ws}/scheduled-messages/${dropped.id}`, (r) => r.set(bearer(user)));
-    await traced('put', '/api/v1/workspaces/{workspaceId}/me/working-hours', `${ws}/me/working-hours`, (r) =>
-      r.set(bearer(user)).send({ autoReplyEnabled: true, days: ['saturday'], start: '09:00', end: '17:00', message: 'بیرون از ساعت کاری' }),
+    await traced('post', `${sm}/{scheduledId}/send`, `${ws}/scheduled-messages/${soon.id}/send`, (r) =>
+      r.set(bearer(user)),
     );
-    await traced('delete', `${cv}/{conversationId}/members/{userId}`, `${cn}/members/${joiner.userId}`, (r) => r.set(bearer(user)));
+    const dropped = (await scheduleOne('لغوشده')).body;
+    await traced('delete', `${sm}/{scheduledId}`, `${ws}/scheduled-messages/${dropped.id}`, (r) =>
+      r.set(bearer(user)),
+    );
+    await traced('put', '/api/v1/workspaces/{workspaceId}/me/working-hours', `${ws}/me/working-hours`, (r) =>
+      r.set(bearer(user)).send({
+        autoReplyEnabled: true,
+        days: ['saturday'],
+        start: '09:00',
+        end: '17:00',
+        message: 'بیرون از ساعت کاری',
+      }),
+    );
+    await traced('delete', `${cv}/{conversationId}/members/{userId}`, `${cn}/members/${joiner.userId}`, (r) =>
+      r.set(bearer(user)),
+    );
     await t.admin.query('update conversations set archived_at = now() where id = $1', [conversation.id]);
-    await traced('delete', `${cv}/{conversationId}`, cn, (r) => r.set(bearer(user)).send({ confirmTitle: conversation.title }));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) => r.set(bearer(user)));
+    await traced('delete', `${cv}/{conversationId}`, cn, (r) =>
+      r.set(bearer(user)).send({ confirmTitle: conversation.title }),
+    );
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) =>
+      r.set(bearer(user)),
+    );
     // Phase 3.1: out of the trash, and back into it.
-    await traced('post', '/api/v1/workspaces/{workspaceId}/projects/{projectId}/restore', `${pj}/restore`, (r) => r.set(bearer(user)));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) => r.set(bearer(user)));
+    await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/projects/{projectId}/restore',
+      `${pj}/restore`,
+      (r) => r.set(bearer(user)),
+    );
+    await traced('delete', '/api/v1/workspaces/{workspaceId}/projects/{projectId}', pj, (r) =>
+      r.set(bearer(user)),
+    );
 
     // Platform super admin: ending sessions and a password reset, by a flagged operator.
     const operator = await withAdminPassword(t, await signIn(t, randomPhone(), 'اپراتور پلتفرم'));
     await t.admin.query('update users set is_platform_admin = true where id = $1', [operator.userId]);
     const target = await signIn(t, randomPhone(), 'کاربر هدف');
     const targetDevice = await signIn(t, target.phone);
-    await traced('post', '/api/v1/admin/sessions/{sessionId}/revoke', `/api/v1/admin/sessions/${targetDevice.sessionId}/revoke`, (r) => r.set(bearer(operator)));
-    await traced('post', '/api/v1/admin/users/{userId}/sessions/revoke-all', `/api/v1/admin/users/${target.userId}/sessions/revoke-all`, (r) => r.set(bearer(operator)));
-    const reset = await traced('post', '/api/v1/admin/users/{userId}/password-reset', `/api/v1/admin/users/${target.userId}/password-reset`, (r) =>
-      r.set(bearer(operator)).send({ channel: 'manual' }),
+    await traced(
+      'post',
+      '/api/v1/admin/sessions/{sessionId}/revoke',
+      `/api/v1/admin/sessions/${targetDevice.sessionId}/revoke`,
+      (r) => r.set(bearer(operator)),
     );
-    await traced('post', '/api/v1/password-reset', '/api/v1/password-reset', (r) => r.send({ token: (reset.body as { code: string }).code, newPassword: 'Tazeh-Ramz-1405!' }));
+    await traced(
+      'post',
+      '/api/v1/admin/users/{userId}/sessions/revoke-all',
+      `/api/v1/admin/users/${target.userId}/sessions/revoke-all`,
+      (r) => r.set(bearer(operator)),
+    );
+    const reset = await traced(
+      'post',
+      '/api/v1/admin/users/{userId}/password-reset',
+      `/api/v1/admin/users/${target.userId}/password-reset`,
+      (r) => r.set(bearer(operator)).send({ channel: 'manual' }),
+    );
+    await traced('post', '/api/v1/password-reset', '/api/v1/password-reset', (r) =>
+      r.send({ token: (reset.body as { code: string }).code, newPassword: 'Tazeh-Ramz-1405!' }),
+    );
     // Phase 2: moderation.
-    await traced('put', '/api/v1/admin/users/{userId}/password-reset-required', `/api/v1/admin/users/${target.userId}/password-reset-required`, (r) =>
-      r.set(bearer(operator)).send({ required: true, reason: 'ورود مشکوک' }),
+    await traced(
+      'put',
+      '/api/v1/admin/users/{userId}/password-reset-required',
+      `/api/v1/admin/users/${target.userId}/password-reset-required`,
+      (r) => r.set(bearer(operator)).send({ required: true, reason: 'ورود مشکوک' }),
     );
-    await traced('post', '/api/v1/admin/users/{userId}/suspend', `/api/v1/admin/users/${target.userId}/suspend`, (r) => r.set(bearer(operator)).send({ reason: 'نقض قوانین' }));
-    await traced('post', '/api/v1/admin/users/{userId}/unsuspend', `/api/v1/admin/users/${target.userId}/unsuspend`, (r) => r.set(bearer(operator)).send({}));
+    await traced(
+      'post',
+      '/api/v1/admin/users/{userId}/suspend',
+      `/api/v1/admin/users/${target.userId}/suspend`,
+      (r) => r.set(bearer(operator)).send({ reason: 'نقض قوانین' }),
+    );
+    await traced(
+      'post',
+      '/api/v1/admin/users/{userId}/unsuspend',
+      `/api/v1/admin/users/${target.userId}/unsuspend`,
+      (r) => r.set(bearer(operator)).send({}),
+    );
     // Phase 3: a workspace of its own, suspended and back, its limits, and its owner replaced.
     const { owner: tenant, workspace: moderated } = await ownerWithWorkspace(t, 'فضای نظارت');
     const heir = await addMember(t, tenant, moderated.id, 'member');
     const wa = `/api/v1/admin/workspaces/${moderated.id}`;
-    await traced('post', '/api/v1/admin/workspaces/{workspaceId}/suspend', `${wa}/suspend`, (r) => r.set(bearer(operator)).send({ reason: 'گزارش تخلف' }));
-    await traced('post', '/api/v1/admin/workspaces/{workspaceId}/unsuspend', `${wa}/unsuspend`, (r) => r.set(bearer(operator)).send({}));
-    await traced('put', '/api/v1/admin/workspaces/{workspaceId}/limits', `${wa}/limits`, (r) =>
-      r.set(bearer(operator)).send({ planId: 'team', overrides: { maxProjects: 3 }, reason: 'قرارداد سازمانی' }),
+    await traced('post', '/api/v1/admin/workspaces/{workspaceId}/suspend', `${wa}/suspend`, (r) =>
+      r.set(bearer(operator)).send({ reason: 'گزارش تخلف' }),
     );
-    await traced('post', '/api/v1/admin/workspaces/{workspaceId}/transfer-ownership', `${wa}/transfer-ownership`, (r) =>
-      r.set(bearer(operator)).send({ userId: heir.userId, reason: 'مالک در دسترس نیست' }),
+    await traced('post', '/api/v1/admin/workspaces/{workspaceId}/unsuspend', `${wa}/unsuspend`, (r) =>
+      r.set(bearer(operator)).send({}),
+    );
+    await traced('put', '/api/v1/admin/workspaces/{workspaceId}/limits', `${wa}/limits`, (r) =>
+      r
+        .set(bearer(operator))
+        .send({ planId: 'team', overrides: { maxProjects: 3 }, reason: 'قرارداد سازمانی' }),
+    );
+    await traced(
+      'post',
+      '/api/v1/admin/workspaces/{workspaceId}/transfer-ownership',
+      `${wa}/transfer-ownership`,
+      (r) => r.set(bearer(operator)).send({ userId: heir.userId, reason: 'مالک در دسترس نیست' }),
     );
 
     // Phase 4: create, edit and soft-archive a global platform announcement.
     const broadcast = (
       await traced('post', '/api/v1/admin/broadcasts', '/api/v1/admin/broadcasts', (r) =>
-        r.set(bearer(operator)).set('Idempotency-Key', idempotencyKey()).send({ message: 'اطلاعیه ردیابی', level: 'info' }),
+        r
+          .set(bearer(operator))
+          .set('Idempotency-Key', idempotencyKey())
+          .send({ message: 'اطلاعیه ردیابی', level: 'info' }),
       )
     ).body as { id: string };
-    await traced('patch', '/api/v1/admin/broadcasts/{broadcastId}', `/api/v1/admin/broadcasts/${broadcast.id}`, (r) =>
-      r.set(bearer(operator)).send({ message: 'اطلاعیه اصلاح‌شده' }),
+    await traced(
+      'patch',
+      '/api/v1/admin/broadcasts/{broadcastId}',
+      `/api/v1/admin/broadcasts/${broadcast.id}`,
+      (r) => r.set(bearer(operator)).send({ message: 'اطلاعیه اصلاح‌شده' }),
     );
-    await traced('delete', '/api/v1/admin/broadcasts/{broadcastId}', `/api/v1/admin/broadcasts/${broadcast.id}`, (r) => r.set(bearer(operator)));
+    await traced(
+      'delete',
+      '/api/v1/admin/broadcasts/{broadcastId}',
+      `/api/v1/admin/broadcasts/${broadcast.id}`,
+      (r) => r.set(bearer(operator)),
+    );
 
     // Conditional platform admin sign-in and recovery through an address whose ownership was proved.
     // Platform CMS: every new mutation keeps the same request/trace audit contract.
-    const siteAuth = (r: Test) => r.set(bearer(operator)).set('Cookie', operator.cookies).set('X-CSRF-Token', operator.csrf).set('Origin', ORIGIN);
+    const siteAuth = (r: Test) =>
+      r
+        .set(bearer(operator))
+        .set('Cookie', operator.cookies)
+        .set('X-CSRF-Token', operator.csrf)
+        .set('Origin', ORIGIN);
     const site = '/api/v1/admin/site';
-    const editorial = { title: 'صفحه ردیابی', description: 'بررسی تاریخچه و انتشار محتوای سایت', sections: [], seo: {}, data: {} };
-    const sitePage = (await traced('post', `${site}/documents`, `${site}/documents`, (r) => siteAuth(r).send({ kind: 'page', slug: 'trace-editorial', draft: editorial }))).body as { id: string };
+    const editorial = {
+      title: 'صفحه ردیابی',
+      description: 'بررسی تاریخچه و انتشار محتوای سایت',
+      sections: [],
+      seo: {},
+      data: {},
+    };
+    const sitePage = (
+      await traced('post', `${site}/documents`, `${site}/documents`, (r) =>
+        siteAuth(r).send({ kind: 'page', slug: 'trace-editorial', draft: editorial }),
+      )
+    ).body as { id: string };
     const sitePath = `${site}/documents/${sitePage.id}`;
-    await traced('put', `${site}/documents/{id}`, sitePath, (r) => siteAuth(r).send({ kind: 'page', slug: 'trace-editorial', draft: { ...editorial, title: 'ویرایش ردیابی' } }));
+    await traced('put', `${site}/documents/{id}`, sitePath, (r) =>
+      siteAuth(r).send({
+        kind: 'page',
+        slug: 'trace-editorial',
+        draft: { ...editorial, title: 'ویرایش ردیابی' },
+      }),
+    );
     await traced('post', `${site}/documents/{id}/publish`, `${sitePath}/publish`, siteAuth);
     const revisionResponse = await t.http().get(`${sitePath}/revisions`).set(bearer(operator));
     const revision = (revisionResponse.body as { id: string }[])[0];
     if (!revision) throw new Error('CMS revision missing');
-    await traced('post', `${site}/documents/{id}/restore`, `${sitePath}/restore`, (r) => siteAuth(r).send({ revisionId: revision.id }));
+    await traced('post', `${site}/documents/{id}/restore`, `${sitePath}/restore`, (r) =>
+      siteAuth(r).send({ revisionId: revision.id }),
+    );
     await traced('post', `${site}/documents/{id}/unpublish`, `${sitePath}/unpublish`, siteAuth);
     await traced('post', `${site}/documents/{id}/archive`, `${sitePath}/archive`, siteAuth);
-    const lead = (await traced('post', '/api/v1/public/site/submissions', '/api/v1/public/site/submissions', (r) => r.set('Origin', ORIGIN).send({ kind: 'contact', fullName: 'فرستنده آزمون', email: 'trace@example.com', message: 'درخواست ردیابی ثبت پیام عمومی', consent: true, website: '' }))).body as { id: string };
-    await traced('patch', `${site}/submissions/{id}`, `${site}/submissions/${lead.id}`, (r) => siteAuth(r).send({ status: 'in-progress', notes: 'در حال بررسی' }));
-    const redirect = (await traced('post', `${site}/redirects`, `${site}/redirects`, (r) => siteAuth(r).send({ fromPath: '/old-trace-page', toPath: '/features' }))).body as { id: string };
+    const lead = (
+      await traced('post', '/api/v1/public/site/submissions', '/api/v1/public/site/submissions', (r) =>
+        r.set('Origin', ORIGIN).send({
+          kind: 'contact',
+          fullName: 'فرستنده آزمون',
+          email: 'trace@example.com',
+          message: 'درخواست ردیابی ثبت پیام عمومی',
+          consent: true,
+          website: '',
+        }),
+      )
+    ).body as { id: string };
+    await traced('patch', `${site}/submissions/{id}`, `${site}/submissions/${lead.id}`, (r) =>
+      siteAuth(r).send({ status: 'in-progress', notes: 'در حال بررسی' }),
+    );
+    const redirect = (
+      await traced('post', `${site}/redirects`, `${site}/redirects`, (r) =>
+        siteAuth(r).send({ fromPath: '/old-trace-page', toPath: '/features' }),
+      )
+    ).body as { id: string };
     await traced('delete', `${site}/redirects/{id}`, `${site}/redirects/${redirect.id}`, siteAuth);
-    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF1cAAAAASUVORK5CYII=', 'base64');
-    const mediaPlan = (await traced('post', `${site}/media`, `${site}/media`, (r) => siteAuth(r).send({ filename: 'trace-image.png', contentType: 'image/png', size: png.length, alt: 'تصویر بررسی ثبت رویداد' }))).body as { media: { id: string }; upload: { url: string; fields: Record<string, string> } };
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF1cAAAAASUVORK5CYII=',
+      'base64',
+    );
+    const mediaPlan = (
+      await traced('post', `${site}/media`, `${site}/media`, (r) =>
+        siteAuth(r).send({
+          filename: 'trace-image.png',
+          contentType: 'image/png',
+          size: png.length,
+          alt: 'تصویر بررسی ثبت رویداد',
+        }),
+      )
+    ).body as { media: { id: string }; upload: { url: string; fields: Record<string, string> } };
     const mediaForm = new FormData();
     for (const [name, value] of Object.entries(mediaPlan.upload.fields)) mediaForm.append(name, value);
     mediaForm.append('Content-Type', 'image/png');
     mediaForm.append('file', new Blob([png], { type: 'image/png' }), 'trace-image.png');
     expect((await fetch(mediaPlan.upload.url, { method: 'POST', body: mediaForm })).status).toBeLessThan(300);
-    await traced('post', `${site}/media/{id}/complete`, `${site}/media/${mediaPlan.media.id}/complete`, siteAuth);
-    await traced('patch', `${site}/media/{id}`, `${site}/media/${mediaPlan.media.id}`, (r) => siteAuth(r).send({ alt: 'متن جایگزین ویرایش‌شده', archive: true }));
+    await traced(
+      'post',
+      `${site}/media/{id}/complete`,
+      `${site}/media/${mediaPlan.media.id}/complete`,
+      siteAuth,
+    );
+    await traced('patch', `${site}/media/{id}`, `${site}/media/${mediaPlan.media.id}`, (r) =>
+      siteAuth(r).send({ alt: 'متن جایگزین ویرایش‌شده', archive: true }),
+    );
 
     // Keep this after platform operations: recovery revokes every operator session.
-    await traced('patch', '/api/v1/me', '/api/v1/me', (r) => r.set(bearer(operator)).send({ email: 'operator@rahnama.ir' }));
-    await traced('post', '/api/v1/auth/email/verification/request', '/api/v1/auth/email/verification/request', (r) => r.set(bearer(operator)).send({}));
+    await traced('patch', '/api/v1/me', '/api/v1/me', (r) =>
+      r.set(bearer(operator)).send({ email: 'operator@rahnama.ir' }),
+    );
+    await traced(
+      'post',
+      '/api/v1/auth/email/verification/request',
+      '/api/v1/auth/email/verification/request',
+      (r) => r.set(bearer(operator)).send({}),
+    );
     const emailProof = t.mail.at(-1)?.text.match(/[A-Za-z0-9_-]{43}/)?.[0];
     expect(emailProof).toBeTruthy();
-    await traced('post', '/api/v1/auth/email/verification/confirm', '/api/v1/auth/email/verification/confirm', (r) => r.set(bearer(operator)).send({ code: emailProof }));
+    await traced(
+      'post',
+      '/api/v1/auth/email/verification/confirm',
+      '/api/v1/auth/email/verification/confirm',
+      (r) => r.set(bearer(operator)).send({ code: emailProof }),
+    );
     const adminProof = async () => {
       const otp = await requestOtp(t, operator.phone);
-      const verified = await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: otp.challengeId, code: lastCode(t, operator.phone) });
+      const verified = await t
+        .http()
+        .post('/api/v1/auth/otp/verify')
+        .send({ challengeId: otp.challengeId, code: lastCode(t, operator.phone) });
       expect(verified.status).toBe(200);
       const result = verified.body as OtpVerifyResult;
       if (result.status !== 'password_required') throw new Error('expected an admin password challenge');
       return result.temporaryToken;
     };
     const passwordProof = await adminProof();
-    await traced('post', '/api/v1/auth/admin/password', '/api/v1/auth/admin/password', (r) => r.send({ temporaryToken: passwordProof, password: STRONG_PASSWORD }));
+    await traced('post', '/api/v1/auth/admin/password', '/api/v1/auth/admin/password', (r) =>
+      r.send({ temporaryToken: passwordProof, password: STRONG_PASSWORD }),
+    );
     const recoveryProof = await adminProof();
-    await traced('post', '/api/v1/auth/admin/recovery/request', '/api/v1/auth/admin/recovery/request', (r) => r.send({ temporaryToken: recoveryProof }));
+    await traced('post', '/api/v1/auth/admin/recovery/request', '/api/v1/auth/admin/recovery/request', (r) =>
+      r.send({ temporaryToken: recoveryProof }),
+    );
     const recoveryCode = t.mail.at(-1)?.text.match(/[A-Za-z0-9_-]{43}/)?.[0];
     expect(recoveryCode).toBeTruthy();
-    await traced('post', '/api/v1/auth/admin/recovery/complete', '/api/v1/auth/admin/recovery/complete', (r) =>
-      r.send({ temporaryToken: recoveryProof, code: recoveryCode, newPassword: 'Recovered-Operator-1405!' }),
+    await traced(
+      'post',
+      '/api/v1/auth/admin/recovery/complete',
+      '/api/v1/auth/admin/recovery/complete',
+      (r) =>
+        r.send({
+          temporaryToken: recoveryProof,
+          code: recoveryCode,
+          newPassword: 'Recovered-Operator-1405!',
+        }),
     );
 
     // Phone and password: sign-in, confirming that session with an SMS code, and recovery.
     const keyholder = await withAdminPassword(t, await signIn(t, randomPhone(), 'دارنده رمز'));
     const passwordSession = (
-      await traced('post', '/api/v1/auth/password/login', '/api/v1/auth/password/login', (r) => r.send({ phone: localForm(keyholder.phone), password: STRONG_PASSWORD }))
+      await traced('post', '/api/v1/auth/password/login', '/api/v1/auth/password/login', (r) =>
+        r.send({ phone: localForm(keyholder.phone), password: STRONG_PASSWORD }),
+      )
     ).body as AuthSession;
-    const clearCooldown = () => t.redis.del(`${t.env.REDIS_PREFIX}:otp:send:phone:${keyholder.phone}:cooldown`);
+    const clearCooldown = () =>
+      t.redis.del(`${t.env.REDIS_PREFIX}:otp:send:phone:${keyholder.phone}:cooldown`);
     await clearCooldown();
-    const confirmation = await traced('post', '/api/v1/auth/otp/confirm/request', '/api/v1/auth/otp/confirm/request', (r) =>
-      r.set('Authorization', `Bearer ${passwordSession.accessToken}`),
+    const confirmation = await traced(
+      'post',
+      '/api/v1/auth/otp/confirm/request',
+      '/api/v1/auth/otp/confirm/request',
+      (r) => r.set('Authorization', `Bearer ${passwordSession.accessToken}`),
     );
     await traced('post', '/api/v1/auth/otp/confirm', '/api/v1/auth/otp/confirm', (r) =>
-      r.set('Authorization', `Bearer ${passwordSession.accessToken}`).send({ challengeId: confirmation.body.challengeId, code: lastCode(t, keyholder.phone) }),
+      r
+        .set('Authorization', `Bearer ${passwordSession.accessToken}`)
+        .send({ challengeId: confirmation.body.challengeId, code: lastCode(t, keyholder.phone) }),
     );
     await clearCooldown();
-    const recovery = await traced('post', '/api/v1/auth/password/forgot', '/api/v1/auth/password/forgot', (r) => r.send({ phone: localForm(keyholder.phone) }));
+    const recovery = await traced(
+      'post',
+      '/api/v1/auth/password/forgot',
+      '/api/v1/auth/password/forgot',
+      (r) => r.send({ phone: localForm(keyholder.phone) }),
+    );
     await traced('post', '/api/v1/auth/password/recover', '/api/v1/auth/password/recover', (r) =>
-      r.send({ challengeId: recovery.body.challengeId, code: t.sms.lastTo(keyholder.phone)?.tokens.code, newPassword: 'Tazeh-Ramz-1405!' }),
+      r.send({
+        challengeId: recovery.body.challengeId,
+        code: t.sms.lastTo(keyholder.phone)?.tokens.code,
+        newPassword: 'Tazeh-Ramz-1405!',
+      }),
     );
 
     // Ownership, removal, deletion, and finally signing out.
-    await traced('post', '/api/v1/workspaces/{workspaceId}/transfer-ownership', `${ws}/transfer-ownership`, (r) => r.set(bearer(user)).send({ userId: joiner.userId }));
+    await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/transfer-ownership',
+      `${ws}/transfer-ownership`,
+      (r) => r.set(bearer(user)).send({ userId: joiner.userId }),
+    );
     const newOwner = { ...joiner };
-    await traced('delete', '/api/v1/workspaces/{workspaceId}/members/{userId}', `${ws}/members/${user.userId}`, (r) => r.set(bearer(newOwner)));
-    await traced('delete', '/api/v1/workspaces/{workspaceId}', ws, (r) => r.set(bearer(newOwner)).send({ confirmName: 'ردیابی' }));
-    await traced('post', '/api/v1/auth/logout', '/api/v1/auth/logout', (r) => r.set(bearer(user)).set('Cookie', user.cookies).set('X-CSRF-Token', user.csrf).set('Origin', ORIGIN));
+    await traced(
+      'delete',
+      '/api/v1/workspaces/{workspaceId}/members/{userId}',
+      `${ws}/members/${user.userId}`,
+      (r) => r.set(bearer(newOwner)),
+    );
+    await traced('delete', '/api/v1/workspaces/{workspaceId}', ws, (r) =>
+      r.set(bearer(newOwner)).send({ confirmName: 'ردیابی' }),
+    );
+    await traced('post', '/api/v1/auth/logout', '/api/v1/auth/logout', (r) =>
+      r.set(bearer(user)).set('Cookie', user.cookies).set('X-CSRF-Token', user.csrf).set('Origin', ORIGIN),
+    );
 
     // Administrative access management: independent super-admin authority and a real setup.
     const root = await withAdminPassword(t, await signIn(t, '+989901819085', 'مالک پلتفرم'));
-    await t.admin.query("update users set is_platform_admin=true, platform_admin_role='SUPER_ADMIN' where id=$1", [root.userId]);
+    await t.admin.query(
+      "update users set is_platform_admin=true, platform_admin_role='SUPER_ADMIN' where id=$1",
+      [root.userId],
+    );
     const administrativePhone = randomPhone();
-    const provisioned = await traced('post', '/api/v1/admin/users/roles', '/api/v1/admin/users/roles', r => r.set(bearer(root)).send({ phone: administrativePhone, fullName: 'مدیر در انتظار', recoveryEmail: 'setup@rahnama.ir', role: 'ADMIN' }));
+    const provisioned = await traced('post', '/api/v1/admin/users/roles', '/api/v1/admin/users/roles', (r) =>
+      r.set(bearer(root)).send({
+        phone: administrativePhone,
+        fullName: 'مدیر در انتظار',
+        recoveryEmail: 'setup@rahnama.ir',
+        role: 'ADMIN',
+      }),
+    );
     const setupOtp = await requestOtp(t, administrativePhone);
-    const setupProof = await t.http().post('/api/v1/auth/otp/verify').send({ challengeId: setupOtp.challengeId, code: lastCode(t, administrativePhone) });
+    const setupProof = await t
+      .http()
+      .post('/api/v1/auth/otp/verify')
+      .send({ challengeId: setupOtp.challengeId, code: lastCode(t, administrativePhone) });
     expect(setupProof.body.status).toBe('admin_setup_required');
     const temporaryToken = setupProof.body.temporaryToken as string;
-    await traced('post', '/api/v1/auth/admin/setup/request', '/api/v1/auth/admin/setup/request', r => r.send({ temporaryToken }));
+    await traced('post', '/api/v1/auth/admin/setup/request', '/api/v1/auth/admin/setup/request', (r) =>
+      r.send({ temporaryToken }),
+    );
     const setupCode = t.mail.at(-1)?.text.match(/[A-Za-z0-9_-]{43}/)?.[0];
     expect(setupCode).toBeTruthy();
-    await traced('post', '/api/v1/auth/admin/setup/complete', '/api/v1/auth/admin/setup/complete', r => r.send({ temporaryToken, code: setupCode, newPassword: STRONG_PASSWORD }));
+    await traced('post', '/api/v1/auth/admin/setup/complete', '/api/v1/auth/admin/setup/complete', (r) =>
+      r.send({ temporaryToken, code: setupCode, newPassword: STRONG_PASSWORD }),
+    );
     const rolePath = `/api/v1/admin/users/roles/${provisioned.body.id}`;
-    await traced('patch', '/api/v1/admin/users/roles/{id}', rolePath, r => r.set(bearer(root)).send({ role: 'OPERATOR' }));
-    await traced('delete', '/api/v1/admin/users/roles/{id}', rolePath, r => r.set(bearer(root)));
+    await traced('patch', '/api/v1/admin/users/roles/{id}', rolePath, (r) =>
+      r.set(bearer(root)).send({ role: 'OPERATOR' }),
+    );
+    await traced('delete', '/api/v1/admin/users/roles/{id}', rolePath, (r) => r.set(bearer(root)));
 
     // Every mutating operation in the API was exercised…
-    const document = JSON.parse(await readFile(OPENAPI_FILE, 'utf8')) as { paths: Record<string, Record<string, unknown>> };
+    const document = JSON.parse(await readFile(OPENAPI_FILE, 'utf8')) as {
+      paths: Record<string, Record<string, unknown>>;
+    };
     const mutating = Object.entries(document.paths).flatMap(([path, operations]) =>
       Object.keys(operations)
         .filter((method) => ['post', 'put', 'patch', 'delete'].includes(method))
@@ -422,8 +896,15 @@ describe('M1 checklist: audit trail and correlation', () => {
     );
     for (const call of calls) {
       const audited = rows.filter((row) => row.request_id === call.requestId);
-      expect({ route: call.template, audited: audited.length > 0 }).toEqual({ route: call.template, audited: true });
-      for (const row of audited) expect({ route: call.template, traceId: row.trace_id }).toEqual({ route: call.template, traceId: call.traceId });
+      expect({ route: call.template, audited: audited.length > 0 }).toEqual({
+        route: call.template,
+        audited: true,
+      });
+      for (const row of audited)
+        expect({ route: call.template, traceId: row.trace_id }).toEqual({
+          route: call.template,
+          traceId: call.traceId,
+        });
     }
   });
 
@@ -443,7 +924,9 @@ describe('M1 checklist: audit trail and correlation', () => {
     expect(response.status).toBe(201);
     await t.flushNotifications();
 
-    const lines = t.logs.filter((line) => line.requestId === requestId || (line.req as { id?: string } | undefined)?.id === requestId);
+    const lines = t.logs.filter(
+      (line) => line.requestId === requestId || (line.req as { id?: string } | undefined)?.id === requestId,
+    );
     const completed = lines.find((line) => line.msg === 'request completed');
     expect(completed).toMatchObject({ traceId, userId: owner.userId, workspaceId: workspace.id });
     // The worker's SMS log line belongs to the same request and trace.
@@ -479,8 +962,14 @@ describe('M1 checklist: query budgets (no N+1)', () => {
     await t.flushNotifications();
     for (const phone of phones) {
       const member = await signIn(t, phone);
-      const link = [...t.sms.sent].reverse().find((sms) => sms.to === phone && sms.template === 'invite')?.tokens.link ?? '';
-      await t.http().post('/api/v1/invitations/accept').set(bearer(member)).send({ token: new URL(link).searchParams.get('token') });
+      const link =
+        [...t.sms.sent].reverse().find((sms) => sms.to === phone && sms.template === 'invite')?.tokens.link ??
+        '';
+      await t
+        .http()
+        .post('/api/v1/invitations/accept')
+        .set(bearer(member))
+        .send({ token: new URL(link).searchParams.get('token') });
     }
     const budget = async (path: string, max: number) => {
       await t.http().get(path).set(bearer(owner)); // warm the permission caches
@@ -523,7 +1012,14 @@ describe('M1 checklist: query budgets (no N+1)', () => {
         .post(`${ws}/calendar/events`)
         .set(bearer(owner))
         .set('Idempotency-Key', idempotencyKey())
-        .send({ kind: 'meeting', title: `جلسه ${index}`, date: `2026-11-0${index + 2}`, startTime: '10:00', projectId: project.id, attendeeIds: [member.userId] });
+        .send({
+          kind: 'meeting',
+          title: `جلسه ${index}`,
+          date: `2026-11-0${index + 2}`,
+          startTime: '10:00',
+          projectId: project.id,
+          attendeeIds: [member.userId],
+        });
     }
     const budget = async (as: Session, path: string, max: number) => {
       await t.http().get(path).set(bearer(as)); // warm the permission caches
@@ -550,12 +1046,28 @@ describe('M1 checklist: query budgets (no N+1)', () => {
     // Several conversations, each with messages, reactions and mentions, to expose any per-row query.
     for (let index = 0; index < 6; index += 1) {
       const conversation = (
-        await t.http().post(`${ws}/conversations`).set(bearer(owner)).set('Idempotency-Key', idempotencyKey()).send({ kind: 'group', title: `گروه ${index}`, memberIds: [member.userId] })
+        await t
+          .http()
+          .post(`${ws}/conversations`)
+          .set(bearer(owner))
+          .set('Idempotency-Key', idempotencyKey())
+          .send({ kind: 'group', title: `گروه ${index}`, memberIds: [member.userId] })
       ).body;
       last = conversation.id;
       for (let message = 0; message < 5; message += 1) {
-        const sent = (await t.http().post(`${ws}/conversations/${conversation.id}/messages`).set(bearer(owner)).send({ clientMsgId: randomUUID(), kind: 'text', text: `<@${member.userId}> ${message}` })).body;
-        await t.http().put(`${ws}/conversations/${conversation.id}/messages/${sent.id}/reactions/${encodeURIComponent('👍')}`).set(bearer(member));
+        const sent = (
+          await t
+            .http()
+            .post(`${ws}/conversations/${conversation.id}/messages`)
+            .set(bearer(owner))
+            .send({ clientMsgId: randomUUID(), kind: 'text', text: `<@${member.userId}> ${message}` })
+        ).body;
+        await t
+          .http()
+          .put(
+            `${ws}/conversations/${conversation.id}/messages/${sent.id}/reactions/${encodeURIComponent('👍')}`,
+          )
+          .set(bearer(member));
       }
     }
     for (const as of [owner, member]) {

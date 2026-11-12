@@ -4,11 +4,11 @@ import type { Task } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { describeDeadline } from '@taskin/jalali';
 import { formatCount } from '@/lib/format';
-import { priorityLabel,priorityTone } from '@/data/reference';
-import { attachmentCount,projectById,subtaskProgress,usersByIds } from '@/store/selectors';
-import { AvatarStack,Badge,ProgressBar } from '@/components/ui';
-import { CalendarIcon,FlagIcon,PaperclipIcon,StarFilledIcon,SubtaskIcon } from '@/components/icons';
-import { TaskCompleteCheckbox,completedTitleClass } from '@/features/tasks/components/TaskCompleteCheckbox';
+import { priorityLabel, priorityTone } from '@/data/reference';
+import { attachmentCount, projectById, subtaskProgress, usersByIds } from '@/store/selectors';
+import { AvatarStack, Badge, ProgressBar } from '@/components/ui';
+import { CalendarIcon, FlagIcon, PaperclipIcon, StarFilledIcon, SubtaskIcon } from '@/components/icons';
+import { TaskCompleteCheckbox, completedTitleClass } from '@/features/tasks/components/TaskCompleteCheckbox';
 import { issueTypeOf } from '@/features/agile/lib/agile';
 import { BlockedPill } from '@/features/agile/components/BlockedPill';
 import { IssueTypeIcon } from '@/features/agile/components/IssueTypeIcon';
@@ -85,7 +85,7 @@ export function TaskCard({
         {/* Agile tracking: nothing for a plain task without blockers, so such cards look as before. */}
         <IssueTypeIcon type={issueTypeOf(task)} severity={task.severity ?? null} className="mt-0.5" />
         {(task.blockedByIds?.length ?? 0) > 0 && <BlockedPill task={task} />}
-        <span className="numeric ms-auto text-micro font-medium text-fg-quaternary latin-inline">
+        <span className="ms-auto text-micro font-medium text-fg-quaternary numeric latin-inline">
           {task.code}
         </span>
       </div>
@@ -104,9 +104,7 @@ export function TaskCard({
         </h4>
       </div>
 
-      {project && (
-        <span className="truncate text-micro text-fg-tertiary">{project.name}</span>
-      )}
+      {project && <span className="truncate text-micro text-fg-tertiary">{project.name}</span>}
 
       {progress.total > 0 && (
         <ProgressBar
@@ -123,7 +121,7 @@ export function TaskCard({
             {deadline.text}
           </Badge>
           {attachmentCount(task) > 0 && (
-            <span className="numeric inline-flex items-center gap-0.5 text-micro text-fg-tertiary">
+            <span className="inline-flex items-center gap-0.5 text-micro text-fg-tertiary numeric">
               <PaperclipIcon size={13} />
               {formatCount(attachmentCount(task))}
             </span>

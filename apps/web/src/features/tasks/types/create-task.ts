@@ -1,5 +1,4 @@
-import type { BoardColumn,TaskDraft } from '@taskin/contracts';
-
+import type { BoardColumn, TaskDraft } from '@taskin/contracts';
 
 export interface CreateTaskModalProps {
   readonly open: boolean;

@@ -2,16 +2,16 @@
 
 import type { Invitation } from '@taskin/contracts';
 import type { InvitationDraft } from '@/store/workspace-reducer';
-import { DEPARTMENTS,ROLES } from '@/data/reference';
+import { DEPARTMENTS, ROLES } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
+import { CHANNEL_LABELS, formatRecipient } from '@taskin/text';
+import { Badge, Button, IconButton, Modal, Select, Textarea } from '@/components/ui';
+import { CloseIcon, MobileIcon, SendIcon, SmsIcon, UserAddIcon } from '@/components/icons';
 import {
-CHANNEL_LABELS,
-formatRecipient
-} from '@taskin/text';
-import { Badge,Button,IconButton,Modal,Select,Textarea } from '@/components/ui';
-import { CloseIcon,MobileIcon,SendIcon,SmsIcon,UserAddIcon } from '@/components/icons';
-import { CHANNEL_ICONS,PendingInvitationRow } from '@/features/workspace/components/directory/PendingInvitationRow';
+  CHANNEL_ICONS,
+  PendingInvitationRow,
+} from '@/features/workspace/components/directory/PendingInvitationRow';
 import { useInvitationForm } from '@/features/workspace/hooks/useInvitationForm';
 
 export interface InviteMemberModalProps {
@@ -30,9 +30,35 @@ const INVITABLE_ROLES = ROLES.filter((role) => !role.locked);
  * A typo, an existing member or a pending invite is flagged on the entry itself instead of
  * failing the whole batch.
  */
-export function InviteMemberModal({ open, invitations, onClose, onSubmit, onRevoke }: InviteMemberModalProps) {
-  const { recipients, setRecipients, pendingText, setPendingText, problems, role, setRole, department, setDepartment, message, setMessage, inputRef, id, commit, onKeyDown, onPaste, submit, emptyError, byEmail, bySms } = useInvitationForm({ open, invitations, onSubmit });
-
+export function InviteMemberModal({
+  open,
+  invitations,
+  onClose,
+  onSubmit,
+  onRevoke,
+}: InviteMemberModalProps) {
+  const {
+    recipients,
+    setRecipients,
+    pendingText,
+    setPendingText,
+    problems,
+    role,
+    setRole,
+    department,
+    setDepartment,
+    message,
+    setMessage,
+    inputRef,
+    id,
+    commit,
+    onKeyDown,
+    onPaste,
+    submit,
+    emptyError,
+    byEmail,
+    bySms,
+  } = useInvitationForm({ open, invitations, onSubmit });
 
   return (
     <Modal
@@ -73,7 +99,9 @@ export function InviteMemberModal({ open, invitations, onClose, onSubmit, onRevo
                 >
                   <Icon size={13} className="shrink-0 text-fg-tertiary" />
                   <span className="sr-only">{`${CHANNEL_LABELS[recipient.channel]}: `}</span>
-                  <span className={cn('latin-inline', recipient.channel === 'sms' && 'numeric')}>{display}</span>
+                  <span className={cn('latin-inline', recipient.channel === 'sms' && 'numeric')}>
+                    {display}
+                  </span>
                   <IconButton
                     label={`حذف ${display}`}
                     icon={<CloseIcon size={12} />}
@@ -81,7 +109,9 @@ export function InviteMemberModal({ open, invitations, onClose, onSubmit, onRevo
                     className="size-5"
                     onClick={(event) => {
                       event.stopPropagation();
-                      setRecipients((current) => current.filter((entry) => entry.address !== recipient.address));
+                      setRecipients((current) =>
+                        current.filter((entry) => entry.address !== recipient.address),
+                      );
                     }}
                   />
                 </span>
@@ -109,11 +139,14 @@ export function InviteMemberModal({ open, invitations, onClose, onSubmit, onRevo
             />
           </div>
           <p id={`${id}-hint`} className="text-caption text-fg-tertiary">
-            به ایمیل‌ها دعوت‌نامه ایمیلی و به شماره‌های موبایل پیامک ارسال می‌شود. چند مورد را با ویرگول، فاصله یا
-            Enter از هم جدا کنید.
+            به ایمیل‌ها دعوت‌نامه ایمیلی و به شماره‌های موبایل پیامک ارسال می‌شود. چند مورد را با ویرگول،
+            فاصله یا Enter از هم جدا کنید.
           </p>
           {recipients.length > 0 && (
-            <p className="numeric flex flex-wrap items-center gap-3 text-caption text-fg-secondary" aria-live="polite">
+            <p
+              className="flex flex-wrap items-center gap-3 text-caption text-fg-secondary numeric"
+              aria-live="polite"
+            >
               {byEmail > 0 && (
                 <span className="inline-flex items-center gap-1">
                   <SmsIcon size={14} className="text-fg-tertiary" />
@@ -131,7 +164,9 @@ export function InviteMemberModal({ open, invitations, onClose, onSubmit, onRevo
           {(problems.length > 0 || emptyError) && (
             <ul className="flex flex-col gap-0.5" role="alert">
               {emptyError && (
-                <li className="text-caption text-status-blocked">دست‌کم یک ایمیل یا شماره موبایل وارد کنید.</li>
+                <li className="text-caption text-status-blocked">
+                  دست‌کم یک ایمیل یا شماره موبایل وارد کنید.
+                </li>
               )}
               {problems.map((problem) => (
                 <li key={problem.token} className="text-caption text-status-blocked">
@@ -174,7 +209,10 @@ export function InviteMemberModal({ open, invitations, onClose, onSubmit, onRevo
         />
 
         {invitations.length > 0 && (
-          <section aria-labelledby={`${id}-pending`} className="flex flex-col gap-2 border-t border-secondary pt-4">
+          <section
+            aria-labelledby={`${id}-pending`}
+            className="flex flex-col gap-2 border-t border-secondary pt-4"
+          >
             <div className="flex items-center gap-2">
               <h3 id={`${id}-pending`} className="text-body-sm font-semibold text-fg-primary">
                 دعوت‌های در انتظار

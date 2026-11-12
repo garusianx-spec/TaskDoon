@@ -1,8 +1,10 @@
 import { resolveSiteDocument } from '@/lib/site-route';
-import { getSiteDocuments,getSitePage,siteMetadata } from '@/lib/site-public';
+import { getSiteDocuments, getSitePage, siteMetadata } from '@/lib/site-public';
 import { DocumentPage } from '@/features/marketing/components/DocumentPage';
 
-export async function generateMetadata() { return siteMetadata(await getSitePage('home')); }
+export async function generateMetadata() {
+  return siteMetadata(await getSitePage('home'));
+}
 
 export default async function Homepage() {
   const [document, documents] = await Promise.all([resolveSiteDocument('page', 'home'), getSiteDocuments()]);

@@ -2,10 +2,26 @@ import type { WeekDay } from '@taskin/contracts';
 import { addDays, dateIn, timeIn } from '../../platform/clock/clock.js';
 
 /** In the order the week starts in Iran. */
-export const WEEK_DAYS: readonly WeekDay[] = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+export const WEEK_DAYS: readonly WeekDay[] = [
+  'saturday',
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+];
 
 /** `Date#getUTCDay()` order: 0 is Sunday. */
-const BY_UTC_DAY: readonly WeekDay[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const BY_UTC_DAY: readonly WeekDay[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+];
 
 export const HH_MM = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
@@ -36,7 +52,8 @@ export function weekDayOf(isoDate: string): WeekDay {
 export function isWorkingTime(hours: WorkingHours, timeZone: string, at: Date): boolean {
   const today = dateIn(timeZone, at);
   const now = timeIn(timeZone, at);
-  if (hours.start < hours.end) return hours.days.includes(weekDayOf(today)) && now >= hours.start && now < hours.end;
+  if (hours.start < hours.end)
+    return hours.days.includes(weekDayOf(today)) && now >= hours.start && now < hours.end;
   if (now >= hours.start) return hours.days.includes(weekDayOf(today));
   if (now < hours.end) return hours.days.includes(weekDayOf(addDays(today, -1)));
   return false;

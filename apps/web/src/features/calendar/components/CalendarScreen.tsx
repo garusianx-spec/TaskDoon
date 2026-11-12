@@ -1,23 +1,17 @@
 'use client';
 
 import { jalaliFromIsoDate } from '@/lib/jalali';
-import { useEffect,useMemo,useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { calendarItemsByDate } from '@/store/selectors';
 import { taskDraft } from '@/store/drafts';
-import {
-buildMonthGrid,formatJalali,shiftJalaliMonth,
-toISODate
-} from '@taskin/jalali';
+import { buildMonthGrid, formatJalali, shiftJalaliMonth, toISODate } from '@taskin/jalali';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { MonthGrid } from '@/features/calendar/components/MonthGrid';
-import { Button,IconButton } from '@/components/ui';
-import {
-AddIcon,ChevronBackwardIcon,
-ChevronForwardIcon
-} from '@/components/icons';
+import { Button, IconButton } from '@/components/ui';
+import { AddIcon, ChevronBackwardIcon, ChevronForwardIcon } from '@/components/icons';
 import { Legend } from '@/features/calendar/components/CalendarLegend';
 import { UpcomingPanel } from '@/features/calendar/components/UpcomingCalendar';
 
@@ -55,7 +49,10 @@ function CalendarContent() {
     dispatch({ type: 'clear-calendar-focus' });
   }, [calendarFocusDate, dispatch]);
 
-  const cells = useMemo(() => buildMonthGrid(cursor.year, cursor.month, today), [cursor.year, cursor.month, today]);
+  const cells = useMemo(
+    () => buildMonthGrid(cursor.year, cursor.month, today),
+    [cursor.year, cursor.month, today],
+  );
 
   // Completed work drops off the calendar: it is a planning surface, not a history.
   const openTasks = useMemo(() => state.tasks.filter((task) => task.status !== 'done'), [state.tasks]);
@@ -88,10 +85,10 @@ function CalendarContent() {
     dispatch({ type: 'set-task-completed', taskId, completed });
 
   return (
-    <div className="scrollbar-thin h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto scrollbar-thin">
       <header className="border-b border-secondary bg-surface px-4 py-3 sm:px-6">
         <h1 className="text-heading-sm font-bold text-fg-primary">تقویم</h1>
-        <span className="numeric text-caption text-fg-tertiary">
+        <span className="text-caption text-fg-tertiary numeric">
           {`${formatCount(monthItemCount)} مهلت، جلسه و نقطه عطف در ${formatJalali(monthIso, 'month-year')}`}
         </span>
       </header>
@@ -110,7 +107,7 @@ function CalendarContent() {
             <div role="group" aria-label="پیمایش ماه" className="flex items-center gap-1.5">
               <IconButton label="ماه قبل" icon={<ChevronBackwardIcon size={18} />} onClick={() => step(-1)} />
               <span
-                className="numeric min-w-24 text-center text-title-sm font-bold text-fg-primary"
+                className="min-w-24 text-center text-title-sm font-bold text-fg-primary numeric"
                 aria-live="polite"
               >
                 {formatJalali(monthIso, 'month-year')}

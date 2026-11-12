@@ -36,12 +36,18 @@ export class UsersService {
   ) {}
 
   async findById(tx: Tx, userId: string): Promise<UserRow | undefined> {
-    const [user] = await tx.select().from(users).where(and(eq(users.id, userId), isNull(users.deletedAt)));
+    const [user] = await tx
+      .select()
+      .from(users)
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)));
     return user;
   }
 
   async findByPhone(tx: Tx, phone: string): Promise<UserRow | undefined> {
-    const [user] = await tx.select().from(users).where(and(eq(users.phone, phone), isNull(users.deletedAt)));
+    const [user] = await tx
+      .select()
+      .from(users)
+      .where(and(eq(users.phone, phone), isNull(users.deletedAt)));
     return user;
   }
 
@@ -64,8 +70,17 @@ export class UsersService {
         })
         .from(workspaceMembers)
         .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
-        .innerJoin(roles, and(eq(roles.workspaceId, workspaceMembers.workspaceId), eq(roles.id, workspaceMembers.roleId)))
-        .where(and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.status, 'active'), isNull(workspaces.deletedAt)))
+        .innerJoin(
+          roles,
+          and(eq(roles.workspaceId, workspaceMembers.workspaceId), eq(roles.id, workspaceMembers.roleId)),
+        )
+        .where(
+          and(
+            eq(workspaceMembers.userId, userId),
+            eq(workspaceMembers.status, 'active'),
+            isNull(workspaces.deletedAt),
+          ),
+        )
         .orderBy(asc(workspaceMembers.joinedAt));
       return { user, memberships };
     });
@@ -76,7 +91,9 @@ export class UsersService {
         name: membership.name,
         initials: membership.initials,
         tone: membership.tone,
-        iconUrl: membership.iconKey ? await this.storage.presignGet(membership.iconKey, ICON_URL_TTL_SECONDS) : null,
+        iconUrl: membership.iconKey
+          ? await this.storage.presignGet(membership.iconKey, ICON_URL_TTL_SECONDS)
+          : null,
         role: membership.roleKey as RoleId,
         isOwner: membership.ownerUserId === userId,
         // Suspended by a platform admin: still listed (the app says why), never opened.
@@ -88,11 +105,27 @@ export class UsersService {
 
   async update(userId: string, patch: UpdateMeBody): Promise<MeUser> {
     return this.uow.run({ workspaceId: null, userId }, async ({ tx }) => {
-      const [before] = await tx.select().from(users).where(and(eq(users.id, userId), isNull(users.deletedAt))).for('update');
+      const [before] = await tx
+        .select()
+        .from(users)
+        .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+        .for('update');
       if (!before) throw new ApiError('UNAUTHENTICATED');
       try {
-        if (patch.email !== undefined && (patch.email?.trim().toLowerCase() ?? null) !== (before.email?.toLowerCase() ?? null)) {
-          await tx.update(authChallenges).set({ consumedAt: sql`now()` }).where(and(eq(authChallenges.userId, userId), isNull(authChallenges.consumedAt), sql`${authChallenges.purpose} in ('email_verify', 'admin_recovery')`));
+        if (
+          patch.email !== undefined &&
+          (patch.email?.trim().toLowerCase() ?? null) !== (before.email?.toLowerCase() ?? null)
+        ) {
+          await tx
+            .update(authChallenges)
+            .set({ consumedAt: sql`now()` })
+            .where(
+              and(
+                eq(authChallenges.userId, userId),
+                isNull(authChallenges.consumedAt),
+                sql`${authChallenges.purpose} in ('email_verify', 'admin_recovery')`,
+              ),
+            );
         }
         const [after] = await tx
           .update(users)
@@ -101,7 +134,10 @@ export class UsersService {
             ...(patch.avatarTone !== undefined ? { avatarTone: patch.avatarTone } : {}),
             // A changed address is unverified until the verification flow (M4) confirms it.
             ...(patch.email !== undefined
-              ? { email: patch.email?.trim().toLowerCase() ?? null, emailVerifiedAt: sql`case when ${users.email} is not distinct from ${patch.email?.trim().toLowerCase() ?? null} then ${users.emailVerifiedAt} else null end` }
+              ? {
+                  email: patch.email?.trim().toLowerCase() ?? null,
+                  emailVerifiedAt: sql`case when ${users.email} is not distinct from ${patch.email?.trim().toLowerCase() ?? null} then ${users.emailVerifiedAt} else null end`,
+                }
               : {}),
           })
           .where(eq(users.id, userId))
@@ -111,11 +147,15 @@ export class UsersService {
           action: 'user.profile.update',
           resourceType: 'user',
           resourceId: userId,
-          changes: { before: { fullName: before.fullName, email: before.email, avatarTone: before.avatarTone }, after: patch },
+          changes: {
+            before: { fullName: before.fullName, email: before.email, avatarTone: before.avatarTone },
+            after: patch,
+          },
         });
         return toMeUser(after);
       } catch (error) {
-        if (isUniqueViolation(error, 'users_email_uq')) throw new ApiError('CONFLICT', 'That email belongs to another account.');
+        if (isUniqueViolation(error, 'users_email_uq'))
+          throw new ApiError('CONFLICT', 'That email belongs to another account.');
         throw error;
       }
     });

@@ -6,11 +6,17 @@ import type { MembershipContext } from '../../platform/http/request.js';
 import { cell } from '../rbac/ability.js';
 
 /** The workspace matrix cells for the messages module. The owner holds every cell. */
-export function messageGrant(member: MembershipContext, action: 'view' | 'create' | 'edit' | 'delete' | 'assign'): boolean {
+export function messageGrant(
+  member: MembershipContext,
+  action: 'view' | 'create' | 'edit' | 'delete' | 'assign',
+): boolean {
   return member.isOwner || member.grants.includes(cell('messages', action));
 }
 
-export function requireMessageGrant(member: MembershipContext, action: 'view' | 'create' | 'edit' | 'delete' | 'assign'): void {
+export function requireMessageGrant(
+  member: MembershipContext,
+  action: 'view' | 'create' | 'edit' | 'delete' | 'assign',
+): void {
   if (!messageGrant(member, action)) throw ApiError.forbidden();
 }
 
@@ -71,8 +77,15 @@ export function accessRowSql(member: MembershipContext, conversationId: string):
 }
 
 /** Loads the conversation as the caller sees it, or 404. `lock` serialises membership changes. */
-export async function loadConversation(tx: Tx, member: MembershipContext, conversationId: string, options: { lock?: boolean } = {}): Promise<ConversationAccess> {
-  const result = await tx.execute<AccessRow>(sql`${accessRowSql(member, conversationId)} ${options.lock ? sql`for update of c` : sql``}`);
+export async function loadConversation(
+  tx: Tx,
+  member: MembershipContext,
+  conversationId: string,
+  options: { lock?: boolean } = {},
+): Promise<ConversationAccess> {
+  const result = await tx.execute<AccessRow>(
+    sql`${accessRowSql(member, conversationId)} ${options.lock ? sql`for update of c` : sql``}`,
+  );
   const row = result.rows[0];
   if (!row) throw ApiError.notFound('The conversation');
   return accessFrom(member, row);
@@ -92,13 +105,19 @@ export function accessFrom(member: MembershipContext, row: AccessRow): Conversat
   };
   const myRole = row.my_role;
   const visible =
-    messageGrant(member, 'view') && (myRole !== null || (conversation.kind === 'channel' && !conversation.isPrivate && publicChannelVisible(member)));
+    messageGrant(member, 'view') &&
+    (myRole !== null ||
+      (conversation.kind === 'channel' && !conversation.isPrivate && publicChannelVisible(member)));
   if (!visible) throw ApiError.notFound('The conversation');
   const leader = myRole === 'owner' || myRole === 'admin' || (myRole !== null && member.isOwner);
   return {
     conversation,
     myRole,
-    canPost: myRole !== null && !conversation.archived && messageGrant(member, 'create') && (conversation.postPolicy === 'everyone' || leader),
+    canPost:
+      myRole !== null &&
+      !conversation.archived &&
+      messageGrant(member, 'create') &&
+      (conversation.postPolicy === 'everyone' || leader),
     canManage: myRole !== null && conversation.kind !== 'direct' && leader,
     canModerate: myRole !== null && (leader || messageGrant(member, 'delete')),
   };

@@ -12,7 +12,11 @@ function box(type: string, body: Buffer, extended = false): Buffer {
 
 function handler(type: string, extended = false): Buffer {
   // FullBox version/flags, pre_defined, handler_type, reserved.
-  return box('hdlr', Buffer.concat([Buffer.alloc(8), Buffer.from(type, 'latin1'), Buffer.alloc(12)]), extended);
+  return box(
+    'hdlr',
+    Buffer.concat([Buffer.alloc(8), Buffer.from(type, 'latin1'), Buffer.alloc(12)]),
+    extended,
+  );
 }
 
 function track(type: string, extended = false): Buffer {
@@ -21,7 +25,11 @@ function track(type: string, extended = false): Buffer {
 
 function mp4(brand: string, handlers: readonly string[], extended = false): Buffer {
   return Buffer.concat([
-    box('ftyp', Buffer.concat([Buffer.from(brand, 'latin1'), Buffer.alloc(4), Buffer.from('isommp42')]), extended),
+    box(
+      'ftyp',
+      Buffer.concat([Buffer.from(brand, 'latin1'), Buffer.alloc(4), Buffer.from('isommp42')]),
+      extended,
+    ),
     box('moov', Buffer.concat(handlers.map((type) => track(type, extended))), extended),
     box('mdat', Buffer.alloc(32)),
   ]);
@@ -31,7 +39,15 @@ function adts(crc = false): Buffer {
   const size = (crc ? 9 : 7) + 4;
   // AAC-LC, 44.1 kHz, stereo, one raw data block, variable bitrate.
   return Buffer.concat([
-    Buffer.from([0xff, crc ? 0xf0 : 0xf1, 0x50, 0x80 | (size >> 11), (size >> 3) & 0xff, ((size & 7) << 5) | 0x1f, 0xfc]),
+    Buffer.from([
+      0xff,
+      crc ? 0xf0 : 0xf1,
+      0x50,
+      0x80 | (size >> 11),
+      (size >> 3) & 0xff,
+      ((size & 7) << 5) | 0x1f,
+      0xfc,
+    ]),
     Buffer.alloc(crc ? 6 : 4),
   ]);
 }
@@ -74,7 +90,10 @@ describe('browser voice-note file types', () => {
     const file = Buffer.concat([type, box('mdat', Buffer.alloc(5000)), box('moov', track('soun'))]);
     expect(sniff(file.subarray(0, 4096), 'voice.m4a')).toEqual({ mime: 'audio/mp4', kind: 'audio' });
     expect(sniff(type, 'voice.m4a')).toEqual({ mime: 'audio/mp4', kind: 'audio' });
-    expect(sniff(mp4('M4A ', ['soun', 'text']), 'chapters.m4a')).toEqual({ mime: 'audio/mp4', kind: 'audio' });
+    expect(sniff(mp4('M4A ', ['soun', 'text']), 'chapters.m4a')).toEqual({
+      mime: 'audio/mp4',
+      kind: 'audio',
+    });
   });
 
   it('does not interpret strings hidden in arbitrary payloads as audio tracks', () => {
@@ -116,9 +135,19 @@ describe('browser voice-note file types', () => {
   });
 
   it('retains Opus WebM, Ogg and MPEG audio recognition', () => {
-    const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from('A_OPUS'), Buffer.alloc(64)]);
+    const webm = Buffer.concat([
+      Buffer.from([0x1a, 0x45, 0xdf, 0xa3]),
+      Buffer.from('A_OPUS'),
+      Buffer.alloc(64),
+    ]);
     expect(sniff(webm, 'voice.webm')).toEqual({ mime: 'audio/webm', kind: 'audio' });
-    expect(sniff(Buffer.from('OggS\0OpusHead', 'latin1'), 'voice.ogg')).toEqual({ mime: 'audio/ogg', kind: 'audio' });
-    expect(sniff(Buffer.from([0xff, 0xfb, 0x90, 0x64]), 'voice.mp3')).toEqual({ mime: 'audio/mpeg', kind: 'audio' });
+    expect(sniff(Buffer.from('OggS\0OpusHead', 'latin1'), 'voice.ogg')).toEqual({
+      mime: 'audio/ogg',
+      kind: 'audio',
+    });
+    expect(sniff(Buffer.from([0xff, 0xfb, 0x90, 0x64]), 'voice.mp3')).toEqual({
+      mime: 'audio/mpeg',
+      kind: 'audio',
+    });
   });
 });

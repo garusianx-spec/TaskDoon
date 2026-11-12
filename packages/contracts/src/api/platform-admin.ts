@@ -63,7 +63,12 @@ export interface PlatformMembership {
   readonly jobTitle: string;
   readonly joinedAt: string;
   readonly leftAt: string | null;
-  readonly projects: readonly { readonly id: string; readonly key: string; readonly name: string; readonly role: ProjectRole }[];
+  readonly projects: readonly {
+    readonly id: string;
+    readonly key: string;
+    readonly name: string;
+    readonly role: ProjectRole;
+  }[];
 }
 
 export interface PlatformUserDetail extends PlatformUserSummary {
@@ -152,7 +157,12 @@ export interface PlatformConversationView {
 }
 
 export interface PlatformConversationDetail extends Omit<PlatformConversationView, 'role' | 'leftAt'> {
-  readonly members: readonly { readonly userId: string; readonly fullName: string; readonly role: string; readonly leftAt: string | null }[];
+  readonly members: readonly {
+    readonly userId: string;
+    readonly fullName: string;
+    readonly role: string;
+    readonly leftAt: string | null;
+  }[];
 }
 
 export type PlatformMessageType = 'text' | 'voice' | 'image' | 'file';
@@ -348,9 +358,27 @@ export interface PlatformWorkspaceModerationResult {
 export interface PlatformMetrics {
   readonly generatedAt: string;
   readonly cached: boolean;
-  readonly users: { readonly total: number; readonly active: number; readonly suspended: number; readonly newLast7Days: number; readonly newLast30Days: number; readonly activeLast7Days: number };
-  readonly workspaces: { readonly total: number; readonly active: number; readonly suspended: number; readonly deleted: number };
-  readonly content: { readonly readyFiles: number; readonly storageUsedBytes: number; readonly tasks: number; readonly messages: number; readonly messagesLast7Days: number };
+  readonly users: {
+    readonly total: number;
+    readonly active: number;
+    readonly suspended: number;
+    readonly newLast7Days: number;
+    readonly newLast30Days: number;
+    readonly activeLast7Days: number;
+  };
+  readonly workspaces: {
+    readonly total: number;
+    readonly active: number;
+    readonly suspended: number;
+    readonly deleted: number;
+  };
+  readonly content: {
+    readonly readyFiles: number;
+    readonly storageUsedBytes: number;
+    readonly tasks: number;
+    readonly messages: number;
+    readonly messagesLast7Days: number;
+  };
 }
 
 export interface PlatformProbe {
@@ -367,7 +395,9 @@ export interface PlatformSmsProvider {
 
 export interface PlatformHealth {
   readonly checkedAt: string;
-  readonly services: Readonly<Record<'database' | 'adminPool' | 'redisCore' | 'redisRt' | 'storage', PlatformProbe>>;
+  readonly services: Readonly<
+    Record<'database' | 'adminPool' | 'redisCore' | 'redisRt' | 'storage', PlatformProbe>
+  >;
   readonly sms: { readonly providers: readonly PlatformSmsProvider[]; readonly failedJobs: number | null };
 }
 

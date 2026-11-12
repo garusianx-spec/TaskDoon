@@ -2,27 +2,36 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState,type FormEvent } from 'react';
-import type { PlatformWorkspaceModerationResult,PlatformWorkspaceStatus,PlatformWorkspaceSummary } from '@taskin/contracts';
-import { formatJalali,toPersianDigits } from '@taskin/jalali';
+import { useState, type FormEvent } from 'react';
+import type {
+  PlatformWorkspaceModerationResult,
+  PlatformWorkspaceStatus,
+  PlatformWorkspaceSummary,
+} from '@taskin/contracts';
+import { formatJalali, toPersianDigits } from '@taskin/jalali';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { WORKSPACE_STATUS } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
-import { Loaded,PageHeader,Panel,TD,TH } from '@/features/admin/components/AdminUi';
-import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { SuspendWorkspaceDialog } from '@/features/admin/components/SuspendWorkspaceDialog';
 import { TransferOwnershipDialog } from '@/features/admin/components/TransferOwnershipDialog';
-import { type WorkspaceAction,WorkspaceActionsMenu } from '@/features/admin/components/WorkspaceActionsMenu';
-import { Badge,Button,Input,Select } from '@/components/ui';
+import { type WorkspaceAction, WorkspaceActionsMenu } from '@/features/admin/components/WorkspaceActionsMenu';
+import { Badge, Button, Input, Select } from '@/components/ui';
 import { SearchIcon } from '@/components/icons';
 
 /** What the list says once a workspace action is done. */
-function outcome(action: Exclude<WorkspaceAction, 'view'>, { workspace, changed }: PlatformWorkspaceModerationResult): string {
+function outcome(
+  action: Exclude<WorkspaceAction, 'view'>,
+  { workspace, changed }: PlatformWorkspaceModerationResult,
+): string {
   switch (action) {
     case 'suspend':
-      return changed ? `${workspace.name} معلق شد؛ اعضایش دیگر به آن دسترسی ندارند.` : `${workspace.name} از قبل معلق بود.`;
+      return changed
+        ? `${workspace.name} معلق شد؛ اعضایش دیگر به آن دسترسی ندارند.`
+        : `${workspace.name} از قبل معلق بود.`;
     case 'unsuspend':
       return changed ? `تعلیق ${workspace.name} برداشته شد.` : `${workspace.name} معلق نبود.`;
     default:
@@ -40,7 +49,10 @@ export default function AdminWorkspacesPage() {
   const [status, setStatus] = useState<PlatformWorkspaceStatus | ''>('');
   /** Rows as the last action left them, until the next search. */
   const [updated, setUpdated] = useState<Readonly<Record<string, PlatformWorkspaceSummary>>>({});
-  const [acting, setActing] = useState<{ readonly action: Exclude<WorkspaceAction, 'view'>; readonly workspace: PlatformWorkspaceSummary } | null>(null);
+  const [acting, setActing] = useState<{
+    readonly action: Exclude<WorkspaceAction, 'view'>;
+    readonly workspace: PlatformWorkspaceSummary;
+  } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [more, setMore] = useState<{ items: PlatformWorkspaceSummary[]; cursor: string | null } | null>(null);
   const [moreError, setMoreError] = useState<string | null>(null);
@@ -85,10 +97,24 @@ export default function AdminWorkspacesPage() {
 
   return (
     <>
-      <PageHeader title="ورک‌اسپیس‌ها و نقش‌ها" description="ورک‌اسپیس‌های پلتفرم، نقش‌ها و ماتریس دسترسی هر کدام، و اعضا با نقش دقیقشان." />
+      <PageHeader
+        title="ورک‌اسپیس‌ها و نقش‌ها"
+        description="ورک‌اسپیس‌های پلتفرم، نقش‌ها و ماتریس دسترسی هر کدام، و اعضا با نقش دقیقشان."
+      />
       <Panel title="جستجو">
-        <form role="search" aria-label="جستجوی ورک‌اسپیس‌ها" onSubmit={onSearch} className="flex flex-wrap items-end gap-2">
-          <Input containerClassName="min-w-[16rem] flex-1" label="نام یا نشانی ورک‌اسپیس" value={draft} onChange={(event) => setDraft(event.target.value)} iconStart={<SearchIcon size={16} />} />
+        <form
+          role="search"
+          aria-label="جستجوی ورک‌اسپیس‌ها"
+          onSubmit={onSearch}
+          className="flex flex-wrap items-end gap-2"
+        >
+          <Input
+            containerClassName="min-w-[16rem] flex-1"
+            label="نام یا نشانی ورک‌اسپیس"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            iconStart={<SearchIcon size={16} />}
+          />
           <div className="w-44">
             <Select
               label="وضعیت"
@@ -108,7 +134,10 @@ export default function AdminWorkspacesPage() {
       </Panel>
       <Panel title="ورک‌اسپیس‌ها">
         {notice && (
-          <p role="status" className="mb-3 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done">
+          <p
+            role="status"
+            className="mb-3 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done"
+          >
             {notice}
           </p>
         )}
@@ -129,45 +158,57 @@ export default function AdminWorkspacesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...data.items, ...(more?.items ?? [])].map((listed) => updated[listed.id] ?? listed).map((workspace) => (
-                      <tr key={workspace.id}>
-                        <td className={TD}>
-                          <Link href={`/admin/workspaces/${workspace.id}`} className="font-semibold text-fg-brand hover:underline">
-                            {workspace.name}
-                          </Link>
-                          <span dir="ltr" className="ms-2 text-caption text-fg-tertiary">
-                            {workspace.slug}
-                          </span>
-                          {workspace.deletedAt && (
-                            <Badge tone="error" size="sm" className="ms-2">
-                              حذف‌شده
-                            </Badge>
-                          )}
-                        </td>
-                        <td className={TD}>
-                          {workspace.status && (
-                            <Badge tone={WORKSPACE_STATUS[workspace.status].tone} size="sm">
-                              {WORKSPACE_STATUS[workspace.status].label}
-                            </Badge>
-                          )}
-                        </td>
-                        <td className={TD}>{workspace.plan}</td>
-                        <td className={TD}>
-                          <Link href={`/admin/users/${workspace.ownerId}`} className="hover:underline">
-                            {workspace.ownerName}
-                          </Link>
-                        </td>
-                        <td className={TD}>{toPersianDigits(workspace.memberCount)}</td>
-                        <td className={TD}>{formatJalali(workspace.createdAt, 'medium')}</td>
-                        <td className={TD}>
-                          <WorkspaceActionsMenu workspace={workspace} onAction={(action) => onAction(workspace, action)} />
-                        </td>
-                      </tr>
-                    ))}
+                    {[...data.items, ...(more?.items ?? [])]
+                      .map((listed) => updated[listed.id] ?? listed)
+                      .map((workspace) => (
+                        <tr key={workspace.id}>
+                          <td className={TD}>
+                            <Link
+                              href={`/admin/workspaces/${workspace.id}`}
+                              className="font-semibold text-fg-brand hover:underline"
+                            >
+                              {workspace.name}
+                            </Link>
+                            <span dir="ltr" className="ms-2 text-caption text-fg-tertiary">
+                              {workspace.slug}
+                            </span>
+                            {workspace.deletedAt && (
+                              <Badge tone="error" size="sm" className="ms-2">
+                                حذف‌شده
+                              </Badge>
+                            )}
+                          </td>
+                          <td className={TD}>
+                            {workspace.status && (
+                              <Badge tone={WORKSPACE_STATUS[workspace.status].tone} size="sm">
+                                {WORKSPACE_STATUS[workspace.status].label}
+                              </Badge>
+                            )}
+                          </td>
+                          <td className={TD}>{workspace.plan}</td>
+                          <td className={TD}>
+                            <Link href={`/admin/users/${workspace.ownerId}`} className="hover:underline">
+                              {workspace.ownerName}
+                            </Link>
+                          </td>
+                          <td className={TD}>{toPersianDigits(workspace.memberCount)}</td>
+                          <td className={TD}>{formatJalali(workspace.createdAt, 'medium')}</td>
+                          <td className={TD}>
+                            <WorkspaceActionsMenu
+                              workspace={workspace}
+                              onAction={(action) => onAction(workspace, action)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </DataTable>
               </TableFrame>
-              {moreError && <p role="alert" className="mt-3 text-caption text-status-blocked">{moreError}</p>}
+              {moreError && (
+                <p role="alert" className="mt-3 text-caption text-status-blocked">
+                  {moreError}
+                </p>
+              )}
               {cursor && (
                 <div className="mt-4 flex justify-center">
                   <Button variant="secondary" loading={loadingMore} onClick={() => void loadMore()}>
@@ -180,10 +221,20 @@ export default function AdminWorkspacesPage() {
         </Loaded>
       </Panel>
       {acting && (acting.action === 'suspend' || acting.action === 'unsuspend') && (
-        <SuspendWorkspaceDialog workspace={acting.workspace} mode={acting.action} onClose={() => setActing(null)} onDone={onDone} />
+        <SuspendWorkspaceDialog
+          workspace={acting.workspace}
+          mode={acting.action}
+          onClose={() => setActing(null)}
+          onDone={onDone}
+        />
       )}
       {acting?.action === 'transfer' && (
-        <TransferOwnershipDialog workspaceId={acting.workspace.id} workspaceName={acting.workspace.name} onClose={() => setActing(null)} onDone={onDone} />
+        <TransferOwnershipDialog
+          workspaceId={acting.workspace.id}
+          workspaceName={acting.workspace.name}
+          onClose={() => setActing(null)}
+          onDone={onDone}
+        />
       )}
     </>
   );

@@ -1,5 +1,25 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Put, Query, Res } from '@nestjs/common';
-import { ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Res,
+} from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import type {
   ConvertMessageResult,
@@ -65,7 +85,10 @@ export class ChatController {
   @Get()
   @ApiOkResponse({ type: ConversationViewDto, isArray: true })
   @ApiOperation({ summary: 'The sidebar (scope=mine), or the public channels you can join (scope=public)' })
-  list(@CurrentMember() member: MembershipContext, @Query() query: ConversationListQueryDto): Promise<ConversationView[]> {
+  list(
+    @CurrentMember() member: MembershipContext,
+    @Query() query: ConversationListQueryDto,
+  ): Promise<ConversationView[]> {
     return this.conversations.list(member, query);
   }
 
@@ -85,14 +108,21 @@ export class ChatController {
 
   @Get(':conversationId')
   @ApiOkResponse({ type: ConversationDetailDto })
-  get(@CurrentMember() member: MembershipContext, @Param('conversationId', UUID) conversationId: string): Promise<ConversationDetail> {
+  get(
+    @CurrentMember() member: MembershipContext,
+    @Param('conversationId', UUID) conversationId: string,
+  ): Promise<ConversationDetail> {
     return this.conversations.get(member, conversationId);
   }
 
   @Delete(':conversationId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
-  deleteArchived(@CurrentMember() member: MembershipContext, @Param('conversationId', UUID) id: string, @Body() body: DeleteArchivedConversationDto): Promise<void> {
+  deleteArchived(
+    @CurrentMember() member: MembershipContext,
+    @Param('conversationId', UUID) id: string,
+    @Body() body: DeleteArchivedConversationDto,
+  ): Promise<void> {
     return this.conversations.deleteArchived(member, id, body.confirmTitle);
   }
 
@@ -216,7 +246,11 @@ export class ChatController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiOperation({ summary: 'Moves your read cursor forward (it never moves back)' })
-  async read(@CurrentMember() member: MembershipContext, @Param('conversationId', UUID) conversationId: string, @Body() body: ReadCursorDto): Promise<void> {
+  async read(
+    @CurrentMember() member: MembershipContext,
+    @Param('conversationId', UUID) conversationId: string,
+    @Body() body: ReadCursorDto,
+  ): Promise<void> {
     await this.messages.advance(member, conversationId, { read: body.seq }, { audit: true });
   }
 
@@ -224,7 +258,10 @@ export class ChatController {
   @Idempotent()
   @ApiOperation({ summary: 'تبدیل پیام به وظیفه: a task linked to this message (one live task per message)' })
   @ApiCreatedResponse({ type: ConvertMessageResultDto })
-  @ApiOkResponse({ type: ConvertMessageResultDto, description: 'The message already had a live task; it is returned' })
+  @ApiOkResponse({
+    type: ConvertMessageResultDto,
+    description: 'The message already had a live task; it is returned',
+  })
   async convertToTask(
     @CurrentMember() member: MembershipContext,
     @Param('conversationId', UUID) conversationId: string,
@@ -239,7 +276,11 @@ export class ChatController {
 
   @Get(':conversationId/media')
   @ApiOkResponse({ type: MediaPageDto })
-  media(@CurrentMember() member: MembershipContext, @Param('conversationId', UUID) conversationId: string, @Query() query: MediaQueryDto): Promise<MediaPage> {
+  media(
+    @CurrentMember() member: MembershipContext,
+    @Param('conversationId', UUID) conversationId: string,
+    @Query() query: MediaQueryDto,
+  ): Promise<MediaPage> {
     return this.messages.media(member, conversationId, query);
   }
 }

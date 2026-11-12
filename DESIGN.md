@@ -2,158 +2,158 @@
 name: TaskDoon
 description: Persian-first visual language for the public website and account entry.
 colors:
-  indigo: "rgb(53 56 205)"
-  indigo-hover: "rgb(45 49 166)"
-  indigo-pressed: "rgb(45 50 130)"
-  indigo-deep: "rgb(31 33 99)"
-  indigo-ring: "rgb(97 114 243)"
-  indigo-line: "rgb(199 215 254)"
-  indigo-mist: "rgb(224 234 255)"
-  indigo-tint: "rgb(238 244 255)"
-  surface: "rgb(255 255 255)"
-  canvas: "rgb(249 250 251)"
-  sunken: "rgb(242 244 247)"
-  line: "rgb(208 213 221)"
-  divider: "rgb(234 236 240)"
-  ink: "rgb(16 24 40)"
-  ink-secondary: "rgb(52 64 84)"
-  ink-muted: "rgb(102 112 133)"
-  ink-disabled: "rgb(152 162 179)"
-  progress-ink: "rgb(181 71 8)"
-  progress-fill: "rgb(255 250 235)"
-  progress-line: "rgb(254 223 137)"
-  done-ink: "rgb(2 122 72)"
-  done-fill: "rgb(236 253 243)"
-  done-line: "rgb(166 244 197)"
-  error-ink: "rgb(180 35 24)"
-  error-line: "rgb(217 45 32)"
+  indigo: 'rgb(53 56 205)'
+  indigo-hover: 'rgb(45 49 166)'
+  indigo-pressed: 'rgb(45 50 130)'
+  indigo-deep: 'rgb(31 33 99)'
+  indigo-ring: 'rgb(97 114 243)'
+  indigo-line: 'rgb(199 215 254)'
+  indigo-mist: 'rgb(224 234 255)'
+  indigo-tint: 'rgb(238 244 255)'
+  surface: 'rgb(255 255 255)'
+  canvas: 'rgb(249 250 251)'
+  sunken: 'rgb(242 244 247)'
+  line: 'rgb(208 213 221)'
+  divider: 'rgb(234 236 240)'
+  ink: 'rgb(16 24 40)'
+  ink-secondary: 'rgb(52 64 84)'
+  ink-muted: 'rgb(102 112 133)'
+  ink-disabled: 'rgb(152 162 179)'
+  progress-ink: 'rgb(181 71 8)'
+  progress-fill: 'rgb(255 250 235)'
+  progress-line: 'rgb(254 223 137)'
+  done-ink: 'rgb(2 122 72)'
+  done-fill: 'rgb(236 253 243)'
+  done-line: 'rgb(166 244 197)'
+  error-ink: 'rgb(180 35 24)'
+  error-line: 'rgb(217 45 32)'
 typography:
   display:
-    fontFamily: "IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif"
-    fontSize: "clamp(36px, 4.5vw, 60px)"
+    fontFamily: 'IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif'
+    fontSize: 'clamp(36px, 4.5vw, 60px)'
     fontWeight: 800
     lineHeight: 1.55
-    letterSpacing: "-.025em"
+    letterSpacing: '-.025em'
   headline:
-    fontFamily: "IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif"
-    fontSize: "clamp(27px, 3vw, 40px)"
+    fontFamily: 'IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif'
+    fontSize: 'clamp(27px, 3vw, 40px)'
     fontWeight: 800
     lineHeight: 1.65
-    letterSpacing: "-.018em"
+    letterSpacing: '-.018em'
   auth-heading:
-    fontFamily: "IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif"
-    fontSize: "clamp(24px, 2.3vw, 30px)"
+    fontFamily: 'IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif'
+    fontSize: 'clamp(24px, 2.3vw, 30px)'
     fontWeight: 800
     lineHeight: 1.65
   title:
-    fontFamily: "IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif"
-    fontSize: "18px"
+    fontFamily: 'IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif'
+    fontSize: '18px'
     fontWeight: 600
     lineHeight: 1.9
   body:
-    fontFamily: "IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif"
-    fontSize: "16px"
+    fontFamily: 'IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif'
+    fontSize: '16px'
     fontWeight: 400
     lineHeight: 1.85
   label:
-    fontFamily: "IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif"
-    fontSize: "11px"
+    fontFamily: 'IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif'
+    fontSize: '11px'
     fontWeight: 500
-    lineHeight: "18px"
+    lineHeight: '18px'
   button:
-    fontFamily: "IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif"
-    fontSize: "14px"
+    fontFamily: 'IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif'
+    fontSize: '14px'
     fontWeight: 600
     lineHeight: 1.6
   auth-button:
-    fontFamily: "IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif"
-    fontSize: "15px"
+    fontFamily: 'IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif'
+    fontSize: '15px'
     fontWeight: 600
-    lineHeight: "24px"
+    lineHeight: '24px'
   field-value:
-    fontFamily: "IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif"
-    fontSize: "16px"
+    fontFamily: 'IRANYekanX, Vazirmatn, Segoe UI, Tahoma, system-ui, sans-serif'
+    fontSize: '16px'
     fontWeight: 400
-    lineHeight: "24px"
+    lineHeight: '24px'
 rounded:
-  inset: "8px"
-  control: "10px"
-  media: "12px"
-  frame: "14px"
-  banner: "16px"
-  auth-panel: "20px"
-  pill: "9999px"
+  inset: '8px'
+  control: '10px'
+  media: '12px'
+  frame: '14px'
+  banner: '16px'
+  auth-panel: '20px'
+  pill: '9999px'
 spacing:
-  compact-gap: "8px"
-  action-gap: "12px"
-  task-inset: "16px"
-  form-gap: "22px"
-  desktop-gutter: "32px"
-  mobile-gutter: "16px"
+  compact-gap: '8px'
+  action-gap: '12px'
+  task-inset: '16px'
+  form-gap: '22px'
+  desktop-gutter: '32px'
+  mobile-gutter: '16px'
 components:
   button-primary:
-    backgroundColor: "{colors.indigo}"
-    textColor: "{colors.surface}"
-    typography: "{typography.button}"
-    rounded: "{rounded.control}"
-    padding: "12px 22px"
+    backgroundColor: '{colors.indigo}'
+    textColor: '{colors.surface}'
+    typography: '{typography.button}'
+    rounded: '{rounded.control}'
+    padding: '12px 22px'
   button-primary-hover:
-    backgroundColor: "{colors.indigo-hover}"
+    backgroundColor: '{colors.indigo-hover}'
   button-primary-active:
-    backgroundColor: "{colors.indigo-pressed}"
+    backgroundColor: '{colors.indigo-pressed}'
   button-secondary:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink-secondary}"
-    typography: "{typography.button}"
-    rounded: "{rounded.control}"
-    padding: "12px 22px"
+    backgroundColor: '{colors.surface}'
+    textColor: '{colors.ink-secondary}'
+    typography: '{typography.button}'
+    rounded: '{rounded.control}'
+    padding: '12px 22px'
   button-secondary-hover:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
+    backgroundColor: '{colors.canvas}'
+    textColor: '{colors.ink}'
   button-auth-submit:
-    backgroundColor: "{colors.indigo}"
-    textColor: "{colors.surface}"
-    typography: "{typography.auth-button}"
-    rounded: "{rounded.control}"
-    padding: "0 16px"
+    backgroundColor: '{colors.indigo}'
+    textColor: '{colors.surface}'
+    typography: '{typography.auth-button}'
+    rounded: '{rounded.control}'
+    padding: '0 16px'
   button-auth-link:
-    backgroundColor: "transparent"
-    textColor: "{colors.indigo}"
-    padding: "0"
+    backgroundColor: 'transparent'
+    textColor: '{colors.indigo}'
+    padding: '0'
   auth-phone-field:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    typography: "{typography.field-value}"
-    rounded: "{rounded.control}"
-    height: "50px"
-    padding: "0 40px 0 64px"
+    backgroundColor: '{colors.surface}'
+    textColor: '{colors.ink}'
+    typography: '{typography.field-value}'
+    rounded: '{rounded.control}'
+    height: '50px'
+    padding: '0 40px 0 64px'
   marketing-nav-link:
-    textColor: "{colors.ink-secondary}"
-    padding: "14px 0"
+    textColor: '{colors.ink-secondary}'
+    padding: '14px 0'
   preview-tab-selected:
-    backgroundColor: "{colors.indigo-tint}"
-    textColor: "{colors.indigo}"
-    rounded: "{rounded.inset}"
-    padding: "10px 18px"
+    backgroundColor: '{colors.indigo-tint}'
+    textColor: '{colors.indigo}'
+    rounded: '{rounded.inset}'
+    padding: '10px 18px'
   status-badge-progress:
-    backgroundColor: "{colors.progress-fill}"
-    textColor: "{colors.progress-ink}"
-    typography: "{typography.label}"
-    rounded: "{rounded.pill}"
-    height: "20px"
-    padding: "0 6px"
+    backgroundColor: '{colors.progress-fill}'
+    textColor: '{colors.progress-ink}'
+    typography: '{typography.label}'
+    rounded: '{rounded.pill}'
+    height: '20px'
+    padding: '0 6px'
   status-badge-done:
-    backgroundColor: "{colors.done-fill}"
-    textColor: "{colors.done-ink}"
-    typography: "{typography.label}"
-    rounded: "{rounded.pill}"
-    height: "20px"
-    padding: "0 6px"
+    backgroundColor: '{colors.done-fill}'
+    textColor: '{colors.done-ink}'
+    typography: '{typography.label}'
+    rounded: '{rounded.pill}'
+    height: '20px'
+    padding: '0 6px'
   sample-task:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.control}"
-    padding: "{spacing.task-inset}"
+    backgroundColor: '{colors.surface}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.control}'
+    padding: '{spacing.task-inset}'
 ---
 
 # Design System: TaskDoon
@@ -227,7 +227,7 @@ The public interface establishes depth with white and cool-gray fills, one-pixel
 ### Actions and navigation
 
 - `.marketing-button` sets the default public CTA to a 48px minimum height with weight 600. The primary uses white on indigo with distinct hover and pressed tones. The outlined secondary uses a white surface and cool-gray line, then takes the canvas tint on hover. The closing indigo banner uses a light-filled primary and a transparent outlined secondary. [Marketing styles](apps/web/src/components/marketing/marketing.css), [Homepage styles](apps/web/src/components/marketing/homepage.css)
-- `.marketing-header` is sticky with a border below it. The desktop current link uses indigo, an underline and `aria-current="page"`. The compact menu has an expanded state, an inert closed panel and Escape-to-close behavior that returns focus to its toggle. Marketing and auth both offer a skip link. [Marketing header](apps/web/src/components/marketing/MarketingHeader.tsx), [Marketing layout](apps/web/src/app/(marketing)/layout.tsx), [Auth card](apps/web/src/components/auth/AuthCard.tsx)
+- `.marketing-header` is sticky with a border below it. The desktop current link uses indigo, an underline and `aria-current="page"`. The compact menu has an expanded state, an inert closed panel and Escape-to-close behavior that returns focus to its toggle. Marketing and auth both offer a skip link. [Marketing header](apps/web/src/components/marketing/MarketingHeader.tsx), [Marketing layout](<apps/web/src/app/(marketing)/layout.tsx>), [Auth card](apps/web/src/components/auth/AuthCard.tsx)
 - `.public-surface :focus-visible` uses a 2px indigo outline at a 4px offset alongside the shared focus treatment. Auth inputs bring the outline flush to the field. The footer and closing section use a pale indigo outline against their dark fills. [Public styles](apps/web/src/components/public/public.css), [Global styles](apps/web/src/app/globals.css), [Auth styles](apps/web/src/components/auth/auth.css)
 
 ### Account entry fields

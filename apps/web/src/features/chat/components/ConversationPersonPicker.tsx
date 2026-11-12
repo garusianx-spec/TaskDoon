@@ -5,11 +5,7 @@ import { DEPARTMENTS } from '@/data/reference';
 import type { User } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
-import {
-Avatar,
-Badge
-} from '@/components/ui';
-
+import { Avatar, Badge } from '@/components/ui';
 
 export const departmentName = (user: User): string =>
   DEPARTMENTS.find((entry) => entry.id === user.department)?.name ?? '';

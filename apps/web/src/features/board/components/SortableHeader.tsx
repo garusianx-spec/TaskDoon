@@ -3,7 +3,6 @@
 import { cn } from '@/lib/utils';
 import { ChevronDownIcon } from '@/components/icons';
 
-
 interface SortableHeaderProps {
   readonly label: string;
   readonly active: boolean;

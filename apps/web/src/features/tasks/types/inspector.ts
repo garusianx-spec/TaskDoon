@@ -1,6 +1,5 @@
-import type { BoardColumn,Task,User } from '@taskin/contracts';
+import type { BoardColumn, Task, User } from '@taskin/contracts';
 import type { TaskPatch } from '@/store/workspace-reducer';
-
 
 export interface TaskInspectorProps {
   readonly task: Task;

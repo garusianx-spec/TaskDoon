@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect,useState } from 'react';
-import type { IssueSeverity,IssueType,Task } from '@taskin/contracts';
-import { ISSUE_SEVERITIES,ISSUE_TYPES,isBacklog,issueTypeOf } from '@/features/agile/lib/agile';
-import { formatDuration,MAX_ESTIMATE_MINUTES,parseDuration } from '@/lib/duration';
+import { useEffect, useState } from 'react';
+import type { IssueSeverity, IssueType, Task } from '@taskin/contracts';
+import { ISSUE_SEVERITIES, ISSUE_TYPES, isBacklog, issueTypeOf } from '@/features/agile/lib/agile';
+import { formatDuration, MAX_ESTIMATE_MINUTES, parseDuration } from '@/lib/duration';
 import type { TaskPatch } from '@/store/workspace-reducer';
-import { Button,Input,Select } from '@/components/ui';
-import { BacklogIcon,KanbanIcon } from '@/components/icons';
+import { Button, Input, Select } from '@/components/ui';
+import { BacklogIcon, KanbanIcon } from '@/components/icons';
 import { IssueTypeIcon } from '@/features/agile/components/IssueTypeIcon';
 
 type SelectSize = 'sm' | 'md';
@@ -32,7 +32,11 @@ export function IssueTypeSelect({
       size={size}
       value={value}
       onValueChange={onChange}
-      options={ISSUE_TYPES.map((entry) => ({ value: entry.id, label: entry.label, icon: <IssueTypeIcon type={entry.id} showTask decorative size={15} /> }))}
+      options={ISSUE_TYPES.map((entry) => ({
+        value: entry.id,
+        label: entry.label,
+        icon: <IssueTypeIcon type={entry.id} showTask decorative size={15} />,
+      }))}
     />
   );
 }
@@ -58,7 +62,10 @@ export function SeveritySelect({
       size={size}
       value={value ?? 'none'}
       onValueChange={(next) => onChange(next === 'none' ? null : next)}
-      options={[{ value: 'none' as const, label: 'تعیین نشده' }, ...ISSUE_SEVERITIES.map((entry) => ({ value: entry.id, label: entry.label }))]}
+      options={[
+        { value: 'none' as const, label: 'تعیین نشده' },
+        ...ISSUE_SEVERITIES.map((entry) => ({ value: entry.id, label: entry.label })),
+      ]}
     />
   );
 }
@@ -76,7 +83,13 @@ function Field({ label, children }: { readonly label: string; readonly children:
  * The task dialog's agile properties: type, a bug's severity, the estimate, and whether the task
  * sits on the board or in the backlog.
  */
-export function IssueFields({ task, onPatch }: { readonly task: Task; readonly onPatch: (patch: TaskPatch) => void }) {
+export function IssueFields({
+  task,
+  onPatch,
+}: {
+  readonly task: Task;
+  readonly onPatch: (patch: TaskPatch) => void;
+}) {
   const type = issueTypeOf(task);
   const inBacklog = isBacklog(task);
   return (
@@ -86,11 +99,18 @@ export function IssueFields({ task, onPatch }: { readonly task: Task; readonly o
       </Field>
       {type === 'bug' && (
         <Field label="شدت">
-          <SeveritySelect label="شدت باگ" value={task.severity ?? null} onChange={(severity) => onPatch({ severity })} />
+          <SeveritySelect
+            label="شدت باگ"
+            value={task.severity ?? null}
+            onChange={(severity) => onPatch({ severity })}
+          />
         </Field>
       )}
       <Field label="برآورد زمان">
-        <EstimateInput value={task.estimatedMinutes ?? null} onCommit={(estimatedMinutes) => onPatch({ estimatedMinutes })} />
+        <EstimateInput
+          value={task.estimatedMinutes ?? null}
+          onCommit={(estimatedMinutes) => onPatch({ estimatedMinutes })}
+        />
       </Field>
       <Field label="جایگاه">
         <Button
@@ -107,7 +127,13 @@ export function IssueFields({ task, onPatch }: { readonly task: Task; readonly o
 }
 
 /** The estimate as typed («2h», «۱ ساعت و ۳۰ دقیقه», «90»), saved on blur or Enter; empty clears it. */
-function EstimateInput({ value, onCommit }: { readonly value: number | null; readonly onCommit: (minutes: number | null) => void }) {
+function EstimateInput({
+  value,
+  onCommit,
+}: {
+  readonly value: number | null;
+  readonly onCommit: (minutes: number | null) => void;
+}) {
   const shown = value === null ? '' : formatDuration(value);
   const [text, setText] = useState(shown);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -139,7 +165,10 @@ function EstimateInput({ value, onCommit }: { readonly value: number | null; rea
       value={text}
       placeholder="مثلاً 2h یا ۹۰ دقیقه"
       error={error}
-      onChange={(event) => { setText(event.target.value); setError(undefined); }}
+      onChange={(event) => {
+        setText(event.target.value);
+        setError(undefined);
+      }}
       onBlur={commit}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {

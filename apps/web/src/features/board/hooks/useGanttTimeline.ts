@@ -1,13 +1,14 @@
 'use client';
 
-import { useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Task } from '@taskin/contracts';
 import {
-addDays,
-daysBetween,gregorianToJalali,
-jalaliWeekdayIndex,
-parseISODate,
-toISODate
+  addDays,
+  daysBetween,
+  gregorianToJalali,
+  jalaliWeekdayIndex,
+  parseISODate,
+  toISODate,
 } from '@taskin/jalali';
 import { useNamespacedId } from '@/hooks/useId';
 import { WINDOW_DAYS } from '@/features/board/lib/gantt-layout';
@@ -34,13 +35,15 @@ type PendingScroll =
 function timeline(scroller: HTMLElement) {
   const sign = getComputedStyle(scroller).direction === 'rtl' ? -1 : 1;
   const day = scroller.querySelector<HTMLElement>('[data-day-index]')?.getBoundingClientRect().width || 40;
-  const names = scroller.querySelector<HTMLElement>('[data-gantt-corner]')?.getBoundingClientRect().width ?? 0;
+  const names =
+    scroller.querySelector<HTMLElement>('[data-gantt-corner]')?.getBoundingClientRect().width ?? 0;
   return {
     day,
     max: scroller.scrollWidth - scroller.clientWidth,
     offset: sign * scroller.scrollLeft,
     visibleDays: Math.max(1, Math.floor((scroller.clientWidth - names) / day)),
-    scrollTo: (offset: number, behavior: ScrollBehavior = 'instant') => scroller.scrollTo({ left: sign * offset, behavior }),
+    scrollTo: (offset: number, behavior: ScrollBehavior = 'instant') =>
+      scroller.scrollTo({ left: sign * offset, behavior }),
   };
 }
 
@@ -68,7 +71,9 @@ export function useGanttTimeline(tasks: readonly Task[]) {
     if (!scroller) return;
     const { day, offset, visibleDays } = timeline(scroller);
     const first = Math.min(WINDOW_DAYS - 1, Math.max(0, Math.round(offset / day)));
-    setInView((current) => (current.first === first && current.count === visibleDays ? current : { first, count: visibleDays }));
+    setInView((current) =>
+      current.first === first && current.count === visibleDays ? current : { first, count: visibleDays },
+    );
   }, []);
 
   const onScroll = () => {
@@ -207,5 +212,18 @@ export function useGanttTimeline(tasks: readonly Task[]) {
   const firstDay = days[inView.first];
   const lastDay = days[Math.min(WINDOW_DAYS - 1, inView.first + inView.count - 1)];
 
-  return { scrollerRef, onScroll, hovered, setHovered, tooltipId, scrollDays, scrollToToday, showTooltip, days, rows, firstDay, lastDay };
+  return {
+    scrollerRef,
+    onScroll,
+    hovered,
+    setHovered,
+    tooltipId,
+    scrollDays,
+    scrollToToday,
+    showTooltip,
+    days,
+    rows,
+    firstDay,
+    lastDay,
+  };
 }

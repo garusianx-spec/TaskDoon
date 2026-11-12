@@ -16,7 +16,17 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { createdAt, instant, position, updatedAt, uuidPk } from './columns.js';
-import { avatarTone, issueSeverity, issueType, projectRole, projectVisibility, tagTone, taskDependencyType, taskPriority, taskStatus } from './enums.js';
+import {
+  avatarTone,
+  issueSeverity,
+  issueType,
+  projectRole,
+  projectVisibility,
+  tagTone,
+  taskDependencyType,
+  taskPriority,
+  taskStatus,
+} from './enums.js';
 import { departments, workspaceMembers, workspaces } from './tenancy.js';
 
 /**
@@ -53,7 +63,9 @@ export const workflows = pgTable(
   },
   (t) => [
     unique('workflows_ws_id_uq').on(t.workspaceId, t.id),
-    uniqueIndex('workflows_default_uq').on(t.workspaceId).where(sql`${t.isDefault}`),
+    uniqueIndex('workflows_default_uq')
+      .on(t.workspaceId)
+      .where(sql`${t.isDefault}`),
   ],
 );
 
@@ -76,11 +88,17 @@ export const boardColumns = pgTable(
   },
   (t) => [
     unique('board_columns_ws_id_uq').on(t.workspaceId, t.id),
-    foreignKey({ name: 'board_columns_workflow_fk', columns: [t.workspaceId, t.workflowId], foreignColumns: [workflows.workspaceId, workflows.id] }).onDelete(
-      'cascade',
-    ),
-    uniqueIndex('board_columns_title_uq').on(t.workflowId, sql`lower(${t.title})`).where(sql`${t.deletedAt} is null`),
-    index('board_columns_position_idx').on(t.workflowId, t.position).where(sql`${t.deletedAt} is null`),
+    foreignKey({
+      name: 'board_columns_workflow_fk',
+      columns: [t.workspaceId, t.workflowId],
+      foreignColumns: [workflows.workspaceId, workflows.id],
+    }).onDelete('cascade'),
+    uniqueIndex('board_columns_title_uq')
+      .on(t.workflowId, sql`lower(${t.title})`)
+      .where(sql`${t.deletedAt} is null`),
+    index('board_columns_position_idx')
+      .on(t.workflowId, t.position)
+      .where(sql`${t.deletedAt} is null`),
     check('board_columns_title_len', sql`char_length(${t.title}) between 1 and 32`),
   ],
 );
@@ -116,11 +134,23 @@ export const projects = pgTable(
   },
   (t) => [
     unique('projects_ws_id_uq').on(t.workspaceId, t.id),
-    uniqueIndex('projects_ws_key_uq').on(t.workspaceId, t.key).where(sql`${t.deletedAt} is null`),
+    uniqueIndex('projects_ws_key_uq')
+      .on(t.workspaceId, t.key)
+      .where(sql`${t.deletedAt} is null`),
     index('projects_ws_parent_idx').on(t.workspaceId, t.parentId),
-    index('projects_trash_idx').on(t.deletedAt).where(sql`${t.deletedAt} is not null`),
-    foreignKey({ name: 'projects_parent_fk', columns: [t.workspaceId, t.parentId], foreignColumns: [t.workspaceId, t.id] }),
-    foreignKey({ name: 'projects_workflow_fk', columns: [t.workspaceId, t.workflowId], foreignColumns: [workflows.workspaceId, workflows.id] }),
+    index('projects_trash_idx')
+      .on(t.deletedAt)
+      .where(sql`${t.deletedAt} is not null`),
+    foreignKey({
+      name: 'projects_parent_fk',
+      columns: [t.workspaceId, t.parentId],
+      foreignColumns: [t.workspaceId, t.id],
+    }),
+    foreignKey({
+      name: 'projects_workflow_fk',
+      columns: [t.workspaceId, t.workflowId],
+      foreignColumns: [workflows.workspaceId, workflows.id],
+    }),
     member('projects_created_by_fk', [t.workspaceId, t.createdBy]),
     member('projects_deleted_by_fk', [t.workspaceId, t.deletedBy]),
     check('projects_key_format', sql`${t.key} ~ '^[A-Z][A-Z0-9]{1,5}$'`),
@@ -141,8 +171,16 @@ export const projectDepartments = pgTable(
   },
   (t) => [
     primaryKey({ name: 'project_departments_pk', columns: [t.projectId, t.departmentId] }),
-    foreignKey({ name: 'project_departments_project_fk', columns: [t.workspaceId, t.projectId], foreignColumns: [projects.workspaceId, projects.id] }).onDelete('cascade'),
-    foreignKey({ name: 'project_departments_department_fk', columns: [t.workspaceId, t.departmentId], foreignColumns: [departments.workspaceId, departments.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'project_departments_project_fk',
+      columns: [t.workspaceId, t.projectId],
+      foreignColumns: [projects.workspaceId, projects.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'project_departments_department_fk',
+      columns: [t.workspaceId, t.departmentId],
+      foreignColumns: [departments.workspaceId, departments.id],
+    }).onDelete('cascade'),
     index('project_departments_workspace_project_idx').on(t.workspaceId, t.projectId),
     index('project_departments_workspace_department_idx').on(t.workspaceId, t.departmentId),
   ],
@@ -160,9 +198,11 @@ export const projectMembers = pgTable(
   },
   (t) => [
     primaryKey({ name: 'project_members_pk', columns: [t.projectId, t.userId] }),
-    foreignKey({ name: 'project_members_project_fk', columns: [t.workspaceId, t.projectId], foreignColumns: [projects.workspaceId, projects.id] }).onDelete(
-      'cascade',
-    ),
+    foreignKey({
+      name: 'project_members_project_fk',
+      columns: [t.workspaceId, t.projectId],
+      foreignColumns: [projects.workspaceId, projects.id],
+    }).onDelete('cascade'),
     member('project_members_user_fk', [t.workspaceId, t.userId]),
     index('project_members_user_idx').on(t.workspaceId, t.userId),
   ],
@@ -179,9 +219,11 @@ export const projectStars = pgTable(
   },
   (t) => [
     primaryKey({ name: 'project_stars_pk', columns: [t.userId, t.projectId] }),
-    foreignKey({ name: 'project_stars_project_fk', columns: [t.workspaceId, t.projectId], foreignColumns: [projects.workspaceId, projects.id] }).onDelete(
-      'cascade',
-    ),
+    foreignKey({
+      name: 'project_stars_project_fk',
+      columns: [t.workspaceId, t.projectId],
+      foreignColumns: [projects.workspaceId, projects.id],
+    }).onDelete('cascade'),
     member('project_stars_user_fk', [t.workspaceId, t.userId]),
   ],
 );
@@ -230,29 +272,58 @@ export const tasks = pgTable(
   (t) => [
     unique('tasks_ws_id_uq').on(t.workspaceId, t.id),
     unique('tasks_project_number_uq').on(t.projectId, t.number),
-    foreignKey({ name: 'tasks_project_fk', columns: [t.workspaceId, t.projectId], foreignColumns: [projects.workspaceId, projects.id] }),
-    foreignKey({ name: 'tasks_column_fk', columns: [t.workspaceId, t.columnId], foreignColumns: [boardColumns.workspaceId, boardColumns.id] }),
-    foreignKey({ name: 'tasks_reopen_column_fk', columns: [t.workspaceId, t.reopenColumnId], foreignColumns: [boardColumns.workspaceId, boardColumns.id] }),
+    foreignKey({
+      name: 'tasks_project_fk',
+      columns: [t.workspaceId, t.projectId],
+      foreignColumns: [projects.workspaceId, projects.id],
+    }),
+    foreignKey({
+      name: 'tasks_column_fk',
+      columns: [t.workspaceId, t.columnId],
+      foreignColumns: [boardColumns.workspaceId, boardColumns.id],
+    }),
+    foreignKey({
+      name: 'tasks_reopen_column_fk',
+      columns: [t.workspaceId, t.reopenColumnId],
+      foreignColumns: [boardColumns.workspaceId, boardColumns.id],
+    }),
     member('tasks_reviewer_fk', [t.workspaceId, t.reviewerId]),
     member('tasks_created_by_fk', [t.workspaceId, t.createdBy]),
     // One message, one note → at most one live task.
-    uniqueIndex('tasks_source_message_uq').on(t.sourceMessageId).where(sql`${t.sourceMessageId} is not null and ${t.deletedAt} is null`),
-    uniqueIndex('tasks_source_note_uq').on(t.sourceNoteId).where(sql`${t.sourceNoteId} is not null and ${t.deletedAt} is null`),
+    uniqueIndex('tasks_source_message_uq')
+      .on(t.sourceMessageId)
+      .where(sql`${t.sourceMessageId} is not null and ${t.deletedAt} is null`),
+    uniqueIndex('tasks_source_note_uq')
+      .on(t.sourceNoteId)
+      .where(sql`${t.sourceNoteId} is not null and ${t.deletedAt} is null`),
     // Moves and column removal: the cards of one column, in order.
-    index('tasks_column_position_idx').on(t.workspaceId, t.columnId, t.position).where(sql`${t.deletedAt} is null and ${t.archivedAt} is null`),
+    index('tasks_column_position_idx')
+      .on(t.workspaceId, t.columnId, t.position)
+      .where(sql`${t.deletedAt} is null and ${t.archivedAt} is null`),
     // The board and filtered lists of a project.
-    index('tasks_project_status_idx').on(t.workspaceId, t.projectId, t.status).where(sql`${t.deletedAt} is null and ${t.archivedAt} is null`),
+    index('tasks_project_status_idx')
+      .on(t.workspaceId, t.projectId, t.status)
+      .where(sql`${t.deletedAt} is null and ${t.archivedAt} is null`),
     // Calendar deadlines and "due soon".
-    index('tasks_due_idx').on(t.workspaceId, t.dueDate).where(sql`${t.deletedAt} is null and ${t.archivedAt} is null and ${t.status} <> 'done'`),
+    index('tasks_due_idx')
+      .on(t.workspaceId, t.dueDate)
+      .where(sql`${t.deletedAt} is null and ${t.archivedAt} is null and ${t.status} <> 'done'`),
     // Keyset pagination of lists, newest first.
-    index('tasks_created_idx').on(t.workspaceId, t.createdAt, t.id).where(sql`${t.deletedAt} is null`),
+    index('tasks_created_idx')
+      .on(t.workspaceId, t.createdAt, t.id)
+      .where(sql`${t.deletedAt} is null`),
     // Persian search (btree_gin lets the tenant key share the trigram index).
-    index('tasks_search_idx').using('gin', t.workspaceId, t.searchText.op('gin_trgm_ops')).where(sql`${t.deletedAt} is null`),
+    index('tasks_search_idx')
+      .using('gin', t.workspaceId, t.searchText.op('gin_trgm_ops'))
+      .where(sql`${t.deletedAt} is null`),
     check('tasks_title_len', sql`char_length(${t.title}) between 1 and 200`),
     check('tasks_description_len', sql`char_length(${t.description}) <= 20000`),
     check('tasks_dates', sql`${t.dueDate} is null or ${t.dueDate} >= ${t.startDate}`),
     check('tasks_severity_bug_only', sql`${t.severity} is null or ${t.type} = 'bug'`),
-    check('tasks_estimate_range', sql`${t.estimatedMinutes} is null or ${t.estimatedMinutes} between 1 and 60000`),
+    check(
+      'tasks_estimate_range',
+      sql`${t.estimatedMinutes} is null or ${t.estimatedMinutes} between 1 and 60000`,
+    ),
   ],
 );
 
@@ -267,7 +338,11 @@ export const taskAssignees = pgTable(
   },
   (t) => [
     primaryKey({ name: 'task_assignees_pk', columns: [t.taskId, t.userId] }),
-    foreignKey({ name: 'task_assignees_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_assignees_task_fk',
+      columns: [t.workspaceId, t.taskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
     member('task_assignees_user_fk', [t.workspaceId, t.userId]),
     // "وظایف من"
     index('task_assignees_user_idx').on(t.workspaceId, t.userId),
@@ -284,7 +359,11 @@ export const taskStars = pgTable(
   },
   (t) => [
     primaryKey({ name: 'task_stars_pk', columns: [t.userId, t.taskId] }),
-    foreignKey({ name: 'task_stars_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_stars_task_fk',
+      columns: [t.workspaceId, t.taskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
     member('task_stars_user_fk', [t.workspaceId, t.userId]),
   ],
 );
@@ -305,7 +384,11 @@ export const subtasks = pgTable(
   },
   (t) => [
     unique('subtasks_ws_id_uq').on(t.workspaceId, t.id),
-    foreignKey({ name: 'subtasks_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'subtasks_task_fk',
+      columns: [t.workspaceId, t.taskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
     member('subtasks_assignee_fk', [t.workspaceId, t.assigneeId]),
     index('subtasks_task_position_idx').on(t.taskId, t.position),
     check('subtasks_title_len', sql`char_length(${t.title}) between 1 and 200`),
@@ -327,8 +410,16 @@ export const taskComments = pgTable(
   },
   (t) => [
     unique('task_comments_ws_id_uq').on(t.workspaceId, t.id),
-    foreignKey({ name: 'task_comments_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
-    foreignKey({ name: 'task_comments_reply_fk', columns: [t.workspaceId, t.replyToId], foreignColumns: [t.workspaceId, t.id] }),
+    foreignKey({
+      name: 'task_comments_task_fk',
+      columns: [t.workspaceId, t.taskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_comments_reply_fk',
+      columns: [t.workspaceId, t.replyToId],
+      foreignColumns: [t.workspaceId, t.id],
+    }),
     member('task_comments_author_fk', [t.workspaceId, t.authorId]),
     index('task_comments_task_idx').on(t.taskId, t.createdAt),
     check('task_comments_body_len', sql`char_length(${t.body}) between 1 and 4000`),
@@ -360,8 +451,16 @@ export const taskLabels = pgTable(
   },
   (t) => [
     primaryKey({ name: 'task_labels_pk', columns: [t.taskId, t.labelId] }),
-    foreignKey({ name: 'task_labels_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
-    foreignKey({ name: 'task_labels_label_fk', columns: [t.workspaceId, t.labelId], foreignColumns: [labels.workspaceId, labels.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_labels_task_fk',
+      columns: [t.workspaceId, t.taskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_labels_label_fk',
+      columns: [t.workspaceId, t.labelId],
+      foreignColumns: [labels.workspaceId, labels.id],
+    }).onDelete('cascade'),
     index('task_labels_label_idx').on(t.labelId),
   ],
 );
@@ -379,7 +478,11 @@ export const taskEvents = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    foreignKey({ name: 'task_events_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_events_task_fk',
+      columns: [t.workspaceId, t.taskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
     index('task_events_task_idx').on(t.taskId, t.createdAt),
   ],
 );
@@ -400,7 +503,11 @@ export const taskWorklogs = pgTable(
   },
   (t) => [
     unique('task_worklogs_ws_id_uq').on(t.workspaceId, t.id),
-    foreignKey({ name: 'task_worklogs_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_worklogs_task_fk',
+      columns: [t.workspaceId, t.taskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
     member('task_worklogs_user_fk', [t.workspaceId, t.userId]),
     index('task_worklogs_task_idx').on(t.taskId, t.loggedAt),
     check('task_worklogs_duration', sql`${t.durationMinutes} between 1 and 1440`),
@@ -427,17 +534,26 @@ export const taskDependencies = pgTable(
   },
   (t) => [
     unique('task_dependencies_ws_id_uq').on(t.workspaceId, t.id),
-    foreignKey({ name: 'task_dependencies_project_fk', columns: [t.workspaceId, t.projectId], foreignColumns: [projects.workspaceId, projects.id] }).onDelete(
-      'cascade',
-    ),
-    foreignKey({ name: 'task_dependencies_source_fk', columns: [t.workspaceId, t.sourceTaskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete(
-      'cascade',
-    ),
-    foreignKey({ name: 'task_dependencies_target_fk', columns: [t.workspaceId, t.targetTaskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete(
-      'cascade',
-    ),
+    foreignKey({
+      name: 'task_dependencies_project_fk',
+      columns: [t.workspaceId, t.projectId],
+      foreignColumns: [projects.workspaceId, projects.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_dependencies_source_fk',
+      columns: [t.workspaceId, t.sourceTaskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_dependencies_target_fk',
+      columns: [t.workspaceId, t.targetTaskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
     member('task_dependencies_created_by_fk', [t.workspaceId, t.createdBy]),
-    uniqueIndex('task_dependencies_pair_uq').on(sql`least(${t.sourceTaskId}, ${t.targetTaskId})`, sql`greatest(${t.sourceTaskId}, ${t.targetTaskId})`),
+    uniqueIndex('task_dependencies_pair_uq').on(
+      sql`least(${t.sourceTaskId}, ${t.targetTaskId})`,
+      sql`greatest(${t.sourceTaskId}, ${t.targetTaskId})`,
+    ),
     index('task_dependencies_source_idx').on(t.sourceTaskId),
     index('task_dependencies_target_idx').on(t.targetTaskId),
     check('task_dependencies_not_self', sql`${t.sourceTaskId} <> ${t.targetTaskId}`),

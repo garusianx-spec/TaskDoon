@@ -1,23 +1,92 @@
-import { afterEach,describe,expect,it,vi } from 'vitest';
-import type { AttachmentView,TaskDetail,TaskDraft } from '@taskin/contracts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { AttachmentView, TaskDetail, TaskDraft } from '@taskin/contracts';
 import { api } from '@/api/endpoints';
 import { ApiProblem } from '@/lib/api-client';
 import { taskDraft } from '@/store/drafts';
 import { LIVE_EMPTY_STATE } from '@/store/initial-state';
 import { LiveStore } from '@/store/live/live-store';
-import { workspaceReducer,type WorkspaceAction,type WorkspaceState } from '@/store/workspace-reducer';
+import { workspaceReducer, type WorkspaceAction, type WorkspaceState } from '@/store/workspace-reducer';
 
 const taskId = '01900000-0000-7000-8000-000000000021';
 const attachmentId = '01900000-0000-7000-8000-000000000022';
-const uploaded: AttachmentView = { id: attachmentId, name: 'report.txt', kind: 'document', mimeType: 'text/plain', size: 6, status: 'scanning', uploadedById: 'owner', uploadedAt: '2026-10-23T00:00:00.000Z' };
-const draft: TaskDraft & { readonly startDate: string } = { title: 'New task', description: '', projectId: 'project-id', status: 'todo', boardColumnId: null, priority: 'medium', assigneeIds: [], startDate: '2026-10-20', dueDate: '2026-10-28', sourceMessageId: null, sourceNoteId: null, subtaskTitles: [], attachments: [{ ...uploaded, url: null }] };
-const detail: TaskDetail = { id: taskId, code: 'NEW-1', projectId: draft.projectId, title: draft.title, description: '', status: 'todo', priority: 'medium', columnId: 'column-id', position: 'a0', assigneeIds: [], reviewerId: null, startDate: draft.startDate, dueDate: draft.dueDate, labelIds: [], starred: false, subtaskCount: 0, subtaskDoneCount: 0, commentCount: 0, attachmentCount: 1, completedAt: null, archived: false, sourceMessageId: null, sourceNoteId: null, version: 1, createdAt: uploaded.uploadedAt, updatedAt: uploaded.uploadedAt, type: 'task', severity: null, estimatedMinutes: null, spentMinutes: 0, isBacklog: false, blockedByIds: [], createdById: 'owner', reopenColumnId: null, subtasks: [], comments: [], attachments: [uploaded], timeline: [], myActions: ['view', 'edit'], sourceMessage: null };
+const uploaded: AttachmentView = {
+  id: attachmentId,
+  name: 'report.txt',
+  kind: 'document',
+  mimeType: 'text/plain',
+  size: 6,
+  status: 'scanning',
+  uploadedById: 'owner',
+  uploadedAt: '2026-10-23T00:00:00.000Z',
+};
+const draft: TaskDraft & { readonly startDate: string } = {
+  title: 'New task',
+  description: '',
+  projectId: 'project-id',
+  status: 'todo',
+  boardColumnId: null,
+  priority: 'medium',
+  assigneeIds: [],
+  startDate: '2026-10-20',
+  dueDate: '2026-10-28',
+  sourceMessageId: null,
+  sourceNoteId: null,
+  subtaskTitles: [],
+  attachments: [{ ...uploaded, url: null }],
+};
+const detail: TaskDetail = {
+  id: taskId,
+  code: 'NEW-1',
+  projectId: draft.projectId,
+  title: draft.title,
+  description: '',
+  status: 'todo',
+  priority: 'medium',
+  columnId: 'column-id',
+  position: 'a0',
+  assigneeIds: [],
+  reviewerId: null,
+  startDate: draft.startDate,
+  dueDate: draft.dueDate,
+  labelIds: [],
+  starred: false,
+  subtaskCount: 0,
+  subtaskDoneCount: 0,
+  commentCount: 0,
+  attachmentCount: 1,
+  completedAt: null,
+  archived: false,
+  sourceMessageId: null,
+  sourceNoteId: null,
+  version: 1,
+  createdAt: uploaded.uploadedAt,
+  updatedAt: uploaded.uploadedAt,
+  type: 'task',
+  severity: null,
+  estimatedMinutes: null,
+  spentMinutes: 0,
+  isBacklog: false,
+  blockedByIds: [],
+  createdById: 'owner',
+  reopenColumnId: null,
+  subtasks: [],
+  comments: [],
+  attachments: [uploaded],
+  timeline: [],
+  myActions: ['view', 'edit'],
+  sourceMessage: null,
+};
 
 function stateStore(initial: Partial<WorkspaceState> = {}) {
   const store = new LiveStore();
   Object.assign(store, { status: { ...store.current, phase: 'ready' }, workspaceId: 'workspace-id' });
   let state: WorkspaceState = { ...LIVE_EMPTY_STATE, meId: 'owner', ...initial };
-  store.attach(() => state, action => { state = workspaceReducer(state, action); });
+  store.attach(
+    () => state,
+    (action) => {
+      state = workspaceReducer(state, action);
+    },
+  );
   const create = (nextDraft: TaskDraft = draft) => {
     const previous = state;
     const action: WorkspaceAction = { type: 'create-task', draft: nextDraft, authorId: 'owner' };
@@ -33,7 +102,15 @@ function stateStore(initial: Partial<WorkspaceState> = {}) {
 }
 
 function uploads() {
-  const plan = vi.spyOn(api.files, 'plan').mockResolvedValue({ attachment: uploaded, plan: { kind: 'post', url: 'https://storage.example.test/upload', fields: { key: 'object', 'Content-Type': 'text/plain' } }, expiresInSeconds: 60 });
+  const plan = vi.spyOn(api.files, 'plan').mockResolvedValue({
+    attachment: uploaded,
+    plan: {
+      kind: 'post',
+      url: 'https://storage.example.test/upload',
+      fields: { key: 'object', 'Content-Type': 'text/plain' },
+    },
+    expiresInSeconds: 60,
+  });
   const complete = vi.spyOn(api.files, 'complete').mockResolvedValue(uploaded);
   const abort = vi.spyOn(api.files, 'abort').mockResolvedValue(undefined);
   const storage = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
@@ -41,7 +118,10 @@ function uploads() {
   return { plan, complete, abort, storage };
 }
 
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('task form request persistence', () => {
   it('reuses a form command id after the task committed but the response was lost', async () => {
@@ -50,16 +130,19 @@ describe('task form request persistence', () => {
     const keys: string[] = [];
     let loseResponse = true;
     let created = 0;
-    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockImplementation(async (_url, options) => {
-      const key = new Headers(options?.headers).get('idempotency-key')!;
-      keys.push(key);
-      if (!responses.has(key)) responses.set(key, { ...detail, code: `NEW-${++created}` });
-      if (loseResponse) {
-        loseResponse = false;
-        throw new TypeError('The connection ended after committing the task.');
-      }
-      return Response.json(responses.get(key));
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockImplementation(async (_url, options) => {
+        const key = new Headers(options?.headers).get('idempotency-key')!;
+        keys.push(key);
+        if (!responses.has(key)) responses.set(key, { ...detail, code: `NEW-${++created}` });
+        if (loseResponse) {
+          loseResponse = false;
+          throw new TypeError('The connection ended after committing the task.');
+        }
+        return Response.json(responses.get(key));
+      }),
+    );
     const test = stateStore();
     await expect(test.createAwaited(draft, [], commandId)).rejects.toMatchObject({ code: 'NETWORK' });
     const retried = await test.createAwaited(draft, [], commandId);
@@ -79,7 +162,10 @@ describe('task form request persistence', () => {
     vi.useRealTimers();
   });
   it('keeps the chosen start date in the optimistic task', () => {
-    const state = workspaceReducer({ ...LIVE_EMPTY_STATE, meId: 'owner' }, { type: 'create-task', draft, authorId: 'owner' });
+    const state = workspaceReducer(
+      { ...LIVE_EMPTY_STATE, meId: 'owner' },
+      { type: 'create-task', draft, authorId: 'owner' },
+    );
     expect(state.tasks[0]?.startDate).toBe(draft.startDate);
   });
 
@@ -88,7 +174,10 @@ describe('task form request persistence', () => {
     const test = stateStore();
     test.create();
     await vi.waitFor(() => expect(test.state().tasks[0]?.id).toBe(taskId));
-    expect(create).toHaveBeenCalledWith('workspace-id', expect.objectContaining({ startDate: draft.startDate, attachmentIds: [attachmentId] }));
+    expect(create).toHaveBeenCalledWith(
+      'workspace-id',
+      expect.objectContaining({ startDate: draft.startDate, attachmentIds: [attachmentId] }),
+    );
     expect(test.state().tasks[0]?.attachments[0]?.id).toBe(attachmentId);
   });
 
@@ -96,7 +185,11 @@ describe('task form request persistence', () => {
     const test = stateStore();
     const upload = uploads();
     let finish!: (value: AttachmentView) => void;
-    upload.complete.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    upload.complete.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
     const create = vi.spyOn(api.tasks, 'create').mockResolvedValue(detail);
     const file = new File(['report'], 'report.txt', { type: 'text/plain' });
     const creating = test.createAwaited({ ...draft, attachments: [] }, [file]);
@@ -104,7 +197,10 @@ describe('task form request persistence', () => {
     expect(create).not.toHaveBeenCalled();
     finish(uploaded);
     await expect(creating).resolves.toBe(taskId);
-    expect(create).toHaveBeenCalledWith('workspace-id', expect.objectContaining({ attachmentIds: [attachmentId] }));
+    expect(create).toHaveBeenCalledWith(
+      'workspace-id',
+      expect.objectContaining({ attachmentIds: [attachmentId] }),
+    );
     expect(test.state().tasks).toHaveLength(1);
   });
 
@@ -114,7 +210,9 @@ describe('task form request persistence', () => {
     upload.storage.mockResolvedValueOnce(new Response(null, { status: 403 }));
     const create = vi.spyOn(api.tasks, 'create').mockResolvedValue(detail);
     const file = new File(['report'], 'report.txt', { type: 'text/plain' });
-    await expect(test.createAwaited({ ...draft, attachments: [] }, [file])).rejects.toMatchObject({ code: 'UPLOAD_INVALID' });
+    await expect(test.createAwaited({ ...draft, attachments: [] }, [file])).rejects.toMatchObject({
+      code: 'UPLOAD_INVALID',
+    });
     expect(create).not.toHaveBeenCalled();
     expect(upload.abort).toHaveBeenCalledWith('workspace-id', attachmentId);
     expect(test.state().tasks).toHaveLength(0);
@@ -142,8 +240,14 @@ describe('task form request persistence', () => {
     vi.spyOn(api.tasks, 'get').mockResolvedValue(detail);
     const rejected = new ApiProblem(412, 'PRECONDITION_FAILED', 'The task changed.', null);
     const update = vi.spyOn(api.tasks, 'update').mockRejectedValue(rejected);
-    await expect(test.store.saveTask(taskId, { title: 'Edited title', startDate: '2026-10-21', estimatedMinutes: 90 })).rejects.toBe(rejected);
-    expect(update).toHaveBeenCalledWith('workspace-id', taskId, 1, { title: 'Edited title', startDate: '2026-10-21', estimatedMinutes: 90 });
+    await expect(
+      test.store.saveTask(taskId, { title: 'Edited title', startDate: '2026-10-21', estimatedMinutes: 90 }),
+    ).rejects.toBe(rejected);
+    expect(update).toHaveBeenCalledWith('workspace-id', taskId, 1, {
+      title: 'Edited title',
+      startDate: '2026-10-21',
+      estimatedMinutes: 90,
+    });
     expect(test.state().tasks[0]?.title).toBe(detail.title);
   });
 
@@ -154,7 +258,12 @@ describe('task form request persistence', () => {
     const rejected = new ApiProblem(0, 'NETWORK', 'The link was interrupted.', null);
     const attach = vi.spyOn(api.tasks, 'attach').mockRejectedValueOnce(rejected).mockResolvedValue(undefined);
     const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
-    const picked = { attachmentId: 'attachment-local-1', file: new File(['report'], 'report.txt', { type: 'text/plain' }), name: 'report.txt', previewUrl: 'blob:preview' };
+    const picked = {
+      attachmentId: 'attachment-local-1',
+      file: new File(['report'], 'report.txt', { type: 'text/plain' }),
+      name: 'report.txt',
+      previewUrl: 'blob:preview',
+    };
     await expect(test.store.attachTaskFiles(taskId, [picked])).rejects.toBe(rejected);
     expect(revoke).toHaveBeenCalledWith(picked.previewUrl);
     await expect(test.store.attachTaskFiles(taskId, [picked])).resolves.toBeUndefined();
@@ -179,11 +288,36 @@ describe('task form request persistence', () => {
     const update = vi.spyOn(api.tasks, 'update').mockResolvedValue(detail);
     await test.store.saveTask(taskId, { title: detail.title });
     let finishRefresh!: (value: TaskDetail) => void;
-    get.mockReturnValueOnce(new Promise(resolve => { finishRefresh = resolve; }));
+    get.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishRefresh = resolve;
+      }),
+    );
     vi.spyOn(api.tasks, 'attach').mockResolvedValue(undefined);
-    const attaching = test.store.attachTaskFiles(taskId, [{ attachmentId: 'attachment-local-1', file: new File(['report'], 'report.txt', { type: 'text/plain' }), name: 'report.txt', previewUrl: 'blob:preview' }]);
+    const attaching = test.store.attachTaskFiles(taskId, [
+      {
+        attachmentId: 'attachment-local-1',
+        file: new File(['report'], 'report.txt', { type: 'text/plain' }),
+        name: 'report.txt',
+        previewUrl: 'blob:preview',
+      },
+    ]);
     await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(2));
-    const newer: TaskDetail = { ...detail, version: 2, title: 'Newer saved title', comments: [{ id: 'comment-id', authorId: 'owner', body: 'A new report', replyToId: null, createdAt: detail.createdAt, editedAt: null }] };
+    const newer: TaskDetail = {
+      ...detail,
+      version: 2,
+      title: 'Newer saved title',
+      comments: [
+        {
+          id: 'comment-id',
+          authorId: 'owner',
+          body: 'A new report',
+          replyToId: null,
+          createdAt: detail.createdAt,
+          editedAt: null,
+        },
+      ],
+    };
     update.mockResolvedValueOnce(newer);
     await test.store.saveTask(taskId, { title: newer.title });
     finishRefresh(detail);
@@ -198,22 +332,49 @@ describe('task form request persistence', () => {
     const rejected = new ApiProblem(412, 'PRECONDITION_FAILED', 'The task moved.', null);
     const move = vi.spyOn(api.tasks, 'move').mockRejectedValue(rejected);
     await expect(test.store.saveTaskColumn(taskId, 'next-column')).rejects.toBe(rejected);
-    expect(move).toHaveBeenCalledWith('workspace-id', taskId, { columnId: 'next-column', expectedVersion: detail.version });
+    expect(move).toHaveBeenCalledWith('workspace-id', taskId, {
+      columnId: 'next-column',
+      expectedVersion: detail.version,
+    });
   });
 
   it('preserves the chosen start date when converting a message or note', async () => {
     const test = stateStore();
     vi.spyOn(api.notes, 'convert').mockResolvedValue({ task: detail, existing: false });
-    await expect(test.createAwaited({ ...draft, sourceNoteId: 'note-id', attachments: [] })).resolves.toBe(taskId);
-    expect(api.notes.convert).toHaveBeenCalledWith('workspace-id', 'note-id', expect.objectContaining({ startDate: draft.startDate }));
+    await expect(test.createAwaited({ ...draft, sourceNoteId: 'note-id', attachments: [] })).resolves.toBe(
+      taskId,
+    );
+    expect(api.notes.convert).toHaveBeenCalledWith(
+      'workspace-id',
+      'note-id',
+      expect.objectContaining({ startDate: draft.startDate }),
+    );
   });
 
   it('retries a conversion attachment failure against the existing source task without duplicating it', async () => {
     const sourceId = 'source-message';
-    const test = stateStore({ messages: [{ id: sourceId, conversationId: 'conversation-id', authorId: 'owner', body: { kind: 'text', text: 'Follow up' }, sentAt: detail.createdAt, replyToId: null, reactions: [], readByIds: [], linkedTaskId: null, edited: false }] });
+    const test = stateStore({
+      messages: [
+        {
+          id: sourceId,
+          conversationId: 'conversation-id',
+          authorId: 'owner',
+          body: { kind: 'text', text: 'Follow up' },
+          sentAt: detail.createdAt,
+          replyToId: null,
+          reactions: [],
+          readByIds: [],
+          linkedTaskId: null,
+          edited: false,
+        },
+      ],
+    });
     const upload = uploads();
     const converted: TaskDetail = { ...detail, sourceMessageId: sourceId };
-    const convert = vi.spyOn(api.conversations, 'convert').mockResolvedValueOnce({ task: converted, existing: false }).mockResolvedValue({ task: converted, existing: true });
+    const convert = vi
+      .spyOn(api.conversations, 'convert')
+      .mockResolvedValueOnce({ task: converted, existing: false })
+      .mockResolvedValue({ task: converted, existing: true });
     const create = vi.spyOn(api.tasks, 'create');
     vi.spyOn(api.tasks, 'get').mockResolvedValue(converted);
     const rejected = new ApiProblem(0, 'NETWORK', 'The attachment link was interrupted.', null);
@@ -225,7 +386,12 @@ describe('task form request persistence', () => {
     expect(test.state().messages[0]?.linkedTaskId).toBeNull();
     await expect(test.createAwaited(sourceDraft, [file])).resolves.toBe(taskId);
     expect(convert).toHaveBeenCalledTimes(2);
-    expect(convert).toHaveBeenCalledWith('workspace-id', 'conversation-id', sourceId, expect.objectContaining({ startDate: draft.startDate, attachmentIds: [] }));
+    expect(convert).toHaveBeenCalledWith(
+      'workspace-id',
+      'conversation-id',
+      sourceId,
+      expect.objectContaining({ startDate: draft.startDate, attachmentIds: [] }),
+    );
     expect(create).not.toHaveBeenCalled();
     expect(attach).toHaveBeenLastCalledWith('workspace-id', taskId, attachmentId);
     expect(upload.plan).toHaveBeenCalledTimes(1);

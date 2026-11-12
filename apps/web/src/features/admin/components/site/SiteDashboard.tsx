@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { siteApi } from '@/features/admin/api/site-api';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
-import { Loaded,PageHeader,Panel } from '@/features/admin/components/AdminUi';
+import { Loaded, PageHeader, Panel } from '@/features/admin/components/AdminUi';
 import { RelativeTime } from '@/components/ui';
 import { KINDS } from '@/features/admin/components/site/SiteFields';
 
@@ -29,6 +29,82 @@ export const SITE_SECTIONS = [
 ] as const;
 
 export function SiteDashboard() {
-  const page = useAdminLoad('site-dashboard', async () => { const [documents, inbox] = await Promise.all([siteApi.documents(), siteApi.submissions({ status: 'new', page: 1, limit: 5 })]); return { documents, inbox }; });
-  return <><PageHeader title="مدیریت وب‌سایت" description="از پیش‌نویس تا انتشار؛ محتوای عمومی، رسانه‌ها و درخواست‌های تسک‌دون را از یک‌جا مدیریت کنید." /><Loaded load={page}>{({ documents, inbox }) => <><div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[{ title: 'محتوای منتشرشده', count: documents.filter((entry) => entry.status === 'published').length }, { title: 'پیش‌نویس‌ها', count: documents.filter((entry) => entry.status === 'draft').length }, { title: 'نیازمند بازبینی', count: documents.filter((entry) => entry.draft.data.approvalRequired === true).length }, { title: 'درخواست‌های جدید', count: inbox.total }].map((stat) => <div key={stat.title} className="rounded-xl border border-secondary bg-surface p-5"><p className="text-body-sm text-fg-tertiary">{stat.title}</p><p className="mt-2 text-3xl font-bold text-fg-primary">{stat.count.toLocaleString('fa-IR')}</p></div>)}</div><Panel title="ادامه ویرایش"><div className="divide-y divide-secondary">{[...documents].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 5).map((document) => <Link key={document.id} href={`/admin/site/pages/${document.id}`} className="flex items-center justify-between gap-4 rounded-lg py-3 text-body-sm hover:bg-hover"><div><p className="font-semibold text-fg-primary">{document.title}</p><p className="mt-1 text-caption text-fg-tertiary">{KINDS[document.kind]} · {document.slug}</p></div><span className="shrink-0 text-caption text-fg-tertiary"><RelativeTime iso={document.updatedAt} /></span></Link>)}</div></Panel></>}</Loaded><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{SITE_SECTIONS.filter((section) => section.path).map((section) => <Link key={section.path} href={`/admin/site/${section.path}`} className="rounded-xl border border-secondary bg-surface p-5 transition-colors hover:border-brand hover:bg-brand-subtle"><p className="text-body font-semibold text-fg-primary">{section.label}</p><p className="mt-2 text-body-sm text-fg-tertiary">{section.description}</p></Link>)}</div></>;
+  const page = useAdminLoad('site-dashboard', async () => {
+    const [documents, inbox] = await Promise.all([
+      siteApi.documents(),
+      siteApi.submissions({ status: 'new', page: 1, limit: 5 }),
+    ]);
+    return { documents, inbox };
+  });
+  return (
+    <>
+      <PageHeader
+        title="مدیریت وب‌سایت"
+        description="از پیش‌نویس تا انتشار؛ محتوای عمومی، رسانه‌ها و درخواست‌های تسک‌دون را از یک‌جا مدیریت کنید."
+      />
+      <Loaded load={page}>
+        {({ documents, inbox }) => (
+          <>
+            <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  title: 'محتوای منتشرشده',
+                  count: documents.filter((entry) => entry.status === 'published').length,
+                },
+                { title: 'پیش‌نویس‌ها', count: documents.filter((entry) => entry.status === 'draft').length },
+                {
+                  title: 'نیازمند بازبینی',
+                  count: documents.filter((entry) => entry.draft.data.approvalRequired === true).length,
+                },
+                { title: 'درخواست‌های جدید', count: inbox.total },
+              ].map((stat) => (
+                <div key={stat.title} className="rounded-xl border border-secondary bg-surface p-5">
+                  <p className="text-body-sm text-fg-tertiary">{stat.title}</p>
+                  <p className="mt-2 text-3xl font-bold text-fg-primary">
+                    {stat.count.toLocaleString('fa-IR')}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <Panel title="ادامه ویرایش">
+              <div className="divide-y divide-secondary">
+                {[...documents]
+                  .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+                  .slice(0, 5)
+                  .map((document) => (
+                    <Link
+                      key={document.id}
+                      href={`/admin/site/pages/${document.id}`}
+                      className="flex items-center justify-between gap-4 rounded-lg py-3 text-body-sm hover:bg-hover"
+                    >
+                      <div>
+                        <p className="font-semibold text-fg-primary">{document.title}</p>
+                        <p className="mt-1 text-caption text-fg-tertiary">
+                          {KINDS[document.kind]} · {document.slug}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-caption text-fg-tertiary">
+                        <RelativeTime iso={document.updatedAt} />
+                      </span>
+                    </Link>
+                  ))}
+              </div>
+            </Panel>
+          </>
+        )}
+      </Loaded>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {SITE_SECTIONS.filter((section) => section.path).map((section) => (
+          <Link
+            key={section.path}
+            href={`/admin/site/${section.path}`}
+            className="rounded-xl border border-secondary bg-surface p-5 transition-colors hover:border-brand hover:bg-brand-subtle"
+          >
+            <p className="text-body font-semibold text-fg-primary">{section.label}</p>
+            <p className="mt-2 text-body-sm text-fg-tertiary">{section.description}</p>
+          </Link>
+        ))}
+      </div>
+    </>
+  );
 }

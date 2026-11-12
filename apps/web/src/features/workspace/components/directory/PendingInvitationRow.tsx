@@ -1,15 +1,11 @@
 'use client';
 
-import type { Invitation,InvitationChannel } from '@taskin/contracts';
-import { DEPARTMENTS,roleLabel } from '@/data/reference';
+import type { Invitation, InvitationChannel } from '@taskin/contracts';
+import { DEPARTMENTS, roleLabel } from '@/data/reference';
 import { cn } from '@/lib/utils';
-import {
-CHANNEL_LABELS,
-formatRecipient
-} from '@taskin/text';
-import { IconButton,RelativeTime } from '@/components/ui';
-import { MobileIcon,SmsIcon,TrashIcon } from '@/components/icons';
-
+import { CHANNEL_LABELS, formatRecipient } from '@taskin/text';
+import { IconButton, RelativeTime } from '@/components/ui';
+import { MobileIcon, SmsIcon, TrashIcon } from '@/components/icons';
 
 /** Envelope for email, handset for SMS — the same glyph on chips and in the pending queue. */
 export const CHANNEL_ICONS: Readonly<Record<InvitationChannel, typeof SmsIcon>> = {
@@ -41,13 +37,13 @@ export function PendingInvitationRow({
       <span className="flex min-w-0 flex-1 flex-col">
         <span
           className={cn(
-            'latin-inline truncate text-caption font-semibold text-fg-primary',
+            'truncate text-caption font-semibold text-fg-primary latin-inline',
             invitation.channel === 'sms' && 'numeric',
           )}
         >
           {display}
         </span>
-        <span className="numeric truncate text-micro text-fg-tertiary">
+        <span className="truncate text-micro text-fg-tertiary numeric">
           {`${CHANNEL_LABELS[invitation.channel]}، ${roleLabel(invitation.role)}، ${departmentName}، `}
           <RelativeTime iso={invitation.invitedAt} />
         </span>

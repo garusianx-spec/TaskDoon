@@ -1,20 +1,30 @@
 'use client';
 
-import type { BoardColumn,Task,TaskPriority,User } from '@taskin/contracts';
+import type { BoardColumn, Task, TaskPriority, User } from '@taskin/contracts';
 import { TASK_PRIORITIES } from '@/data/reference';
-import {
-Select
-} from '@/components/ui';
+import { Select } from '@/components/ui';
 import { JalaliDatePicker } from '@/components/shared/JalaliDatePicker';
 import { ColumnDot } from '@/features/board/components/ColumnDot';
 import { IssueFields } from '@/features/agile/components/IssueFields';
 import type { TaskPatch } from '@/store/workspace-reducer';
-import {
-FlagIcon
-} from '@/components/icons';
+import { FlagIcon } from '@/components/icons';
 import { PeoplePicker } from '@/features/tasks/components/TaskPeoplePicker';
 
-export function TaskInspectorFields({ task, column, columns, reviewer, onColumn, onPatch }: { readonly task: Task; readonly column: BoardColumn | undefined; readonly columns: readonly BoardColumn[]; readonly reviewer: User | undefined; readonly onColumn: (id: string) => void; readonly onPatch: (patch: TaskPatch) => void }) {
+export function TaskInspectorFields({
+  task,
+  column,
+  columns,
+  reviewer,
+  onColumn,
+  onPatch,
+}: {
+  readonly task: Task;
+  readonly column: BoardColumn | undefined;
+  readonly columns: readonly BoardColumn[];
+  readonly reviewer: User | undefined;
+  readonly onColumn: (id: string) => void;
+  readonly onPatch: (patch: TaskPatch) => void;
+}) {
   return (
     <section
       className="flex flex-col gap-3 md:col-start-2 md:row-start-1 md:rounded-xl md:border md:border-secondary md:bg-sunken/40 md:p-4"
@@ -69,9 +79,7 @@ export function TaskInspectorFields({ task, column, columns, reviewer, onColumn,
       <Field label="تاییدکننده">
         <PeoplePicker
           selectedIds={reviewer ? [reviewer.id] : []}
-          onToggle={(userId) =>
-            onPatch({ reviewerId: task.reviewerId === userId ? null : userId })
-          }
+          onToggle={(userId) => onPatch({ reviewerId: task.reviewerId === userId ? null : userId })}
           label="انتخاب تاییدکننده"
           emptyLabel="افزودن تاییدکننده"
           single

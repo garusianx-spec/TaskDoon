@@ -51,7 +51,17 @@ export class EventStream {
     const pipeline = this.redis.rt.pipeline();
     for (const entry of entries) {
       const key = this.key(entry.workspaceId);
-      pipeline.xadd(key, 'MAXLEN', '~', MAXLEN, '*', 'r', JSON.stringify(entry.rooms), 'e', JSON.stringify(entry.envelope));
+      pipeline.xadd(
+        key,
+        'MAXLEN',
+        '~',
+        MAXLEN,
+        '*',
+        'r',
+        JSON.stringify(entry.rooms),
+        'e',
+        JSON.stringify(entry.envelope),
+      );
       pipeline.expire(key, TTL_SECONDS);
     }
     const results = (await pipeline.exec()) ?? [];
@@ -66,7 +76,11 @@ export class EventStream {
    * The entries after `lastEventId`, up to `limit`. `gap` is true when entries after it may have
    * been trimmed or expired (or `lastEventId` is not a stream id at all): the client must resync.
    */
-  async since(workspaceId: string, lastEventId: string, limit: number): Promise<{ entries: StreamEntry[]; gap: boolean; more: boolean }> {
+  async since(
+    workspaceId: string,
+    lastEventId: string,
+    limit: number,
+  ): Promise<{ entries: StreamEntry[]; gap: boolean; more: boolean }> {
     if (!STREAM_ID.test(lastEventId)) return { entries: [], gap: true, more: false };
     const key = this.key(workspaceId);
     let length = 0;
@@ -83,14 +97,21 @@ export class EventStream {
     }
     // Trimming only ever removes the oldest entries. The client is safe when its last event is
     // still held (or newer); older than everything held, it may have missed trimmed ones.
-    const [first] = length > 0 ? ((await this.redis.rt.xrange(key, '-', '+', 'COUNT', 1)) as [string, string[]][]) : [];
+    const [first] =
+      length > 0 ? ((await this.redis.rt.xrange(key, '-', '+', 'COUNT', 1)) as [string, string[]][]) : [];
     const oldest = first?.[0];
-    const gap = oldest ? compareStreamIds(lastEventId, oldest) < 0 : compareStreamIds(lastEventId, lastGenerated) < 0;
+    const gap = oldest
+      ? compareStreamIds(lastEventId, oldest) < 0
+      : compareStreamIds(lastEventId, lastGenerated) < 0;
     if (gap) return { entries: [], gap: true, more: false };
-    const raw = (await this.redis.rt.xrange(key, `(${lastEventId}`, '+', 'COUNT', limit + 1)) as [string, string[]][];
+    const raw = (await this.redis.rt.xrange(key, `(${lastEventId}`, '+', 'COUNT', limit + 1)) as [
+      string,
+      string[],
+    ][];
     const entries = raw.slice(0, limit).map(([id, fields]): StreamEntry => {
       const values: Record<string, string> = {};
-      for (let index = 0; index < fields.length - 1; index += 2) values[fields[index] as string] = fields[index + 1] as string;
+      for (let index = 0; index < fields.length - 1; index += 2)
+        values[fields[index] as string] = fields[index + 1] as string;
       const envelope = JSON.parse(values.e ?? '{}') as RealtimeEnvelope;
       return { id, rooms: JSON.parse(values.r ?? '[]') as string[], envelope: { ...envelope, eventId: id } };
     });

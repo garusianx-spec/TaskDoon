@@ -1,7 +1,15 @@
 import { hostname } from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { type BeforeApplicationShutdown, Injectable, Logger } from '@nestjs/common';
-import { ConnectedSocket, MessageBody, type OnGatewayConnection, type OnGatewayDisconnect, type OnGatewayInit, SubscribeMessage, WebSocketGateway } from '@nestjs/websockets';
+import {
+  ConnectedSocket,
+  MessageBody,
+  type OnGatewayConnection,
+  type OnGatewayDisconnect,
+  type OnGatewayInit,
+  SubscribeMessage,
+  WebSocketGateway,
+} from '@nestjs/websockets';
 import type { Redis } from 'ioredis';
 import type { Server } from 'socket.io';
 import { z, ZodError } from 'zod';
@@ -23,9 +31,18 @@ import { MembershipService } from '../rbac/membership.service.js';
 import { MembersService } from '../workspaces/members.service.js';
 import { PresenceTracker } from './presence-tracker.js';
 import { RoomScope } from './room-scope.js';
-import { type BucketKind, bucketLimits, EXPIRY_GRACE_SECONDS, type RtSocket, WsJwtGuard, WsThrottlerGuard } from './ws-guards.js';
+import {
+  type BucketKind,
+  bucketLimits,
+  EXPIRY_GRACE_SECONDS,
+  type RtSocket,
+  WsJwtGuard,
+  WsThrottlerGuard,
+} from './ws-guards.js';
 
-const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'must be a UUID');
+const UUID = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'must be a UUID');
 const schemas = {
   subscribe: z.object({ workspaceId: UUID }).strict(),
   refresh: z.object({ token: z.string().min(1).max(4096) }).strict(),
@@ -54,7 +71,9 @@ const schemas = {
   react: z.object({ messageId: UUID, emoji: z.string().min(1).max(32), on: z.boolean() }).strict(),
   cursor: z.object({ conversationId: UUID, seq: z.number().int().min(0) }).strict(),
   typing: z.object({ conversationId: UUID }).strict(),
-  presence: z.object({ presence: z.enum(['online', 'busy', 'away']), statusMessage: z.string().max(80).optional() }).strict(),
+  presence: z
+    .object({ presence: z.enum(['online', 'busy', 'away']), statusMessage: z.string().max(80).optional() })
+    .strict(),
 };
 
 /** How long a typing indicator lasts without a renewal (RFC §4). */
@@ -74,7 +93,9 @@ const REPLAY_MAX = 1_000;
  */
 @Injectable()
 @WebSocketGateway()
-export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, BeforeApplicationShutdown {
+export class RealtimeGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, BeforeApplicationShutdown
+{
   private readonly logger = new Logger('RealtimeGateway');
   readonly nodeId: string;
   private server?: Server;
@@ -104,7 +125,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   ) {
     this.nodeId = config.env.WS_NODE_ID ?? `${hostname()}-${process.pid}-${randomBytes(3).toString('hex')}`;
     this.jwt = new WsJwtGuard(config.env.ACCESS_TOKEN_TTL_SECONDS);
-    this.throttle = new WsThrottlerGuard(bucketLimits({ burst: config.env.WS_SEND_BURST, perSecond: config.env.WS_SEND_PER_SECOND }));
+    this.throttle = new WsThrottlerGuard(
+      bucketLimits({ burst: config.env.WS_SEND_BURST, perSecond: config.env.WS_SEND_PER_SECOND }),
+    );
   }
 
   /** The Socket.IO server this node runs (for operations and tests). */
@@ -119,9 +142,14 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     this.subscriber = this.redis.rt.duplicate();
     this.subscriber.on('error', () => undefined);
     this.subscriber.on('message', (_channel: string, raw: string) => {
-      this.bus = this.bus.then(() => this.apply(JSON.parse(raw) as BusOperation)).catch((error: unknown) => {
-        this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'bus operation failed');
-      });
+      this.bus = this.bus
+        .then(() => this.apply(JSON.parse(raw) as BusOperation))
+        .catch((error: unknown) => {
+          this.logger.warn(
+            { error: error instanceof Error ? error.message : String(error) },
+            'bus operation failed',
+          );
+        });
     });
     void this.subscriber.subscribe(this.redis.key(BUS_CHANNEL));
     this.logger.log({ nodeId: this.nodeId, adapter: this.config.env.RT_ADAPTER }, 'realtime gateway ready');
@@ -161,7 +189,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     if (this.crashed || !this.server) return;
     this.draining = true;
     for (const socket of this.localSockets()) {
-      socket.emit('server:draining', this.envelope('server:draining', null, { reconnectInMs: Math.floor(Math.random() * 5_000) }));
+      socket.emit(
+        'server:draining',
+        this.envelope('server:draining', null, { reconnectInMs: Math.floor(Math.random() * 5_000) }),
+      );
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
     await this.messages.flushReads();
@@ -197,7 +228,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   /* ================================================================== client events */
 
   @SubscribeMessage('workspace:subscribe')
-  subscribe(@ConnectedSocket() socket: RtSocket, @MessageBody() body: unknown): Promise<WsAck<{ online: string[] }> | undefined> {
+  subscribe(
+    @ConnectedSocket() socket: RtSocket,
+    @MessageBody() body: unknown,
+  ): Promise<WsAck<{ online: string[] }> | undefined> {
     return this.run(socket, 'workspace:subscribe', 'other', async () => {
       const { workspaceId } = schemas.subscribe.parse(body);
       const online = await this.enter(socket, workspaceId);
@@ -206,11 +240,15 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   @SubscribeMessage('auth:refresh')
-  refresh(@ConnectedSocket() socket: RtSocket, @MessageBody() body: unknown): Promise<WsAck<{ expiresAt: string }> | undefined> {
+  refresh(
+    @ConnectedSocket() socket: RtSocket,
+    @MessageBody() body: unknown,
+  ): Promise<WsAck<{ expiresAt: string }> | undefined> {
     return this.run(socket, 'auth:refresh', 'other', async () => {
       const { token } = schemas.refresh.parse(body);
       const principal = await this.auth.authenticate(token);
-      if (principal.userId !== socket.data.userId) throw new ApiError('AUTH_INVALID', 'The token belongs to someone else.');
+      if (principal.userId !== socket.data.userId)
+        throw new ApiError('AUTH_INVALID', 'The token belongs to someone else.');
       if (principal.sessionId !== socket.data.sessionId) {
         await socket.leave(rooms.session(socket.data.sessionId));
         await socket.join(rooms.session(principal.sessionId));
@@ -223,7 +261,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   @SubscribeMessage('sync:resume')
-  resume(@ConnectedSocket() socket: RtSocket, @MessageBody() body: unknown): Promise<WsAck<ResumeResult> | undefined> {
+  resume(
+    @ConnectedSocket() socket: RtSocket,
+    @MessageBody() body: unknown,
+  ): Promise<WsAck<ResumeResult> | undefined> {
     return this.run(socket, 'sync:resume', 'other', async () => {
       const input = schemas.resume.parse(body);
       // Rooms first, then the reads: whatever commits after the join arrives as a live event.
@@ -232,9 +273,16 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       const conversations = await this.messages.resume(member, input.conversations);
       let replayed = 0;
       if (input.lastEventId) {
-        const { entries, gap, more } = await this.stream.since(input.workspaceId, input.lastEventId, REPLAY_MAX);
+        const { entries, gap, more } = await this.stream.since(
+          input.workspaceId,
+          input.lastEventId,
+          REPLAY_MAX,
+        );
         if (gap || more) {
-          socket.emit('resync:required', this.envelope('resync:required', input.workspaceId, { scopes: ['all'] }));
+          socket.emit(
+            'resync:required',
+            this.envelope('resync:required', input.workspaceId, { scopes: ['all'] }),
+          );
         } else {
           for (const entry of entries) {
             if (!entry.rooms.some((room) => socket.rooms.has(room))) continue;
@@ -251,7 +299,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   send(@ConnectedSocket() socket: RtSocket, @MessageBody() body: unknown) {
     return this.run(socket, 'message:send', 'send', async () => {
       const { conversationId, ...message } = schemas.send.parse(body);
-      const { sent } = await this.messages.send(this.member(socket), conversationId, message, { socketId: socket.id });
+      const { sent } = await this.messages.send(this.member(socket), conversationId, message, {
+        socketId: socket.id,
+      });
       return { ...sent };
     });
   }
@@ -286,7 +336,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   delivered(@ConnectedSocket() socket: RtSocket, @MessageBody() body: unknown) {
     return this.run(socket, 'message:delivered', 'other', async () => {
       const { conversationId, seq } = schemas.cursor.parse(body);
-      this.messages.queueCursor(this.member(socket), this.inConversation(socket, conversationId), { delivered: seq });
+      this.messages.queueCursor(this.member(socket), this.inConversation(socket, conversationId), {
+        delivered: seq,
+      });
       return {};
     });
   }
@@ -295,7 +347,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   read(@ConnectedSocket() socket: RtSocket, @MessageBody() body: unknown) {
     return this.run(socket, 'message:read', 'other', async () => {
       const { conversationId, seq } = schemas.cursor.parse(body);
-      this.messages.queueCursor(this.member(socket), this.inConversation(socket, conversationId), { read: seq });
+      this.messages.queueCursor(this.member(socket), this.inConversation(socket, conversationId), {
+        read: seq,
+      });
       return {};
     });
   }
@@ -309,7 +363,15 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       const key = `${socket.id}:${conversationId}`;
       const running = this.typing.get(key);
       if (running) clearTimeout(running);
-      else socket.volatile.to(room).emit('typing', this.envelope('typing', socket.data.workspaceId, { conversationId, userId: socket.data.userId, typing: true }));
+      else
+        socket.volatile.to(room).emit(
+          'typing',
+          this.envelope('typing', socket.data.workspaceId, {
+            conversationId,
+            userId: socket.data.userId,
+            typing: true,
+          }),
+        );
       const timer = setTimeout(() => {
         this.typing.delete(key);
         this.typingOff(socket, conversationId);
@@ -345,14 +407,24 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   private typingOff(socket: RtSocket, conversationId: string): void {
-    socket.volatile
-      .to(rooms.conversation(conversationId))
-      .emit('typing', this.envelope('typing', socket.data.workspaceId, { conversationId, userId: socket.data.userId, typing: false }));
+    socket.volatile.to(rooms.conversation(conversationId)).emit(
+      'typing',
+      this.envelope('typing', socket.data.workspaceId, {
+        conversationId,
+        userId: socket.data.userId,
+        typing: false,
+      }),
+    );
   }
 
   /* ================================================================== the wrapper */
 
-  private async run<T extends object>(socket: RtSocket, event: string, bucket: BucketKind, work: () => Promise<T>): Promise<WsAck<T> | undefined> {
+  private async run<T extends object>(
+    socket: RtSocket,
+    event: string,
+    bucket: BucketKind,
+    work: () => Promise<T>,
+  ): Promise<WsAck<T> | undefined> {
     if (this.crashed) return undefined;
     const now = this.clock.now();
     const standing = this.jwt.check(socket, Math.floor(now.getTime() / 1000));
@@ -364,7 +436,11 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     const wait = this.throttle.take(socket, bucket, now.getTime());
     if (wait > 0) return { ok: false, code: 'RATE_LIMITED', retryAfterMs: wait };
     return this.context.run(
-      { userId: socket.data.userId, sessionId: socket.data.sessionId, ...(socket.data.workspaceId ? { workspaceId: socket.data.workspaceId } : {}) },
+      {
+        userId: socket.data.userId,
+        sessionId: socket.data.sessionId,
+        ...(socket.data.workspaceId ? { workspaceId: socket.data.workspaceId } : {}),
+      },
       async () => {
         try {
           const result = await work();
@@ -377,13 +453,29 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   private failure(error: unknown, socket: RtSocket, event: string): WsAck<never> {
-    if (error instanceof ZodError) return { ok: false, code: 'VALIDATION_FAILED', message: error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ') };
-    if (error instanceof ApiError) return { ok: false, code: error.code as ApiErrorCode, ...(error.detail ? { message: error.detail } : {}) };
+    if (error instanceof ZodError)
+      return {
+        ok: false,
+        code: 'VALIDATION_FAILED',
+        message: error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; '),
+      };
+    if (error instanceof ApiError)
+      return {
+        ok: false,
+        code: error.code as ApiErrorCode,
+        ...(error.detail ? { message: error.detail } : {}),
+      };
     if (isUnavailable(error)) {
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error), event, connId: socket.data.connId }, 'socket event unavailable');
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error), event, connId: socket.data.connId },
+        'socket event unavailable',
+      );
       return { ok: false, code: 'SERVICE_UNAVAILABLE' };
     }
-    this.logger.error({ error: error instanceof Error ? error.message : String(error), event, connId: socket.data.connId }, 'socket event failed');
+    this.logger.error(
+      { error: error instanceof Error ? error.message : String(error), event, connId: socket.data.connId },
+      'socket event failed',
+    );
     return { ok: false, code: 'INTERNAL' };
   }
 
@@ -403,7 +495,8 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   private async enter(socket: RtSocket, workspaceId: string): Promise<string[]> {
     const member = await this.memberships.load(workspaceId, socket.data.userId);
     if (!member) {
-      if (await this.memberships.suspendedFor(workspaceId, socket.data.userId)) throw new ApiError('WORKSPACE_SUSPENDED');
+      if (await this.memberships.suspendedFor(workspaceId, socket.data.userId))
+        throw new ApiError('WORKSPACE_SUSPENDED');
       throw ApiError.notFound('The workspace');
     }
     const scope = await this.scope.of(member);
@@ -437,7 +530,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         return;
       }
       case 'leave': {
-        const targets = operation.userIds ? operation.userIds.flatMap((userId) => this.localSockets(rooms.user(userId))) : operation.rooms.flatMap((room) => this.localSockets(room));
+        const targets = operation.userIds
+          ? operation.userIds.flatMap((userId) => this.localSockets(rooms.user(userId)))
+          : operation.rooms.flatMap((room) => this.localSockets(room));
         for (const socket of targets) for (const room of operation.rooms) await socket.leave(room);
         return;
       }
@@ -446,7 +541,13 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         return;
       case 'evict': {
         for (const socket of this.workspaceSockets(operation.workspaceId, operation.userIds)) {
-          socket.emit('workspace:removed', this.envelope('workspace:removed', operation.workspaceId, { workspaceId: operation.workspaceId, reason: operation.reason }));
+          socket.emit(
+            'workspace:removed',
+            this.envelope('workspace:removed', operation.workspaceId, {
+              workspaceId: operation.workspaceId,
+              reason: operation.reason,
+            }),
+          );
           await this.leaveWorkspace(socket);
         }
         return;
@@ -455,7 +556,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         this.jwt.revoke(operation.sessionIds, Math.floor(this.clock.now().getTime() / 1000));
         for (const sessionId of operation.sessionIds) {
           for (const socket of this.localSockets(rooms.session(sessionId))) {
-            socket.emit('session:revoked', this.envelope('session:revoked', null, { reason: operation.reason }));
+            socket.emit(
+              'session:revoked',
+              this.envelope('session:revoked', null, { reason: operation.reason }),
+            );
             socket.disconnect(true);
           }
         }
@@ -465,23 +569,32 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   /** Re-evaluates the rooms of these users' sockets (all, when null) after a permission change. */
-  private async rescope(workspaceId: string, userIds: readonly string[] | null, reason: string): Promise<void> {
+  private async rescope(
+    workspaceId: string,
+    userIds: readonly string[] | null,
+    reason: string,
+  ): Promise<void> {
     const sockets = this.workspaceSockets(workspaceId, userIds);
     const byUser = new Map<string, RtSocket[]>();
-    for (const socket of sockets) byUser.set(socket.data.userId, [...(byUser.get(socket.data.userId) ?? []), socket]);
+    for (const socket of sockets)
+      byUser.set(socket.data.userId, [...(byUser.get(socket.data.userId) ?? []), socket]);
     for (const [userId, own] of byUser) {
       const member = await this.memberships.load(workspaceId, userId);
       if (!member) {
         const why = (await this.memberships.suspendedFor(workspaceId, userId)) ? 'suspended' : 'removed';
         for (const socket of own) {
-          socket.emit('workspace:removed', this.envelope('workspace:removed', workspaceId, { workspaceId, reason: why }));
+          socket.emit(
+            'workspace:removed',
+            this.envelope('workspace:removed', workspaceId, { workspaceId, reason: why }),
+          );
           await this.leaveWorkspace(socket);
         }
         continue;
       }
       const wanted = new Set((await this.scope.of(member)).rooms);
       for (const socket of own) {
-        for (const room of [...socket.rooms]) if (isWorkspaceRoom(room) && !wanted.has(room)) await socket.leave(room);
+        for (const room of [...socket.rooms])
+          if (isWorkspaceRoom(room) && !wanted.has(room)) await socket.leave(room);
         await socket.join([...wanted]);
         socket.data.member = member;
         socket.emit('permissions:updated', this.envelope('permissions:updated', workspaceId, { reason }));
@@ -498,7 +611,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   /** Local sockets live in `workspaceId`, optionally only those of `userIds`. */
   private workspaceSockets(workspaceId: string, userIds: readonly string[] | null): RtSocket[] {
     const wanted = userIds ? new Set(userIds) : null;
-    return this.localSockets(rooms.workspace(workspaceId)).filter((socket) => socket.data.workspaceId === workspaceId && (!wanted || wanted.has(socket.data.userId)));
+    return this.localSockets(rooms.workspace(workspaceId)).filter(
+      (socket) => socket.data.workspaceId === workspaceId && (!wanted || wanted.has(socket.data.userId)),
+    );
   }
 
   /** This node's sockets, all or in one room. */
@@ -514,7 +629,11 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     });
   }
 
-  private envelope<T extends RealtimeEnvelope['type']>(type: T, workspaceId: string | null, data: RealtimeEnvelope<T>['data']): RealtimeEnvelope<T> {
+  private envelope<T extends RealtimeEnvelope['type']>(
+    type: T,
+    workspaceId: string | null,
+    data: RealtimeEnvelope<T>['data'],
+  ): RealtimeEnvelope<T> {
     return this.publisher.envelope({ type, workspaceId, rooms: [], data, actorId: null, requestId: null });
   }
 }

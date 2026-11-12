@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback,useEffect,useRef,useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useFileUrl } from '@/store/files';
 import { formatDuration } from '@taskin/jalali';
-import { PauseIcon,PlayIcon } from '@/components/icons';
+import { PauseIcon, PlayIcon } from '@/components/icons';
 
 export interface VoicePlayerProps {
   readonly durationSec: number;
@@ -31,7 +31,14 @@ const RATE_LABELS: Readonly<Record<Rate, string>> = { 1: '۱×', 1.5: '۱٫۵×'
  *                     `requestAnimationFrame` clock over the known duration. The user still
  *                     gets scrubbing and progress; only the audio output is absent.
  */
-export function VoicePlayer({ durationSec, waveform, src, outgoing, label, variant = 'bubble' }: VoicePlayerProps) {
+export function VoicePlayer({
+  durationSec,
+  waveform,
+  src,
+  outgoing,
+  label,
+  variant = 'bubble',
+}: VoicePlayerProps) {
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -52,7 +59,8 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
   // Simulated transport: advance `elapsed` from a monotonic clock until the memo ends.
   const runClock = useCallback(() => {
     const tick = () => {
-      const seconds = offsetRef.current + ((performance.now() - startedAtRef.current) / 1000) * rateRef.current;
+      const seconds =
+        offsetRef.current + ((performance.now() - startedAtRef.current) / 1000) * rateRef.current;
       if (seconds >= durationSec) {
         setElapsed(durationSec);
         setPlaying(false);
@@ -84,7 +92,10 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
     }
 
     if (audio) {
-      void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      void audio
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => setPlaying(false));
       return;
     }
 
@@ -129,7 +140,9 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
   const remaining = Math.max(0, durationSec - elapsed);
 
   return (
-    <div className={cn('flex items-center gap-2.5', variant === 'bubble' ? 'w-60 sm:w-72' : 'w-full min-w-0')}>
+    <div
+      className={cn('flex items-center gap-2.5', variant === 'bubble' ? 'w-60 sm:w-72' : 'w-full min-w-0')}
+    >
       {src && (
         <audio
           ref={audioRef}
@@ -207,13 +220,7 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
               aria-hidden="true"
               className={cn(
                 'w-[2px] shrink-0 rounded-full transition-colors duration-100',
-                outgoing
-                  ? played
-                    ? 'bg-white'
-                    : 'bg-white/35'
-                  : played
-                    ? 'bg-brand-solid'
-                    : 'bg-gray-300',
+                outgoing ? (played ? 'bg-white' : 'bg-white/35') : played ? 'bg-brand-solid' : 'bg-gray-300',
               )}
               style={{ height: `${Math.round(amplitude * 24) + 4}px` }}
             />
@@ -223,7 +230,7 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
 
       <span
         className={cn(
-          'numeric shrink-0 text-micro font-medium',
+          'shrink-0 text-micro font-medium numeric',
           outgoing ? 'text-fg-on-brand/80' : 'text-fg-tertiary',
         )}
       >
@@ -236,8 +243,10 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
         // Not «سرعت پخش …»: the play button's name must not be a part of this one.
         aria-label={`سرعت ${label}: ${RATE_LABELS[rate]}`}
         className={cn(
-          'numeric flex h-6 min-w-10 shrink-0 items-center justify-center rounded-full px-1.5 text-micro font-semibold transition-colors',
-          outgoing ? 'bg-white/20 text-fg-on-brand hover:bg-white/30' : 'bg-sunken text-fg-secondary hover:bg-hover',
+          'flex h-6 min-w-10 shrink-0 items-center justify-center rounded-full px-1.5 text-micro font-semibold transition-colors numeric',
+          outgoing
+            ? 'bg-white/20 text-fg-on-brand hover:bg-white/30'
+            : 'bg-sunken text-fg-secondary hover:bg-hover',
         )}
       >
         {RATE_LABELS[rate]}
@@ -247,7 +256,11 @@ export function VoicePlayer({ durationSec, waveform, src, outgoing, label, varia
 }
 
 /** A voice note or audio file: its local recording (`src`), or the stored copy through a signed link. */
-export function StoredVoicePlayer({ attachmentId, src, ...player }: VoicePlayerProps & { readonly attachmentId: string | null }) {
+export function StoredVoicePlayer({
+  attachmentId,
+  src,
+  ...player
+}: VoicePlayerProps & { readonly attachmentId: string | null }) {
   const stored = useFileUrl(src || !attachmentId ? null : { id: attachmentId, url: null }, 'inline');
   return <VoicePlayer {...player} src={src ?? stored} />;
 }

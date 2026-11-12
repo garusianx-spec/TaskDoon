@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef,type ReactNode } from 'react';
-import { Button,type ButtonProps } from '@/components/ui';
+import { useRef, type ReactNode } from 'react';
+import { Button, type ButtonProps } from '@/components/ui';
 
 export interface FileUploaderProps {
   readonly accept: string;
@@ -14,7 +14,16 @@ export interface FileUploaderProps {
   readonly onPick: (file: File) => void;
 }
 
-export function FileUploader({ accept, id, disabled = false, loading = false, size = 'xs', icon, children, onPick }: FileUploaderProps) {
+export function FileUploader({
+  accept,
+  id,
+  disabled = false,
+  loading = false,
+  size = 'xs',
+  icon,
+  children,
+  onPick,
+}: FileUploaderProps) {
   const input = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -33,7 +42,14 @@ export function FileUploader({ accept, id, disabled = false, loading = false, si
           if (file) onPick(file);
         }}
       />
-      <Button size={size} variant="secondary" iconStart={icon} disabled={disabled} loading={loading} onClick={() => input.current?.click()}>
+      <Button
+        size={size}
+        variant="secondary"
+        iconStart={icon}
+        disabled={disabled}
+        loading={loading}
+        onClick={() => input.current?.click()}
+      >
         {children}
       </Button>
     </>

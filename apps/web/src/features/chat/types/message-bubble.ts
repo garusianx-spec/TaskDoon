@@ -1,5 +1,4 @@
-import type { Message,User } from '@taskin/contracts';
-
+import type { Message, User } from '@taskin/contracts';
 
 export interface MessageBubbleProps {
   readonly readOnly?: boolean;

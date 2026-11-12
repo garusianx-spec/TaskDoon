@@ -71,7 +71,10 @@ export class ConsoleSmsProvider implements SmsProvider {
   async send(message: SmsMessage): Promise<string | null> {
     const text = renderSms(message);
     this.sent.push({ ...message, text, at: new Date() });
-    this.logger.log({ to: maskPhone(message.to), template: message.template, devOnly: true, text }, 'SMS (console driver)');
+    this.logger.log(
+      { to: maskPhone(message.to), template: message.template, devOnly: true, text },
+      'SMS (console driver)',
+    );
     return `console-${this.sent.length}`;
   }
 
@@ -107,7 +110,10 @@ export class KavenegarProvider implements SmsProvider {
   ) {}
 
   async send(message: SmsMessage): Promise<string | null> {
-    const params = new URLSearchParams({ receptor: toLocalMobile(message.to), template: this.templates[message.template] });
+    const params = new URLSearchParams({
+      receptor: toLocalMobile(message.to),
+      template: this.templates[message.template],
+    });
     const values = Object.values(message.tokens);
     if (message.template === 'invite') {
       params.set('token', message.tokens.link ?? '');
@@ -115,7 +121,11 @@ export class KavenegarProvider implements SmsProvider {
     } else if (message.template === 'password_reset') {
       params.set('token', message.tokens.link ?? '');
     } else {
-      values.slice(0, 3).forEach((value, index) => params.set(index === 0 ? 'token' : `token${index + 1}`, value.replace(/\s+/g, '_')));
+      values
+        .slice(0, 3)
+        .forEach((value, index) =>
+          params.set(index === 0 ? 'token' : `token${index + 1}`, value.replace(/\s+/g, '_')),
+        );
     }
     const url = `${this.baseUrl}/v1/${encodeURIComponent(this.apiKey)}/verify/lookup.json`;
     const response = await fetch(url, {
@@ -153,7 +163,10 @@ export class SmsIrProvider implements SmsProvider {
       {
         mobile: toLocalMobile(message.to),
         templateId,
-        parameters: Object.entries(message.tokens).map(([name, value]) => ({ name: name.toUpperCase(), value })),
+        parameters: Object.entries(message.tokens).map(([name, value]) => ({
+          name: name.toUpperCase(),
+          value,
+        })),
       },
       { 'x-api-key': this.apiKey },
     )) as { status?: number; data?: { messageId?: number } } | null;
@@ -213,7 +226,9 @@ export class SmsService {
 
   /** The in-memory console driver, when configured (development and tests). */
   get console(): ConsoleSmsProvider | undefined {
-    return this.providers.find((provider): provider is ConsoleSmsProvider => provider instanceof ConsoleSmsProvider);
+    return this.providers.find(
+      (provider): provider is ConsoleSmsProvider => provider instanceof ConsoleSmsProvider,
+    );
   }
 
   status(): readonly SmsProviderStatus[] {
@@ -245,7 +260,10 @@ export class SmsService {
         this.breakers.set(provider.name, { failures, openUntil: failures >= 3 ? Date.now() + 30_000 : 0 });
         const cause = error instanceof Error ? error.message : String(error);
         causes.push(`${provider.name}: ${cause}`);
-        this.logger.warn({ provider: provider.name, to: maskPhone(message.to), cause }, 'SMS provider failed');
+        this.logger.warn(
+          { provider: provider.name, to: maskPhone(message.to), cause },
+          'SMS provider failed',
+        );
       }
     }
     throw new SmsUnavailableError(causes);

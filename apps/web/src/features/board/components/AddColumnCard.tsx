@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect,useRef,useState,type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { TagTone } from '@taskin/contracts';
 import { TAG_TONES } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { TAG_DOT } from '@/lib/tag-tone';
 import { useNamespacedId } from '@/hooks/useId';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
-import { Button,Input } from '@/components/ui';
-import { AddIcon,CheckIcon } from '@/components/icons';
-
+import { Button, Input } from '@/components/ui';
+import { AddIcon, CheckIcon } from '@/components/icons';
 
 interface AddColumnCardProps {
   readonly existingTitles: readonly string[];
@@ -120,7 +119,12 @@ export function AddColumnCard({ existingTitles, onAdd, onOpen }: AddColumnCardPr
       />
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 text-body-sm font-medium text-fg-secondary">رنگ شاخص</legend>
-        <div role="radiogroup" aria-label="رنگ شاخص ستون" onKeyDown={onKeyDown} className="flex flex-wrap gap-1.5">
+        <div
+          role="radiogroup"
+          aria-label="رنگ شاخص ستون"
+          onKeyDown={onKeyDown}
+          className="flex flex-wrap gap-1.5"
+        >
           {TAG_TONES.map((entry, index) => {
             const selected = entry.id === tone;
             return (
@@ -146,7 +150,9 @@ export function AddColumnCard({ existingTitles, onAdd, onOpen }: AddColumnCardPr
           })}
         </div>
       </fieldset>
-      <p className="text-micro text-fg-tertiary">کارت‌های این ستون در فیلترها و گزارش‌ها «در حال انجام» شمرده می‌شوند.</p>
+      <p className="text-micro text-fg-tertiary">
+        کارت‌های این ستون در فیلترها و گزارش‌ها «در حال انجام» شمرده می‌شوند.
+      </p>
       <div className="flex gap-2">
         <Button type="submit" size="sm" fullWidth iconStart={<AddIcon size={16} />}>
           افزودن ستون

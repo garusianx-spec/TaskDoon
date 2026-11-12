@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect,useRef,type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -41,14 +41,18 @@ export function TaskDetailDialog({ open, onClose, title, children }: TaskDetailD
 
   return createPortal(
     <div className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-6">
-      <div className="absolute inset-0 animate-fade-in bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div
+        className="absolute inset-0 animate-fade-in bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="scrollbar-thin relative max-h-[90vh] w-full max-w-4xl animate-scale-in overflow-y-auto rounded-2xl border border-secondary bg-surface shadow-2xl outline-none"
+        className="relative max-h-[90vh] w-full max-w-4xl animate-scale-in overflow-y-auto rounded-2xl border border-secondary bg-surface shadow-2xl outline-none scrollbar-thin"
       >
         <h2 id={titleId} className="sr-only">
           {title}

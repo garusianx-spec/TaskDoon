@@ -4,11 +4,17 @@ import type { CalendarItem } from '@/store/selectors';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { formatJalali } from '@taskin/jalali';
-import { projectById,usersByIds } from '@/store/selectors';
-import { AvatarStack,Badge,Button } from '@/components/ui';
+import { projectById, usersByIds } from '@/store/selectors';
+import { AvatarStack, Badge, Button } from '@/components/ui';
 import { TaskCompleteCheckbox } from '@/features/tasks/components/TaskCompleteCheckbox';
-import { AddIcon,CalendarIcon } from '@/components/icons';
-import { ItemIcon,itemKindLabel,itemTimeLabel,itemTitle,itemTone } from '@/features/calendar/components/calendar-item';
+import { AddIcon, CalendarIcon } from '@/components/icons';
+import {
+  ItemIcon,
+  itemKindLabel,
+  itemTimeLabel,
+  itemTitle,
+  itemTone,
+} from '@/features/calendar/components/calendar-item';
 
 export interface DaySummaryProps {
   readonly date: string;
@@ -39,7 +45,7 @@ export function DaySummary({
         </Badge>
       </div>
 
-      <ul className="scrollbar-thin flex max-h-72 flex-col gap-1 overflow-y-auto">
+      <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto scrollbar-thin">
         {items.map((item) => {
           const time = itemTimeLabel(item);
           const project =
@@ -48,16 +54,25 @@ export function DaySummary({
               : item.event.projectId
                 ? projectById(item.event.projectId)
                 : undefined;
-          const people = usersByIds(item.kind === 'deadline' ? item.task.assigneeIds : item.event.attendeeIds);
+          const people = usersByIds(
+            item.kind === 'deadline' ? item.task.assigneeIds : item.event.attendeeIds,
+          );
 
           const body = (
             <>
-              <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', itemTone(item, today))}>
+              <span
+                className={cn(
+                  'flex size-8 shrink-0 items-center justify-center rounded-lg',
+                  itemTone(item, today),
+                )}
+              >
                 <ItemIcon item={item} size={15} />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="line-clamp-2 text-caption font-semibold text-fg-primary">{itemTitle(item)}</span>
-                <span className="numeric truncate text-micro text-fg-tertiary">
+                <span className="line-clamp-2 text-caption font-semibold text-fg-primary">
+                  {itemTitle(item)}
+                </span>
+                <span className="truncate text-micro text-fg-tertiary numeric">
                   {[itemKindLabel(item), time, project?.name].filter(Boolean).join('، ')}
                 </span>
               </span>
@@ -91,10 +106,22 @@ export function DaySummary({
       </ul>
 
       <div className="flex gap-1.5 border-t border-secondary px-1 pt-2">
-        <Button size="xs" variant="secondary" fullWidth iconStart={<AddIcon size={14} />} onClick={onCreateTask}>
+        <Button
+          size="xs"
+          variant="secondary"
+          fullWidth
+          iconStart={<AddIcon size={14} />}
+          onClick={onCreateTask}
+        >
           وظیفه جدید
         </Button>
-        <Button size="xs" variant="secondary" fullWidth iconStart={<CalendarIcon size={14} />} onClick={onCreateEvent}>
+        <Button
+          size="xs"
+          variant="secondary"
+          fullWidth
+          iconStart={<CalendarIcon size={14} />}
+          onClick={onCreateEvent}
+        >
           رویداد جدید
         </Button>
       </div>

@@ -1,23 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import type { DepartmentId,SmartViewId,Task } from '@taskin/contracts';
+import type { DepartmentId, SmartViewId, Task } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { directory } from '@/store/directory';
 import { DepartmentIcon } from '@/features/board/components/DepartmentIcon';
 import { projectList } from '@/store/selectors';
-import { IconButton,Tooltip } from '@/components/ui';
+import { IconButton, Tooltip } from '@/components/ui';
 import {
-AddIcon,
-ArchiveIcon,
-ClockIcon,
-FolderAddIcon,
-FolderIcon,
-StarIcon,
-TaskSquareIcon,
-TrashIcon,
-UserIcon,
+  AddIcon,
+  ArchiveIcon,
+  ClockIcon,
+  FolderAddIcon,
+  FolderIcon,
+  StarIcon,
+  TaskSquareIcon,
+  TrashIcon,
+  UserIcon,
 } from '@/components/icons';
 
 export interface TaskSidebarProps {
@@ -82,10 +82,15 @@ export function TaskSidebar({
     }
   };
 
-  const projectCount = (projectId: string): number => tasks.filter((task) => task.projectId === projectId).length;
+  const projectCount = (projectId: string): number =>
+    tasks.filter((task) => task.projectId === projectId).length;
 
   const departments = directory.departments();
-  const visibleProjects = departmentFilter ? projects.filter((project) => (project.departmentIds ?? [project.departmentId]).includes(departmentFilter)) : projects;
+  const visibleProjects = departmentFilter
+    ? projects.filter((project) =>
+        (project.departmentIds ?? [project.departmentId]).includes(departmentFilter),
+      )
+    : projects;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -93,7 +98,7 @@ export function TaskSidebar({
         <h2 className="text-title font-bold text-fg-primary">پروژه‌ها و وظایف</h2>
       </div>
 
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
         <nav aria-label="نماهای هوشمند" className="flex flex-col gap-0.5">
           {SMART_VIEWS.map(({ id, label, Icon }) => {
             const active = smartView === id && projectFilterId === null;
@@ -112,7 +117,7 @@ export function TaskSidebar({
                 <span className="flex-1 truncate">{label}</span>
                 <span
                   className={cn(
-                    'numeric rounded-full px-1.5 py-0.5 text-micro font-semibold',
+                    'rounded-full px-1.5 py-0.5 text-micro font-semibold numeric',
                     active ? 'bg-surface text-fg-brand' : 'bg-sunken text-fg-tertiary',
                   )}
                 >
@@ -126,10 +131,16 @@ export function TaskSidebar({
         <div className="my-3 border-t border-secondary" />
 
         <nav aria-label="درخت پروژه‌ها" className="flex flex-col gap-0.5">
-          <div className="flex items-center justify-between gap-2 ps-2.5 pb-1">
+          <div className="flex items-center justify-between gap-2 pb-1 ps-2.5">
             <h3 className="text-micro font-semibold uppercase tracking-wide text-fg-quaternary">پروژه‌ها</h3>
             {onCreateProject && (
-              <IconButton label="پروژه جدید" size="xs" variant="ghost" icon={<AddIcon size={14} />} onClick={onCreateProject} />
+              <IconButton
+                label="پروژه جدید"
+                size="xs"
+                variant="ghost"
+                icon={<AddIcon size={14} />}
+                onClick={onCreateProject}
+              />
             )}
           </div>
           {visibleProjects.length === 0 && onCreateProject && (
@@ -148,20 +159,37 @@ export function TaskSidebar({
             return (
               <div
                 key={project.id}
-                className={cn('group/project relative flex items-center rounded-lg transition-colors', active ? 'bg-brand-subtle' : 'hover:bg-hover')}
+                className={cn(
+                  'group/project relative flex items-center rounded-lg transition-colors',
+                  active ? 'bg-brand-subtle' : 'hover:bg-hover',
+                )}
               >
                 <button
                   type="button"
                   onClick={() => onProjectChange(active ? null : project.id)}
                   aria-current={active ? 'true' : undefined}
-                  className={cn('flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-start', onDeleteProject && 'pe-9')}
+                  className={cn(
+                    'flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-start',
+                    onDeleteProject && 'pe-9',
+                  )}
                 >
-                  <FolderIcon size={17} variant="twotone" className={active ? 'text-fg-brand' : 'text-fg-quaternary'} />
-                  <span className={cn('flex-1 truncate text-body-sm font-medium', active ? 'text-fg-brand' : 'text-fg-secondary')}>
+                  <FolderIcon
+                    size={17}
+                    variant="twotone"
+                    className={active ? 'text-fg-brand' : 'text-fg-quaternary'}
+                  />
+                  <span
+                    className={cn(
+                      'flex-1 truncate text-body-sm font-medium',
+                      active ? 'text-fg-brand' : 'text-fg-secondary',
+                    )}
+                  >
                     {project.name}
                   </span>
                   {project.starred && <StarIcon size={13} className="shrink-0 text-status-progress" />}
-                  <span className="numeric shrink-0 text-micro text-fg-tertiary">{formatCount(projectCount(project.id))}</span>
+                  <span className="shrink-0 text-micro text-fg-tertiary numeric">
+                    {formatCount(projectCount(project.id))}
+                  </span>
                 </button>
                 {onDeleteProject && (
                   <span className="absolute end-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/project:opacity-100">

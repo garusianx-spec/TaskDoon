@@ -1,6 +1,6 @@
 'use client';
 
-import { formatJalali,formatRelative } from '@taskin/jalali';
+import { formatJalali, formatRelative } from '@taskin/jalali';
 import { useNow } from '@/hooks/useNow';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +18,11 @@ export function RelativeTime({ iso, className }: RelativeTimeProps) {
   const now = useNow();
 
   return (
-    <time dateTime={iso} className={className === undefined ? undefined : cn(className)} suppressHydrationWarning>
+    <time
+      dateTime={iso}
+      className={className === undefined ? undefined : cn(className)}
+      suppressHydrationWarning
+    >
       {now ? formatRelative(iso, now) : formatJalali(iso, 'day-month')}
     </time>
   );

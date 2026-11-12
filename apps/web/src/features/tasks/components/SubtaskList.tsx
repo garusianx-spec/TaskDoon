@@ -5,8 +5,8 @@ import type { Subtask } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { formatFraction } from '@/lib/format';
 import { userById } from '@/store/selectors';
-import { Avatar,Checkbox,IconButton,Input,ProgressBar } from '@/components/ui';
-import { AddIcon,ArrowDownIcon,ArrowUpIcon,DragHandleIcon,TrashIcon } from '@/components/icons';
+import { Avatar, Checkbox, IconButton, Input, ProgressBar } from '@/components/ui';
+import { AddIcon, ArrowDownIcon, ArrowUpIcon, DragHandleIcon, TrashIcon } from '@/components/icons';
 
 export interface SubtaskListProps {
   readonly subtasks: readonly Subtask[];
@@ -50,7 +50,7 @@ export function SubtaskList({ subtasks, onToggle, onAdd, onRemove, onMove, taskT
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
         <h4 className="text-title-sm font-semibold text-fg-primary">زیروظیفه‌ها</h4>
-        <span className="numeric text-caption text-fg-tertiary">
+        <span className="text-caption text-fg-tertiary numeric">
           {subtasks.length > 0 ? formatFraction(done, subtasks.length) : '—'}
         </span>
         {subtasks.length > 0 && (

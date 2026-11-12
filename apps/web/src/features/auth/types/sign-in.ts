@@ -12,7 +12,12 @@ export type Step =
   | { readonly kind: 'phone' }
   | SmsStep
   | { readonly kind: 'name'; readonly signupToken: string }
-  | { readonly kind: 'admin-setup'; readonly temporaryToken: string; readonly expiresAt: number; readonly sent: boolean }
+  | {
+      readonly kind: 'admin-setup';
+      readonly temporaryToken: string;
+      readonly expiresAt: number;
+      readonly sent: boolean;
+    }
   | { readonly kind: 'admin-password'; readonly temporaryToken: string; readonly expiresAt: number }
   | { readonly kind: 'admin-recovery'; readonly temporaryToken: string; readonly expiresAt: number }
   | { readonly kind: 'password' }

@@ -22,19 +22,19 @@ No archive expiry or storage-object deletion is added. The existing file garbage
 
 ## Verification
 
-| Check | Result |
-|---|---|
-| All workspace typecheck and lint | Passed |
-| API units | 214 passed |
-| Web unit/component tests | 105 passed |
-| Shared Jalali/text units | 13 passed |
-| Full API integration | 310 passed / 29 files on final backend code, including the 10,000-message stress test |
-| Final API chat/archive/retention/audit checks | 31 passed; expanded real-storage archive test also passed |
-| Production demo build | Passed on final UI code |
-| Full demo Playwright | 505 passed / 19 suites; zero console problems |
-| Affected browser regression checks | 96 passed / 5 suites after conditional action rendering; zero console problems |
-| Final archive browser checks | 14 passed after freezing the deletion target; zero console problems |
-| Drizzle migration consistency | Passed with explicit dialect/output arguments |
+| Check                                         | Result                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------- |
+| All workspace typecheck and lint              | Passed                                                                                |
+| API units                                     | 214 passed                                                                            |
+| Web unit/component tests                      | 105 passed                                                                            |
+| Shared Jalali/text units                      | 13 passed                                                                             |
+| Full API integration                          | 310 passed / 29 files on final backend code, including the 10,000-message stress test |
+| Final API chat/archive/retention/audit checks | 31 passed; expanded real-storage archive test also passed                             |
+| Production demo build                         | Passed on final UI code                                                               |
+| Full demo Playwright                          | 505 passed / 19 suites; zero console problems                                         |
+| Affected browser regression checks            | 96 passed / 5 suites after conditional action rendering; zero console problems        |
+| Final archive browser checks                  | 14 passed after freezing the deletion target; zero console problems                   |
+| Drizzle migration consistency                 | Passed with explicit dialect/output arguments                                         |
 
 New database cases cover concurrent companion resolution, unchanged creation-event count on retry, raw duplicate rejection (`23505`), non-destructive legacy duplicate repair, archive listing, project purge after 100 days, preserved text/file history, file garbage collection, another member downloading the original stored PDF, read-only mutations, wrong-title rejection, unauthorized deletion and foreign-tenant rejection. Existing tenant/RLS, realtime, files and audit suites are retained.
 
@@ -43,7 +43,6 @@ New web tests cover canonical companion reconciliation, preservation of archived
 The archive browser suite covers a single project chat, preserved discussion, read-only status, named deletion, Cancel focus, Escape cancellation, focus restoration and 375px/1280px layouts without horizontal overflow. Screenshots are under `apps/web/e2e/out/phase4_archive*`; verification logs are under `.local/phase4-*`. The full browser run includes the existing project creation, task forms, board generation, voice recording, chat bridge, notes and mobile suites.
 
 One full database repeat overlapped browser checks/builds and ended at 309/310 with a Socket.IO acknowledgement timeout in the existing 10,000-message stress scenario. The browser server was then stopped and the entire database suite rerun without competing builds or browsers. That isolated run passed all 310 tests in 223 seconds, including the same stress scenario. No timeout or assertion was relaxed.
-
 
 The full 505-check browser run preceded the final action-markup and stable confirmation-target changes. The five affected suites then passed 96 checks; after the target snapshot change, the final archive suite passed all 14 checks again. The final production build, typecheck and lint include these changes. No claim is made that unrelated live-browser suites were rerun: real persistence, file storage, tenant isolation and RLS were verified through the complete API integration suite.
 

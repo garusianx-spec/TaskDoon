@@ -1,15 +1,15 @@
 'use client';
 
-import { useRef,useState,type PointerEvent as ReactPointerEvent } from 'react';
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Task } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { describeDeadline } from '@taskin/jalali';
 import { formatFraction } from '@/lib/format';
-import { priorityLabel,priorityTone } from '@/data/reference';
-import { subtaskProgress,usersByIds } from '@/store/selectors';
-import { AvatarStack,Badge,IconButton } from '@/components/ui';
-import { CalendarIcon,CheckIcon,ClockIcon,MoreVerticalIcon } from '@/components/icons';
-import { TaskCompleteCheckbox,completedTitleClass } from '@/features/tasks/components/TaskCompleteCheckbox';
+import { priorityLabel, priorityTone } from '@/data/reference';
+import { subtaskProgress, usersByIds } from '@/store/selectors';
+import { AvatarStack, Badge, IconButton } from '@/components/ui';
+import { CalendarIcon, CheckIcon, ClockIcon, MoreVerticalIcon } from '@/components/icons';
+import { TaskCompleteCheckbox, completedTitleClass } from '@/features/tasks/components/TaskCompleteCheckbox';
 
 export interface SwipeableTaskRowProps {
   readonly task: Task;
@@ -124,7 +124,7 @@ export function SwipeableTaskRow({ task, onOpen, onToggleComplete, onPostpone }:
             <Badge tone={priorityTone(task.priority)} size="sm">
               {priorityLabel(task.priority)}
             </Badge>
-            <span className="numeric latin-inline ms-auto text-micro text-fg-quaternary">{task.code}</span>
+            <span className="ms-auto text-micro text-fg-quaternary numeric latin-inline">{task.code}</span>
           </span>
 
           <span
@@ -141,11 +141,13 @@ export function SwipeableTaskRow({ task, onOpen, onToggleComplete, onPostpone }:
               {deadline.text}
             </Badge>
             {progress.total > 0 && (
-              <span className="numeric text-micro text-fg-tertiary">
+              <span className="text-micro text-fg-tertiary numeric">
                 {formatFraction(progress.done, progress.total)}
               </span>
             )}
-            {assignees.length > 0 && <AvatarStack members={assignees} max={2} size="xs" className="ms-auto" />}
+            {assignees.length > 0 && (
+              <AvatarStack members={assignees} max={2} size="xs" className="ms-auto" />
+            )}
           </span>
         </button>
 

@@ -6,5 +6,7 @@ export interface SkeletonProps {
 
 /** Decorative placeholder. Put loading status on the surrounding region. */
 export function Skeleton({ className }: SkeletonProps) {
-  return <div aria-hidden="true" className={cn('rounded-md bg-sunken motion-safe:animate-pulse', className)} />;
+  return (
+    <div aria-hidden="true" className={cn('rounded-md bg-sunken motion-safe:animate-pulse', className)} />
+  );
 }
