@@ -15,6 +15,7 @@ const apiOrigin = process.env.TASKIN_API_ORIGIN ?? 'http://localhost:4000';
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  poweredByHeader: false,
   generateBuildId: async () => containerBuildId(),
   // The dev-tools badge sits bottom-left, over the composer's send button in this RTL layout.
   devIndicators: false,
@@ -24,6 +25,17 @@ const nextConfig = {
   outputFileTracingRoot: monorepoRoot,
   // Socket.IO's path ends in a slash (`/rt/`); redirecting it to `/rt` would break the handshake.
   skipTrailingSlashRedirect: true,
+  async headers() {
+    return [{
+      source: '/:path*',
+      headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=()' },
+      ],
+    }];
+  },
   async rewrites() {
     return [
       { source: '/api/v1/:path*', destination: `${apiOrigin}/api/v1/:path*` },

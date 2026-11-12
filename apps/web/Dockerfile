@@ -25,7 +25,7 @@ RUN apk add --no-cache binutils=2.45.1-r1 \
     && cp /usr/local/LICENSE /runtime-root/usr/local/share/licenses/node/LICENSE
 
 # Source changes do not invalidate the deterministic dependency installation.
-FROM base AS installer
+FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
@@ -35,7 +35,7 @@ COPY packages/text/package.json packages/text/package.json
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --workspace=@taskin/web --include-workspace-root --no-audit --no-fund
 
-FROM installer AS builder
+FROM deps AS build
 COPY tsconfig.base.json ./
 COPY packages/contracts/tsconfig.json packages/contracts/tsconfig.json
 COPY packages/contracts/src packages/contracts/src
@@ -61,7 +61,7 @@ RUN npm run build --workspace=@taskin/web
 
 # Next also traces optional build-time imports. They are not needed by its
 # production server; remove the TypeScript and native SWC compilers explicitly.
-FROM builder AS runtime-artifacts
+FROM build AS runtime-artifacts
 RUN rm -rf apps/web/.next/standalone/apps/web/scripts/container-build-id.mjs \
         apps/web/.next/standalone/node_modules/typescript \
         apps/web/.next/standalone/node_modules/@types \
@@ -75,8 +75,10 @@ RUN rm -rf apps/web/.next/standalone/apps/web/scripts/container-build-id.mjs \
         apps/web/.next/standalone/node_modules/next/dist/compiled/babel-packages \
         apps/web/.next/standalone/node_modules/next/dist/compiled/next-devtools \
         apps/web/.next/standalone/node_modules/next/dist/server/typescript \
-    && find apps/web/.next/standalone/node_modules/next/dist/compiled/babel -type f \
-        ! -name code-frame.js ! -name package.json -delete \
+    && if [ -d apps/web/.next/standalone/node_modules/next/dist/compiled/babel ]; then \
+        find apps/web/.next/standalone/node_modules/next/dist/compiled/babel -type f \
+            ! -name code-frame.js ! -name package.json -delete; \
+    fi \
     && find apps/web/.next/standalone -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.map' \) -delete \
     && test ! -d apps/web/.next/standalone/node_modules/typescript
 
@@ -90,10 +92,10 @@ ENV NODE_ENV=production \
 COPY --from=runtime-binaries /runtime-root/ /
 WORKDIR /app
 COPY --from=runtime-artifacts --chown=node:node /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=node:node /app/apps/web/public ./apps/web/public
-COPY --from=builder --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=node:node /app/apps/web/public ./apps/web/public
+COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD ["/usr/local/bin/node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health/ready',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+    CMD ["/usr/local/bin/node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 CMD ["/usr/local/bin/node", "apps/web/server.js"]
