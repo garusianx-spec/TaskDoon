@@ -6,15 +6,15 @@ Phase 1 was committed as `cbfa72be7fe4c172e7c38b0e2f1fc0f1cde090c4` and pushed t
 
 `.github/workflows/ci.yml` runs for pull requests targeting `main`, pushes to `feat/*`, and reusable `workflow_call` invocations. Concurrency cancels superseded CI runs. Fork pull requests receive no deployment secrets or package-write permission; the workflow uses `pull_request`, not `pull_request_target`.
 
-| Job | Checks |
-|---|---|
-| `lint-and-typecheck` | Locked npm install with npm download cache; all workspace lint/type checks; Jalali/text unit tests; contrast; deployment helper safety tests |
-| `test-api` | API unit tests, migration journal/schema drift guard, full integration suite on a fresh PostgreSQL 18 database and Redis 7 service containers, plus real SeaweedFS S3 |
-| `test-web` | Production Next.js build in demo mode and the complete existing demo Playwright suites |
-| `docker-build-dryrun` | BuildKit matrix for API runner, Web runner, and isolated migrator; no login or image publishing |
-| `compose` | API, migrator, PgBouncer and infrastructure readiness/sign-in |
-| `scale` | Two WebSocket nodes, HTTP role, worker and edge; cross-node delivery/room updates |
-| `e2e-live` | All six existing live suites: collaboration, platform administration, password recovery, platform moderation, workspace moderation, and Agile |
+| Job                   | Checks                                                                                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lint-and-typecheck`  | Locked npm install with npm download cache; all workspace lint/type checks; Jalali/text unit tests; contrast; deployment helper safety tests                          |
+| `test-api`            | API unit tests, migration journal/schema drift guard, full integration suite on a fresh PostgreSQL 18 database and Redis 7 service containers, plus real SeaweedFS S3 |
+| `test-web`            | Production Next.js build in demo mode and the complete existing demo Playwright suites                                                                                |
+| `docker-build-dryrun` | BuildKit matrix for API runner, Web runner, and isolated migrator; no login or image publishing                                                                       |
+| `compose`             | API, migrator, PgBouncer and infrastructure readiness/sign-in                                                                                                         |
+| `scale`               | Two WebSocket nodes, HTTP role, worker and edge; cross-node delivery/room updates                                                                                     |
+| `e2e-live`            | All six existing live suites: collaboration, platform administration, password recovery, platform moderation, workspace moderation, and Agile                         |
 
 Existing test assertions and migrations are unchanged. CI-only Compose overlays pin infrastructure images, bind diagnostic ports to loopback, replace shell/wget probes with bounded Node probes, and remove migration-owner credentials from daemon roles. The live admin suites invoke the existing separately compiled host CLI with ephemeral test owner credentials; the production runner continues to exclude operator CLIs.
 
@@ -34,10 +34,10 @@ Delivery order:
 4. After every publish succeeds, check current `main` again and promote those existing indexes to the package version and `latest`, without rebuilding.
 5. Enter the `production` environment, check current `main` again, and POST the Coolify deployment webhook.
 
-| Image | Docker target |
-|---|---|
-| `ghcr.io/<lowercase-owner>/taskdoon-api` | `apps/api/Dockerfile`, `runner` |
-| `ghcr.io/<lowercase-owner>/taskdoon-web` | `apps/web/Dockerfile`, `runner` |
+| Image                                         | Docker target                     |
+| --------------------------------------------- | --------------------------------- |
+| `ghcr.io/<lowercase-owner>/taskdoon-api`      | `apps/api/Dockerfile`, `runner`   |
+| `ghcr.io/<lowercase-owner>/taskdoon-web`      | `apps/web/Dockerfile`, `runner`   |
 | `ghcr.io/<lowercase-owner>/taskdoon-migrator` | `apps/api/Dockerfile`, `migrator` |
 
 Metadata produces the package semver (currently `0.1.0`), `sha-<12 characters>`, `sha-<full commit>`, and `latest`. Package-version and latest aliases are mutable: a subsequent main release with the same package version moves those aliases. Bump `package.json` when assigning a new semantic release. Full SHA tags identify source revisions; an `@sha256:...` digest fixes the exact published image bytes and is the strongest rollback reference.
@@ -48,10 +48,10 @@ Three GHCR repositories cannot be promoted atomically. A registry failure during
 
 Create a GitHub environment named `production` and restrict deployment refs to `main`. Configure its secrets, or equivalent repository secrets:
 
-| Secret | Purpose |
-|---|---|
-| `COOLIFY_WEBHOOK_URL` | HTTPS deployment webhook copied from the intended Coolify application/Compose resource |
-| `COOLIFY_API_TOKEN` | Coolify API token scoped to the intended team and deploy-only permission; enable Coolify API access and set an expiration |
+| Secret                | Purpose                                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `COOLIFY_WEBHOOK_URL` | HTTPS deployment webhook copied from the intended Coolify application/Compose resource                                    |
+| `COOLIFY_API_TOKEN`   | Coolify API token scoped to the intended team and deploy-only permission; enable Coolify API access and set an expiration |
 
 `GITHUB_TOKEN` is supplied automatically. No publishing PAT is required. Workflow/default/CI jobs have only `contents: read`. Only publish and tag-promotion jobs add `packages: write`; the deploy job keeps `contents: read` for checkout and the main-ref guard. Checkout does not persist credentials. Ensure repository/organization policy permits Actions to create/write these GHCR packages and that existing packages grant this repository Actions access.
 
@@ -61,10 +61,10 @@ Configure Coolify to pull the published images rather than rebuild the source ch
 
 Repository variables affecting the Web build:
 
-| Variable | Default |
-|---|---|
-| `NEXT_PUBLIC_RT_URL` | Empty: same-origin realtime through the edge |
-| `TASKIN_API_ORIGIN` | `http://api:4000`: build-time Next rewrite destination |
+| Variable             | Default                                                |
+| -------------------- | ------------------------------------------------------ |
+| `NEXT_PUBLIC_RT_URL` | Empty: same-origin realtime through the edge           |
+| `TASKIN_API_ORIGIN`  | `http://api:4000`: build-time Next rewrite destination |
 
 `NEXT_PUBLIC_DATA_SOURCE=api` is fixed for delivery. Public values and rewrites are compiled into the image and require rebuilding when changed. Never use these variables for secrets. Configure Coolify's service names and edge routes to match the selected origins; preserve first-party secure cookies and S3 signed Host/path behavior described in [containerization.md](containerization.md).
 

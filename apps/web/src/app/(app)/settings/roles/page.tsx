@@ -6,8 +6,9 @@ import { DEFAULT_PERMISSION_MATRIX, PERMISSION_ACTIONS, PERMISSION_MODULES, ROLE
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
-import { PermissionMatrixTable, RoleList } from '@/components/rbac/PermissionMatrixTable';
-import { RolePermissionsModal } from '@/components/rbac/RolePermissionsModal';
+import { PermissionMatrixTable } from '@/features/workspace/components/roles/PermissionMatrixTable';
+import { RoleList } from '@/features/workspace/components/roles/RoleList';
+import { RolePermissionsModal } from '@/features/workspace/components/roles/RolePermissionsModal';
 import { Badge, Button } from '@/components/ui';
 import { InfoCircleIcon, KeyIcon, RefreshIcon, ShieldIcon } from '@/components/icons';
 
@@ -23,7 +24,7 @@ export default function RolesSettingsPage() {
 
   return (
     <AppShell>
-      <div className="scrollbar-thin h-full overflow-y-auto">
+      <div className="h-full overflow-y-auto scrollbar-thin">
         <header className="border-b border-secondary bg-surface px-4 py-4 sm:px-6">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-lg bg-brand-subtle text-fg-brand">
@@ -31,7 +32,7 @@ export default function RolesSettingsPage() {
             </span>
             <div className="flex min-w-0 flex-col">
               <h1 className="text-heading-sm font-bold text-fg-primary">نقش‌ها و سطوح دسترسی</h1>
-              <span className="numeric text-caption text-fg-tertiary">
+              <span className="text-caption text-fg-tertiary numeric">
                 {`${formatCount(ROLES.length)} نقش، ${formatCount(PERMISSION_MODULES.length)} ماژول، ${formatCount(totalCells)} دسترسی برای هر نقش`}
               </span>
             </div>
@@ -66,8 +67,8 @@ export default function RolesSettingsPage() {
             <div className="flex items-start gap-2 rounded-xl border border-secondary bg-surface p-3">
               <InfoCircleIcon size={18} variant="twotone" className="mt-0.5 shrink-0 text-fg-brand" />
               <p className="text-micro leading-5 text-fg-tertiary">
-                تغییرات این صفحه بلافاصله ذخیره می‌شود. برای ویرایش گروهی چند نقش و اعمال بر دپارتمان‌ها
-                از «ویرایش پیشرفته» استفاده کنید.
+                تغییرات این صفحه بلافاصله ذخیره می‌شود. برای ویرایش گروهی چند نقش و اعمال بر دپارتمان‌ها از
+                «ویرایش پیشرفته» استفاده کنید.
               </p>
             </div>
           </aside>
@@ -91,9 +92,7 @@ export default function RolesSettingsPage() {
               onToggleAction={(action, value) =>
                 dispatch({ type: 'set-action-permissions', role: role.id, action, value })
               }
-              onToggleRole={(value) =>
-                dispatch({ type: 'set-role-permissions', role: role.id, value })
-              }
+              onToggleRole={(value) => dispatch({ type: 'set-role-permissions', role: role.id, value })}
             />
           </div>
         </div>
@@ -104,9 +103,7 @@ export default function RolesSettingsPage() {
         onClose={() => setModalOpen(false)}
         permissions={state.permissions}
         onChange={(permissions) => dispatch({ type: 'replace-permissions', permissions })}
-        onReset={() =>
-          dispatch({ type: 'replace-permissions', permissions: DEFAULT_PERMISSION_MATRIX })
-        }
+        onReset={() => dispatch({ type: 'replace-permissions', permissions: DEFAULT_PERMISSION_MATRIX })}
       />
     </AppShell>
   );

@@ -37,7 +37,8 @@ export class WsJwtGuard {
   }
 
   revoke(sessionIds: readonly string[], nowSeconds: number): void {
-    for (const id of sessionIds) this.revoked.set(id, nowSeconds + this.tokenTtlSeconds + EXPIRY_GRACE_SECONDS);
+    for (const id of sessionIds)
+      this.revoked.set(id, nowSeconds + this.tokenTtlSeconds + EXPIRY_GRACE_SECONDS);
     if (this.revoked.size > 10_000) {
       for (const [id, until] of this.revoked) if (until < nowSeconds) this.revoked.delete(id);
     }
@@ -57,7 +58,9 @@ export type BucketKind = 'send' | 'typing' | 'other';
 export type BucketLimits = Record<BucketKind, { readonly capacity: number; readonly perSecond: number }>;
 
 /** RFC §3: `message:send` bursts of 20, then 5 a second; typing once a second; the rest 30 / 10 a second. */
-export function bucketLimits(send: { readonly burst: number; readonly perSecond: number } = { burst: 20, perSecond: 5 }): BucketLimits {
+export function bucketLimits(
+  send: { readonly burst: number; readonly perSecond: number } = { burst: 20, perSecond: 5 },
+): BucketLimits {
   return {
     send: { capacity: send.burst, perSecond: send.perSecond },
     typing: { capacity: 1, perSecond: 1 },

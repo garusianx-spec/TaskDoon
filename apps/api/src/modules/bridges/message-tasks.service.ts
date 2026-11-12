@@ -49,15 +49,25 @@ export class MessageTasksService {
     private readonly publisher: RealtimePublisher,
   ) {}
 
-  async convert(member: MembershipContext, conversationId: string, messageId: string, body: ConvertMessageBody): Promise<ConvertMessageResult> {
+  async convert(
+    member: MembershipContext,
+    conversationId: string,
+    messageId: string,
+    body: ConvertMessageBody,
+  ): Promise<ConvertMessageResult> {
     requireMessageGrant(member, 'view');
     let outcome: Converted;
     try {
-      outcome = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, (unit) => this.inUnit(unit, member, conversationId, messageId, body));
+      outcome = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, (unit) =>
+        this.inUnit(unit, member, conversationId, messageId, body),
+      );
     } catch (error) {
       // Someone else converted the message between our check and our insert.
       if (!isUniqueViolation(error, 'tasks_source_message_uq')) throw error;
-      const taskId = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, ({ tx }) => this.linkedTask(tx, member, messageId));
+      const taskId = await this.uow.run(
+        { workspaceId: member.workspaceId, userId: member.userId },
+        ({ tx }) => this.linkedTask(tx, member, messageId),
+      );
       if (!taskId) throw error;
       outcome = { taskId, existing: true, code: null, systemMessage: null };
     }
@@ -71,13 +81,24 @@ export class MessageTasksService {
         data: { conversationId, messageId, taskId: outcome.taskId, code: outcome.code },
       });
       if (outcome.systemMessage) {
-        await this.publisher.emit({ type: 'message:new', workspaceId: member.workspaceId, rooms: [rooms.conversation(conversationId)], data: outcome.systemMessage });
+        await this.publisher.emit({
+          type: 'message:new',
+          workspaceId: member.workspaceId,
+          rooms: [rooms.conversation(conversationId)],
+          data: outcome.systemMessage,
+        });
       }
     }
     return { task: await this.tasks.detail(member, outcome.taskId), existing: outcome.existing };
   }
 
-  private async inUnit(unit: Unit, member: MembershipContext, conversationId: string, messageId: string, body: ConvertMessageBody): Promise<Converted> {
+  private async inUnit(
+    unit: Unit,
+    member: MembershipContext,
+    conversationId: string,
+    messageId: string,
+    body: ConvertMessageBody,
+  ): Promise<Converted> {
     const { tx } = unit;
     const access = await loadConversation(tx, member, conversationId);
     const [message] = (
@@ -122,7 +143,10 @@ export class MessageTasksService {
     ).rows;
     const code = task?.code ?? '';
 
-    const systemMessage = access.conversation.kind !== 'direct' && (await this.announces(tx, member.workspaceId)) ? await this.systemLine(tx, member, conversationId, messageId, taskId, code) : null;
+    const systemMessage =
+      access.conversation.kind !== 'direct' && (await this.announces(tx, member.workspaceId))
+        ? await this.systemLine(tx, member, conversationId, messageId, taskId, code)
+        : null;
 
     await this.audit.write(tx, {
       action: 'task.create_from_message',
@@ -143,12 +167,22 @@ export class MessageTasksService {
   }
 
   private async announces(tx: Tx, workspaceId: string): Promise<boolean> {
-    const [workspace] = await tx.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, workspaceId));
+    const [workspace] = await tx
+      .select({ settings: workspaces.settings })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId));
     return workspace?.settings.systemMessageOnConvert ?? true;
   }
 
   /** «پیام به وظیفه … تبدیل شد»: the next `seq` of the conversation, written by the system. */
-  private async systemLine(tx: Tx, member: MembershipContext, conversationId: string, messageId: string, taskId: string, code: string): Promise<MessageView> {
+  private async systemLine(
+    tx: Tx,
+    member: MembershipContext,
+    conversationId: string,
+    messageId: string,
+    taskId: string,
+    code: string,
+  ): Promise<MessageView> {
     const meta = { type: 'message_converted', params: { messageId, taskId, code, actorId: member.userId } };
     const [row] = (
       await tx.execute<{ id: string; seq: string | number; created_at: string }>(sql`

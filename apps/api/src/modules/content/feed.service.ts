@@ -74,7 +74,13 @@ export class FeedService {
       switch (job.type) {
         case 'task.assigned': {
           const payload = job.payload as unknown as OutboxEventMap['task.assigned'];
-          const recipients = await this.viewers(tx, job.workspaceId, payload.projectId, payload.assigneeIds, actor);
+          const recipients = await this.viewers(
+            tx,
+            job.workspaceId,
+            payload.projectId,
+            payload.assigneeIds,
+            actor,
+          );
           await this.notify(
             unit,
             recipients.map((recipientId) => ({
@@ -85,12 +91,22 @@ export class FeedService {
               dedupeKey: `evt:${job.eventId}`,
             })),
           );
-          await this.record(tx, { ...this.activity(job, payload), kind: 'task-assigned', context: payload.code });
+          await this.record(tx, {
+            ...this.activity(job, payload),
+            kind: 'task-assigned',
+            context: payload.code,
+          });
           return;
         }
         case 'task.status_changed': {
           const payload = job.payload as unknown as OutboxEventMap['task.status_changed'];
-          const recipients = await this.viewers(tx, job.workspaceId, payload.projectId, payload.watcherIds, actor);
+          const recipients = await this.viewers(
+            tx,
+            job.workspaceId,
+            payload.projectId,
+            payload.watcherIds,
+            actor,
+          );
           await this.notify(
             unit,
             recipients.map((recipientId) => ({
@@ -103,13 +119,25 @@ export class FeedService {
               collapse: true,
             })),
           );
-          if (payload.to === 'done') await this.record(tx, { ...this.activity(job, payload), kind: 'task-completed', context: payload.code });
+          if (payload.to === 'done')
+            await this.record(tx, {
+              ...this.activity(job, payload),
+              kind: 'task-completed',
+              context: payload.code,
+            });
           return;
         }
         case 'task.commented': {
           const payload = job.payload as unknown as OutboxEventMap['task.commented'];
-          const replyTo = payload.replyToAuthorId && payload.replyToAuthorId !== actor ? payload.replyToAuthorId : null;
-          const recipients = await this.viewers(tx, job.workspaceId, payload.projectId, [...payload.watcherIds, ...(replyTo ? [replyTo] : [])], actor);
+          const replyTo =
+            payload.replyToAuthorId && payload.replyToAuthorId !== actor ? payload.replyToAuthorId : null;
+          const recipients = await this.viewers(
+            tx,
+            job.workspaceId,
+            payload.projectId,
+            [...payload.watcherIds, ...(replyTo ? [replyTo] : [])],
+            actor,
+          );
           await this.notify(
             unit,
             recipients.map((recipientId) => ({
@@ -120,17 +148,28 @@ export class FeedService {
               dedupeKey: `evt:${job.eventId}`,
             })),
           );
-          await this.record(tx, { ...this.activity(job, payload), kind: 'task-commented', context: payload.excerpt });
+          await this.record(tx, {
+            ...this.activity(job, payload),
+            kind: 'task-commented',
+            context: payload.excerpt,
+          });
           return;
         }
         case 'task.file_attached': {
           const payload = job.payload as unknown as OutboxEventMap['task.file_attached'];
-          await this.record(tx, { ...this.activity(job, payload), kind: 'file-shared', context: payload.fileName });
+          await this.record(tx, {
+            ...this.activity(job, payload),
+            kind: 'file-shared',
+            context: payload.fileName,
+          });
           return;
         }
         case 'member.joined': {
           const payload = job.payload as unknown as OutboxEventMap['member.joined'];
-          const [person] = await tx.select({ fullName: users.fullName }).from(users).where(eq(users.id, payload.userId));
+          const [person] = await tx
+            .select({ fullName: users.fullName })
+            .from(users)
+            .where(eq(users.id, payload.userId));
           await this.record(tx, {
             workspaceId: job.workspaceId,
             actorId: payload.userId,
@@ -146,7 +185,12 @@ export class FeedService {
         }
         case 'message.posted': {
           const payload = job.payload as unknown as OutboxEventMap['message.posted'];
-          const candidates = [...new Set([...payload.mentionIds, ...(payload.replyToAuthorId ? [payload.replyToAuthorId] : [])])].filter((id) => id !== actor);
+          const candidates = [
+            ...new Set([
+              ...payload.mentionIds,
+              ...(payload.replyToAuthorId ? [payload.replyToAuthorId] : []),
+            ]),
+          ].filter((id) => id !== actor);
           if (candidates.length === 0) return;
           // Still in the conversation, and not silenced ("nothing"); a muted chat still reports mentions.
           const result = await tx.execute<{ user_id: string; title: string | null; kind: string }>(sql`
@@ -166,7 +210,12 @@ export class FeedService {
               subject: row.title ?? '',
               targetType: 'message' as const,
               targetId: payload.messageId,
-              payload: { conversationId: payload.conversationId, conversationKind: row.kind, seq: payload.seq, excerpt: payload.excerpt },
+              payload: {
+                conversationId: payload.conversationId,
+                conversationKind: row.kind,
+                seq: payload.seq,
+                excerpt: payload.excerpt,
+              },
               dedupeKey: `evt:${job.eventId}`,
             })),
           );
@@ -206,7 +255,8 @@ export class FeedService {
             : sql`do nothing`
         }
         returning id, workspace_id, recipient_id, kind, actor_id, subject, payload, target_type, target_id, read_at, created_at`);
-      for (const row of inserted.rows) created.push({ recipientId: String(row.recipient_id), view: notificationView(row) });
+      for (const row of inserted.rows)
+        created.push({ recipientId: String(row.recipient_id), view: notificationView(row) });
     }
     if (created.length > 0) unit.afterCommit(() => this.announce(created));
   }
@@ -227,7 +277,10 @@ export class FeedService {
 
   /* ================================================================== inbox (per user, across workspaces) */
 
-  async inbox(principal: AuthPrincipal, query: { workspaceId?: string; filter: NotificationFilter; cursor?: string; limit: number }): Promise<NotificationPage> {
+  async inbox(
+    principal: AuthPrincipal,
+    query: { workspaceId?: string; filter: NotificationFilter; cursor?: string; limit: number },
+  ): Promise<NotificationPage> {
     const member = sql`exists (select 1 from workspace_members m join workspaces w on w.id = m.workspace_id
                                where m.workspace_id = n.workspace_id and m.user_id = ${principal.userId} and m.status = 'active' and w.deleted_at is null)`;
     const scope = [sql`n.recipient_id = ${principal.userId}`, member];
@@ -240,7 +293,10 @@ export class FeedService {
       conditions.push(sql`(n.created_at, n.id) < (${cursor.value}::timestamptz, ${cursor.id}::uuid)`);
     }
     const result = await this.uow.run({ workspaceId: null, userId: principal.userId }, ({ tx }) =>
-      tx.execute<{ items: (Record<string, unknown> & { sort_created: string })[] | null; unread: string }>(sql`
+      tx.execute<{
+        items: (Record<string, unknown> & { sort_created: string })[] | null;
+        unread: string;
+      }>(sql`
         with page as (
           select n.id, n.workspace_id, n.kind, n.actor_id, n.subject, n.payload, n.target_type, n.target_id,
                  n.read_at, n.created_at, n.created_at::text as sort_created
@@ -267,13 +323,19 @@ export class FeedService {
       if (body.ids?.length) conditions.push(sql`id = any(${sql.param([...body.ids])}::uuid[])`);
       else if (!body.all) return 0;
       if (body.workspaceId) conditions.push(sql`workspace_id = ${body.workspaceId}`);
-      const updated = await tx.execute(sql`update notifications set read_at = now() where ${sql.join(conditions, sql` and `)} returning id`);
+      const updated = await tx.execute(
+        sql`update notifications set read_at = now() where ${sql.join(conditions, sql` and `)} returning id`,
+      );
       // The inbox is the user's, not a workspace's: the audit row is user-level (no tenant is set).
       await this.audit.write(tx, {
         action: 'notification.read',
         workspaceId: null,
         resourceType: 'notification',
-        changes: { count: updated.rows.length, all: Boolean(body.all), workspaceId: body.workspaceId ?? null },
+        changes: {
+          count: updated.rows.length,
+          all: Boolean(body.all),
+          workspaceId: body.workspaceId ?? null,
+        },
       });
       return updated.rows.length;
     });
@@ -281,8 +343,14 @@ export class FeedService {
 
   /* ================================================================== activity feed */
 
-  async activityPage(member: MembershipContext, query: { cursor?: string; limit: number }): Promise<ActivityPage> {
-    const conditions = [sql`a.workspace_id = ${member.workspaceId}`, sql`(a.project_id is null or ${projectVisibleSql(member)})`];
+  async activityPage(
+    member: MembershipContext,
+    query: { cursor?: string; limit: number },
+  ): Promise<ActivityPage> {
+    const conditions = [
+      sql`a.workspace_id = ${member.workspaceId}`,
+      sql`(a.project_id is null or ${projectVisibleSql(member)})`,
+    ];
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
       conditions.push(sql`(a.created_at, a.id) < (${cursor.value}::timestamptz, ${cursor.id}::uuid)`);
@@ -311,19 +379,17 @@ export class FeedService {
     const rows = result.rows;
     const last = rows.length > query.limit ? rows[query.limit - 1] : undefined;
     return {
-      items: rows.slice(0, query.limit).map(
-        (row): ActivityView => ({
-          id: row.id,
-          kind: row.kind,
-          actorId: row.actor_id,
-          targetType: row.target_type,
-          targetId: row.target_id,
-          targetTitle: row.target_title,
-          context: row.context,
-          projectId: row.project_id,
-          createdAt: iso(row.created_at),
-        }),
-      ),
+      items: rows.slice(0, query.limit).map((row): ActivityView => ({
+        id: row.id,
+        kind: row.kind,
+        actorId: row.actor_id,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        targetTitle: row.target_title,
+        context: row.context,
+        projectId: row.project_id,
+        createdAt: iso(row.created_at),
+      })),
       nextCursor: last ? encodeCursor(last.sort_created, last.id) : null,
     };
   }
@@ -331,14 +397,35 @@ export class FeedService {
   /* ================================================================== helpers */
 
   /** `candidates` who can still see the project, minus the actor. */
-  private async viewers(tx: Tx, workspaceId: string, projectId: string, candidates: readonly string[], actor: string | null): Promise<string[]> {
-    const [project] = await tx.select({ visibility: projects.visibility }).from(projects).where(eq(projects.id, projectId));
+  private async viewers(
+    tx: Tx,
+    workspaceId: string,
+    projectId: string,
+    candidates: readonly string[],
+    actor: string | null,
+  ): Promise<string[]> {
+    const [project] = await tx
+      .select({ visibility: projects.visibility })
+      .from(projects)
+      .where(eq(projects.id, projectId));
     if (!project) return [];
-    return this.access.viewersOf(tx, workspaceId, projectId, project.visibility, candidates.filter((userId) => userId !== actor));
+    return this.access.viewersOf(
+      tx,
+      workspaceId,
+      projectId,
+      project.visibility,
+      candidates.filter((userId) => userId !== actor),
+    );
   }
 
   private taskTarget(job: FeedFanoutJob, payload: { taskId: string; title: string }) {
-    return { workspaceId: job.workspaceId, actorId: job.actorId, subject: payload.title, targetType: 'task' as const, targetId: payload.taskId };
+    return {
+      workspaceId: job.workspaceId,
+      actorId: job.actorId,
+      subject: payload.title,
+      targetType: 'task' as const,
+      targetId: payload.taskId,
+    };
   }
 
   private activity(job: FeedFanoutJob, payload: { taskId: string; title: string; projectId: string }) {

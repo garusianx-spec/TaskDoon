@@ -26,16 +26,16 @@ The Agile browser suites now assert the requested absence of time tracking while
 
 ## Verification
 
-| Check | Result |
-|---|---|
-| Clean `npm ci` | Passed |
-| `npm run -ws typecheck` | Passed |
-| `npm run -ws lint` | Passed |
-| API unit tests | 204 passed |
-| Web unit tests | 66 passed |
-| Shared Jalali/text tests | 13 passed |
-| Demo production build | Passed |
-| Demo Playwright suites | 426 checks passed across 16 suites; zero console problems |
+| Check                    | Result                                                    |
+| ------------------------ | --------------------------------------------------------- |
+| Clean `npm ci`           | Passed                                                    |
+| `npm run -ws typecheck`  | Passed                                                    |
+| `npm run -ws lint`       | Passed                                                    |
+| API unit tests           | 204 passed                                                |
+| Web unit tests           | 66 passed                                                 |
+| Shared Jalali/text tests | 13 passed                                                 |
+| Demo production build    | Passed                                                    |
+| Demo Playwright suites   | 426 checks passed across 16 suites; zero console problems |
 
 Browser checks use installed Chrome against the production build; screenshots/logs are local verification artifacts under `apps/web/e2e/out/` and `work/phase1-*`. On Windows the test runner uses `BASE_URL=http://localhost:3100` against an explicitly running production server, avoiding its existing POSIX process-group shutdown path.
 

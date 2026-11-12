@@ -24,16 +24,24 @@ const PREVIEW_ENV = envSchema.parse({
 });
 
 export async function buildOpenApiDocument(): Promise<OpenAPIObject> {
-  const app = await NestFactory.create(AppModule.forRole(PREVIEW_ENV), { preview: true, logger: false, abortOnError: false });
+  const app = await NestFactory.create(AppModule.forRole(PREVIEW_ENV), {
+    preview: true,
+    logger: false,
+    abortOnError: false,
+  });
   app.setGlobalPrefix('api', { exclude: ['health/live', 'health/ready'] });
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   const config = new DocumentBuilder()
     .setTitle('TaskDoon API')
-    .setDescription('REST API of the TaskDoon collaboration platform (RFC 0001). Errors are RFC 9457 problem details.')
+    .setDescription(
+      'REST API of the TaskDoon collaboration platform (RFC 0001). Errors are RFC 9457 problem details.',
+    )
     .setVersion('1')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
     .build();
-  const document = SwaggerModule.createDocument(app, config, { operationIdFactory: (controller, method) => `${controller.replace(/Controller$/, '')}_${method}` });
+  const document = SwaggerModule.createDocument(app, config, {
+    operationIdFactory: (controller, method) => `${controller.replace(/Controller$/, '')}_${method}`,
+  });
   await app.close();
   return document;
 }

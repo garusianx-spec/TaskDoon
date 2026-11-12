@@ -523,12 +523,7 @@ export type SessionStatus = 'active' | 'signed-out';
 /* ============================== Activity feed ============================== */
 
 export type ActivityKind =
-  | 'task-assigned'
-  | 'task-completed'
-  | 'task-commented'
-  | 'message-mention'
-  | 'file-shared'
-  | 'member-joined';
+  'task-assigned' | 'task-completed' | 'task-commented' | 'message-mention' | 'file-shared' | 'member-joined';
 
 export interface ActivityItem {
   readonly id: string;

@@ -36,7 +36,16 @@ export const permissionAction = pgEnum('permission_action', PERMISSION_ACTION_ID
 
 /* ---------------------------------------------------------------- M2: work and content */
 
-export const tagTone = pgEnum('tag_tone', ['gray', 'blue', 'teal', 'green', 'amber', 'red', 'pink', 'violet']);
+export const tagTone = pgEnum('tag_tone', [
+  'gray',
+  'blue',
+  'teal',
+  'green',
+  'amber',
+  'red',
+  'pink',
+  'violet',
+]);
 
 export const projectRole = pgEnum('project_role', ['lead', 'contributor', 'viewer']);
 
@@ -56,9 +65,22 @@ export const issueSeverity = pgEnum('issue_severity', ['critical', 'high', 'medi
 /** `blocked_by` rows are the reverse edge of `blocks`; `relates_to` never blocks. */
 export const taskDependencyType = pgEnum('task_dependency_type', ['blocks', 'blocked_by', 'relates_to']);
 
-export const attachmentKind = pgEnum('attachment_kind', ['image', 'video', 'document', 'sheet', 'archive', 'audio']);
+export const attachmentKind = pgEnum('attachment_kind', [
+  'image',
+  'video',
+  'document',
+  'sheet',
+  'archive',
+  'audio',
+]);
 
-export const attachmentStatus = pgEnum('attachment_status', ['pending', 'scanning', 'ready', 'rejected', 'deleted']);
+export const attachmentStatus = pgEnum('attachment_status', [
+  'pending',
+  'scanning',
+  'ready',
+  'rejected',
+  'deleted',
+]);
 
 export const eventKind = pgEnum('event_kind', ['meeting', 'reminder', 'milestone']);
 
@@ -102,4 +124,9 @@ export const messageKind = pgEnum('message_kind', ['text', 'voice', 'file', 'sys
 
 /* ---------------------------------------------------------------- Phase 3.2: scheduled messages */
 
-export const scheduledMessageStatus = pgEnum('scheduled_message_status', ['pending', 'sent', 'cancelled', 'failed']);
+export const scheduledMessageStatus = pgEnum('scheduled_message_status', [
+  'pending',
+  'sent',
+  'cancelled',
+  'failed',
+]);

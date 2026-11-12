@@ -1,6 +1,6 @@
 import type { AttachmentView, UploadPlan } from '@taskin/contracts';
-import { api } from './endpoints';
-import { ApiProblem } from './http';
+import { api } from '@/api/endpoints';
+import { ApiProblem } from '@/lib/api-client';
 
 /**
  * Files go straight from the browser to object storage (RFC §11): the API plans the upload and
@@ -12,7 +12,15 @@ import { ApiProblem } from './http';
 export function contentTypeOf(file: Blob, name: string): string {
   if (file.type) return file.type.toLowerCase();
   const extension = name.split('.').pop()?.toLowerCase() ?? '';
-  const known: Readonly<Record<string, string>> = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', txt: 'text/plain', csv: 'text/csv' };
+  const known: Readonly<Record<string, string>> = {
+    pdf: 'application/pdf',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    webp: 'image/webp',
+    txt: 'text/plain',
+    csv: 'text/csv',
+  };
   return known[extension] ?? 'application/octet-stream';
 }
 
@@ -31,7 +39,11 @@ export async function uploadFile(workspaceId: string, file: Blob, fileName: stri
 }
 
 /** Sends the bytes as the plan says; returns the part ETags of a multipart upload. */
-async function send(plan: UploadPlan, file: Blob, contentType: string): Promise<{ partNumber: number; etag: string }[] | null> {
+async function send(
+  plan: UploadPlan,
+  file: Blob,
+  contentType: string,
+): Promise<{ partNumber: number; etag: string }[] | null> {
   if (plan.kind === 'post') {
     await postForm(plan.url, plan.fields, file, contentType);
     return null;
@@ -48,7 +60,12 @@ async function send(plan: UploadPlan, file: Blob, contentType: string): Promise<
 }
 
 /** A presigned POST: the policy fields, the exact type the policy expects, then the file last. */
-export async function postForm(url: string, fields: Readonly<Record<string, string>>, file: Blob, contentType: string): Promise<void> {
+export async function postForm(
+  url: string,
+  fields: Readonly<Record<string, string>>,
+  file: Blob,
+  contentType: string,
+): Promise<void> {
   const form = new FormData();
   for (const [name, value] of Object.entries(fields)) form.append(name, value);
   if (!('Content-Type' in fields)) form.append('Content-Type', contentType);

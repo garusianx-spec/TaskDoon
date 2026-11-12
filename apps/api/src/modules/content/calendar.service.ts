@@ -12,7 +12,12 @@ import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import { Clock, dateIn, instantIn, timeIn } from '../../platform/clock/clock.js';
 import type { Tx } from '../../platform/db/database.js';
 import { isoDate, isoDateOrNull, isoOrNull } from '../../platform/db/rows.js';
-import { calendarEventAttendees, calendarEvents, workspaceMembers, workspaces } from '../../platform/db/schema/all.js';
+import {
+  calendarEventAttendees,
+  calendarEvents,
+  workspaceMembers,
+  workspaces,
+} from '../../platform/db/schema/all.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { MembershipContext } from '../../platform/http/request.js';
@@ -55,7 +60,11 @@ function eventView(row: EventJson, timeZone: string): CalendarEventView {
     title: row.title,
     description: row.description,
     date: startsAt ? dateIn(timeZone, startsAt) : isoDate(row.startDate ?? ''),
-    endDate: startsAt ? (endsAt && dateIn(timeZone, endsAt) !== dateIn(timeZone, startsAt) ? dateIn(timeZone, endsAt) : null) : isoDateOrNull(row.endDate),
+    endDate: startsAt
+      ? endsAt && dateIn(timeZone, endsAt) !== dateIn(timeZone, startsAt)
+        ? dateIn(timeZone, endsAt)
+        : null
+      : isoDateOrNull(row.endDate),
     startTime: startsAt ? timeIn(timeZone, startsAt) : null,
     endTime: endsAt ? timeIn(timeZone, endsAt) : null,
     startsAt: isoOrNull(row.startsAt),
@@ -116,7 +125,11 @@ export class CalendarService {
       throw ApiError.validation([{ field: 'to', message: `a range covers at most ${MAX_RANGE_DAYS} days` }]);
     }
     const result = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, ({ tx }) =>
-      tx.execute<{ time_zone: string; events: EventJson[] | null; deadlines: (Omit<DeadlineView, 'dueDate'> & { dueDate: string })[] | null }>(sql`
+      tx.execute<{
+        time_zone: string;
+        events: EventJson[] | null;
+        deadlines: (Omit<DeadlineView, 'dueDate'> & { dueDate: string })[] | null;
+      }>(sql`
         with ws as (select settings ->> 'timeZone' as tz from workspaces where id = ${member.workspaceId})
         select ws.tz as time_zone,
           (select json_agg(json_build_object(
@@ -150,7 +163,10 @@ export class CalendarService {
       to,
       timeZone,
       events: (row?.events ?? []).map((event) => eventView(event, timeZone)),
-      deadlines: (row?.deadlines ?? []).map((deadline) => ({ ...deadline, dueDate: isoDate(deadline.dueDate) })),
+      deadlines: (row?.deadlines ?? []).map((deadline) => ({
+        ...deadline,
+        dueDate: isoDate(deadline.dueDate),
+      })),
     };
   }
 
@@ -164,7 +180,14 @@ export class CalendarService {
   async create(member: MembershipContext, body: CreateCalendarEventBody): Promise<CalendarEventView> {
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const timeZone = await this.timeZone(tx, member.workspaceId);
-      const timing = this.timing(body.kind, timeZone, body.date, body.endDate ?? null, body.startTime ?? null, body.endTime ?? null);
+      const timing = this.timing(
+        body.kind,
+        timeZone,
+        body.date,
+        body.endDate ?? null,
+        body.startTime ?? null,
+        body.endTime ?? null,
+      );
       const attendeeIds = [...new Set(body.attendeeIds ?? [])];
       await this.checkPeople(tx, member, body.projectId ?? null, attendeeIds, 'create');
       const [row] = await tx
@@ -182,7 +205,11 @@ export class CalendarService {
         .returning();
       if (!row) throw new Error('event insert returned nothing');
       if (attendeeIds.length > 0) {
-        await tx.insert(calendarEventAttendees).values(attendeeIds.map((userId) => ({ workspaceId: member.workspaceId, eventId: row.id, userId })));
+        await tx
+          .insert(calendarEventAttendees)
+          .values(
+            attendeeIds.map((userId) => ({ workspaceId: member.workspaceId, eventId: row.id, userId })),
+          );
       }
       await this.audit.write(tx, {
         action: 'calendar.event.create',
@@ -196,7 +223,12 @@ export class CalendarService {
     });
   }
 
-  async update(member: MembershipContext, eventId: string, ifMatch: number, body: UpdateCalendarEventBody): Promise<CalendarEventView> {
+  async update(
+    member: MembershipContext,
+    eventId: string,
+    ifMatch: number,
+    body: UpdateCalendarEventBody,
+  ): Promise<CalendarEventView> {
     return this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
       const { row, attendees } = await this.load(tx, member, eventId, true);
       await this.assertCanChange(tx, member, row, 'edit');
@@ -218,7 +250,9 @@ export class CalendarService {
         await this.checkPeople(tx, member, row.projectId, attendeeIds, null);
         await tx.delete(calendarEventAttendees).where(eq(calendarEventAttendees.eventId, eventId));
         if (attendeeIds.length > 0) {
-          await tx.insert(calendarEventAttendees).values(attendeeIds.map((userId) => ({ workspaceId: member.workspaceId, eventId, userId })));
+          await tx
+            .insert(calendarEventAttendees)
+            .values(attendeeIds.map((userId) => ({ workspaceId: member.workspaceId, eventId, userId })));
         }
       }
       const [updated] = await tx
@@ -233,7 +267,13 @@ export class CalendarService {
         .where(and(eq(calendarEvents.workspaceId, member.workspaceId), eq(calendarEvents.id, eventId)))
         .returning();
       if (!updated) throw ApiError.notFound('The event');
-      await this.audit.write(tx, { action: 'calendar.event.update', workspaceId: member.workspaceId, resourceType: 'calendar_event', resourceId: eventId, changes: { after: body } });
+      await this.audit.write(tx, {
+        action: 'calendar.event.update',
+        workspaceId: member.workspaceId,
+        resourceType: 'calendar_event',
+        resourceId: eventId,
+        changes: { after: body },
+      });
       // The new version gets its own reminder; the old job finds a newer version and does nothing.
       await this.schedule(tx, member, updated, timeZone);
       return eventView(eventJson(updated, attendeeIds), timeZone);
@@ -248,8 +288,20 @@ export class CalendarService {
         .update(calendarEvents)
         .set({ deletedAt: sql`now()`, version: sql`${calendarEvents.version} + 1` })
         .where(and(eq(calendarEvents.workspaceId, member.workspaceId), eq(calendarEvents.id, eventId)));
-      await this.audit.write(tx, { action: 'calendar.event.delete', workspaceId: member.workspaceId, resourceType: 'calendar_event', resourceId: eventId, changes: { before: { title: row.title } } });
-      await this.outbox.add(tx, { type: 'calendar.event.deleted', aggregateType: 'calendar_event', aggregateId: eventId, workspaceId: member.workspaceId, payload: { eventId } });
+      await this.audit.write(tx, {
+        action: 'calendar.event.delete',
+        workspaceId: member.workspaceId,
+        resourceType: 'calendar_event',
+        resourceId: eventId,
+        changes: { before: { title: row.title } },
+      });
+      await this.outbox.add(tx, {
+        type: 'calendar.event.deleted',
+        aggregateType: 'calendar_event',
+        aggregateId: eventId,
+        workspaceId: member.workspaceId,
+        payload: { eventId },
+      });
     });
   }
 
@@ -260,17 +312,29 @@ export class CalendarService {
   async remind(workspaceId: string, eventId: string, version: number): Promise<'sent' | 'stale'> {
     return this.uow.run({ workspaceId, userId: null }, async (unit) => {
       const { tx } = unit;
-      const [row] = await tx.select().from(calendarEvents).where(and(eq(calendarEvents.workspaceId, workspaceId), eq(calendarEvents.id, eventId)));
+      const [row] = await tx
+        .select()
+        .from(calendarEvents)
+        .where(and(eq(calendarEvents.workspaceId, workspaceId), eq(calendarEvents.id, eventId)));
       if (!row || row.deletedAt || row.version !== version) return 'stale';
-      const attendees = (await tx.select({ userId: calendarEventAttendees.userId }).from(calendarEventAttendees).where(eq(calendarEventAttendees.eventId, eventId))).map(
-        (entry) => entry.userId,
-      );
+      const attendees = (
+        await tx
+          .select({ userId: calendarEventAttendees.userId })
+          .from(calendarEventAttendees)
+          .where(eq(calendarEventAttendees.eventId, eventId))
+      ).map((entry) => entry.userId);
       const people = [...new Set([row.createdBy, ...attendees])];
       const active = (
         await tx
           .select({ userId: workspaceMembers.userId })
           .from(workspaceMembers)
-          .where(and(eq(workspaceMembers.workspaceId, workspaceId), inArray(workspaceMembers.userId, people), eq(workspaceMembers.status, 'active')))
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, workspaceId),
+              inArray(workspaceMembers.userId, people),
+              eq(workspaceMembers.status, 'active'),
+            ),
+          )
       ).map((entry) => entry.userId);
       await this.feed.notify(
         unit,
@@ -296,16 +360,32 @@ export class CalendarService {
    * Turns wall-clock input into storage: all-day entries keep dates; timed ones become instants
    * in the workspace's zone (so "09:00" means 09:00 in Tehran whatever the server's zone).
    */
-  private timing(kind: CalendarEventKind, timeZone: string, date: string, endDate: string | null, startTime: string | null, endTime: string | null): Timing {
-    if (kind === 'milestone' && (startTime || endTime)) throw ApiError.validation([{ field: 'startTime', message: 'milestones are all-day' }]);
+  private timing(
+    kind: CalendarEventKind,
+    timeZone: string,
+    date: string,
+    endDate: string | null,
+    startTime: string | null,
+    endTime: string | null,
+  ): Timing {
+    if (kind === 'milestone' && (startTime || endTime))
+      throw ApiError.validation([{ field: 'startTime', message: 'milestones are all-day' }]);
     if (!startTime) {
       if (endTime) throw ApiError.validation([{ field: 'endTime', message: 'needs a start time' }]);
-      if (endDate && endDate < date) throw ApiError.validation([{ field: 'endDate', message: 'must not be before date' }]);
-      return { allDay: true, startDate: date, endDate: endDate && endDate !== date ? endDate : null, startsAt: null, endsAt: null };
+      if (endDate && endDate < date)
+        throw ApiError.validation([{ field: 'endDate', message: 'must not be before date' }]);
+      return {
+        allDay: true,
+        startDate: date,
+        endDate: endDate && endDate !== date ? endDate : null,
+        startsAt: null,
+        endsAt: null,
+      };
     }
     const startsAt = instantIn(timeZone, date, startTime);
     const endsAt = endTime ? instantIn(timeZone, endDate ?? date, endTime) : null;
-    if (endsAt && endsAt <= startsAt) throw ApiError.validation([{ field: 'endTime', message: 'must be after the start' }]);
+    if (endsAt && endsAt <= startsAt)
+      throw ApiError.validation([{ field: 'endTime', message: 'must be after the start' }]);
     return { allDay: false, startDate: null, endDate: null, startsAt, endsAt };
   }
 
@@ -326,12 +406,22 @@ export class CalendarService {
       aggregateType: 'calendar_event',
       aggregateId: row.id,
       workspaceId: member.workspaceId,
-      payload: { eventId: row.id, version: row.version, remindAt: this.remindAt(row, timeZone)?.toISOString() ?? null },
+      payload: {
+        eventId: row.id,
+        version: row.version,
+        remindAt: this.remindAt(row, timeZone)?.toISOString() ?? null,
+      },
     });
   }
 
   /** Attendees must be members; for a project event they must see the project, and so must you. */
-  private async checkPeople(tx: Tx, member: MembershipContext, projectId: string | null, attendeeIds: readonly string[], action: 'create' | null): Promise<void> {
+  private async checkPeople(
+    tx: Tx,
+    member: MembershipContext,
+    projectId: string | null,
+    attendeeIds: readonly string[],
+    action: 'create' | null,
+  ): Promise<void> {
     if (projectId) {
       const { project, actions } = await this.access.project(tx, member, projectId);
       if (action) assertAction(actions, action);
@@ -342,12 +432,24 @@ export class CalendarService {
     const active = await tx
       .select({ userId: workspaceMembers.userId })
       .from(workspaceMembers)
-      .where(and(eq(workspaceMembers.workspaceId, member.workspaceId), inArray(workspaceMembers.userId, [...attendeeIds]), eq(workspaceMembers.status, 'active')));
-    if (active.length !== attendeeIds.length) throw ApiError.validation([{ field: 'attendeeIds', message: 'every attendee must be a member' }]);
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, member.workspaceId),
+          inArray(workspaceMembers.userId, [...attendeeIds]),
+          eq(workspaceMembers.status, 'active'),
+        ),
+      );
+    if (active.length !== attendeeIds.length)
+      throw ApiError.validation([{ field: 'attendeeIds', message: 'every attendee must be a member' }]);
   }
 
   /** Personal events change only by their author; project events also by whoever holds the action. */
-  private async assertCanChange(tx: Tx, member: MembershipContext, row: EventRow, action: 'edit' | 'delete'): Promise<void> {
+  private async assertCanChange(
+    tx: Tx,
+    member: MembershipContext,
+    row: EventRow,
+    action: 'edit' | 'delete',
+  ): Promise<void> {
     if (row.createdBy === member.userId || member.isOwner) return;
     if (!row.projectId) throw ApiError.forbidden();
     const { actions } = await this.access.project(tx, member, row.projectId);
@@ -355,16 +457,30 @@ export class CalendarService {
   }
 
   /** An event the member can see, with its attendees; anything else is 404. */
-  private async load(tx: Tx, member: MembershipContext, eventId: string, lock = false): Promise<{ row: EventRow; attendees: string[] }> {
+  private async load(
+    tx: Tx,
+    member: MembershipContext,
+    eventId: string,
+    lock = false,
+  ): Promise<{ row: EventRow; attendees: string[] }> {
     const query = tx
       .select()
       .from(calendarEvents)
-      .where(and(eq(calendarEvents.workspaceId, member.workspaceId), eq(calendarEvents.id, eventId), isNull(calendarEvents.deletedAt)));
+      .where(
+        and(
+          eq(calendarEvents.workspaceId, member.workspaceId),
+          eq(calendarEvents.id, eventId),
+          isNull(calendarEvents.deletedAt),
+        ),
+      );
     const [row] = lock ? await query.for('update') : await query;
     if (!row) throw ApiError.notFound('The event');
-    const attendees = (await tx.select({ userId: calendarEventAttendees.userId }).from(calendarEventAttendees).where(eq(calendarEventAttendees.eventId, eventId))).map(
-      (entry) => entry.userId,
-    );
+    const attendees = (
+      await tx
+        .select({ userId: calendarEventAttendees.userId })
+        .from(calendarEventAttendees)
+        .where(eq(calendarEventAttendees.eventId, eventId))
+    ).map((entry) => entry.userId);
     if (row.projectId) {
       try {
         await this.access.project(tx, member, row.projectId);
@@ -378,7 +494,10 @@ export class CalendarService {
   }
 
   private async timeZone(tx: Tx, workspaceId: string): Promise<string> {
-    const [workspace] = await tx.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, workspaceId));
+    const [workspace] = await tx
+      .select({ settings: workspaces.settings })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId));
     return workspace?.settings.timeZone ?? 'Asia/Tehran';
   }
 }

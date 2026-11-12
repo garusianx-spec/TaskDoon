@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { AdminSession } from '@/admin/AdminSession';
-import { AdminGate } from '@/components/admin/AdminGate';
+import { AdminSession } from '@/features/admin/hooks/AdminSession';
+import { AdminGuard } from '@/components/layout/AdminGuard';
 
 export const metadata: Metadata = {
   title: 'پنل مدیریت پلتفرم',
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function AdminLayout({ children }: { readonly children: ReactNode }) {
   return (
     <AdminSession>
-      <AdminGate>{children}</AdminGate>
+      <AdminGuard>{children}</AdminGuard>
     </AdminSession>
   );
 }

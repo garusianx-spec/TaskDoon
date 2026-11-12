@@ -1,6 +1,13 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { IsOptional, IsUUID, Matches, registerDecorator, ValidateIf, type ValidationOptions } from 'class-validator';
+import {
+  IsOptional,
+  IsUUID,
+  Matches,
+  registerDecorator,
+  ValidateIf,
+  type ValidationOptions,
+} from 'class-validator';
 import { toLatinDigits } from '@taskin/text';
 
 /** A real calendar date, `YYYY-MM-DD` (2025-02-30 is refused). */
@@ -12,7 +19,10 @@ export function isCalendarDate(value: unknown): value is string {
 }
 
 /** Persian and Arabic digits become ASCII before validation (RFC §9). */
-export const LatinDigits = () => Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? toLatinDigits(value.trim()) : value));
+export const LatinDigits = () =>
+  Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? toLatinDigits(value.trim()) : value,
+  );
 
 export function IsCalendarDate(options?: ValidationOptions): PropertyDecorator {
   return (target, propertyName) =>

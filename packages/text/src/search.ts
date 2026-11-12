@@ -2,11 +2,11 @@ import { toLatinDigits } from './contact.js';
 
 /** Arabic code points Persian writers produce by accident, mapped to the Persian letters they mean. */
 const ARABIC_TO_PERSIAN: Readonly<Record<string, string>> = {
-  'ي': 'ی', // U+064A Arabic yeh
-  'ى': 'ی', // U+0649 alef maksura
-  'ك': 'ک', // U+0643 Arabic kaf
-  'ۀ': 'ه', // U+06C0 heh with yeh above
-  'ة': 'ه', // U+0629 teh marbuta
+  ي: 'ی', // U+064A Arabic yeh
+  ى: 'ی', // U+0649 alef maksura
+  ك: 'ک', // U+0643 Arabic kaf
+  ۀ: 'ه', // U+06C0 heh with yeh above
+  ة: 'ه', // U+0629 teh marbuta
 };
 
 /** Harakat, tanwin, shadda, sukun, superscript alef, and tatweel (kashida). */

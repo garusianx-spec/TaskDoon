@@ -41,34 +41,54 @@ export class RolesService {
       const rows = await tx
         .select({
           role: roles,
-          grants: sql<string[]>`coalesce(array_agg(${rolePermissions.module}::text || ':' || ${rolePermissions.action}::text) filter (where ${rolePermissions.module} is not null), '{}')`,
+          grants: sql<
+            string[]
+          >`coalesce(array_agg(${rolePermissions.module}::text || ':' || ${rolePermissions.action}::text) filter (where ${rolePermissions.module} is not null), '{}')`,
         })
         .from(roles)
-        .leftJoin(rolePermissions, and(eq(rolePermissions.workspaceId, roles.workspaceId), eq(rolePermissions.roleId, roles.id)))
+        .leftJoin(
+          rolePermissions,
+          and(eq(rolePermissions.workspaceId, roles.workspaceId), eq(rolePermissions.roleId, roles.id)),
+        )
         .where(eq(roles.workspaceId, member.workspaceId))
         .groupBy(roles.id)
         .orderBy(asc(roles.rank));
       const counts = await tx
         .select({ roleId: workspaceMembers.roleId, members: count() })
         .from(workspaceMembers)
-        .where(and(eq(workspaceMembers.workspaceId, member.workspaceId), inArray(workspaceMembers.status, ['active', 'suspended'])))
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, member.workspaceId),
+            inArray(workspaceMembers.status, ['active', 'suspended']),
+          ),
+        )
         .groupBy(workspaceMembers.roleId);
-      return rows.map(({ role, grants }) => this.view(role, grants, counts.find((c) => c.roleId === role.id)?.members ?? 0));
+      return rows.map(({ role, grants }) =>
+        this.view(role, grants, counts.find((c) => c.roleId === role.id)?.members ?? 0),
+      );
     });
   }
 
-  async replace(actor: MembershipContext, roleId: string, permissions: RolePermissions, ifMatch: string | undefined): Promise<RoleView> {
+  async replace(
+    actor: MembershipContext,
+    roleId: string,
+    permissions: RolePermissions,
+    ifMatch: string | undefined,
+  ): Promise<RoleView> {
     if (!this.abilities.forMember(actor).can('edit', 'Role')) throw ApiError.forbidden();
     if (ifMatch === undefined) throw new ApiError('PRECONDITION_REQUIRED');
     const expected = Number(ifMatch.replaceAll('"', '').replace(/^W\//, ''));
     return this.uow.run({ workspaceId: actor.workspaceId, userId: actor.userId }, async (unit) => {
       const role = await this.lockRole(unit.tx, actor.workspaceId, roleId);
-      if (role.version !== expected) throw new ApiError('PRECONDITION_FAILED', `The role is at version ${role.version}.`);
+      if (role.version !== expected)
+        throw new ApiError('PRECONDITION_FAILED', `The role is at version ${role.version}.`);
       const updated = await this.replaceRow(unit, actor, role, permissions);
       const [members] = await unit.tx
         .select({ members: count() })
         .from(workspaceMembers)
-        .where(and(eq(workspaceMembers.workspaceId, actor.workspaceId), eq(workspaceMembers.roleId, role.id)));
+        .where(
+          and(eq(workspaceMembers.workspaceId, actor.workspaceId), eq(workspaceMembers.roleId, role.id)),
+        );
       return this.view(updated.role, updated.grants, members?.members ?? 0);
     });
   }
@@ -77,7 +97,12 @@ export class RolesService {
   async resetDefaults(actor: MembershipContext): Promise<RoleView[]> {
     if (!this.abilities.forMember(actor).can('edit', 'Role')) throw ApiError.forbidden();
     await this.uow.run({ workspaceId: actor.workspaceId, userId: actor.userId }, async (unit) => {
-      const rows = await unit.tx.select().from(roles).where(eq(roles.workspaceId, actor.workspaceId)).orderBy(asc(roles.rank)).for('update');
+      const rows = await unit.tx
+        .select()
+        .from(roles)
+        .where(eq(roles.workspaceId, actor.workspaceId))
+        .orderBy(asc(roles.rank))
+        .for('update');
       for (const role of rows) {
         if (role.isLocked || !role.isSystem || (!actor.isOwner && role.rank <= actor.rank)) continue;
         await this.replaceRow(unit, actor, role, DEFAULT_PERMISSION_MATRIX[role.key as RoleId]);
@@ -96,25 +121,44 @@ export class RolesService {
     };
   }
 
-  private async replaceRow(unit: Unit, actor: MembershipContext, role: RoleRow, permissions: RolePermissions) {
+  private async replaceRow(
+    unit: Unit,
+    actor: MembershipContext,
+    role: RoleRow,
+    permissions: RolePermissions,
+  ) {
     if (role.isLocked) throw new ApiError('OWNER_IMMUTABLE');
     if (!actor.isOwner && role.rank <= actor.rank) throw new ApiError('ROLE_RANK_VIOLATION');
-    const next = grantedCells(permissions).map(({ module, action }) => ({ module, action, key: cell(module, action) }));
+    const next = grantedCells(permissions).map(({ module, action }) => ({
+      module,
+      action,
+      key: cell(module, action),
+    }));
     if (!actor.isOwner) {
       const beyond = next.filter((entry) => !actor.grants.includes(entry.key));
       if (beyond.length > 0) {
-        throw new ApiError('PRIVILEGE_ESCALATION', `You do not hold: ${beyond.map((entry) => entry.key).join(', ')}.`);
+        throw new ApiError(
+          'PRIVILEGE_ESCALATION',
+          `You do not hold: ${beyond.map((entry) => entry.key).join(', ')}.`,
+        );
       }
     }
     const before = await unit.tx
       .select({ module: rolePermissions.module, action: rolePermissions.action })
       .from(rolePermissions)
       .where(and(eq(rolePermissions.workspaceId, role.workspaceId), eq(rolePermissions.roleId, role.id)));
-    await unit.tx.delete(rolePermissions).where(and(eq(rolePermissions.workspaceId, role.workspaceId), eq(rolePermissions.roleId, role.id)));
+    await unit.tx
+      .delete(rolePermissions)
+      .where(and(eq(rolePermissions.workspaceId, role.workspaceId), eq(rolePermissions.roleId, role.id)));
     if (next.length > 0) {
-      await unit.tx
-        .insert(rolePermissions)
-        .values(next.map(({ module, action }) => ({ workspaceId: role.workspaceId, roleId: role.id, module, action })));
+      await unit.tx.insert(rolePermissions).values(
+        next.map(({ module, action }) => ({
+          workspaceId: role.workspaceId,
+          roleId: role.id,
+          module,
+          action,
+        })),
+      );
     }
     const [updated] = await unit.tx
       .update(roles)

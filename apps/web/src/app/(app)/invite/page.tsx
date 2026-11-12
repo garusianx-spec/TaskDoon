@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthCard } from '@/components/auth/AuthCard';
+import { AuthCard } from '@/features/auth/components/AuthCard';
 
 /**
  * The link in an invitation SMS or email (`/invite?token=…`). The live store keeps the token
@@ -18,7 +18,11 @@ export default function InvitePage() {
 
   return (
     <AuthCard labelledBy="invite-title" title="پیوستن به فضای کاری" description="در حال باز کردن فضای کاری…">
-      <div role="progressbar" aria-label="بارگذاری" className="mx-auto size-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      <div
+        role="progressbar"
+        aria-label="بارگذاری"
+        className="mx-auto size-8 animate-spin rounded-full border-2 border-brand border-t-transparent"
+      />
     </AuthCard>
   );
 }

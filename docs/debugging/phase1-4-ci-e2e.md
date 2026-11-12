@@ -31,16 +31,16 @@ The permanent demo regression checks explicitly focus the department/member trig
 
 ## Verification
 
-| Check | Result |
-|---|---|
-| Unmodified live-flow reproduction | 16 passed, one timeout, zero console problems |
-| Trigger-focused Escape reproduction | Failed before fix; 7 passed after fix, zero console problems |
-| Workspace typecheck and lint | Passed |
-| Web unit/component tests | 105 passed |
-| Live production build | Passed |
-| Complete `npm run test:e2e:live` | 149 passed, zero failures, zero console problems |
-| Demo production build | Passed |
-| Complete 19-suite demo Playwright run | 506 passed, zero failures, zero console problems |
+| Check                                 | Result                                                       |
+| ------------------------------------- | ------------------------------------------------------------ |
+| Unmodified live-flow reproduction     | 16 passed, one timeout, zero console problems                |
+| Trigger-focused Escape reproduction   | Failed before fix; 7 passed after fix, zero console problems |
+| Workspace typecheck and lint          | Passed                                                       |
+| Web unit/component tests              | 105 passed                                                   |
+| Live production build                 | Passed                                                       |
+| Complete `npm run test:e2e:live`      | 149 passed, zero failures, zero console problems             |
+| Demo production build                 | Passed                                                       |
+| Complete 19-suite demo Playwright run | 506 passed, zero failures, zero console problems             |
 
 The complete live run covered task persistence/completion after reload, guest realtime synchronization, reactions, lost-acknowledgement resend, real PDF/image upload and download, voice recording, message-to-task conversion, subtask order, task attachments, notifications, auto-replies, worker-dispatched scheduled messages, profile/notes, project departments/members, project limits, trash restoration, removal of a member and uploaded workspace icons.
 

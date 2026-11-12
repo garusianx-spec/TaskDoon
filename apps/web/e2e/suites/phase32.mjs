@@ -29,13 +29,19 @@ await scheduleButton.click();
 let dialog = page.getByRole('dialog', { name: 'زمان‌بندی ارسال پیام' });
 check(await visible(dialog), 'the clock beside «ارسال پیام» opens the scheduler');
 check(await visible(dialog.getByText('یادآوری: جلسه بازبینی طراحی')), '…showing the message being scheduled');
-check((await dialog.getByRole('group', { name: 'زمان‌های پیشنهادی' }).getByRole('button').count()) >= 2, '…with shortcuts');
+check(
+  (await dialog.getByRole('group', { name: 'زمان‌های پیشنهادی' }).getByRole('button').count()) >= 2,
+  '…with shortcuts',
+);
 await dialog.getByRole('button', { name: 'یک ساعت دیگر' }).click();
 check(await visible(dialog.getByText(/^ارسال در /)), 'the chosen time is spelled out in Jalali');
 await dialog.getByRole('button', { name: 'زمان‌بندی ارسال' }).click();
 check(await eventually(async () => (await dialog.count()) === 0), 'scheduling closes the dialog');
 check((await input.inputValue()) === '', 'the composer is cleared');
-check((await chat.getByText('یادآوری: جلسه بازبینی طراحی').count()) === 0, 'the message is not in the thread yet');
+check(
+  (await chat.getByText('یادآوری: جلسه بازبینی طراحی').count()) === 0,
+  'the message is not in the thread yet',
+);
 const bar = chat.getByRole('button', { name: /پیام‌های زمان‌بندی‌شده/ });
 check(await visible(bar), 'the conversation shows «پیام‌های زمان‌بندی‌شده»');
 check((await bar.textContent()).includes('۱'), '…with one waiting');
@@ -50,10 +56,18 @@ const past = new Date(now - 30 * 60_000);
 if (past.getDate() === new Date(now).getDate()) {
   // The one-hour default can land on tomorrow; test the past time on today's date.
   await dialog.locator('button[aria-haspopup="dialog"]').click();
-  await dialog.getByRole('dialog', { name: 'انتخاب تاریخ ارسال', exact: true }).getByRole('button', { name: 'امروز', exact: true }).click();
-  await dialog.getByLabel('ساعت ارسال').fill(`${String(past.getHours()).padStart(2, '0')}:${String(past.getMinutes()).padStart(2, '0')}`);
+  await dialog
+    .getByRole('dialog', { name: 'انتخاب تاریخ ارسال', exact: true })
+    .getByRole('button', { name: 'امروز', exact: true })
+    .click();
+  await dialog
+    .getByLabel('ساعت ارسال')
+    .fill(`${String(past.getHours()).padStart(2, '0')}:${String(past.getMinutes()).padStart(2, '0')}`);
   await dialog.getByRole('button', { name: 'زمان‌بندی ارسال' }).click();
-  check(await visible(dialog.getByRole('alert').filter({ hasText: 'دست‌کم یک دقیقه بعد' })), 'a time in the past is refused');
+  check(
+    await visible(dialog.getByRole('alert').filter({ hasText: 'دست‌کم یک دقیقه بعد' })),
+    'a time in the past is refused',
+  );
 }
 await dialog.getByRole('button', { name: /^فردا ساعت/ }).click();
 await dialog.getByRole('button', { name: 'زمان‌بندی ارسال' }).click();
@@ -85,7 +99,10 @@ await dialog.getByRole('button', { name: 'زمان‌بندی ارسال' }).cli
 check(await visible(bar), 'a third one waits');
 check((await list.count()) === 0, '…in the bar: the list does not open by itself');
 await page.clock.fastForward('01:10:00');
-check(await eventually(async () => (await chat.getByText('گزارش هفتگی ضمیمه شد').count()) === 1), 'when its time comes, it is sent by itself');
+check(
+  await eventually(async () => (await chat.getByText('گزارش هفتگی ضمیمه شد').count()) === 1),
+  'when its time comes, it is sent by itself',
+);
 check(await eventually(async () => (await bar.count()) === 0), '…and leaves the bar');
 
 /* ---------- 2. A teammate's out-of-office auto-reply ---------- */
@@ -99,7 +116,10 @@ check(await visible(dm), 'a direct chat with Leila (on leave) opens');
 await page.getByLabel('نوشتن پیام در لیلا قاسمی').fill('سلام، گزارش مالی ماه آماده است؟');
 await page.getByLabel('نوشتن پیام در لیلا قاسمی').press('Enter');
 const replies = dm.getByText('پاسخ خودکار', { exact: true });
-check(await eventually(async () => (await replies.count()) === 1), 'her auto-reply answers, marked «پاسخ خودکار»');
+check(
+  await eventually(async () => (await replies.count()) === 1),
+  'her auto-reply answers, marked «پاسخ خودکار»',
+);
 check(await visible(dm.getByText(/در مرخصی هستم/)), '…with her out-of-office text');
 await page.getByLabel('نوشتن پیام در لیلا قاسمی').fill('ممنون، منتظر می‌مانم.');
 await page.getByLabel('نوشتن پیام در لیلا قاسمی').press('Enter');
@@ -107,11 +127,17 @@ await page.waitForTimeout(300);
 check((await replies.count()) === 1, 'a second message the same day gets no second answer');
 await page.screenshot({ path: `${out}/p32_autoreply.png` });
 
-await page.getByRole('button', { name: /کمپین نوروزی/ }).first().click();
+await page
+  .getByRole('button', { name: /کمپین نوروزی/ })
+  .first()
+  .click();
 const group = page.getByRole('region', { name: 'گفتگوی کمپین نوروزی' });
 await page.getByLabel('نوشتن پیام در کمپین نوروزی').fill('لیلا، بودجه کمپین تأیید شد؟');
 await page.getByLabel('نوشتن پیام در کمپین نوروزی').press('Enter');
-check(await visible(group.getByText('لیلا، بودجه کمپین تأیید شد؟')), 'a message in a group she is in is sent');
+check(
+  await visible(group.getByText('لیلا، بودجه کمپین تأیید شد؟')),
+  'a message in a group she is in is sent',
+);
 await page.waitForTimeout(300);
 check((await group.getByText('پاسخ خودکار', { exact: true }).count()) === 0, 'groups never get auto-replies');
 
@@ -128,11 +154,21 @@ let settings = await openSettings();
 check(await visible(settings), 'the account menu opens «ساعات کاری و پاسخ خودکار»');
 const toggle = settings.getByRole('switch', { name: 'پاسخ خودکار خارج از ساعت کاری' });
 check((await toggle.getAttribute('aria-checked')) === 'false', 'the auto-reply starts off');
-check((await settings.getByRole('button', { name: 'شنبه', exact: true }).getAttribute('aria-pressed')) === 'true', 'Saturday is a working day by default');
-check((await settings.getByRole('button', { name: 'جمعه', exact: true }).getAttribute('aria-pressed')) === 'false', '…Friday is not');
+check(
+  (await settings.getByRole('button', { name: 'شنبه', exact: true }).getAttribute('aria-pressed')) === 'true',
+  'Saturday is a working day by default',
+);
+check(
+  (await settings.getByRole('button', { name: 'جمعه', exact: true }).getAttribute('aria-pressed')) ===
+    'false',
+  '…Friday is not',
+);
 await settings.getByLabel('پایان ساعت کاری').fill('09:00');
 await settings.getByRole('button', { name: 'ذخیره' }).click();
-check(await visible(settings.getByRole('alert').filter({ hasText: 'باید با ساعت شروع فرق کند' })), 'the same start and end are refused');
+check(
+  await visible(settings.getByRole('alert').filter({ hasText: 'باید با ساعت شروع فرق کند' })),
+  'the same start and end are refused',
+);
 await toggle.click();
 await settings.getByRole('button', { name: 'پنجشنبه', exact: true }).click();
 await settings.getByLabel('پایان ساعت کاری').fill('17:30');
@@ -140,10 +176,25 @@ await settings.getByLabel('متن پاسخ خودکار').fill('تا شنبه د
 await settings.getByRole('button', { name: 'ذخیره' }).click();
 check(await eventually(async () => (await settings.count()) === 0), 'saving closes the settings');
 settings = await openSettings();
-check((await settings.getByRole('switch', { name: 'پاسخ خودکار خارج از ساعت کاری' }).getAttribute('aria-checked')) === 'true', 'the auto-reply stays on');
-check((await settings.getByRole('button', { name: 'پنجشنبه', exact: true }).getAttribute('aria-pressed')) === 'true', 'Thursday is now a working day');
-check((await settings.getByLabel('پایان ساعت کاری').inputValue()) === '17:30', 'the new end of the day is kept');
-check((await settings.getByLabel('متن پاسخ خودکار').inputValue()) === 'تا شنبه در سفر کاری هستم.', 'the new text is kept');
+check(
+  (await settings
+    .getByRole('switch', { name: 'پاسخ خودکار خارج از ساعت کاری' })
+    .getAttribute('aria-checked')) === 'true',
+  'the auto-reply stays on',
+);
+check(
+  (await settings.getByRole('button', { name: 'پنجشنبه', exact: true }).getAttribute('aria-pressed')) ===
+    'true',
+  'Thursday is now a working day',
+);
+check(
+  (await settings.getByLabel('پایان ساعت کاری').inputValue()) === '17:30',
+  'the new end of the day is kept',
+);
+check(
+  (await settings.getByLabel('متن پاسخ خودکار').inputValue()) === 'تا شنبه در سفر کاری هستم.',
+  'the new text is kept',
+);
 await page.screenshot({ path: `${out}/p32_hours.png` });
 await page.keyboard.press('Escape');
 

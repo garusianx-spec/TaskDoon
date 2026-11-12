@@ -48,7 +48,11 @@ async function api(method, path, { token, body, idempotent } = {}) {
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (token) headers.authorization = `Bearer ${token}`;
   if (idempotent) headers['idempotency-key'] = randomUUID();
-  const response = await fetch(`${base}/api/v1${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const response = await fetch(`${base}/api/v1${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null };
 }
@@ -59,11 +63,32 @@ const from = logSize();
 const codeSentAt = Date.now();
 const challenge = await api('POST', '/auth/otp/request', { body: { phone } });
 const code = await smsAfter(from, OTP, 'sign-in code');
-const verified = await api('POST', '/auth/otp/verify', { body: { challengeId: challenge.body.challengeId, code } });
-const signedUp = await api('POST', '/auth/signup', { body: { signupToken: verified.body.signupToken, fullName } });
+const verified = await api('POST', '/auth/otp/verify', {
+  body: { challengeId: challenge.body.challengeId, code },
+});
+const signedUp = await api('POST', '/auth/signup', {
+  body: { signupToken: verified.body.signupToken, fullName },
+});
 check(signedUp.status === 201, 'the account is created by SMS code');
-check((await api('POST', '/auth/password', { token: signedUp.body.accessToken, body: { newPassword: FIRST_PASSWORD } })).status === 204, '…and sets a password');
-check((await api('POST', '/workspaces', { token: signedUp.body.accessToken, body: { name: workspaceName }, idempotent: true })).status === 201, '…and a workspace');
+check(
+  (
+    await api('POST', '/auth/password', {
+      token: signedUp.body.accessToken,
+      body: { newPassword: FIRST_PASSWORD },
+    })
+  ).status === 204,
+  '…and sets a password',
+);
+check(
+  (
+    await api('POST', '/workspaces', {
+      token: signedUp.body.accessToken,
+      body: { name: workspaceName },
+      idempotent: true,
+    })
+  ).status === 201,
+  '…and a workspace',
+);
 
 /* ---------- Phone and password ---------- */
 
@@ -74,18 +99,33 @@ const first = await (await browser.newContext({ viewport, locale: 'fa-IR' })).ne
 // the browser logs each 401 it receives. Every other message still fails the suite.
 watchConsole(first, { allow: [/the server responded with a status of 401/] });
 await first.goto(`${base}/feed`);
-check(await visible(first.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000), 'the sign-in card opens on the SMS code, as before');
-check(await visible(first.getByRole('button', { name: 'دریافت کد ورود' })), '…«دریافت کد ورود» stays the main action');
+check(
+  await visible(first.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000),
+  'the sign-in card opens on the SMS code, as before',
+);
+check(
+  await visible(first.getByRole('button', { name: 'دریافت کد ورود' })),
+  '…«دریافت کد ورود» stays the main action',
+);
 await first.getByRole('button', { name: 'ورود با رمز عبور' }).click();
-check(await visible(first.getByRole('heading', { name: 'ورود با رمز عبور' })), '«ورود با رمز عبور» offers phone and password');
+check(
+  await visible(first.getByRole('heading', { name: 'ورود با رمز عبور' })),
+  '«ورود با رمز عبور» offers phone and password',
+);
 await first.getByRole('textbox', { name: 'شماره موبایل' }).fill(phone);
 await first.getByLabel('رمز عبور', { exact: true }).fill('Not-The-Password-1');
 await first.getByRole('button', { name: 'ورود', exact: true }).click();
-check(await visible(first.getByText('شماره موبایل یا رمز عبور درست نیست.')), 'a wrong password is refused, without saying which part was wrong');
+check(
+  await visible(first.getByText('شماره موبایل یا رمز عبور درست نیست.')),
+  'a wrong password is refused, without saying which part was wrong',
+);
 await first.getByLabel('رمز عبور', { exact: true }).fill(FIRST_PASSWORD);
 await first.screenshot({ path: `${out}/password_signin.png` });
 await first.getByRole('button', { name: 'ورود', exact: true }).click();
-check(await visible(first.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000), 'the right one signs in, into the workspace');
+check(
+  await visible(first.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000),
+  'the right one signs in, into the workspace',
+);
 
 /* ---------- «فراموشی رمز عبور» on another device ---------- */
 
@@ -94,29 +134,53 @@ watchConsole(second);
 await second.goto(`${base}/feed`);
 await second.getByRole('button', { name: 'ورود با رمز عبور' }).click();
 await second.getByRole('button', { name: 'فراموشی رمز عبور' }).click();
-check(await visible(second.getByRole('heading', { name: 'فراموشی رمز عبور' })), '«فراموشی رمز عبور» asks for the phone number');
+check(
+  await visible(second.getByRole('heading', { name: 'فراموشی رمز عبور' })),
+  '«فراموشی رمز عبور» asks for the phone number',
+);
 await second.getByRole('textbox', { name: 'شماره موبایل' }).fill(phone);
 // A number can ask for a new code once a minute.
 await new Promise((resolve) => setTimeout(resolve, Math.max(0, codeSentAt + 62_000 - Date.now())));
 const resetFrom = logSize();
 await second.getByRole('button', { name: 'ارسال کد بازنشانی' }).click();
-check(await visible(second.getByRole('heading', { name: 'گذاشتن رمز عبور تازه' }), 15_000), '…and texts a reset code');
-await second.getByRole('textbox', { name: 'کد بازنشانی' }).fill(await smsAfter(resetFrom, RESET, 'reset code'));
+check(
+  await visible(second.getByRole('heading', { name: 'گذاشتن رمز عبور تازه' }), 15_000),
+  '…and texts a reset code',
+);
+await second
+  .getByRole('textbox', { name: 'کد بازنشانی' })
+  .fill(await smsAfter(resetFrom, RESET, 'reset code'));
 await second.getByLabel('رمز عبور تازه', { exact: true }).fill(NEW_PASSWORD);
 await second.getByLabel('تکرار رمز عبور تازه', { exact: true }).fill('Something-Else-1');
 await second.getByRole('button', { name: 'ذخیره رمز و ورود' }).click();
-check(await visible(second.getByText('تکرار رمز عبور با خود آن یکی نیست.')), 'a repeat that differs is caught before anything is sent');
+check(
+  await visible(second.getByText('تکرار رمز عبور با خود آن یکی نیست.')),
+  'a repeat that differs is caught before anything is sent',
+);
 await second.getByLabel('تکرار رمز عبور تازه', { exact: true }).fill(NEW_PASSWORD);
 await second.screenshot({ path: `${out}/password_reset.png` });
 await second.getByRole('button', { name: 'ذخیره رمز و ورود' }).click();
-check(await visible(second.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000), 'the new password is saved and signs this device in');
+check(
+  await visible(second.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000),
+  'the new password is saved and signs this device in',
+);
 
 await first.reload();
-check(await visible(first.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000), 'the other device was signed out');
 check(
-  await eventually(async () => (await api('POST', '/auth/password/login', { body: { phone, password: FIRST_PASSWORD } })).body?.code === 'CREDENTIALS_INVALID'),
+  await visible(first.getByRole('heading', { name: 'ورود به تسک‌دون' }), 30_000),
+  'the other device was signed out',
+);
+check(
+  await eventually(
+    async () =>
+      (await api('POST', '/auth/password/login', { body: { phone, password: FIRST_PASSWORD } })).body
+        ?.code === 'CREDENTIALS_INVALID',
+  ),
   'the old password no longer works',
 );
-check((await api('POST', '/auth/password/login', { body: { phone, password: NEW_PASSWORD } })).status === 200, '…the new one does');
+check(
+  (await api('POST', '/auth/password/login', { body: { phone, password: NEW_PASSWORD } })).status === 200,
+  '…the new one does',
+);
 
 await finish(browser);

@@ -24,11 +24,11 @@ x-api-env: &api-env
   S3_SECRET_KEY: taskin-dev-secret
   SMTP_URL: smtp://mailpit:1025
   PUBLIC_WEB_ORIGIN: http://localhost:3000
-  COOKIE_SECURE: "false"
+  COOKIE_SECURE: 'false'
   OTP_PEPPER: development-only-pepper-change-me-please
   APP_ENCRYPTION_KEY: ZGV2ZWxvcG1lbnQtb25seS1rZXktY2hhbmdlLW1lISE=
   SMS_PROVIDERS: console
-  LOG_PRETTY: "false"
+  LOG_PRETTY: 'false'
 
 services:
   postgres:
@@ -37,13 +37,13 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
-    command: ["postgres", "-c", "max_connections=200", "-c", "shared_preload_libraries=pg_stat_statements"]
+    command: ['postgres', '-c', 'max_connections=200', '-c', 'shared_preload_libraries=pg_stat_statements']
     volumes:
       - pgdata:/var/lib/postgresql
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
-    ports: ["5432:5432"]
+    ports: ['5432:5432']
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d taskin"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d taskin']
       interval: 3s
       timeout: 3s
       retries: 20
@@ -52,22 +52,22 @@ services:
     image: edoburu/pgbouncer:v1.24.1-p1
     environment:
       DB_HOST: postgres
-      DB_PORT: "5432"
+      DB_PORT: '5432'
       DB_USER: taskin_app
       DB_PASSWORD: taskin_app
       DB_NAME: taskin
       AUTH_TYPE: scram-sha-256
       POOL_MODE: transaction
-      MAX_CLIENT_CONN: "500"
-      DEFAULT_POOL_SIZE: "20"
-      LISTEN_PORT: "6432"
+      MAX_CLIENT_CONN: '500'
+      DEFAULT_POOL_SIZE: '20'
+      LISTEN_PORT: '6432'
       # node-postgres sends these at connect; transaction pooling cannot keep session settings.
       IGNORE_STARTUP_PARAMETERS: extra_float_digits
     depends_on:
       postgres: { condition: service_healthy }
-    ports: ["6432:6432"]
+    ports: ['6432:6432']
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U taskin_app -d taskin"]
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -p 6432 -U taskin_app -d taskin']
       interval: 3s
       timeout: 3s
       retries: 20
@@ -75,11 +75,12 @@ services:
   redis-core:
     image: redis:7.4-alpine
     # Durable: BullMQ, rate limits, idempotency, revocations. BullMQ requires noeviction.
-    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
+    command:
+      ['redis-server', '--appendonly', 'yes', '--appendfsync', 'everysec', '--maxmemory-policy', 'noeviction']
     volumes: [redisdata:/data]
-    ports: ["6379:6379"]
+    ports: ['6379:6379']
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 3s
       timeout: 3s
       retries: 20
@@ -87,10 +88,21 @@ services:
   redis-rt:
     image: redis:7.4-alpine
     # Disposable: Socket.IO fan-out, presence, typing.
-    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
-    ports: ["6380:6379"]
+    command:
+      [
+        'redis-server',
+        '--save',
+        '',
+        '--appendonly',
+        'no',
+        '--maxmemory',
+        '256mb',
+        '--maxmemory-policy',
+        'volatile-lru',
+      ]
+    ports: ['6380:6379']
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 3s
       timeout: 3s
       retries: 20
@@ -109,9 +121,9 @@ services:
     volumes:
       - s3data:/data
       - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
-    ports: ["8333:8333"]
+    ports: ['8333:8333']
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/status || exit 1"]
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:8333/status || exit 1']
       interval: 3s
       timeout: 3s
       retries: 40
@@ -120,18 +132,18 @@ services:
     image: chrislusf/seaweedfs:4.47
     depends_on:
       s3: { condition: service_healthy }
-    entrypoint: ["sh", "-c"]
+    entrypoint: ['sh', '-c']
     command:
       - |
         echo 's3.bucket.create -name taskin-files' | weed shell -master=s3:9333 || true
         echo 's3.bucket.list' | weed shell -master=s3:9333 | grep -q taskin-files
-    restart: "no"
+    restart: 'no'
 
   mailpit:
     image: axllent/mailpit:v1.27
-    ports: ["1025:1025", "8025:8025"]
+    ports: ['1025:1025', '8025:8025']
     healthcheck:
-      test: ["CMD", "/mailpit", "readyz"]
+      test: ['CMD', '/mailpit', 'readyz']
       interval: 3s
       timeout: 3s
       retries: 20
@@ -140,10 +152,10 @@ services:
     profiles: [app]
     build: { context: .., dockerfile: apps/api/Dockerfile, target: migrator }
     environment: *api-env
-    command: ["node", "--enable-source-maps", "dist/cli/migrate.js"]
+    command: ['node', '--enable-source-maps', 'dist/cli/migrate.js']
     depends_on:
       postgres: { condition: service_healthy }
-    restart: "no"
+    restart: 'no'
 
   api:
     profiles: [app]
@@ -151,7 +163,7 @@ services:
     environment:
       <<: *api-env
       APP_ROLE: all
-      PORT: "4000"
+      PORT: '4000'
     depends_on:
       migrate: { condition: service_completed_successfully }
       pgbouncer: { condition: service_healthy }
@@ -159,9 +171,9 @@ services:
       redis-rt: { condition: service_healthy }
       s3-init: { condition: service_completed_successfully }
       mailpit: { condition: service_healthy }
-    ports: ["4000:4000"]
+    ports: ['4000:4000']
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:4000/health/ready || exit 1"]
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:4000/health/ready || exit 1']
       interval: 5s
       timeout: 3s
       retries: 20

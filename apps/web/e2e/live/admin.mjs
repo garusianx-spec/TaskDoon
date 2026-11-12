@@ -29,11 +29,14 @@ import { check, eventually, finish, launch, out, visible, watchConsole } from '.
 const base = process.env.BASE_URL ?? 'http://localhost:3000';
 const apiLog = process.env.API_LOG;
 if (!apiLog) {
-  console.error('Set API_LOG to the file the API logs to: the console SMS driver writes sign-in codes there.');
+  console.error(
+    'Set API_LOG to the file the API logs to: the console SMS driver writes sign-in codes there.',
+  );
   process.exit(2);
 }
 const grantCommand =
-  process.env.GRANT_PLATFORM_ADMIN ?? `node ${fileURLToPath(new URL('../../../api/dist/cli/platform-admin.js', import.meta.url))} grant`;
+  process.env.GRANT_PLATFORM_ADMIN ??
+  `node ${fileURLToPath(new URL('../../../api/dist/cli/platform-admin.js', import.meta.url))} grant`;
 
 const OTP = /"text":"کد ورود شما به تسک‌دون: (\d{6})"/g;
 const runId = String(Date.now()).slice(-4);
@@ -67,7 +70,11 @@ async function api(method, path, { token, body, idempotent } = {}) {
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (token) headers.authorization = `Bearer ${token}`;
   if (idempotent) headers['idempotency-key'] = randomUUID();
-  const response = await fetch(`${base}/api/v1${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const response = await fetch(`${base}/api/v1${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null };
 }
@@ -80,16 +87,23 @@ async function signUp(phone, fullName) {
   const challenge = await api('POST', '/auth/otp/request', { body: { phone } });
   if (challenge.status !== 200) throw new Error(`otp/request ${challenge.status}`);
   const code = await smsAfter(from, OTP, 'sign-in code');
-  const verify = await api('POST', '/auth/otp/verify', { body: { challengeId: challenge.body.challengeId, code } });
+  const verify = await api('POST', '/auth/otp/verify', {
+    body: { challengeId: challenge.body.challengeId, code },
+  });
   if (verify.body?.status !== 'signup_required') throw new Error(`otp/verify ${verify.status}`);
-  const signup = await api('POST', '/auth/signup', { body: { signupToken: verify.body.signupToken, fullName } });
+  const signup = await api('POST', '/auth/signup', {
+    body: { signupToken: verify.body.signupToken, fullName },
+  });
   if (signup.status !== 201) throw new Error(`signup ${signup.status}`);
   return signup.body;
 }
 
 /** When each number was last sent a code: it may ask for another one a minute later. */
 const codeSentAt = new Map();
-const cooledDown = (phone) => new Promise((resolve) => setTimeout(resolve, Math.max(0, (codeSentAt.get(phone) ?? 0) + 62_000 - Date.now())));
+const cooledDown = (phone) =>
+  new Promise((resolve) =>
+    setTimeout(resolve, Math.max(0, (codeSentAt.get(phone) ?? 0) + 62_000 - Date.now())),
+  );
 
 /** Phone → code on a sign-in card (no sign-up step). */
 async function signInAt(page, phone) {
@@ -109,8 +123,20 @@ async function signInAt(page, phone) {
 const member = await signUp(memberPhone, memberName);
 const memberCodeAt = lastCodeAt;
 // Owners need a password before their first workspace (allowed right after an SMS sign-in).
-check((await api('POST', '/auth/password', { token: member.accessToken, body: { newPassword: `Avalin-Ramz-${runId}!` } })).status === 204, 'the member sets her owner password');
-const workspace = await api('POST', '/workspaces', { token: member.accessToken, body: { name: workspaceName }, idempotent: true });
+check(
+  (
+    await api('POST', '/auth/password', {
+      token: member.accessToken,
+      body: { newPassword: `Avalin-Ramz-${runId}!` },
+    })
+  ).status === 204,
+  'the member sets her owner password',
+);
+const workspace = await api('POST', '/workspaces', {
+  token: member.accessToken,
+  body: { name: workspaceName },
+  idempotent: true,
+});
 check(workspace.status === 201, 'the member creates her workspace');
 const channel = await api('POST', `/workspaces/${workspace.body.id}/conversations`, {
   token: member.accessToken,
@@ -135,8 +161,14 @@ const page = await operatorContext.newPage();
 watchConsole(page);
 
 await page.goto(`${base}/admin`);
-check(await visible(page.getByRole('heading', { name: 'ورود به پنل مدیریت پلتفرم' }), 30_000), '/admin opens its own sign-in card');
-check((await page.getByRole('navigation', { name: 'ناوبری اصلی' }).count()) === 0, '…with nothing of the workspace app around it');
+check(
+  await visible(page.getByRole('heading', { name: 'ورود به پنل مدیریت پلتفرم' }), 30_000),
+  '/admin opens its own sign-in card',
+);
+check(
+  (await page.getByRole('navigation', { name: 'ناوبری اصلی' }).count()) === 0,
+  '…with nothing of the workspace app around it',
+);
 // The account is created where accounts are created: the workspace app's sign-in.
 await page.goto(`${base}/feed`);
 await signInAt(page, operatorPhone);
@@ -144,20 +176,34 @@ const nameBox = page.getByRole('textbox', { name: 'نام و نام خانواد
 await nameBox.waitFor({ timeout: 15_000 });
 await nameBox.fill(operatorName);
 await page.getByRole('button', { name: 'ساخت حساب و ورود' }).click();
-check(await visible(page.getByRole('heading', { name: `${operatorName}، خوش آمدید` }), 15_000), 'the operator signs up in the workspace app');
+check(
+  await visible(page.getByRole('heading', { name: `${operatorName}، خوش آمدید` }), 15_000),
+  'the operator signs up in the workspace app',
+);
 execSync(`${grantCommand} ${operatorPhone}`, { stdio: 'inherit' });
 
 // Same browser, same session: /admin restores it, no second code.
 await page.goto(`${base}/admin`);
-check(await visible(page.getByRole('heading', { name: 'رمز عبور مدیر را تعیین کنید' }), 30_000), 'once flagged, /admin asks an operator without a password to set one');
+check(
+  await visible(page.getByRole('heading', { name: 'رمز عبور مدیر را تعیین کنید' }), 30_000),
+  'once flagged, /admin asks an operator without a password to set one',
+);
 await page.getByLabel('رمز عبور', { exact: true }).fill(OPERATOR_PASSWORD);
 await page.getByRole('button', { name: 'ذخیره و ادامه' }).click();
 const nav = page.getByRole('navigation', { name: 'بخش‌های پنل مدیریت' });
 check(await visible(nav, 15_000), 'after the step-up the admin shell opens');
-for (const section of ['کاربران و سشن‌ها', 'رصد پیام‌ها و گروه‌ها', 'ورک‌اسپیس‌ها و نقش‌ها', 'گزارش بازرسی']) {
+for (const section of [
+  'کاربران و سشن‌ها',
+  'رصد پیام‌ها و گروه‌ها',
+  'ورک‌اسپیس‌ها و نقش‌ها',
+  'گزارش بازرسی',
+]) {
   check(await visible(nav.getByRole('link', { name: section })), `…with «${section}»`);
 }
-check(await eventually(async () => new URL(page.url()).pathname === '/admin/users'), '…on the user directory');
+check(
+  await eventually(async () => new URL(page.url()).pathname === '/admin/users'),
+  '…on the user directory',
+);
 
 /* ---------- Directory → profile → sessions ---------- */
 
@@ -175,20 +221,32 @@ check(await visible(memberships.getByRole('link', { name: workspaceName })), '�
 check(await visible(memberships.getByText('مالک سازمان')), '…and her exact role there');
 
 const sessions = page.getByRole('region', { name: 'فهرست نشست‌ها' });
-check(await visible(sessions.getByText('فعال', { exact: true }).first()), 'the session inspector lists her active session');
+check(
+  await visible(sessions.getByText('فعال', { exact: true }).first()),
+  'the session inspector lists her active session',
+);
 await page.screenshot({ path: `${out}/admin_profile.png`, fullPage: true });
 await sessions.getByRole('button', { name: 'پایان نشست' }).first().click();
 const confirm = page.getByRole('alertdialog', { name: 'پایان این نشست' });
 await confirm.getByRole('button', { name: 'پایان نشست' }).click();
 check(await visible(page.getByText('نشست پایان یافت.')), 'ending it is confirmed');
-check(await eventually(async () => (await api('GET', '/me', { token: member.accessToken })).status === 401), '…and her token stops working at once');
-check(await visible(sessions.getByText('مدیر پلتفرم').first()), '…the session shows it was ended by a platform admin');
+check(
+  await eventually(async () => (await api('GET', '/me', { token: member.accessToken })).status === 401),
+  '…and her token stops working at once',
+);
+check(
+  await visible(sessions.getByText('مدیر پلتفرم').first()),
+  '…the session shows it was ended by a platform admin',
+);
 
 /* ---------- Conversations and messages ---------- */
 
 const conversations = page.getByRole('region', { name: 'فهرست گفتگوها' });
 await conversations.getByRole('link', { name: channelName }).click();
-check(await visible(page.getByRole('heading', { level: 1, name: channelName }), 10_000), 'her channel opens in the inspector');
+check(
+  await visible(page.getByRole('heading', { level: 1, name: channelName }), 10_000),
+  'her channel opens in the inspector',
+);
 const messages = page.getByRole('list', { name: 'پیام‌های گفتگو' });
 check(await visible(messages.getByText('گزارش ماهانه ضمیمه می‌شود')), '…with its messages');
 check(await eventually(async () => (await messages.getByRole('listitem').count()) === 2), '…both of them');
@@ -198,7 +256,10 @@ await page.getByRole('option', { name: 'پیام صوتی' }).click();
 await page.getByRole('button', { name: 'اعمال فیلتر' }).click();
 check(await visible(page.getByText('موردی پیدا نشد.')), 'filtering by voice messages leaves none');
 await page.getByRole('button', { name: 'حذف فیلترها' }).click();
-check(await eventually(async () => (await messages.getByRole('listitem').count()) === 2), 'clearing the filter brings them back');
+check(
+  await eventually(async () => (await messages.getByRole('listitem').count()) === 2),
+  'clearing the filter brings them back',
+);
 
 /* ---------- A password reset code, shown once ---------- */
 
@@ -214,19 +275,31 @@ check(/\/reset-password\?token=[A-Za-z0-9_-]{43}$/.test(resetLink), '…a single
 await page.screenshot({ path: `${out}/admin_reset.png` });
 await reset.getByRole('button', { name: 'متوجه شدم' }).click();
 await page.getByRole('button', { name: 'بازنشانی رمز عبور' }).click();
-check(!(await visible(page.getByLabel('پیوند بازنشانی'), 1000)), 'reopening the dialog does not show the code again');
+check(
+  !(await visible(page.getByLabel('پیوند بازنشانی'), 1000)),
+  'reopening the dialog does not show the code again',
+);
 await page.keyboard.press('Escape');
 
 const resetContext = await browser.newContext({ viewport, locale: 'fa-IR' });
 const resetPage = await resetContext.newPage();
 watchConsole(resetPage);
 await resetPage.goto(resetLink.replace(/^https?:\/\/[^/]+/, base));
-check(await visible(resetPage.getByRole('heading', { name: 'گذاشتن رمز عبور تازه' }), 15_000), 'the link opens /reset-password, outside the workspace app');
-check(await eventually(async () => !new URL(resetPage.url()).search.includes('token')), '…and the code leaves the address bar');
+check(
+  await visible(resetPage.getByRole('heading', { name: 'گذاشتن رمز عبور تازه' }), 15_000),
+  'the link opens /reset-password, outside the workspace app',
+);
+check(
+  await eventually(async () => !new URL(resetPage.url()).search.includes('token')),
+  '…and the code leaves the address bar',
+);
 await resetPage.getByLabel('رمز عبور تازه', { exact: true }).fill(MEMBER_PASSWORD);
 await resetPage.getByLabel('تکرار رمز عبور', { exact: true }).fill(MEMBER_PASSWORD);
 await resetPage.getByRole('button', { name: 'ذخیره رمز عبور' }).click();
-check(await visible(resetPage.getByRole('heading', { name: 'رمز عبور تازه ذخیره شد' }), 10_000), 'the member sets her new password with it');
+check(
+  await visible(resetPage.getByRole('heading', { name: 'رمز عبور تازه ذخیره شد' }), 10_000),
+  'the member sets her new password with it',
+);
 await resetContext.close();
 
 /* ---------- Audit log, workspaces and roles ---------- */
@@ -234,16 +307,30 @@ await resetContext.close();
 await nav.getByRole('link', { name: 'گزارش بازرسی' }).click();
 const audit = page.getByRole('region', { name: 'رویدادهای گزارش بازرسی' });
 for (const action of ['خواندن پیام‌ها', 'پایان یک نشست', 'صدور کد بازنشانی رمز', 'مشاهده پروفایل']) {
-  check(await visible(audit.getByText(action, { exact: true }).first(), 10_000), `the audit log records «${action}»`);
+  check(
+    await visible(audit.getByText(action, { exact: true }).first(), 10_000),
+    `the audit log records «${action}»`,
+  );
 }
 check(await visible(audit.getByText(operatorName).first()), '…with who did it');
 
 await nav.getByRole('link', { name: 'ورک‌اسپیس‌ها و نقش‌ها' }).click();
 await page.getByLabel('نام یا نشانی ورک‌اسپیس').fill(workspaceName);
 await page.getByRole('button', { name: 'جستجو', exact: true }).click();
-await page.getByRole('region', { name: 'فهرست ورک‌اسپیس‌ها' }).getByRole('link', { name: workspaceName }).click();
-check(await visible(page.getByRole('region', { name: 'ماتریس دسترسی نقش‌ها' }), 10_000), 'a workspace shows its roles and permission matrix');
-check(await visible(page.getByRole('region', { name: 'اعضای ورک‌اسپیس' }).getByRole('link', { name: memberName })), '…and its members');
+await page
+  .getByRole('region', { name: 'فهرست ورک‌اسپیس‌ها' })
+  .getByRole('link', { name: workspaceName })
+  .click();
+check(
+  await visible(page.getByRole('region', { name: 'ماتریس دسترسی نقش‌ها' }), 10_000),
+  'a workspace shows its roles and permission matrix',
+);
+check(
+  await visible(
+    page.getByRole('region', { name: 'اعضای ورک‌اسپیس' }).getByRole('link', { name: memberName }),
+  ),
+  '…and its members',
+);
 await page.screenshot({ path: `${out}/admin_workspace_light.png`, fullPage: true });
 await page.emulateMedia({ colorScheme: 'dark' });
 await page.waitForTimeout(300);
@@ -258,9 +345,15 @@ const memberPage = await memberContext.newPage();
 await new Promise((resolve) => setTimeout(resolve, Math.max(0, memberCodeAt + 62_000 - Date.now())));
 await memberPage.goto(`${base}/admin`);
 await signInAt(memberPage, memberPhone);
-check(await visible(memberPage.getByRole('heading', { name: 'این صفحه پیدا نشد' }), 15_000), 'a member who finds /admin sees the same 404 as any unknown address');
+check(
+  await visible(memberPage.getByRole('heading', { name: 'این صفحه پیدا نشد' }), 15_000),
+  'a member who finds /admin sees the same 404 as any unknown address',
+);
 await memberPage.goto(`${base}/feed`);
-check(await visible(memberPage.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000), 'her workspace app works as always');
+check(
+  await visible(memberPage.getByRole('navigation', { name: 'ناوبری اصلی' }), 30_000),
+  'her workspace app works as always',
+);
 check((await memberPage.locator('a[href^="/admin"]').count()) === 0, '…with no link to /admin anywhere');
 await memberContext.close();
 
@@ -272,14 +365,26 @@ watchConsole(passwordPage);
 await cooledDown(operatorPhone);
 await passwordPage.goto(`${base}/admin`);
 await signInAt(passwordPage, operatorPhone);
-check(await visible(passwordPage.getByRole('heading', { name: 'تأیید رمز مدیر' }), 15_000), 'verified admin OTP prompts for the conditional password challenge');
-check((await passwordPage.getByRole('navigation', { name: 'بخش‌های پنل مدیریت' }).count()) === 0, 'the panel stays hidden until the password succeeds');
+check(
+  await visible(passwordPage.getByRole('heading', { name: 'تأیید رمز مدیر' }), 15_000),
+  'verified admin OTP prompts for the conditional password challenge',
+);
+check(
+  (await passwordPage.getByRole('navigation', { name: 'بخش‌های پنل مدیریت' }).count()) === 0,
+  'the panel stays hidden until the password succeeds',
+);
 await passwordPage.getByLabel('رمز مدیر', { exact: true }).fill(OPERATOR_PASSWORD);
 await passwordPage.getByRole('button', { name: 'تکمیل ورود', exact: true }).click();
-check(await visible(passwordPage.getByRole('heading', { name: 'تأیید رمز عبور' }), 15_000), 'the panel still requires its separate password step-up');
+check(
+  await visible(passwordPage.getByRole('heading', { name: 'تأیید رمز عبور' }), 15_000),
+  'the panel still requires its separate password step-up',
+);
 await passwordPage.getByLabel('رمز عبور', { exact: true }).fill(OPERATOR_PASSWORD);
 await passwordPage.getByRole('button', { name: 'تأیید و ادامه' }).click();
-check(await visible(passwordPage.getByRole('navigation', { name: 'بخش‌های پنل مدیریت' }), 15_000), 'the panel opens after both sign-in factors and its step-up');
+check(
+  await visible(passwordPage.getByRole('navigation', { name: 'بخش‌های پنل مدیریت' }), 15_000),
+  'the panel opens after both sign-in factors and its step-up',
+);
 await passwordContext.close();
 
 await finish(browser);

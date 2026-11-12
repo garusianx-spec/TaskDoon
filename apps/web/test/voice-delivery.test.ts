@@ -1,17 +1,32 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentView, Conversation, SendMessageBody } from '@taskin/contracts';
-import { api } from '../src/api/endpoints';
-import { http } from '../src/api/http';
-import { RealtimeClient } from '../src/api/realtime';
-import { LIVE_EMPTY_STATE } from '../src/store/initial-state';
-import { LiveStore } from '../src/store/live/live-store';
-import { workspaceReducer, type VoiceRecording, type WorkspaceAction, type WorkspaceState } from '../src/store/workspace-reducer';
+import { api } from '@/api/endpoints';
+import { http } from '@/lib/api-client';
+import { RealtimeClient } from '@/api/realtime';
+import { LIVE_EMPTY_STATE } from '@/store/initial-state';
+import { LiveStore } from '@/store/live/live-store';
+import {
+  workspaceReducer,
+  type VoiceRecording,
+  type WorkspaceAction,
+  type WorkspaceState,
+} from '@/store/workspace-reducer';
 
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 const conversation: Conversation = {
-  id: '01900000-0000-7000-8000-000000000011', kind: 'group', title: 'گفتگو',
-  memberIds: ['owner'], pinned: false, muted: false, unreadCount: 0, topic: '', tone: 'teal',
+  id: '01900000-0000-7000-8000-000000000011',
+  kind: 'group',
+  title: 'گفتگو',
+  memberIds: ['owner'],
+  pinned: false,
+  muted: false,
+  unreadCount: 0,
+  topic: '',
+  tone: 'teal',
 };
 const localId = 'message-local-201';
 const attachmentId = '01900000-0000-7000-8000-000000000012';
@@ -23,15 +38,27 @@ const waveform = [5, 25, 100] as const;
 function delivery(mimeType = 'audio/webm;codecs=opus', storageStatus = 204) {
   const recording: VoiceRecording = {
     blob: new Blob([new Uint8Array([1, 3, 5, 7])], { type: mimeType }),
-    durationSec: 2.4, waveform, previewUrl: 'blob:voice-preview',
+    durationSec: 2.4,
+    waveform,
+    previewUrl: 'blob:voice-preview',
   };
   const attachment: AttachmentView = {
-    id: attachmentId, name: 'voice', kind: 'audio', mimeType: mimeType.split(';')[0]!,
-    size: recording.blob.size, status: 'scanning', uploadedById: 'owner', uploadedAt: sent.createdAt,
+    id: attachmentId,
+    name: 'voice',
+    kind: 'audio',
+    mimeType: mimeType.split(';')[0]!,
+    size: recording.blob.size,
+    status: 'scanning',
+    uploadedById: 'owner',
+    uploadedAt: sent.createdAt,
   };
   const plan = vi.spyOn(api.files, 'plan').mockResolvedValue({
     attachment,
-    plan: { kind: 'post', url: 'https://storage.example.test/upload', fields: { key: 'voice-object', 'Content-Type': mimeType } },
+    plan: {
+      kind: 'post',
+      url: 'https://storage.example.test/upload',
+      fields: { key: 'voice-object', 'Content-Type': mimeType },
+    },
     expiresInSeconds: 60,
   });
   const complete = vi.spyOn(api.files, 'complete').mockResolvedValue(attachment);
@@ -43,13 +70,25 @@ function delivery(mimeType = 'audio/webm;codecs=opus', storageStatus = 204) {
   // Begin at the loaded workspace boundary; no session restore or real socket connection is needed.
   Object.assign(store, { status: { ...store.current, phase: 'ready' }, workspaceId: 'workspace-id' });
   let state: WorkspaceState = { ...LIVE_EMPTY_STATE, meId: 'owner', conversations: [conversation] };
-  store.attach(() => state, (incoming) => { state = workspaceReducer(state, incoming); });
+  store.attach(
+    () => state,
+    (incoming) => {
+      state = workspaceReducer(state, incoming);
+    },
+  );
   const dispatch = (action: WorkspaceAction) => {
     const previous = state;
     state = workspaceReducer(state, action);
     store.effect(action, previous, state);
   };
-  const send = () => dispatch({ type: 'send-voice', conversationId: conversation.id, authorId: 'owner', messageId: localId, recording });
+  const send = () =>
+    dispatch({
+      type: 'send-voice',
+      conversationId: conversation.id,
+      authorId: 'owner',
+      messageId: localId,
+      recording,
+    });
   return { recording, plan, complete, abort, storage, socket, store, dispatch, send, state: () => state };
 }
 
@@ -59,34 +98,48 @@ describe('voice upload and message delivery', () => {
     ['audio/mp4;codecs=mp4a.40.2', 'm4a'],
     ['audio/ogg;codecs=opus', 'ogg'],
     ['audio/aac', 'aac'],
-  ])('uploads %s with the matching filename and voice metadata', async (mimeType: string, extension: string) => {
-    const test = delivery(mimeType);
-    test.send();
-    await vi.waitFor(() => expect(test.state().messages[0]?.id).toBe(messageId));
-    expect(test.plan).toHaveBeenCalledWith('workspace-id', {
-      fileName: expect.stringMatching(new RegExp('^voice-[0-9]+\\.' + extension + '$')),
-      size: test.recording.blob.size, contentType: mimeType,
-    });
-    const [storageUrl, options] = test.storage.mock.calls[0]!;
-    expect(storageUrl).toBe('https://storage.example.test/upload');
-    expect(options?.method).toBe('POST');
-    const form = options?.body as FormData;
-    expect(form.get('Content-Type')).toBe(mimeType);
-    const file = form.get('file') as File;
-    expect(file.type).toBe(mimeType);
-    expect(await file.arrayBuffer()).toEqual(await test.recording.blob.arrayBuffer());
-    expect(test.complete).toHaveBeenCalledWith('workspace-id', attachmentId, {});
-    expect(test.socket).toHaveBeenCalledWith(conversation.id, {
-      clientMsgId: expect.any(String), kind: 'voice', attachmentId, durationSec: 2.4, waveform,
-    });
-    expect(test.state().messages[0]?.body).toEqual({
-      kind: 'voice', durationSec: 2.4, waveform, src: 'blob:voice-preview', attachmentId,
-    });
-  });
+  ])(
+    'uploads %s with the matching filename and voice metadata',
+    async (mimeType: string, extension: string) => {
+      const test = delivery(mimeType);
+      test.send();
+      await vi.waitFor(() => expect(test.state().messages[0]?.id).toBe(messageId));
+      expect(test.plan).toHaveBeenCalledWith('workspace-id', {
+        fileName: expect.stringMatching(new RegExp('^voice-[0-9]+\\.' + extension + '$')),
+        size: test.recording.blob.size,
+        contentType: mimeType,
+      });
+      const [storageUrl, options] = test.storage.mock.calls[0]!;
+      expect(storageUrl).toBe('https://storage.example.test/upload');
+      expect(options?.method).toBe('POST');
+      const form = options?.body as FormData;
+      expect(form.get('Content-Type')).toBe(mimeType);
+      const file = form.get('file') as File;
+      expect(file.type).toBe(mimeType);
+      expect(await file.arrayBuffer()).toEqual(await test.recording.blob.arrayBuffer());
+      expect(test.complete).toHaveBeenCalledWith('workspace-id', attachmentId, {});
+      expect(test.socket).toHaveBeenCalledWith(conversation.id, {
+        clientMsgId: expect.any(String),
+        kind: 'voice',
+        attachmentId,
+        durationSec: 2.4,
+        waveform,
+      });
+      expect(test.state().messages[0]?.body).toEqual({
+        kind: 'voice',
+        durationSec: 2.4,
+        waveform,
+        src: 'blob:voice-preview',
+        attachmentId,
+      });
+    },
+  );
 
   it('resends the same attachment and client message id after a rejected send', async () => {
     const test = delivery();
-    test.socket.mockResolvedValueOnce({ ok: false, code: 'FORBIDDEN' }).mockResolvedValueOnce({ ok: true, ...sent });
+    test.socket
+      .mockResolvedValueOnce({ ok: false, code: 'FORBIDDEN' })
+      .mockResolvedValueOnce({ ok: true, ...sent });
     test.send();
     await vi.waitFor(() => expect(test.state().messages[0]?.failed).toBe(true));
     const original = test.socket.mock.calls[0]![1];
@@ -120,7 +173,10 @@ describe('voice upload and message delivery', () => {
     await vi.waitFor(() => expect(test.state().messages[0]?.failed).toBe(true));
     expect(test.state().messages[0]?.id).toBe(localId);
     expect(test.state().messages[0]?.body).toEqual({
-      kind: 'voice', durationSec: 2.4, waveform, src: 'blob:voice-preview',
+      kind: 'voice',
+      durationSec: 2.4,
+      waveform,
+      src: 'blob:voice-preview',
     });
     expect(test.store.current.toast?.text).toBeTruthy();
     expect(test.state().messages).toHaveLength(1);
@@ -133,7 +189,11 @@ describe('voice upload and message delivery', () => {
     test.send();
     await vi.waitFor(() => expect(test.state().messages[0]?.id).toBe(messageId));
     const body: SendMessageBody = test.socket.mock.calls[0]![1];
-    expect(rest).toHaveBeenCalledWith('/workspaces/workspace-id/conversations/' + conversation.id + '/messages', body, { idempotent: true });
+    expect(rest).toHaveBeenCalledWith(
+      '/workspaces/workspace-id/conversations/' + conversation.id + '/messages',
+      body,
+      { idempotent: true },
+    );
     expect(test.plan).toHaveBeenCalledTimes(1);
   });
 });

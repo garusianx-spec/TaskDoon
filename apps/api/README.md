@@ -30,12 +30,12 @@ Errors are RFC 9457 `application/problem+json` with a machine-readable `code`
 
 One image, chosen by `APP_ROLE` (RFC §1.3):
 
-| Role | Runs |
-| --- | --- |
-| `http` | The REST API: guards, validation, idempotency, rate limits |
+| Role     | Runs                                                                                                                                                                                                           |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `http`   | The REST API: guards, validation, idempotency, rate limits                                                                                                                                                     |
 | `worker` | BullMQ consumers (SMS, email, notification and feed fan-out, file scans, calendar reminders), maintenance schedules (audit partitions, workspace purge, file garbage collection, cleanup) and the outbox relay |
-| `ws` | The Socket.IO gateway on `/rt`: handshake authentication, rooms, the chat hot path, typing, presence, resume. Health endpoints only over HTTP |
-| `all` | Everything, for local development |
+| `ws`     | The Socket.IO gateway on `/rt`: handshake authentication, rooms, the chat hot path, typing, presence, resume. Health endpoints only over HTTP                                                                  |
+| `all`    | Everything, for local development                                                                                                                                                                              |
 
 Controllers are only mounted in the `http` composition, so a worker can never expose a route
 without the authentication guard in front of it.
@@ -156,11 +156,11 @@ db/
 
 ## Tests
 
-| Command | What | Needs |
-| --- | --- | --- |
-| `npm test -w @taskin/api` | Unit tests: the full 5 × 5 × 5 permission matrix, crypto, redaction, error mapping, SMS failover, socket token buckets and expiry, stream ids, mentions, the outbox → realtime mapping | nothing |
-| `npm run test:int -w @taskin/api` | Integration suites: RLS isolation, auth, RBAC, idempotency, workspaces, invitations, projects and the CASL/SQL conformance check, board ordering and concurrency, tasks, uploads against S3, notes, calendar, notifications and feed, Jalali reports, chat, the gateway, two gateway nodes per adapter (ordering, node crash and resume, presence), audit coverage of every mutating route, query budgets | `npm run infra:up` |
-| `node apps/api/scripts/scale-smoke.mjs` | The scaled topology behind nginx: cross-node delivery, edge routing, relay-driven room changes | the scale stack (below) |
+| Command                                 | What                                                                                                                                                                                                                                                                                                                                                                                                      | Needs                   |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `npm test -w @taskin/api`               | Unit tests: the full 5 × 5 × 5 permission matrix, crypto, redaction, error mapping, SMS failover, socket token buckets and expiry, stream ids, mentions, the outbox → realtime mapping                                                                                                                                                                                                                    | nothing                 |
+| `npm run test:int -w @taskin/api`       | Integration suites: RLS isolation, auth, RBAC, idempotency, workspaces, invitations, projects and the CASL/SQL conformance check, board ordering and concurrency, tasks, uploads against S3, notes, calendar, notifications and feed, Jalali reports, chat, the gateway, two gateway nodes per adapter (ordering, node crash and resume, presence), audit coverage of every mutating route, query budgets | `npm run infra:up`      |
+| `node apps/api/scripts/scale-smoke.mjs` | The scaled topology behind nginx: cross-node delivery, edge routing, relay-driven room changes                                                                                                                                                                                                                                                                                                            | the scale stack (below) |
 
 The integration run migrates a template database from zero once; every test file clones it
 (`CREATE DATABASE … TEMPLATE`) and uses its own Redis prefix, so files run in parallel. Override
@@ -183,15 +183,15 @@ empty result, a p95 of 50 ms or more, or a search lookup that misses the trigram
 `PERF_DATABASE_URL` points it at a server (defaults to `infra:up`'s). Results of the M2 run
 (PostgreSQL 18 in Docker, warm cache):
 
-| Read model | p50 ms | p95 ms | max ms | Rows | Driving index |
-| --- | --- | --- | --- | --- | --- |
-| board, 1,000 cards | 31.2 | 44.3 | 50.5 | 1000 | `tasks_project_status_idx`; each child table once over the page's ids |
-| board columns | 1.7 | 2.5 | 4.6 | 1 | `workflows_default_uq` (four columns per workspace) |
-| my tasks | 15.8 | 23.6 | 31.8 | 51 | `task_assignees_user_idx` → `tasks_ws_id_uq` |
-| due soon | 8.9 | 14.0 | 24.1 | 51 | `tasks_due_idx` |
-| search, common word (~8% of tasks) | 24.0 | 34.7 | 45.2 | 51 | `tasks_search_idx` via `app.search_task_ids` → `tasks_ws_id_uq` |
-| search, task code | 6.5 | 10.9 | 21.3 | 1 | `tasks_search_idx` via `app.search_task_ids` → `tasks_ws_id_uq` |
-| task detail | 4.2 | 7.1 | 16.0 | 1 | `tasks_ws_id_uq`; children by `task_id` |
+| Read model                         | p50 ms | p95 ms | max ms | Rows | Driving index                                                         |
+| ---------------------------------- | ------ | ------ | ------ | ---- | --------------------------------------------------------------------- |
+| board, 1,000 cards                 | 31.2   | 44.3   | 50.5   | 1000 | `tasks_project_status_idx`; each child table once over the page's ids |
+| board columns                      | 1.7    | 2.5    | 4.6    | 1    | `workflows_default_uq` (four columns per workspace)                   |
+| my tasks                           | 15.8   | 23.6   | 31.8   | 51   | `task_assignees_user_idx` → `tasks_ws_id_uq`                          |
+| due soon                           | 8.9    | 14.0   | 24.1   | 51   | `tasks_due_idx`                                                       |
+| search, common word (~8% of tasks) | 24.0   | 34.7   | 45.2   | 51   | `tasks_search_idx` via `app.search_task_ids` → `tasks_ws_id_uq`       |
+| search, task code                  | 6.5    | 10.9   | 21.3   | 1    | `tasks_search_idx` via `app.search_task_ids` → `tasks_ws_id_uq`       |
+| task detail                        | 4.2    | 7.1    | 16.0   | 1    | `tasks_ws_id_uq`; children by `task_id`                               |
 
 On the board, 14 ms is the executor and 4 ms is planning. The rest of the round trip is
 transferring and parsing 1,000 rows. Two things keep the lists flat as data grows:
@@ -233,12 +233,12 @@ node, the worker, PostgreSQL, PgBouncer, both Redis servers, nginx, and the load
 (about 0.6 of a core). All runs had 20,000 sockets, 10,000 per node, and each message fans out
 to 9 members.
 
-| Rate | Delivered | Ack p50 / p95 / p99 ms | Fan-out p50 / p95 / p99 ms | REST p95 ms, alone → during | Host busy |
-| --- | --- | --- | --- | --- | --- |
-| 250 msg/s (18,830 sockets connected) | 100%, 244 msg/s | 12 / 104 / 1,007 | 13 / 119 / 1,023 | 51 → 111 | 76% |
-| 250 msg/s | 100%, 250 msg/s | 12 / 156 / 1,206 | 14 / 228 / 1,216 | 43 → 119 | 77% |
-| 350 msg/s | 100%, 333 msg/s; 375 refused `SERVICE_UNAVAILABLE` | 98 / 4,037 / 4,772 | 119 / 4,044 / 4,842 | 51 → 214 | 90% |
-| 500 msg/s | 100%, 430 msg/s; 3,412 refused `SERVICE_UNAVAILABLE` | 4,065 / 5,173 / 5,364 | 4,093 / 5,216 / 5,457 | 46 → 187 | 92% |
+| Rate                                 | Delivered                                            | Ack p50 / p95 / p99 ms | Fan-out p50 / p95 / p99 ms | REST p95 ms, alone → during | Host busy |
+| ------------------------------------ | ---------------------------------------------------- | ---------------------- | -------------------------- | --------------------------- | --------- |
+| 250 msg/s (18,830 sockets connected) | 100%, 244 msg/s                                      | 12 / 104 / 1,007       | 13 / 119 / 1,023           | 51 → 111                    | 76%       |
+| 250 msg/s                            | 100%, 250 msg/s                                      | 12 / 156 / 1,206       | 14 / 228 / 1,216           | 43 → 119                    | 77%       |
+| 350 msg/s                            | 100%, 333 msg/s; 375 refused `SERVICE_UNAVAILABLE`   | 98 / 4,037 / 4,772     | 119 / 4,044 / 4,842        | 51 → 214                    | 90%       |
+| 500 msg/s                            | 100%, 430 msg/s; 3,412 refused `SERVICE_UNAVAILABLE` | 4,065 / 5,173 / 5,364  | 4,093 / 5,216 / 5,457      | 46 → 187                    | 92%       |
 
 - **At 250 msg/s** the first run met every target: ack p95 < 150 ms, fan-out p95 < 250 ms, REST
   p95 < 200 ms during the chat load. The second run missed ack p95 by 6 ms.

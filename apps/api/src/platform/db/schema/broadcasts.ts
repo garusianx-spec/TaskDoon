@@ -14,8 +14,12 @@ export const systemBroadcasts = pgTable(
     isActive: boolean().notNull().default(true),
     startsAt: instant().notNull().defaultNow(),
     expiresAt: instant(),
-    createdBy: uuid().notNull().references(() => users.id),
-    updatedBy: uuid().notNull().references(() => users.id),
+    createdBy: uuid()
+      .notNull()
+      .references(() => users.id),
+    updatedBy: uuid()
+      .notNull()
+      .references(() => users.id),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     archivedAt: instant(),
@@ -23,7 +27,9 @@ export const systemBroadcasts = pgTable(
   (t) => [
     check('system_broadcasts_message_length', sql`char_length(btrim(${t.message})) between 1 and 500`),
     check('system_broadcasts_time_window', sql`${t.expiresAt} is null or ${t.expiresAt} > ${t.startsAt}`),
-    index('system_broadcasts_active_starts_idx').on(t.startsAt).where(sql`${t.archivedAt} is null and ${t.isActive} = true`),
+    index('system_broadcasts_active_starts_idx')
+      .on(t.startsAt)
+      .where(sql`${t.archivedAt} is null and ${t.isActive} = true`),
     index('system_broadcasts_created_idx').on(t.createdAt.desc(), t.id.desc()),
     index('system_broadcasts_created_by_idx').on(t.createdBy),
     index('system_broadcasts_updated_by_idx').on(t.updatedBy),

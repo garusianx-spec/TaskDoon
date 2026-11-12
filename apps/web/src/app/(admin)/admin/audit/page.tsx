@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import type { PlatformAuditEntry } from '@taskin/contracts';
-import { adminApi } from '@/admin/api';
-import { useAdmin } from '@/admin/AdminSession';
-import { AUDIT_ACTIONS, dateTimeLabel } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { problemMessage } from '@/api/messages';
-import { Loaded, PageHeader, Panel, TABLE, TableFrame, TD, TH } from '@/components/admin/AdminUi';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { useAdmin } from '@/features/admin/hooks/AdminSession';
+import { AUDIT_ACTIONS, dateTimeLabel } from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { problemMessage } from '@/lib/api-problem';
+import { Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { Button, Select } from '@/components/ui';
 
 const ACTION_FILTERS = [
@@ -62,7 +63,10 @@ export default function AdminAuditPage() {
 
   return (
     <>
-      <PageHeader title="گزارش بازرسی" description="هر جستجو، مشاهده و اقدام مدیران پلتفرم، با نشانی IP و شناسه درخواست؛ این گزارش پاک یا ویرایش نمی‌شود." />
+      <PageHeader
+        title="گزارش بازرسی"
+        description="هر جستجو، مشاهده و اقدام مدیران پلتفرم، با نشانی IP و شناسه درخواست؛ این گزارش پاک یا ویرایش نمی‌شود."
+      />
       <Panel
         title="رویدادها"
         actions={
@@ -83,7 +87,7 @@ export default function AdminAuditPage() {
           {(data) => (
             <>
               <TableFrame label="رویدادهای گزارش بازرسی">
-                <table className={TABLE}>
+                <DataTable>
                   <thead>
                     <tr>
                       <th className={TH}>زمان</th>
@@ -130,7 +134,11 @@ export default function AdminAuditPage() {
                             {entry.requestId ?? '—'}
                           </span>
                           {entry.traceId && (
-                            <span dir="ltr" className="mt-0.5 block text-start font-mono text-micro text-fg-tertiary" title="شناسه ردیابی (trace id)">
+                            <span
+                              dir="ltr"
+                              className="mt-0.5 block text-start font-mono text-micro text-fg-tertiary"
+                              title="شناسه ردیابی (trace id)"
+                            >
                               trace {entry.traceId}
                             </span>
                           )}
@@ -138,9 +146,13 @@ export default function AdminAuditPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               </TableFrame>
-              {moreError && <p role="alert" className="mt-3 text-caption text-status-blocked">{moreError}</p>}
+              {moreError && (
+                <p role="alert" className="mt-3 text-caption text-status-blocked">
+                  {moreError}
+                </p>
+              )}
               {cursor && (
                 <div className="mt-4 flex justify-center">
                   <Button variant="secondary" loading={loadingMore} onClick={() => void loadMore()}>

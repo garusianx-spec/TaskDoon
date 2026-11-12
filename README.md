@@ -3,25 +3,48 @@
 پلتفرم ارتباط و مدیریت وظایف سازمانی، راست‌به‌چپ و با تقویم هجری شمسی.
 
 An RTL-first, Persian enterprise communication and task-management platform built on
-Next.js (App Router), React and TypeScript in strict mode, styled with Tailwind CSS against
+Next.js 16 (App Router and Turbopack), React 19 and TypeScript in strict mode, styled with Tailwind CSS 3.4 against
 a fully tokenised Untitled UI design system. The backend (`apps/api`) is a NestJS modular
 monolith on PostgreSQL, Redis and S3-compatible storage, designed in
 [RFC 0001](docs/rfc/0001-backend-architecture.md) and built milestone by milestone.
 
 ---
 
-## Running it
+## راه‌اندازی و توسعه
 
-Node.js 22.12 or newer. Every command runs from the repository root:
+تسک‌دون با Next.js 16، React 19 و Tailwind CSS 3.4 ساخته شده است. رابط راست‌به‌چپ، تقویم
+هجری شمسی و پوستهٔ تیره در برنامهٔ وب یکپارچه‌اند. برنامهٔ وب از API واقعی NestJS و سرویس‌های
+PostgreSQL، Redis و فضای ذخیره‌سازی سازگار با S3 استفاده می‌کند.
+
+با آخرین نسخهٔ Node.js 22 و Docker، این دستورها را در ریشهٔ مخزن اجرا کنید.
 
 ```bash
-npm install
+npm ci
+npm run infra:app
+npm run dev
+```
+
+وب در `http://localhost:3000` و API در پورت `4000` در دسترس‌اند. برای بررسی تغییرات از
+`npm run typecheck`، `npm run lint`، `npm run format:check`، `npm test` و `npm run build`
+استفاده کنید. مسیرها در `apps/web/src/app`، امکانات هر حوزه در `apps/web/src/features` و
+اجزای مشترک رابط در `apps/web/src/components` قرار دارند. شیوهٔ ساخت و اجرای تصویر مستقل وب
+و پشتهٔ مشابه محیط عملیاتی در [راهنمای Docker](docs/devops/containerization.md) آمده است.
+
+## Running it
+
+Use the latest Node.js 22 patch and run commands from the repository root.
+
+```bash
+npm ci
 npm run dev             # builds the shared packages, then http://localhost:3000 (the live app: needs the API on :4000)
 NEXT_PUBLIC_DATA_SOURCE=demo npm run dev   # the same app on the in-memory demo workspace, no backend needed
 npm run build           # packages, apps/api and the production build of apps/web
 npm run typecheck       # every workspace (strict, noUncheckedIndexedAccess)
 npm run lint            # Next rules for apps/web, typescript-eslint for packages and apps/api
-npm test                # unit tests: packages/jalali, packages/text, apps/api (no services needed)
+npm run format:check    # Prettier and Tailwind class order
+npm test                # unit tests for both apps, packages/jalali and packages/text
+npm run test:watch --workspace @taskin/web
+npm audit --omit=dev --audit-level=high
 npm run check:contrast  # WCAG AA audit of every palette × mode (see Theme engine)
 NEXT_PUBLIC_DATA_SOURCE=demo npm run build && npm run test:e2e   # Playwright suites (demo data), production build
 API_LOG=<api log file> npm run test:e2e:live                    # two people against the running API (see Live app)
@@ -40,15 +63,15 @@ configuration, its test layout, and the scale-out smoke test and chat load resul
 
 The repository is an npm-workspaces monorepo:
 
-| Path | Contents |
-| --- | --- |
-| `apps/web` | The Next.js app |
-| `apps/api` | The NestJS API: auth, workspaces, RBAC, projects, board, tasks, files, notes, calendar, notifications, and real-time chat on a Socket.IO gateway (M1–M3 of RFC 0001) |
-| `packages/contracts` | Domain types, API contracts and the permission vocabulary, shared by web and API |
-| `packages/jalali` | Jalali calendar engine and Persian date formatting |
-| `packages/text` | Persian text helpers: digits, Iranian mobile numbers, monograms, note Markdown and checklists, search normalisation |
-| `infra` | Docker Compose stacks for local development and the scaled topology, database roles, S3 and nginx configuration |
-| `docs/rfc` | Architecture decisions; the backend design is [RFC 0001](docs/rfc/0001-backend-architecture.md) |
+| Path                 | Contents                                                                                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`           | The Next.js app                                                                                                                                                      |
+| `apps/api`           | The NestJS API: auth, workspaces, RBAC, projects, board, tasks, files, notes, calendar, notifications, and real-time chat on a Socket.IO gateway (M1–M3 of RFC 0001) |
+| `packages/contracts` | Domain types, API contracts and the permission vocabulary, shared by web and API                                                                                     |
+| `packages/jalali`    | Jalali calendar engine and Persian date formatting                                                                                                                   |
+| `packages/text`      | Persian text helpers: digits, Iranian mobile numbers, monograms, note Markdown and checklists, search normalisation                                                  |
+| `infra`              | Docker Compose stacks for local development and the scaled topology, database roles, S3 and nginx configuration                                                      |
+| `docs/rfc`           | Architecture decisions; the backend design is [RFC 0001](docs/rfc/0001-backend-architecture.md)                                                                      |
 
 Packages compile to `dist/`. While `npm run dev` is running, run `npm run build:packages -- --watch`
 in a second terminal to pick up package edits.
@@ -68,11 +91,11 @@ Socket.IO path `/rt/` to the API, so the browser only ever talks to the app's ow
 refresh cookie is first-party and no CORS is involved. In production the edge (nginx) routes
 both paths the same way.
 
-| Variable | Read at | Default | Purpose |
-| --- | --- | --- | --- |
-| `NEXT_PUBLIC_DATA_SOURCE` | build | `api` | `api` for the live app, `demo` for the in-memory fixture workspace |
-| `TASKIN_API_ORIGIN` | build | `http://localhost:4000` | Where `/api/v1` and `/rt` are proxied. Rewrites are compiled into the build, so set it before `next build` |
-| `NEXT_PUBLIC_RT_URL` | build | the page's origin | Connect the socket to another origin instead (an edge that routes `/rt` itself) |
+| Variable                  | Read at | Default                 | Purpose                                                                                                    |
+| ------------------------- | ------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_DATA_SOURCE` | build   | `api`                   | `api` for the live app, `demo` for the in-memory fixture workspace                                         |
+| `TASKIN_API_ORIGIN`       | build   | `http://localhost:4000` | Where `/api/v1` and `/rt` are proxied. Rewrites are compiled into the build, so set it before `next build` |
+| `NEXT_PUBLIC_RT_URL`      | build   | the page's origin       | Connect the socket to another origin instead (an edge that routes `/rt` itself)                            |
 
 Locally: `npm run infra:app` (or `infra:up` plus the API from `apps/api`), then `npm run dev`.
 Sign in with any Iranian mobile number; the API's console SMS driver writes the code to its log
@@ -151,13 +174,13 @@ See [administrative role management](docs/product/admin-role-management-phase2.m
 
 `IRANYekanX` is self-hosted from `public/fonts` as WOFF2. **Two masters ship in this
 repository** (Medium and ExtraBold), and `apps/web/src/styles/fonts.css` declares each `@font-face`
-with a *weight range* so every step of the type scale resolves to the nearest available
+with a _weight range_ so every step of the type scale resolves to the nearest available
 master rather than being synthesised by the browser:
 
-| Master     | `font-weight` range | Covers                                          |
-| ---------- | ------------------- | ----------------------------------------------- |
-| Medium     | `400 600`           | micro-copy, body, chat, titles, table headers    |
-| ExtraBold  | `700 900`           | page headers, workspace headers                  |
+| Master    | `font-weight` range | Covers                                        |
+| --------- | ------------------- | --------------------------------------------- |
+| Medium    | `400 600`           | micro-copy, body, chat, titles, table headers |
+| ExtraBold | `700 900`           | page headers, workspace headers               |
 
 To add the remaining masters, drop `IRANYekanWebRegular.woff2`,
 `IRANYekanWebSemiBold.woff2` or `IRANYekanWebBold.woff2` into `public/fonts` and narrow the
@@ -167,16 +190,16 @@ weights through Tailwind's `font-*` utilities.
 The type scale lives in `tailwind.config.ts` and is sized for Persian, which needs slightly
 more leading than Latin at the same optical size:
 
-| Token          | Size | Weight | Used for                                  |
-| -------------- | ---- | ------ | ----------------------------------------- |
-| `text-micro`   | 11px | 400    | badges, counters                          |
-| `text-caption` | 12px | 400    | micro-copy, metadata                      |
-| `text-body-sm` | 13px | 400/500| chat messages                             |
-| `text-body`    | 14px | 400    | body copy, table cells                    |
-| `text-title-sm`| 14px | 600    | tab labels, table headers                 |
-| `text-title`   | 16px | 600    | section titles                            |
-| `text-heading` | 18–20px | 700 | page headers                              |
-| `text-display` | 24px | 800    | workspace headers                         |
+| Token           | Size    | Weight  | Used for                  |
+| --------------- | ------- | ------- | ------------------------- |
+| `text-micro`    | 11px    | 400     | badges, counters          |
+| `text-caption`  | 12px    | 400     | micro-copy, metadata      |
+| `text-body-sm`  | 13px    | 400/500 | chat messages             |
+| `text-body`     | 14px    | 400     | body copy, table cells    |
+| `text-title-sm` | 14px    | 600     | tab labels, table headers |
+| `text-title`    | 16px    | 600     | section titles            |
+| `text-heading`  | 18–20px | 700     | page headers              |
+| `text-display`  | 24px    | 800     | workspace headers         |
 
 ### OpenType
 
@@ -214,14 +237,14 @@ background, `#161B26` cards, `#1F242F` borders.
 
 Six swappable Primary 50→900 scales, selected with `data-accent`, each in light and OLED dark:
 
-| Accent   | Name              | Primary 600 | Accessible anchors                          |
-| -------- | ----------------- | ----------- | ------------------------------------------- |
-| `indigo` | سازمانی پیش‌فرض    | `#3538CD`   | default (600 fill, 600 ink) — the default   |
-| `teal`   | تمرکز عمیق         | `#0E766E`   | ink → 700 (600 on its hover tint is 4.46:1) |
-| `violet` | استارتاپ مدرن      | `#6941C6`   | default                                     |
-| `rose`   | رز شرابی           | `#9E165F`   | default                                     |
-| `amber`  | گرمای سازمانی      | `#B54708`   | ring → 600 (500 is 2.2:1 on white)          |
-| `ocean`  | اقیانوس عمیق       | `#088AB2`   | fill + ink → 700 (600 is 3.9:1 with white)  |
+| Accent   | Name            | Primary 600 | Accessible anchors                          |
+| -------- | --------------- | ----------- | ------------------------------------------- |
+| `indigo` | سازمانی پیش‌فرض | `#3538CD`   | default (600 fill, 600 ink) — the default   |
+| `teal`   | تمرکز عمیق      | `#0E766E`   | ink → 700 (600 on its hover tint is 4.46:1) |
+| `violet` | استارتاپ مدرن   | `#6941C6`   | default                                     |
+| `rose`   | رز شرابی        | `#9E165F`   | default                                     |
+| `amber`  | گرمای سازمانی   | `#B54708`   | ring → 600 (500 is 2.2:1 on white)          |
+| `ocean`  | اقیانوس عمیق    | `#088AB2`   | fill + ink → 700 (600 is 3.9:1 with white)  |
 
 A palette keeps its 600 identity colour for borders, rings and swatches; only the steps that
 carry text move where the 600 would miss AA. `npm run check:contrast` parses `tokens.css`,
@@ -262,15 +285,15 @@ a transform has to be mirrored explicitly (the switch knob, direction-aware chev
 Direction-aware details that are easy to get wrong and are handled here:
 
 - **Chevrons and arrows.** `ChevronForwardIcon` points along the reading direction (left in
-  RTL); `ChevronBackwardIcon` points against it. "Previous month/week" uses *backward*
-  (earlier content lies to the right in RTL); "next" uses *forward*.
+  RTL); `ChevronBackwardIcon` points against it. "Previous month/week" uses _backward_
+  (earlier content lies to the right in RTL); "next" uses _forward_.
 - **Kanban keyboard movement.** With a card picked up, `ArrowLeft` advances to the next
   column and `ArrowRight` retreats.
 - **Waveform scrubbing.** The voice player measures the click offset from the track's right
   edge, and `ArrowLeft` seeks forward.
 - **Gantt.** The timeline is a CSS grid of one column per day. Because the container inherits
   `dir="rtl"`, column 1 is the right-most cell and bars run right-to-left with no coordinate
-  mirroring — only `gridColumnStart` / `gridColumnEnd`. Later days sit at a *negative*
+  mirroring — only `gridColumnStart` / `gridColumnEnd`. Later days sit at a _negative_
   `scrollLeft`, so the week buttons work in "px from the window's first day" and apply the
   sign of the document direction.
 - **Avatar stacks** use `flex-row-reverse` plus a negative inline margin so the first member
@@ -294,7 +317,7 @@ descriptions (`۲ روز تأخیر`, `فردا`) and Persian-digit formatting.
 
 ### Clock-dependent rendering
 
-These routes are statically prerendered, so the server's clock is *build* time. Anything
+These routes are statically prerendered, so the server's clock is _build_ time. Anything
 phrased relative to "now" would therefore never match the visitor. `useNow()` returns `null`
 until mount, letting callers emit a deterministic absolute value for SSR and upgrade to live
 phrasing after hydration — which also keeps timestamps ticking instead of freezing at page
@@ -306,46 +329,35 @@ load. `<RelativeTime>` wraps this in a semantic `<time>` element.
 
 ```
 apps/web/src/
-├── app/                    # App Router routes (one per module) + root layout
+├── app/                    # App Router routes, layouts and health endpoints
 ├── components/
-│   ├── ui/                 # Headless-ish primitives: Button, Switch, Modal, Drawer, …
-│   ├── icons/              # ~60 hand-authored Iconsax-style glyphs
-│   ├── overlays/           # OverlayProvider (global dialog store) + OverlayHost
-│   ├── layout/             # AppShell, NavRail, TopAppBar, BottomNav, QuickCreate, search
-│   ├── chat/               # ChatView, MessageBubble, VoicePlayer, composer, shared-media tabs
-│   ├── tasks/              # Kanban, List, Gantt, Inspector, Jalali date picker, swipe rows
-│   ├── calendar/           # Month grid, day summary, event dialog
-│   ├── notes/              # Category sidebar, block editor with live checklists, Markdown renderer
-│   ├── notifications/      # Notification centre drawer
-│   ├── account/            # Profile, security & sign-in, sign-out dialogs
-│   ├── auth/               # Live sign-in (SMS code), first workspace, loading and connection states
-│   ├── directory/          # Invite dialog (email or Iranian mobile)
-│   ├── workspace/          # Switcher menu, create / settings / delete-workspace dialogs
-│   ├── rbac/               # Permission matrix + advanced editing modal
-│   └── theme/              # ThemeProvider, ThemePicker
-├── api/                    # REST client, session and tokens, Socket.IO client, API → domain mappers
-├── data/                   # Typed reference data + seed workspace fixture (the demo data source)
-├── hooks/                  # focus trap, scroll lock, roving focus, media query, clock
-├── lib/                    # formatting, link metadata, downloads, tag tones, theme bootstrap
-├── store/                  # Pure reducer + selectors + container provider
-│   └── live/               # LiveStore: loads from the API, sends changes, applies socket events
+│   ├── ui/                 # Button, Input, Modal, Badge, Dropdown, Avatar, Tabs, Skeleton
+│   ├── layout/             # App shell, desktop and mobile navigation, workspace controls
+│   ├── shared/             # Jalali date picker, uploader, empty state, confirm dialog, table
+│   └── …                   # Icons, themes, overlay wiring and shared entry points
+├── features/               # Auth, workspace, board, tasks, agile, chat, admin and other domains
+│   └── <domain>/           # Components, hooks, typed API calls and types where used
+├── api/                    # Shared session handling, Socket.IO client and API mappings
+├── data/                   # Reference data and the demo workspace fixture
+├── hooks/                  # Shared focus, scroll lock, media query and clock hooks
+├── lib/                    # api-client.ts, jalali.ts, theme.ts, utils.ts and other utilities
+├── store/                  # Workspace provider, reducer and selectors
+│   └── live/               # API persistence and realtime reconciliation
 └── styles/                 # fonts.css, tokens.css
 ```
 
 The domain model lives in `packages/contracts`, the Jalali engine in `packages/jalali`, and the
 Persian text helpers (digits, mobile numbers, monograms, note Markdown and checklists) in
-`packages/text`; the app imports them as `@taskin/contracts`, `@taskin/jalali` and
-`@taskin/text`.
+`packages/text`. The app imports them as `@taskin/contracts`, `@taskin/jalali` and `@taskin/text`.
+Tailwind stays on 3.4 to preserve the current RTL utilities, custom tokens and Persian typography scale.
 
 ### Separation of concerns
 
-`WorkspaceProvider` is the **single stateful container**. Everything below it is
-presentational: it receives data and callbacks and owns no domain state. `workspace-reducer.ts`
-is a pure function with a closed, exhaustively-switched action union — it has no React
-import and is directly unit-testable. In the live app `LiveStore` sits beside it: the provider
-applies each action to the reducer and hands it to the store, which sends it to the API and
-feeds server answers and socket events back as `sync/*` actions (see Live app). The screens do
-not know which data source they run on.
+`WorkspaceProvider` owns shared workspace state. Feature hooks manage screen interactions and
+domain-specific requests. `workspace-reducer.ts` is a pure function with an exhaustive action
+union and runs in Vitest without React. In the live app, the provider hands actions to `LiveStore`,
+which persists them through the API and feeds server answers and socket events back as `sync/*`
+actions. The API enforces workspace membership and authorization.
 
 Every modal dialog lives in one global store, `OverlayProvider`, mounted in the root layout
 above all routes. `useOverlays()` opens any of them from anywhere — the rail, a board column,
@@ -469,7 +481,7 @@ guard, so adding a member surfaces as a compile error rather than a runtime fall
   restored to the opener.
 - **The task dialog** is modal everywhere: focus moves to the dialog (so its name is read
   first), stays inside it and returns to the card that opened it.
-- **The conversation inspector** is a docked column on desktop — it does *not* trap focus or
+- **The conversation inspector** is a docked column on desktop — it does _not_ trap focus or
   lock scroll there, because the chat stays interactive — and promotes to a full dialog on
   mobile.
 - **Kanban drag and drop has a complete keyboard path**: focus a card, `Space` picks it up,
@@ -510,7 +522,7 @@ the message text and any attachment. Verified: zero horizontal overflow on every
 
 ---
 
-## What is not wired yet
+## Live and demo behavior
 
 The live app persists and synchronises what the screens do through the API: sign-in and
 sessions, workspaces (with their icons), invitations, roles and permissions, projects, the board
@@ -547,3 +559,39 @@ invitations and workspaces) are real and flow through the reducer; they reset on
 nothing is persisted except the theme. By the same token the demo's account flows are front-end
 only: the password form validates locally and records the change time, and signing out resets
 the in-memory session — a full reload starts a fresh signed-in session.
+
+## Docker and CI
+
+Build and start the web image from the repository root. Run the health check from a second terminal.
+
+```bash
+docker build --file apps/web/Dockerfile --target runner --tag taskdoon-web:local .
+docker run --rm --publish 127.0.0.1:3000:3000 taskdoon-web:local
+curl --fail http://127.0.0.1:3000/api/health
+```
+
+The standalone runner uses the unprivileged `node` user. Its health route reports the web process
+status. The local Compose guide covers API, storage, database, Redis and ingress wiring. The root
+`.env.example` lists Compose settings. Use the local generator for disposable credentials.
+[Production-parity Compose](docs/devops/containerization.md)
+
+`npm ci` installs the local pre-commit hook in a Git checkout. The hook formats staged files.
+CI checks workspace lint, types, formatting, tests, the production dependency audit and builds.
+It also runs Playwright and smoke-tests the Docker web runner. Use the `CI` workflow job names
+when configuring required checks for `main`. [GitHub Actions setup](docs/devops/cicd.md)
+
+### Follow-ups
+
+- **CSP nonces.** Integrate a per-request nonce with the inline theme bootstrap in `lib/theme.ts`
+  and verify theme rendering before enforcing the policy.
+- **Playwright E2E.** Keep demo and live flows in CI and extend cross-browser coverage for the RTL,
+  sign-in, attachment and voice flows.
+- **Sentry.** Configure web and API error reporting and validate source maps and PII filtering.
+- **IRANYekan.** Verify the webfont license covers production domains and redistribution in images.
+
+### پیگیری‌های بعدی
+
+- اتصال nonce در CSP به اسکریپت اولیهٔ پوسته و بررسی نمایش پوسته پیش از فعال‌سازی سیاست.
+- گسترش پوشش Playwright برای مرورگرهای دیگر، ورود، پیوست‌ها، پیام صوتی و رابط راست‌به‌چپ.
+- تنظیم گزارش خطا در Sentry و بررسی حذف داده‌های شخصی از گزارش‌ها.
+- بررسی مجوز وب‌فونت ایران‌یکان برای دامنه‌های عملیاتی و انتشار در تصاویر Docker.

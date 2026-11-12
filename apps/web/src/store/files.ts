@@ -18,7 +18,10 @@ export function setFileResolver(next: FileResolver | null): void {
  * Where a file's bytes can be read: its own `url` (a local preview, or a fixture that has one),
  * else a signed link from the API. `null` when there is none (demo fixtures ship no binaries).
  */
-export async function resolveFileUrl(attachment: Pick<Attachment, 'id' | 'url'>, disposition: FileDisposition): Promise<string | null> {
+export async function resolveFileUrl(
+  attachment: Pick<Attachment, 'id' | 'url'>,
+  disposition: FileDisposition,
+): Promise<string | null> {
   if (attachment.url) return attachment.url;
   if (!resolver) return null;
   try {
@@ -32,7 +35,10 @@ export async function resolveFileUrl(attachment: Pick<Attachment, 'id' | 'url'>,
  * The URL to show or play a file in place (`inline`), once known. Components render their
  * placeholder until then, so the server render and the first client render agree.
  */
-export function useFileUrl(attachment: Pick<Attachment, 'id' | 'url'> | null, disposition: FileDisposition = 'inline'): string | null {
+export function useFileUrl(
+  attachment: Pick<Attachment, 'id' | 'url'> | null,
+  disposition: FileDisposition = 'inline',
+): string | null {
   const [resolved, setResolved] = useState<{ readonly id: string; readonly url: string | null } | null>(null);
   const id = attachment?.id ?? null;
   const own = attachment?.url ?? null;

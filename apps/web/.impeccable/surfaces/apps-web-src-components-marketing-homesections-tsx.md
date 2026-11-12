@@ -1,8 +1,9 @@
 ---
 version: 1
-slug: "apps-web-src-components-marketing-homesections-tsx"
-primary_target: "apps/web/src/components/marketing/HomeSections.tsx"
-related_targets: ["apps/web/src/components/auth/AuthCard.tsx","apps/web/src/components/auth/SignInScreen.tsx"]
+slug: 'apps-web-src-components-marketing-homesections-tsx'
+primary_target: 'apps/web/src/components/marketing/HomeSections.tsx'
+related_targets:
+  ['apps/web/src/components/auth/AuthCard.tsx', 'apps/web/src/components/auth/SignInScreen.tsx']
 ---
 
 # Public website and authentication direction

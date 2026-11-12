@@ -18,7 +18,9 @@ const LOCK_MINUTES = 15;
 export function passwordProblem(password: string): string | null {
   if (password.length < 8) return 'must be at least 8 characters';
   if (password.length > 128) return 'must be at most 128 characters';
-  const classes = [/[a-z]/, /[A-Z]/, /[0-9۰-۹]/, /[^a-zA-Z0-9۰-۹]/].filter((pattern) => pattern.test(password)).length;
+  const classes = [/[a-z]/, /[A-Z]/, /[0-9۰-۹]/, /[^a-zA-Z0-9۰-۹]/].filter((pattern) =>
+    pattern.test(password),
+  ).length;
   if (classes < 2) return 'must mix letters with digits or symbols';
   return null;
 }
@@ -68,13 +70,18 @@ export class PasswordService {
 
     if (await argon2.verify(user.passwordHash, password)) {
       if (user.failures > 0) {
-        await this.database.db.update(users).set({ failedPasswordAttempts: 0, lockedUntil: null }).where(eq(users.id, userId));
+        await this.database.db
+          .update(users)
+          .set({ failedPasswordAttempts: 0, lockedUntil: null })
+          .where(eq(users.id, userId));
       }
       return;
     }
 
     const lock = await this.recordFailure(userId, user.phone, user.failures);
-    throw lock ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`) : new ApiError('PASSWORD_INVALID');
+    throw lock
+      ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`)
+      : new ApiError('PASSWORD_INVALID');
   }
 
   /**
@@ -103,16 +110,24 @@ export class PasswordService {
       throw new ApiError('CREDENTIALS_INVALID');
     }
     const matches = await argon2.verify(user.passwordHash, password);
-    if (user.locked) throw matches ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`) : new ApiError('CREDENTIALS_INVALID');
+    if (user.locked)
+      throw matches
+        ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`)
+        : new ApiError('CREDENTIALS_INVALID');
     if (matches) {
       if (user.resetRequired) throw new ApiError('PASSWORD_RESET_REQUIRED');
       if (user.failures > 0) {
-        await this.database.db.update(users).set({ failedPasswordAttempts: 0, lockedUntil: null }).where(eq(users.id, user.id));
+        await this.database.db
+          .update(users)
+          .set({ failedPasswordAttempts: 0, lockedUntil: null })
+          .where(eq(users.id, user.id));
       }
       return user.id;
     }
     const lock = await this.recordFailure(user.id, user.phone, user.failures, 'signin');
-    throw lock ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`) : new ApiError('CREDENTIALS_INVALID');
+    throw lock
+      ? new ApiError('ACCOUNT_LOCKED', `Try again in ${LOCK_MINUTES} minutes.`)
+      : new ApiError('CREDENTIALS_INVALID');
   }
 
   /**
@@ -120,7 +135,12 @@ export class PasswordService {
    * then fails, so the counter is real. The tenth locks the password and texts the owner.
    * Returns whether it locked.
    */
-  private async recordFailure(userId: string, phone: string, failuresSoFar: number, via?: 'signin'): Promise<boolean> {
+  private async recordFailure(
+    userId: string,
+    phone: string,
+    failuresSoFar: number,
+    via?: 'signin',
+  ): Promise<boolean> {
     const failures = failuresSoFar + 1;
     const lock = failures >= MAX_FAILURES;
     await this.database.db.transaction(async (tx) => {
@@ -132,15 +152,23 @@ export class PasswordService {
             : { failedPasswordAttempts: failures },
         )
         .where(eq(users.id, userId));
-      await tx
-        .insert(auditLogs)
-        .values(this.audit.row({ action: lock ? 'auth.password.locked' : 'auth.password.failed', actorUserId: userId, ...(via ? { changes: { via } } : {}) }));
+      await tx.insert(auditLogs).values(
+        this.audit.row({
+          action: lock ? 'auth.password.locked' : 'auth.password.failed',
+          actorUserId: userId,
+          ...(via ? { changes: { via } } : {}),
+        }),
+      );
       if (lock) {
         await this.outbox.add(tx, {
           type: 'notification.sms',
           aggregateType: 'user',
           aggregateId: userId,
-          payload: { to: phone, template: 'alert', tokens: { event: 'ورود با رمز عبور به دلیل تلاش‌های نادرست موقتاً قفل شد' } },
+          payload: {
+            to: phone,
+            template: 'alert',
+            tokens: { event: 'ورود با رمز عبور به دلیل تلاش‌های نادرست موقتاً قفل شد' },
+          },
         });
       }
     });

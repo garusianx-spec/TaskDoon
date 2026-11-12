@@ -5,15 +5,30 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import type { PlatformWorkspaceModerationResult } from '@taskin/contracts';
 import { formatJalali, toPersianDigits } from '@taskin/jalali';
-import { adminApi } from '@/admin/api';
-import { dateTimeLabel, MEMBER_STATUS, phoneLabel, USER_STATUS, WORKSPACE_STATUS } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { Fact, Loaded, PageHeader, Panel, TABLE, TableFrame, TD, TH } from '@/components/admin/AdminUi';
-import { SuspendWorkspaceDialog } from '@/components/admin/SuspendWorkspaceDialog';
-import { TransferOwnershipDialog } from '@/components/admin/TransferOwnershipDialog';
-import { WorkspaceQuotaPanel } from '@/components/admin/WorkspaceQuotaPanel';
+import { adminApi } from '@/features/admin/api/admin-api';
+import {
+  dateTimeLabel,
+  MEMBER_STATUS,
+  phoneLabel,
+  USER_STATUS,
+  WORKSPACE_STATUS,
+} from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { Fact, Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { DataTable, TableFrame } from '@/components/shared/DataTable';
+import { SuspendWorkspaceDialog } from '@/features/admin/components/SuspendWorkspaceDialog';
+import { TransferOwnershipDialog } from '@/features/admin/components/TransferOwnershipDialog';
+import { WorkspaceQuotaPanel } from '@/features/admin/components/WorkspaceQuotaPanel';
 import { Badge, Button } from '@/components/ui';
-import { ArrowRightIcon, CheckCircleIcon, CheckIcon, CrownIcon, LockIcon, MinusIcon, WarningIcon } from '@/components/icons';
+import {
+  ArrowRightIcon,
+  CheckCircleIcon,
+  CheckIcon,
+  CrownIcon,
+  LockIcon,
+  MinusIcon,
+  WarningIcon,
+} from '@/components/icons';
 import { PERMISSION_ACTIONS, PERMISSION_MODULES } from '@/data/reference';
 
 /** A workspace: each role with its permission matrix, and who holds which role. */
@@ -38,7 +53,10 @@ export default function AdminWorkspacePage() {
 
   return (
     <>
-      <Link href="/admin/workspaces" className="mb-3 inline-flex items-center gap-1 text-body-sm text-fg-tertiary hover:text-fg-primary">
+      <Link
+        href="/admin/workspaces"
+        className="mb-3 inline-flex items-center gap-1 text-body-sm text-fg-tertiary hover:text-fg-primary"
+      >
         <ArrowRightIcon size={16} />
         ورک‌اسپیس‌ها
       </Link>
@@ -56,15 +74,27 @@ export default function AdminWorkspacePage() {
                         {WORKSPACE_STATUS[detail.status].label}
                       </Badge>
                     )}
-                    <Button variant="secondary" iconStart={<CrownIcon size={16} />} onClick={() => setActing('transfer')}>
+                    <Button
+                      variant="secondary"
+                      iconStart={<CrownIcon size={16} />}
+                      onClick={() => setActing('transfer')}
+                    >
                       انتقال مالکیت
                     </Button>
                     {detail.status === 'suspended' ? (
-                      <Button variant="primary" iconStart={<CheckCircleIcon size={16} />} onClick={() => setActing('suspension')}>
+                      <Button
+                        variant="primary"
+                        iconStart={<CheckCircleIcon size={16} />}
+                        onClick={() => setActing('suspension')}
+                      >
                         رفع تعلیق
                       </Button>
                     ) : (
-                      <Button variant="destructive" iconStart={<LockIcon size={16} />} onClick={() => setActing('suspension')}>
+                      <Button
+                        variant="destructive"
+                        iconStart={<LockIcon size={16} />}
+                        onClick={() => setActing('suspension')}
+                      >
                         تعلیق فضای کاری
                       </Button>
                     )}
@@ -73,15 +103,22 @@ export default function AdminWorkspacePage() {
               }
             />
             {notice && (
-              <p role="status" className="mb-4 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done">
+              <p
+                role="status"
+                className="mb-4 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done"
+              >
                 {notice}
               </p>
             )}
             {detail.status === 'suspended' && (
-              <div role="note" className="mb-4 flex flex-col gap-2 rounded-lg border border-secondary bg-sunken px-3 py-2 text-body-sm text-fg-secondary">
+              <div
+                role="note"
+                className="mb-4 flex flex-col gap-2 rounded-lg border border-secondary bg-sunken px-3 py-2 text-body-sm text-fg-secondary"
+              >
                 <span className="flex items-start gap-2">
                   <WarningIcon size={18} className="mt-0.5 shrink-0 text-warning-600" />
-                  این فضای کاری معلق است: اعضایش به آن دسترسی ندارند، اما حساب‌ها و فضاهای کاری دیگرشان دست‌نخورده است.
+                  این فضای کاری معلق است: اعضایش به آن دسترسی ندارند، اما حساب‌ها و فضاهای کاری دیگرشان
+                  دست‌نخورده است.
                 </span>
                 {detail.suspension && (
                   <dl className="grid gap-3 sm:grid-cols-3">
@@ -95,7 +132,10 @@ export default function AdminWorkspacePage() {
               </div>
             )}
             {detail.deletedAt && (
-              <p role="status" className="mb-4 rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked">
+              <p
+                role="status"
+                className="mb-4 rounded-lg bg-status-blocked-subtle px-3 py-2 text-body-sm text-status-blocked"
+              >
                 این ورک‌اسپیس در {formatJalali(detail.deletedAt, 'medium')} حذف شده است.
               </p>
             )}
@@ -110,7 +150,7 @@ export default function AdminWorkspacePage() {
             )}
             <Panel title="نقش‌ها و ماتریس دسترسی">
               <TableFrame label="ماتریس دسترسی نقش‌ها">
-                <table className={TABLE}>
+                <DataTable>
                   <thead>
                     <tr>
                       <th className={TH}>نقش</th>
@@ -138,8 +178,15 @@ export default function AdminWorkspacePage() {
                               {PERMISSION_ACTIONS.map((action) => {
                                 const granted = role.grants.includes(`${module.id}:${action.id}`);
                                 return (
-                                  <li key={action.id} className={`flex items-center gap-1 text-caption ${granted ? 'text-fg-primary' : 'text-fg-quaternary'}`}>
-                                    {granted ? <CheckIcon size={12} className="text-status-done" /> : <MinusIcon size={12} />}
+                                  <li
+                                    key={action.id}
+                                    className={`flex items-center gap-1 text-caption ${granted ? 'text-fg-primary' : 'text-fg-quaternary'}`}
+                                  >
+                                    {granted ? (
+                                      <CheckIcon size={12} className="text-status-done" />
+                                    ) : (
+                                      <MinusIcon size={12} />
+                                    )}
                                     <span>{action.shortName}</span>
                                     <span className="sr-only">{granted ? 'دارد' : 'ندارد'}</span>
                                   </li>
@@ -151,12 +198,12 @@ export default function AdminWorkspacePage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               </TableFrame>
             </Panel>
             <Panel title="اعضا">
               <TableFrame label="اعضای ورک‌اسپیس">
-                <table className={TABLE}>
+                <DataTable>
                   <thead>
                     <tr>
                       <th className={TH}>نام</th>
@@ -171,7 +218,10 @@ export default function AdminWorkspacePage() {
                     {detail.members.map((member) => (
                       <tr key={member.userId}>
                         <td className={TD}>
-                          <Link href={`/admin/users/${member.userId}`} className="inline-flex items-center gap-1 font-semibold text-fg-brand hover:underline">
+                          <Link
+                            href={`/admin/users/${member.userId}`}
+                            className="inline-flex items-center gap-1 font-semibold text-fg-brand hover:underline"
+                          >
                             {member.isOwner && <CrownIcon size={14} className="text-warning-600" />}
                             {member.fullName}
                           </Link>
@@ -196,18 +246,35 @@ export default function AdminWorkspacePage() {
                         </td>
                         <td className={TD}>
                           {formatJalali(member.joinedAt, 'medium')}
-                          {member.leftAt && <p className="text-caption text-fg-tertiary">خروج: {formatJalali(member.leftAt, 'medium')}</p>}
+                          {member.leftAt && (
+                            <p className="text-caption text-fg-tertiary">
+                              خروج: {formatJalali(member.leftAt, 'medium')}
+                            </p>
+                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               </TableFrame>
             </Panel>
             {acting === 'suspension' && (
-              <SuspendWorkspaceDialog workspace={detail} mode={detail.status === 'suspended' ? 'unsuspend' : 'suspend'} onClose={() => setActing(null)} onDone={onDone} />
+              <SuspendWorkspaceDialog
+                workspace={detail}
+                mode={detail.status === 'suspended' ? 'unsuspend' : 'suspend'}
+                onClose={() => setActing(null)}
+                onDone={onDone}
+              />
             )}
-            {acting === 'transfer' && <TransferOwnershipDialog workspaceId={detail.id} workspaceName={detail.name} detail={detail} onClose={() => setActing(null)} onDone={onDone} />}
+            {acting === 'transfer' && (
+              <TransferOwnershipDialog
+                workspaceId={detail.id}
+                workspaceName={detail.name}
+                detail={detail}
+                onClose={() => setActing(null)}
+                onDone={onDone}
+              />
+            )}
           </>
         )}
       </Loaded>

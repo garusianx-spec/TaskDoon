@@ -53,7 +53,10 @@ export class RealtimePublisher {
     return this.redis.key(BUS_CHANNEL);
   }
 
-  envelope<T extends RealtimeEventType>(event: RealtimeEmit<T>, eventId: string | null = null): RealtimeEnvelope<T> {
+  envelope<T extends RealtimeEventType>(
+    event: RealtimeEmit<T>,
+    eventId: string | null = null,
+  ): RealtimeEnvelope<T> {
     return {
       eventId,
       type: event.type,
@@ -80,9 +83,22 @@ export class RealtimePublisher {
         });
         return;
       }
-      await this.send(events.map((event, index): BusOperation => ({ op: 'emit', rooms: event.rooms, except: event.except, envelope: envelopes[index] as RealtimeEnvelope })));
+      await this.send(
+        events.map((event, index): BusOperation => ({
+          op: 'emit',
+          rooms: event.rooms,
+          except: event.except,
+          envelope: envelopes[index] as RealtimeEnvelope,
+        })),
+      );
     } catch (error) {
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error), types: events.map((event) => event.type) }, 'realtime emit failed');
+      this.logger.warn(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          types: events.map((event) => event.type),
+        },
+        'realtime emit failed',
+      );
     }
   }
 
@@ -105,17 +121,26 @@ export class RealtimePublisher {
         }),
       );
     } catch (error) {
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'realtime publish failed');
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        'realtime publish failed',
+      );
     }
   }
 
   /** Appends the durable events to their streams (one round trip) and builds every envelope. */
   private async record(events: readonly RealtimeEmit[]): Promise<RealtimeEnvelope[]> {
     const envelopes = events.map((event) => this.envelope(event));
-    const durable = events.flatMap((event, index) => (event.durable && event.workspaceId ? [{ event, index }] : []));
+    const durable = events.flatMap((event, index) =>
+      event.durable && event.workspaceId ? [{ event, index }] : [],
+    );
     if (durable.length > 0) {
       const ids = await this.stream.append(
-        durable.map(({ event, index }) => ({ workspaceId: event.workspaceId as string, rooms: event.rooms, envelope: envelopes[index] as RealtimeEnvelope })),
+        durable.map(({ event, index }) => ({
+          workspaceId: event.workspaceId as string,
+          rooms: event.rooms,
+          envelope: envelopes[index] as RealtimeEnvelope,
+        })),
       );
       durable.forEach(({ index }, position) => {
         envelopes[index] = { ...(envelopes[index] as RealtimeEnvelope), eventId: ids[position] ?? null };

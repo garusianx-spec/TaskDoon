@@ -11,7 +11,8 @@ import type { OutboxWriter } from '../../platform/outbox/outbox-writer.js';
  */
 
 /** Leads moderate the channel; the project's creator owns it. */
-const channelRole = (role: ProjectRole): Exclude<ConversationRole, 'owner'> => (role === 'lead' ? 'admin' : 'member');
+const channelRole = (role: ProjectRole): Exclude<ConversationRole, 'owner'> =>
+  role === 'lead' ? 'admin' : 'member';
 
 /** Conversation titles are 1–80 characters and topics at most 250, projects allow more. */
 const title = (name: string): string => name.trim().slice(0, 80);
@@ -29,7 +30,11 @@ export interface ProjectChannelSeed {
 }
 
 /** Opens the project's channel with the creator as its owner and every other member in it. */
-export async function openProjectChannel(tx: Tx, outbox: OutboxWriter, seed: ProjectChannelSeed): Promise<string> {
+export async function openProjectChannel(
+  tx: Tx,
+  outbox: OutboxWriter,
+  seed: ProjectChannelSeed,
+): Promise<string> {
   const w = seed.workspaceId;
   const inserted = await tx.execute<{ id: string }>(sql`
     insert into conversations (workspace_id, kind, title, topic, tone, is_private, post_policy, project_id, membership_mode, created_by)
@@ -37,7 +42,9 @@ export async function openProjectChannel(tx: Tx, outbox: OutboxWriter, seed: Pro
     on conflict (workspace_id, project_id) where project_id is not null do nothing
     returning id`);
   if (!inserted.rows[0]) {
-    const existing = await tx.execute<{ id: string }>(sql`select id from conversations where workspace_id = ${w} and project_id = ${seed.projectId}`);
+    const existing = await tx.execute<{ id: string }>(
+      sql`select id from conversations where workspace_id = ${w} and project_id = ${seed.projectId}`,
+    );
     if (!existing.rows[0]) throw new Error('project channel resolution failed');
     return existing.rows[0].id;
   }
@@ -75,7 +82,12 @@ interface SyncedRow extends Record<string, unknown> {
 export async function syncProjectChannelMember(
   tx: Tx,
   outbox: OutboxWriter,
-  target: { readonly workspaceId: string; readonly projectId: string; readonly userId: string; readonly role: ProjectRole | null },
+  target: {
+    readonly workspaceId: string;
+    readonly projectId: string;
+    readonly userId: string;
+    readonly role: ProjectRole | null;
+  },
 ): Promise<void> {
   const w = target.workspaceId;
   const channels = await tx.execute<SyncedRow>(sql`
@@ -133,7 +145,12 @@ export async function syncProjectChannelMember(
 }
 
 /** Project deletion permanently archives its companion; restoration never reopens history. */
-export async function setProjectChannelsArchived(tx: Tx, outbox: OutboxWriter, workspaceId: string, projectId: string): Promise<void> {
+export async function setProjectChannelsArchived(
+  tx: Tx,
+  outbox: OutboxWriter,
+  workspaceId: string,
+  projectId: string,
+): Promise<void> {
   const changed = await tx.execute<{ id: string }>(sql`
     update conversations set archived_at = now()
     where workspace_id = ${workspaceId} and project_id = ${projectId} and membership_mode = 'project_synced'
@@ -151,7 +168,13 @@ export async function setProjectChannelsArchived(tx: Tx, outbox: OutboxWriter, w
 }
 
 /** A renamed project renames its channel. */
-export async function renameProjectChannels(tx: Tx, outbox: OutboxWriter, workspaceId: string, projectId: string, name: string): Promise<void> {
+export async function renameProjectChannels(
+  tx: Tx,
+  outbox: OutboxWriter,
+  workspaceId: string,
+  projectId: string,
+  name: string,
+): Promise<void> {
   const changed = await tx.execute<{ id: string }>(sql`
     update conversations set title = ${title(name)}
     where workspace_id = ${workspaceId} and project_id = ${projectId} and membership_mode = 'project_synced' and archived_at is null and title is distinct from ${title(name)}

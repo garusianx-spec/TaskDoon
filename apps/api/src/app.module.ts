@@ -33,7 +33,12 @@ import { loggerParams } from './platform/logging/logging.js';
 import { OutboxRelay } from './platform/outbox/outbox-relay.js';
 import { PlatformModule } from './platform/platform.module.js';
 import { RedisClients } from './platform/redis/redis.js';
-import { MaintenanceProcessor, NotificationsProcessor, QueueWorkers, WorkProcessor } from './worker/workers.js';
+import {
+  MaintenanceProcessor,
+  NotificationsProcessor,
+  QueueWorkers,
+  WorkProcessor,
+} from './worker/workers.js';
 
 export interface AppModuleOptions {
   /** Where logs go; tests capture them to assert correlation ids. Defaults to stdout. */
@@ -69,14 +74,27 @@ class HttpApiModule {
                 name: 'user',
                 ttl: 60_000,
                 limit: config.env.THROTTLE_USER_PER_MINUTE,
-                getTracker: (request: Record<string, unknown>) => `user:${(request as AuthenticatedRequest).auth?.userId ?? 'anonymous'}`,
+                getTracker: (request: Record<string, unknown>) =>
+                  `user:${(request as AuthenticatedRequest).auth?.userId ?? 'anonymous'}`,
                 skipIf: (context) => !context.switchToHttp().getRequest<AuthenticatedRequest>().auth,
               },
             ],
           }),
         }),
       ],
-      controllers: [BroadcastsController, AuthController, MeController, InboxController, WorkspaceEntryController, WorkspaceController, WorkController, AgileController, ContentController, ChatController, SchedulingController],
+      controllers: [
+        BroadcastsController,
+        AuthController,
+        MeController,
+        InboxController,
+        WorkspaceEntryController,
+        WorkspaceController,
+        WorkController,
+        AgileController,
+        ContentController,
+        ChatController,
+        SchedulingController,
+      ],
       providers: pipeline,
     };
   }
@@ -109,7 +127,8 @@ export class AppModule {
         ClsModule.forRoot({ global: true, middleware: { mount: false } }),
         LoggerModule.forRootAsync({
           inject: [AppConfig, ClsService],
-          useFactory: (config: AppConfig, cls: ClsService<RequestContextStore>) => loggerParams(config, cls, options.logDestination),
+          useFactory: (config: AppConfig, cls: ClsService<RequestContextStore>) =>
+            loggerParams(config, cls, options.logDestination),
         }),
         PlatformModule,
         TerminusModule,

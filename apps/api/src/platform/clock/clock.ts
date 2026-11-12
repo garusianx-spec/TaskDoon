@@ -21,8 +21,14 @@ export class Clock {
 
 /** `YYYY-MM-DD` of `instant` on the wall calendar of `timeZone` (an IANA zone). */
 export function dateIn(timeZone: string, instant: Date): string {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant);
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((entry) => entry.type === type)?.value ?? '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(instant);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((entry) => entry.type === type)?.value ?? '';
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
@@ -49,7 +55,8 @@ export function instantIn(timeZone: string, isoDate: string, time: string): Date
       hour: 'numeric',
       minute: 'numeric',
     }).formatToParts(new Date(at));
-    const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((entry) => entry.type === type)?.value ?? 0);
+    const value = (type: Intl.DateTimeFormatPartTypes) =>
+      Number(parts.find((entry) => entry.type === type)?.value ?? 0);
     return Date.UTC(value('year'), value('month') - 1, value('day'), value('hour'), value('minute')) - at;
   };
   const first = guess - offset(guess);
@@ -59,5 +66,10 @@ export function instantIn(timeZone: string, isoDate: string, time: string): Date
 
 /** `HH:mm` of `instant` in `timeZone`. */
 export function timeIn(timeZone: string, instant: Date): string {
-  return new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(instant);
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(instant);
 }

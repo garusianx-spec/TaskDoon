@@ -23,7 +23,10 @@ const STANDING_BATCH = 500;
 @Injectable()
 export class RevocationService {
   private readonly logger = new Logger('RevocationService');
-  private standingQueue = new Map<string, { resolve: (standing: UserStanding) => void; reject: (error: unknown) => void }[]>();
+  private standingQueue = new Map<
+    string,
+    { resolve: (standing: UserStanding) => void; reject: (error: unknown) => void }[]
+  >();
   private standingInFlight = false;
 
   constructor(
@@ -45,7 +48,10 @@ export class RevocationService {
     try {
       if ((await this.redis.core.exists(this.redis.key('revoked', 'sid', sessionId))) === 1) return true;
     } catch (error) {
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'revocation cache unavailable; asking the database');
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        'revocation cache unavailable; asking the database',
+      );
       const [row] = await this.database.db
         .select({ revokedAt: authSessions.revokedAt })
         .from(authSessions)
@@ -84,15 +90,28 @@ export class RevocationService {
         for (const userId of batch.keys()) this.standingQueue.delete(userId);
         try {
           const rows = await this.database.db
-            .select({ id: users.id, securityVersion: users.securityVersion, status: users.status, deletedAt: users.deletedAt })
+            .select({
+              id: users.id,
+              securityVersion: users.securityVersion,
+              status: users.status,
+              deletedAt: users.deletedAt,
+            })
             .from(users)
             .where(sql`${users.id} = any(${sql.param([...batch.keys()])}::uuid[])`);
           const found = new Map(rows.map((row) => [row.id, row]));
           const pipeline = this.redis.core.pipeline();
           for (const [userId, waiters] of batch) {
             const row = found.get(userId);
-            const standing: UserStanding = { securityVersion: row?.securityVersion ?? -1, active: row?.status === 'active' && row.deletedAt === null };
-            pipeline.set(this.redis.key('user', 'standing', userId), JSON.stringify(standing), 'EX', STANDING_TTL_SECONDS);
+            const standing: UserStanding = {
+              securityVersion: row?.securityVersion ?? -1,
+              active: row?.status === 'active' && row.deletedAt === null,
+            };
+            pipeline.set(
+              this.redis.key('user', 'standing', userId),
+              JSON.stringify(standing),
+              'EX',
+              STANDING_TTL_SECONDS,
+            );
             for (const waiter of waiters) waiter.resolve(standing);
           }
           await pipeline.exec().catch(() => undefined);

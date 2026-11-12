@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 import { useNamespacedId } from '@/hooks/useId';
 import type { ReactNode } from 'react';
@@ -70,9 +70,7 @@ export function SegmentedControl<TValue extends string>({
             className={cn(
               'inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-semibold transition-colors duration-150',
               size === 'sm' ? 'h-7 px-2.5 text-caption' : 'h-9 px-3 text-title-sm',
-              selected
-                ? 'bg-surface text-fg-primary shadow-xs'
-                : 'text-fg-tertiary hover:text-fg-secondary',
+              selected ? 'bg-surface text-fg-primary shadow-xs' : 'text-fg-tertiary hover:text-fg-secondary',
             )}
           >
             {option.icon}
@@ -80,7 +78,7 @@ export function SegmentedControl<TValue extends string>({
             {option.count !== undefined && (
               <span
                 className={cn(
-                  'numeric rounded-full px-1.5 text-micro font-semibold',
+                  'rounded-full px-1.5 text-micro font-semibold numeric',
                   selected ? 'bg-brand-subtle text-fg-brand' : 'bg-muted text-fg-tertiary',
                 )}
               >

@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef, type ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { useNamespacedId } from '@/hooks/useId';
 import { CheckIcon, MinusIcon } from '@/components/icons';
 
@@ -65,11 +65,7 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
         className,
       )}
     >
-      {indeterminate ? (
-        <MinusIcon size={glyph} />
-      ) : checked ? (
-        <CheckIcon size={glyph} />
-      ) : null}
+      {indeterminate ? <MinusIcon size={glyph} /> : checked ? <CheckIcon size={glyph} /> : null}
     </button>
   );
 

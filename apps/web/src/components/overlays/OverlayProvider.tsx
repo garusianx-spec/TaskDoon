@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { TaskDraft } from '@taskin/contracts';
 import { useWorkspace } from '@/store/WorkspaceProvider';
-import { OverlayContext, type Overlay, type OverlayContextValue } from './context';
-import { OverlayHost } from './OverlayHost';
+import { OverlayContext, type Overlay, type OverlayContextValue } from '@/components/overlays/context';
+import { OverlayHost } from '@/components/overlays/OverlayHost';
 
-export { useOverlays, type Overlay, type OverlayKind } from './context';
+export { useOverlays, type Overlay, type OverlayKind } from '@/components/overlays/context';
 
 /** Shortcuts shown in the quick-create menu. Matched on `code` so a Persian layout works too. */
 const SHORTCUTS: Readonly<Record<string, Overlay>> = {

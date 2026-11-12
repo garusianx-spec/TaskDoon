@@ -25,7 +25,9 @@ export function encodeCursor(createdAt: string, id: string): string {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function decodeCursor(cursor: string | undefined): { readonly createdAt: string; readonly id: string } | null {
+export function decodeCursor(
+  cursor: string | undefined,
+): { readonly createdAt: string; readonly id: string } | null {
   if (!cursor) return null;
   const [createdAt, id] = Buffer.from(cursor, 'base64url').toString('utf8').split('|');
   if (!createdAt || !id || !UUID.test(id) || Number.isNaN(Date.parse(createdAt))) {

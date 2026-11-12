@@ -36,8 +36,14 @@ test('Iranian mobile numbers normalise to 09xxxxxxxxx in every common form', () 
 });
 
 test('recipients are classified as SMS or email, with reasons for rejects', () => {
-  assert.deepEqual(parseRecipient('+98 912 123 4567'), { ok: true, recipient: { address: '09121234567', channel: 'sms' } });
-  assert.deepEqual(parseRecipient('A.B@Company.IR'), { ok: true, recipient: { address: 'a.b@company.ir', channel: 'email' } });
+  assert.deepEqual(parseRecipient('+98 912 123 4567'), {
+    ok: true,
+    recipient: { address: '09121234567', channel: 'sms' },
+  });
+  assert.deepEqual(parseRecipient('A.B@Company.IR'), {
+    ok: true,
+    recipient: { address: 'a.b@company.ir', channel: 'email' },
+  });
   assert.equal(parseRecipient('0812123456').ok, false);
   assert.equal(parseRecipient('bad@x').ok, false);
   assert.equal(parseRecipient('foo').ok, false);

@@ -72,7 +72,10 @@ export function displayPhone(e164: string): string {
   return e164.startsWith('+98') ? formatMobile(`0${e164.slice(3)}`) : e164;
 }
 
-export function memberToUser(member: MemberView, departmentName: (id: string | null) => string | undefined): User {
+export function memberToUser(
+  member: MemberView,
+  departmentName: (id: string | null) => string | undefined,
+): User {
   return {
     id: member.userId,
     fullName: member.fullName,
@@ -141,7 +144,10 @@ export function workspaceFromView(view: WorkspaceView): Workspace {
 }
 
 /** A project in the trash: back as a project on «بازیابی» (the server restores its tasks too). */
-export function trashedProjectFromView(view: TrashedProjectView, departmentName: (id: string | null) => string | undefined): TrashedProject {
+export function trashedProjectFromView(
+  view: TrashedProjectView,
+  departmentName: (id: string | null) => string | undefined,
+): TrashedProject {
   return {
     project: {
       id: view.id,
@@ -160,7 +166,10 @@ export function trashedProjectFromView(view: TrashedProjectView, departmentName:
 
 /* ============================================================ board */
 
-export function projectFromView(view: ProjectView, departmentName: (id: string | null) => string | undefined): Project {
+export function projectFromView(
+  view: ProjectView,
+  departmentName: (id: string | null) => string | undefined,
+): Project {
   return {
     id: view.id,
     name: view.name,
@@ -175,15 +184,25 @@ export function projectFromView(view: ProjectView, departmentName: (id: string |
 
 /** A column of `projectId`'s board (every project has its own columns). */
 export function columnFromView(view: ColumnView, projectId: string): BoardColumn {
-  return { id: view.id, title: view.title, status: view.status, tone: view.tone, custom: !view.builtIn, projectId };
+  return {
+    id: view.id,
+    title: view.title,
+    status: view.status,
+    tone: view.tone,
+    custom: !view.builtIn,
+    projectId,
+  };
 }
 
 /** Every column of the given workflows, each project's in board order. */
 export function columnsFromWorkflows(views: readonly WorkflowView[]): BoardColumn[] {
-  return views.flatMap((view) => [...view.columns].sort(byColumnPosition).map((column) => columnFromView(column, view.projectId)));
+  return views.flatMap((view) =>
+    [...view.columns].sort(byColumnPosition).map((column) => columnFromView(column, view.projectId)),
+  );
 }
 
-const byColumnPosition = (a: ColumnView, b: ColumnView): number => (a.position < b.position ? -1 : a.position > b.position ? 1 : a.id < b.id ? -1 : 1);
+const byColumnPosition = (a: ColumnView, b: ColumnView): number =>
+  a.position < b.position ? -1 : a.position > b.position ? 1 : a.id < b.id ? -1 : 1;
 
 /** In the UI a card on a built-in column carries `boardColumnId: null` (its status names the column). */
 export function boardColumnIdFor(columns: readonly BoardColumn[], columnId: string): string | null {
@@ -192,12 +211,18 @@ export function boardColumnIdFor(columns: readonly BoardColumn[], columnId: stri
 }
 
 /** The API column a UI placement lands on. */
-export function apiColumnFor(columns: readonly BoardColumn[], placement: { readonly status: TaskStatus; readonly boardColumnId: string | null }): BoardColumn | undefined {
+export function apiColumnFor(
+  columns: readonly BoardColumn[],
+  placement: { readonly status: TaskStatus; readonly boardColumnId: string | null },
+): BoardColumn | undefined {
   if (placement.boardColumnId !== null) {
     const named = columns.find((column) => column.id === placement.boardColumnId);
     if (named) return named;
   }
-  return columns.find((column) => !column.custom && column.status === placement.status) ?? columns.find((column) => column.status === placement.status);
+  return (
+    columns.find((column) => !column.custom && column.status === placement.status) ??
+    columns.find((column) => column.status === placement.status)
+  );
 }
 
 /** A list card. What only the detail holds (description, subtasks …) is kept from `previous`. */
@@ -245,11 +270,24 @@ export function taskFromCard(card: TaskCard, columns: readonly BoardColumn[], pr
 }
 
 export function worklogFromView(view: WorklogView): Worklog {
-  return { id: view.id, userId: view.userId, minutes: view.durationMinutes, note: view.description, loggedAt: view.loggedAt };
+  return {
+    id: view.id,
+    userId: view.userId,
+    minutes: view.durationMinutes,
+    note: view.description,
+    loggedAt: view.loggedAt,
+  };
 }
 
 export function linkFromView(view: TaskDependencyView): TaskLink {
-  return { id: view.id, kind: view.type, taskId: view.task.id, code: view.task.code, title: view.task.title, status: view.task.status };
+  return {
+    id: view.id,
+    kind: view.type,
+    taskId: view.task.id,
+    code: view.task.code,
+    title: view.task.title,
+    status: view.task.status,
+  };
 }
 
 export function subtaskFromView(view: SubtaskView): Subtask {
@@ -257,15 +295,31 @@ export function subtaskFromView(view: SubtaskView): Subtask {
 }
 
 export function attachmentFromView(view: AttachmentView): Attachment {
-  return { id: view.id, name: view.name, kind: view.kind, size: view.size, uploadedAt: view.uploadedAt, uploadedById: view.uploadedById, url: null };
+  return {
+    id: view.id,
+    name: view.name,
+    kind: view.kind,
+    size: view.size,
+    uploadedAt: view.uploadedAt,
+    uploadedById: view.uploadedById,
+    url: null,
+  };
 }
 
 export function commentFromView(view: TaskCommentView): Task['comments'][number] {
-  return { id: view.id, authorId: view.authorId, body: view.body, createdAt: view.createdAt, replyToId: view.replyToId };
+  return {
+    id: view.id,
+    authorId: view.authorId,
+    body: view.body,
+    createdAt: view.createdAt,
+    replyToId: view.replyToId,
+  };
 }
 
 export function taskFromDetail(detail: TaskDetail, columns: readonly BoardColumn[]): Task {
-  const reopen = detail.reopenColumnId ? columns.find((column) => column.id === detail.reopenColumnId) : undefined;
+  const reopen = detail.reopenColumnId
+    ? columns.find((column) => column.id === detail.reopenColumnId)
+    : undefined;
   // Complete arrays follow, so the list-page counts (`summary`) are left out.
   const { summary, ...rest } = taskFromCard(detail, columns);
   void summary;
@@ -293,7 +347,11 @@ export function taskFromDetail(detail: TaskDetail, columns: readonly BoardColumn
 /* ============================================================ chat */
 
 /** A direct chat is named after the other person. */
-export function conversationFromView(view: ConversationView, meId: string, nameOf: (userId: string) => string | undefined): Conversation {
+export function conversationFromView(
+  view: ConversationView,
+  meId: string,
+  nameOf: (userId: string) => string | undefined,
+): Conversation {
   const other = view.memberIds.find((id) => id !== meId);
   const title = view.title ?? (other ? (nameOf(other) ?? 'گفتگوی مستقیم') : 'یادداشت‌های من');
   return {
@@ -305,7 +363,15 @@ export function conversationFromView(view: ConversationView, meId: string, nameO
     muted: view.mutedUntil !== null && Date.parse(view.mutedUntil) > Date.now(),
     unreadCount: view.unreadCount,
     tone: view.tone,
-    topic: view.topic || (view.projectId ? 'کانال پروژه' : view.kind === 'direct' ? 'گفتگوی مستقیم' : view.kind === 'channel' ? 'کانال' : 'گروه تیمی'),
+    topic:
+      view.topic ||
+      (view.projectId
+        ? 'کانال پروژه'
+        : view.kind === 'direct'
+          ? 'گفتگوی مستقیم'
+          : view.kind === 'channel'
+            ? 'کانال'
+            : 'گروه تیمی'),
     projectId: view.projectId,
     archived: view.archived,
     archiveManager: view.myRole === 'owner' || view.myRole === 'admin',
@@ -329,7 +395,13 @@ function messageBody(view: MessageView, nameOf: (userId: string) => string | und
       return { kind: 'text', text: renderMentions(view.text ?? '', nameOf) };
     case 'voice': {
       const meta = view.meta && 'durationSec' in view.meta ? view.meta : { durationSec: 0, waveform: [] };
-      return { kind: 'voice', durationSec: meta.durationSec, waveform: meta.waveform, src: null, ...(view.attachment ? { attachmentId: view.attachment.id } : {}) };
+      return {
+        kind: 'voice',
+        durationSec: meta.durationSec,
+        waveform: meta.waveform,
+        src: null,
+        ...(view.attachment ? { attachmentId: view.attachment.id } : {}),
+      };
     }
     case 'file':
       return view.attachment
@@ -352,7 +424,11 @@ function systemText(view: MessageView): string {
   return 'رویداد گفتگو';
 }
 
-export function messageFromView(view: MessageView, readByIds: readonly string[], nameOf: (userId: string) => string | undefined): Message {
+export function messageFromView(
+  view: MessageView,
+  readByIds: readonly string[],
+  nameOf: (userId: string) => string | undefined,
+): Message {
   return {
     id: view.id,
     conversationId: view.conversationId,
@@ -384,7 +460,13 @@ export function scheduledFromView(view: ScheduledMessageView): ScheduledMessage 
 }
 
 export function workingHoursFromView(view: WorkingHoursView): WorkingHours {
-  return { autoReplyEnabled: view.autoReplyEnabled, days: view.days, start: view.start, end: view.end, message: view.message };
+  return {
+    autoReplyEnabled: view.autoReplyEnabled,
+    days: view.days,
+    start: view.start,
+    end: view.end,
+    message: view.message,
+  };
 }
 
 /* ============================================================ calendar, notes */
@@ -425,7 +507,8 @@ export function noteFromView(view: NoteView): Note {
 
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 const TASK_STATUSES: readonly TaskStatus[] = ['todo', 'in-progress', 'review', 'done'];
-const status = (value: unknown): TaskStatus => (TASK_STATUSES.includes(value as TaskStatus) ? (value as TaskStatus) : 'todo');
+const status = (value: unknown): TaskStatus =>
+  TASK_STATUSES.includes(value as TaskStatus) ? (value as TaskStatus) : 'todo';
 
 /** `null` for kinds the notification centre does not show (invitations, reminders, new members). */
 export function notificationFromView(view: NotificationView): AppNotification | null {
@@ -457,7 +540,10 @@ export function notificationFromView(view: NotificationView): AppNotification | 
     read: view.read,
     event,
     subject: view.subject,
-    target: view.targetType === 'task' ? { kind: 'task', taskId: view.targetId } : { kind: 'conversation', conversationId },
+    target:
+      view.targetType === 'task'
+        ? { kind: 'task', taskId: view.targetId }
+        : { kind: 'conversation', conversationId },
   };
 }
 
@@ -475,7 +561,10 @@ export function activityFromView(view: ActivityView): ActivityItem {
 
 /* ============================================================ account */
 
-export function invitationFromView(view: InvitationView, departmentName: (id: string | null) => string | undefined): Invitation {
+export function invitationFromView(
+  view: InvitationView,
+  departmentName: (id: string | null) => string | undefined,
+): Invitation {
   return {
     id: view.id,
     address: view.address,

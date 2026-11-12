@@ -13,7 +13,11 @@ import type { OutboxEventMap, OutboxEventType } from './outbox-writer.js';
 type OutboxRow = typeof outboxEvents.$inferSelect;
 
 type Publication =
-  | { readonly queue: 'notifications'; readonly name: keyof NotificationJobs; readonly payload: NotificationJobs[keyof NotificationJobs] }
+  | {
+      readonly queue: 'notifications';
+      readonly name: keyof NotificationJobs;
+      readonly payload: NotificationJobs[keyof NotificationJobs];
+    }
   | {
       readonly queue: 'work';
       readonly name: keyof WorkJobs;
@@ -41,18 +45,44 @@ export function publicationsFor(row: OutboxRow, now: number): readonly Publicati
       {
         queue: 'work',
         name: 'feed.fanout',
-        payload: { eventId: row.id, workspaceId: row.workspaceId, type, actorId: row.headers.actorId ?? null, payload: row.payload },
+        payload: {
+          eventId: row.id,
+          workspaceId: row.workspaceId,
+          type,
+          actorId: row.headers.actorId ?? null,
+          payload: row.payload,
+        },
       },
     ];
   }
   switch (type) {
     case 'notification.sms':
-      return [{ queue: 'notifications', name: 'sms.send', payload: row.payload as unknown as OutboxEventMap['notification.sms'] }];
+      return [
+        {
+          queue: 'notifications',
+          name: 'sms.send',
+          payload: row.payload as unknown as OutboxEventMap['notification.sms'],
+        },
+      ];
     case 'notification.email':
-      return [{ queue: 'notifications', name: 'mail.send', payload: row.payload as unknown as OutboxEventMap['notification.email'] }];
+      return [
+        {
+          queue: 'notifications',
+          name: 'mail.send',
+          payload: row.payload as unknown as OutboxEventMap['notification.email'],
+        },
+      ];
     case 'file.uploaded': {
       const payload = row.payload as unknown as OutboxEventMap['file.uploaded'];
-      return row.workspaceId ? [{ queue: 'work', name: 'file.scan', payload: { workspaceId: row.workspaceId, attachmentId: payload.attachmentId } }] : [];
+      return row.workspaceId
+        ? [
+            {
+              queue: 'work',
+              name: 'file.scan',
+              payload: { workspaceId: row.workspaceId, attachmentId: payload.attachmentId },
+            },
+          ]
+        : [];
     }
     case 'calendar.event.changed': {
       const payload = row.payload as unknown as OutboxEventMap['calendar.event.changed'];
@@ -75,7 +105,11 @@ export function publicationsFor(row: OutboxRow, now: number): readonly Publicati
         {
           queue: 'work',
           name: 'message.dispatch',
-          payload: { workspaceId: row.workspaceId, scheduledId: payload.scheduledId, authorId: payload.authorId },
+          payload: {
+            workspaceId: row.workspaceId,
+            scheduledId: payload.scheduledId,
+            authorId: payload.authorId,
+          },
           // One job per schedule; the sweep covers a job that is lost.
           jobId: `scheduled-${payload.scheduledId}`,
           delay: Math.max(0, Date.parse(payload.scheduledAt) - now),
@@ -148,11 +182,17 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
     if (rows.length === 0) return 0;
 
     const now = Date.now();
-    const publications = rows.flatMap((row) => publicationsFor(row, now).map((publication) => ({ row, publication })));
+    const publications = rows.flatMap((row) =>
+      publicationsFor(row, now).map((publication) => ({ row, publication })),
+    );
     const job = ({ row, publication }: (typeof publications)[number]) => ({
       name: publication.name,
       data: {
-        headers: { requestId: row.headers.requestId, traceId: row.headers.traceId, eventId: row.id } satisfies JobHeaders,
+        headers: {
+          requestId: row.headers.requestId,
+          traceId: row.headers.traceId,
+          eventId: row.id,
+        } satisfies JobHeaders,
         payload: publication.payload,
       },
       opts: {
@@ -160,9 +200,14 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
         ...(publication.queue === 'work' && publication.delay ? { delay: publication.delay } : {}),
       },
     });
-    const notifications = publications.filter((entry) => entry.publication.queue === 'notifications').map(job);
+    const notifications = publications
+      .filter((entry) => entry.publication.queue === 'notifications')
+      .map(job);
     const work = publications.filter((entry) => entry.publication.queue === 'work').map(job);
-    if (notifications.length > 0) await this.queues.notifications.addBulk(notifications as Parameters<Queues['notifications']['addBulk']>[0]);
+    if (notifications.length > 0)
+      await this.queues.notifications.addBulk(
+        notifications as Parameters<Queues['notifications']['addBulk']>[0],
+      );
     if (work.length > 0) await this.queues.work.addBulk(work as Parameters<Queues['work']['addBulk']>[0]);
     // Realtime last and best effort: clients recover a lost event by replay or refetch.
     await this.realtime.publish(rows.flatMap((row) => realtimeFor(row)));
@@ -170,14 +215,21 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
     await this.database.db
       .update(outboxEvents)
       .set({ publishedAt: sql`now()` })
-      .where(inArray(outboxEvents.id, rows.map((row) => row.id)));
+      .where(
+        inArray(
+          outboxEvents.id,
+          rows.map((row) => row.id),
+        ),
+      );
     return rows.length;
   }
 
   /** Seconds the oldest unpublished event has waited: the lag metric the RFC alerts on. */
   async lagSeconds(): Promise<number> {
     const [row] = await this.database.db
-      .select({ lag: sql<number>`coalesce(extract(epoch from now() - min(${outboxEvents.createdAt})), 0)::float8` })
+      .select({
+        lag: sql<number>`coalesce(extract(epoch from now() - min(${outboxEvents.createdAt})), 0)::float8`,
+      })
       .from(outboxEvents)
       .where(isNull(outboxEvents.publishedAt));
     return row?.lag ?? 0;
@@ -205,7 +257,10 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
           while ((await this.drainOnce()) === BATCH && !this.stopped);
         } while (this.again && !this.stopped);
       } catch (error) {
-        this.logger.error({ error: error instanceof Error ? error.message : String(error) }, 'outbox drain failed');
+        this.logger.error(
+          { error: error instanceof Error ? error.message : String(error) },
+          'outbox drain failed',
+        );
       } finally {
         this.draining = undefined;
       }
@@ -240,7 +295,10 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
         this.kick();
         await lost;
       } catch (error) {
-        this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'outbox relay campaign failed');
+        this.logger.warn(
+          { error: error instanceof Error ? error.message : String(error) },
+          'outbox relay campaign failed',
+        );
       } finally {
         this.leaderClient = undefined;
         await client.end().catch(() => undefined);

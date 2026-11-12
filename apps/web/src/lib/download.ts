@@ -1,5 +1,5 @@
 import type { Attachment } from '@taskin/contracts';
-import { formatFileSize } from './format';
+import { formatFileSize } from '@/lib/format';
 import { formatJalali } from '@taskin/jalali';
 import { resolveFileUrl } from '@/store/files';
 

@@ -191,7 +191,8 @@ export interface InvitationView {
   readonly expiresAt: string;
 }
 
-export type InvitationRejection = 'invalid_address' | 'already_member' | 'already_invited' | 'domain_not_allowed';
+export type InvitationRejection =
+  'invalid_address' | 'already_member' | 'already_invited' | 'domain_not_allowed';
 
 export interface CreateInvitationsResult {
   readonly created: readonly InvitationView[];

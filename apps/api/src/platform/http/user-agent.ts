@@ -51,7 +51,9 @@ export function parseUserAgent(userAgent: string | null | undefined): ParsedUser
       break;
     }
   }
-  const tablet = /\biPad\b|\bTablet\b/i.test(userAgent) || (/\bAndroid\b/.test(userAgent) && !/\bMobile\b/.test(userAgent));
+  const tablet =
+    /\biPad\b|\bTablet\b/i.test(userAgent) ||
+    (/\bAndroid\b/.test(userAgent) && !/\bMobile\b/.test(userAgent));
   const mobile = !tablet && /\bMobile\b|\biPhone\b|\biPod\b/.test(userAgent);
   const deviceType = tablet ? 'tablet' : mobile ? 'mobile' : os ? 'desktop' : null;
   return { client, os, deviceType };

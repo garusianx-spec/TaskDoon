@@ -1,5 +1,27 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query, Redirect } from '@nestjs/common';
-import { ApiCreatedResponse, ApiFoundResponse, ApiHeader, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  Redirect,
+} from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiFoundResponse,
+  ApiHeader,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type {
   ActivityPage,
   AttachmentView,
@@ -75,9 +97,14 @@ export class ContentController {
 
   @Post('files/uploads')
   @Idempotent()
-  @ApiOperation({ summary: 'Plan an upload: reserves the bytes and returns a presigned POST (≤ 16 MB) or multipart parts' })
+  @ApiOperation({
+    summary: 'Plan an upload: reserves the bytes and returns a presigned POST (≤ 16 MB) or multipart parts',
+  })
   @ApiCreatedResponse({ type: UploadViewDto })
-  createUpload(@CurrentMember() member: MembershipContext, @Body() body: CreateUploadDto): Promise<UploadView> {
+  createUpload(
+    @CurrentMember() member: MembershipContext,
+    @Body() body: CreateUploadDto,
+  ): Promise<UploadView> {
     return this.files.createUpload(member, body);
   }
 
@@ -85,14 +112,21 @@ export class ContentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Check the stored file (exact size, real type) and hand it to the scanner' })
   @ApiOkResponse({ type: AttachmentViewDto })
-  completeUpload(@CurrentMember() member: MembershipContext, @Param('attachmentId', UUID) attachmentId: string, @Body() body: CompleteUploadDto): Promise<AttachmentView> {
+  completeUpload(
+    @CurrentMember() member: MembershipContext,
+    @Param('attachmentId', UUID) attachmentId: string,
+    @Body() body: CompleteUploadDto,
+  ): Promise<AttachmentView> {
     return this.files.complete(member, attachmentId, body);
   }
 
   @Post('files/uploads/:attachmentId/abort')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
-  abortUpload(@CurrentMember() member: MembershipContext, @Param('attachmentId', UUID) attachmentId: string): Promise<void> {
+  abortUpload(
+    @CurrentMember() member: MembershipContext,
+    @Param('attachmentId', UUID) attachmentId: string,
+  ): Promise<void> {
     return this.files.abort(member, attachmentId);
   }
 
@@ -100,14 +134,24 @@ export class ContentController {
   @Redirect()
   @ApiOperation({ summary: 'Redirect to a 5-minute download link (always an attachment, RFC 5987 name)' })
   @ApiFoundResponse()
-  async download(@CurrentMember() member: MembershipContext, @Param('attachmentId', UUID) attachmentId: string): Promise<{ url: string; statusCode: number }> {
+  async download(
+    @CurrentMember() member: MembershipContext,
+    @Param('attachmentId', UUID) attachmentId: string,
+  ): Promise<{ url: string; statusCode: number }> {
     return { url: await this.files.downloadUrl(member, attachmentId), statusCode: HttpStatus.FOUND };
   }
 
   @Get('files/:attachmentId/link')
-  @ApiOperation({ summary: 'A short-lived link as JSON: `inline` for images, audio and video (to show or play), else a download' })
+  @ApiOperation({
+    summary:
+      'A short-lived link as JSON: `inline` for images, audio and video (to show or play), else a download',
+  })
   @ApiOkResponse({ type: FileLinkDto })
-  fileLink(@CurrentMember() member: MembershipContext, @Param('attachmentId', UUID) attachmentId: string, @Query() query: FileLinkQueryDto): Promise<FileLink> {
+  fileLink(
+    @CurrentMember() member: MembershipContext,
+    @Param('attachmentId', UUID) attachmentId: string,
+    @Query() query: FileLinkQueryDto,
+  ): Promise<FileLink> {
     return this.files.link(member, attachmentId, query.disposition ?? 'attachment');
   }
 
@@ -121,27 +165,44 @@ export class ContentController {
 
   @Post('note-categories')
   @ApiCreatedResponse({ type: NoteCategoryViewDto })
-  createCategory(@CurrentMember() member: MembershipContext, @Body() body: CreateNoteCategoryDto): Promise<NoteCategoryView> {
+  createCategory(
+    @CurrentMember() member: MembershipContext,
+    @Body() body: CreateNoteCategoryDto,
+  ): Promise<NoteCategoryView> {
     return this.notes.createCategory(member, body);
   }
 
   @Patch('note-categories/:categoryId')
   @ApiOkResponse({ type: NoteCategoryViewDto })
-  updateCategory(@CurrentMember() member: MembershipContext, @Param('categoryId', UUID) categoryId: string, @Body() body: UpdateNoteCategoryDto): Promise<NoteCategoryView> {
+  updateCategory(
+    @CurrentMember() member: MembershipContext,
+    @Param('categoryId', UUID) categoryId: string,
+    @Body() body: UpdateNoteCategoryDto,
+  ): Promise<NoteCategoryView> {
     return this.notes.updateCategory(member, categoryId, body);
   }
 
   @Delete('note-categories/:categoryId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a notebook, built-in or custom; its notes are kept, filed in no notebook' })
-  removeCategory(@CurrentMember() member: MembershipContext, @Param('categoryId', UUID) categoryId: string): Promise<void> {
+  @ApiOperation({
+    summary: 'Delete a notebook, built-in or custom; its notes are kept, filed in no notebook',
+  })
+  removeCategory(
+    @CurrentMember() member: MembershipContext,
+    @Param('categoryId', UUID) categoryId: string,
+  ): Promise<void> {
     return this.notes.removeCategory(member, categoryId);
   }
 
   @Get('notes')
   @ApiOkResponse({ type: NotePageDto })
   listNotes(@CurrentMember() member: MembershipContext, @Query() query: NoteListQueryDto): Promise<NotePage> {
-    return this.notes.list(member, { categoryId: query.categoryId, q: query.q, cursor: query.cursor, limit: query.limit ?? 50 });
+    return this.notes.list(member, {
+      categoryId: query.categoryId,
+      q: query.q,
+      cursor: query.cursor,
+      limit: query.limit ?? 50,
+    });
   }
 
   @Post('notes')
@@ -153,7 +214,10 @@ export class ContentController {
 
   @Get('notes/:noteId')
   @ApiOkResponse({ type: NoteViewDto })
-  getNote(@CurrentMember() member: MembershipContext, @Param('noteId', UUID) noteId: string): Promise<NoteView> {
+  getNote(
+    @CurrentMember() member: MembershipContext,
+    @Param('noteId', UUID) noteId: string,
+  ): Promise<NoteView> {
     return this.notes.get(member, noteId);
   }
 
@@ -171,7 +235,10 @@ export class ContentController {
 
   @Delete('notes/:noteId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeNote(@CurrentMember() member: MembershipContext, @Param('noteId', UUID) noteId: string): Promise<void> {
+  removeNote(
+    @CurrentMember() member: MembershipContext,
+    @Param('noteId', UUID) noteId: string,
+  ): Promise<void> {
     return this.notes.remove(member, noteId);
   }
 
@@ -180,7 +247,11 @@ export class ContentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Convert a note to a task; open checklist items become subtasks (once per note)' })
   @ApiOkResponse({ type: ConvertNoteResultDto })
-  convertNote(@CurrentMember() member: MembershipContext, @Param('noteId', UUID) noteId: string, @Body() body: ConvertNoteDto): Promise<ConvertNoteResult> {
+  convertNote(
+    @CurrentMember() member: MembershipContext,
+    @Param('noteId', UUID) noteId: string,
+    @Body() body: ConvertNoteDto,
+  ): Promise<ConvertNoteResult> {
     return this.notes.convert(member, noteId, body);
   }
 
@@ -189,20 +260,29 @@ export class ContentController {
   @Get('calendar')
   @ApiOperation({ summary: 'Events and open-task deadlines in a date range (at most 100 days)' })
   @ApiOkResponse({ type: CalendarViewDto })
-  calendarView(@CurrentMember() member: MembershipContext, @Query() query: CalendarQueryDto): Promise<CalendarView> {
+  calendarView(
+    @CurrentMember() member: MembershipContext,
+    @Query() query: CalendarQueryDto,
+  ): Promise<CalendarView> {
     return this.calendar.view(member, query.from, query.to);
   }
 
   @Post('calendar/events')
   @Idempotent()
   @ApiCreatedResponse({ type: CalendarEventViewDto })
-  createEvent(@CurrentMember() member: MembershipContext, @Body() body: CreateCalendarEventDto): Promise<CalendarEventView> {
+  createEvent(
+    @CurrentMember() member: MembershipContext,
+    @Body() body: CreateCalendarEventDto,
+  ): Promise<CalendarEventView> {
     return this.calendar.create(member, body);
   }
 
   @Get('calendar/events/:eventId')
   @ApiOkResponse({ type: CalendarEventViewDto })
-  getEvent(@CurrentMember() member: MembershipContext, @Param('eventId', UUID) eventId: string): Promise<CalendarEventView> {
+  getEvent(
+    @CurrentMember() member: MembershipContext,
+    @Param('eventId', UUID) eventId: string,
+  ): Promise<CalendarEventView> {
     return this.calendar.get(member, eventId);
   }
 
@@ -220,7 +300,10 @@ export class ContentController {
 
   @Delete('calendar/events/:eventId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeEvent(@CurrentMember() member: MembershipContext, @Param('eventId', UUID) eventId: string): Promise<void> {
+  removeEvent(
+    @CurrentMember() member: MembershipContext,
+    @Param('eventId', UUID) eventId: string,
+  ): Promise<void> {
     return this.calendar.remove(member, eventId);
   }
 
@@ -236,7 +319,10 @@ export class ContentController {
   @Get('reports/tasks-by-month')
   @ApiOperation({ summary: 'Tasks created and completed per Jalali month of a Jalali year' })
   @ApiOkResponse({ type: MonthlyTaskReportDto })
-  tasksByMonth(@CurrentMember() member: MembershipContext, @Query() query: ReportQueryDto): Promise<MonthlyTaskReport> {
+  tasksByMonth(
+    @CurrentMember() member: MembershipContext,
+    @Query() query: ReportQueryDto,
+  ): Promise<MonthlyTaskReport> {
     return this.reports.tasksByMonth(member, query.jalaliYear);
   }
 }
@@ -251,14 +337,22 @@ export class InboxController {
   @Get()
   @ApiOkResponse({ type: NotificationPageDto })
   inbox(@CurrentAuth() principal: AuthPrincipal, @Query() query: InboxQueryDto): Promise<NotificationPage> {
-    return this.feed.inbox(principal, { workspaceId: query.workspaceId, filter: query.filter ?? 'all', cursor: query.cursor, limit: query.limit ?? 50 });
+    return this.feed.inbox(principal, {
+      workspaceId: query.workspaceId,
+      filter: query.filter ?? 'all',
+      cursor: query.cursor,
+      limit: query.limit ?? 50,
+    });
   }
 
   @Post('read')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark notifications read: by id, or all (optionally in one workspace)' })
   @ApiOkResponse({ type: MarkedDto })
-  async markRead(@CurrentAuth() principal: AuthPrincipal, @Body() body: MarkNotificationsReadDto): Promise<{ marked: number }> {
+  async markRead(
+    @CurrentAuth() principal: AuthPrincipal,
+    @Body() body: MarkNotificationsReadDto,
+  ): Promise<{ marked: number }> {
     return { marked: await this.feed.markRead(principal, body) };
   }
 }

@@ -1,11 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { directKey, mentionedIds } from '../../src/modules/chat/chat-access.js';
-import { bucketLimits, EXPIRY_GRACE_SECONDS, type RtSocket, WsJwtGuard, WsThrottlerGuard } from '../../src/modules/realtime/ws-guards.js';
+import {
+  bucketLimits,
+  EXPIRY_GRACE_SECONDS,
+  type RtSocket,
+  WsJwtGuard,
+  WsThrottlerGuard,
+} from '../../src/modules/realtime/ws-guards.js';
 import { isUnavailable } from '../../src/platform/db/pg-errors.js';
 import { compareStreamIds } from '../../src/platform/realtime/event-stream.js';
 import { realtimeFor } from '../../src/platform/realtime/outbox-realtime.js';
 
-const socket = (data: Partial<RtSocket['data']> = {}) => ({ data: { userId: 'u', sessionId: 's', expiresAt: 1_000, connId: 'c', workspaceId: null, member: null, ...data } }) as RtSocket;
+const socket = (data: Partial<RtSocket['data']> = {}) =>
+  ({
+    data: {
+      userId: 'u',
+      sessionId: 's',
+      expiresAt: 1_000,
+      connId: 'c',
+      workspaceId: null,
+      member: null,
+      ...data,
+    },
+  }) as RtSocket;
 
 describe('WsThrottlerGuard: per-socket token buckets', () => {
   it('allows the burst, then the steady rate, and says how long to wait', () => {
@@ -67,11 +84,16 @@ describe('mentions and direct keys', () => {
 
   it('reads each <@userId> token once, lower-cased, and ignores anything else', () => {
     expect(mentionedIds(null)).toEqual([]);
-    expect(mentionedIds(`سلام <@${a}> و <@${b.toUpperCase()}> و دوباره <@${a}>، نه <@not-a-uuid> و نه @${a}`)).toEqual([a, b]);
+    expect(
+      mentionedIds(`سلام <@${a}> و <@${b.toUpperCase()}> و دوباره <@${a}>، نه <@not-a-uuid> و نه @${a}`),
+    ).toEqual([a, b]);
   });
 
   it('keeps at most 50 mentions', () => {
-    const ids = Array.from({ length: 60 }, (_, index) => `0192a3b4-c5d6-7e8f-9a0b-${String(index).padStart(12, '0')}`);
+    const ids = Array.from(
+      { length: 60 },
+      (_, index) => `0192a3b4-c5d6-7e8f-9a0b-${String(index).padStart(12, '0')}`,
+    );
     expect(mentionedIds(ids.map((id) => `<@${id}>`).join(' '))).toHaveLength(50);
   });
 
@@ -83,10 +105,22 @@ describe('mentions and direct keys', () => {
 
 describe('realtimeFor: what a committed outbox event means to connected clients', () => {
   const row = (eventType: string, payload: object, workspaceId: string | null = 'w1') =>
-    ({ id: 1, workspaceId, aggregateType: 'x', aggregateId: 'a', eventType, payload, headers: { actorId: 'actor', requestId: 'req' }, createdAt: new Date('2026-09-25T10:00:00Z'), publishedAt: null }) as unknown as Parameters<typeof realtimeFor>[0];
+    ({
+      id: 1,
+      workspaceId,
+      aggregateType: 'x',
+      aggregateId: 'a',
+      eventType,
+      payload,
+      headers: { actorId: 'actor', requestId: 'req' },
+      createdAt: new Date('2026-09-25T10:00:00Z'),
+      publishedAt: null,
+    }) as unknown as Parameters<typeof realtimeFor>[0];
 
   it('sends task events to the project room, durable and versioned', () => {
-    expect(realtimeFor(row('task.created', { taskId: 't', projectId: 'p', columnId: 'c', version: 3 }))).toEqual([
+    expect(
+      realtimeFor(row('task.created', { taskId: 't', projectId: 'p', columnId: 'c', version: 3 })),
+    ).toEqual([
       {
         emit: {
           type: 'task:created',
@@ -104,15 +138,23 @@ describe('realtimeFor: what a committed outbox event means to connected clients'
   });
 
   it('revokes sessions whatever the workspace, and ignores what clients need not hear', () => {
-    expect(realtimeFor(row('session.revoked', { sessionIds: ['s1'], reason: 'logout' }, null))).toEqual([{ op: { op: 'revoke', sessionIds: ['s1'], reason: 'logout' } }]);
-    expect(realtimeFor(row('task.created', { taskId: 't', projectId: 'p', columnId: 'c', version: 1 }, null))).toEqual([]);
+    expect(realtimeFor(row('session.revoked', { sessionIds: ['s1'], reason: 'logout' }, null))).toEqual([
+      { op: { op: 'revoke', sessionIds: ['s1'], reason: 'logout' } },
+    ]);
+    expect(
+      realtimeFor(row('task.created', { taskId: 't', projectId: 'p', columnId: 'c', version: 1 }, null)),
+    ).toEqual([]);
     expect(realtimeFor(row('message.posted', { conversationId: 'c' }))).toEqual([]);
   });
 
   it('re-evaluates rooms when visibility changes, and asks viewers to refetch otherwise', () => {
-    expect(realtimeFor(row('project.updated', { projectId: 'p', fields: ['visibility'] }))).toEqual([{ op: { op: 'rescope', workspaceId: 'w1', userIds: null, reason: 'project.visibility' } }]);
+    expect(realtimeFor(row('project.updated', { projectId: 'p', fields: ['visibility'] }))).toEqual([
+      { op: { op: 'rescope', workspaceId: 'w1', userIds: null, reason: 'project.visibility' } },
+    ]);
     const renamed = realtimeFor(row('project.updated', { projectId: 'p', fields: ['name'] }));
-    expect(renamed).toMatchObject([{ emit: { type: 'resync:required', rooms: ['project:p'], data: { scopes: ['projects'] } } }]);
+    expect(renamed).toMatchObject([
+      { emit: { type: 'resync:required', rooms: ['project:p'], data: { scopes: ['projects'] } } },
+    ]);
   });
 
   it('evicts a removed member before announcing it', () => {
@@ -123,11 +165,15 @@ describe('realtimeFor: what a committed outbox event means to connected clients'
   });
 
   it('joins new conversation members before announcing, and announces a removal before leaving', () => {
-    expect(realtimeFor(row('conversation.member.added', { conversationId: 'c', userId: 'u2', role: 'member' }))).toMatchObject([
+    expect(
+      realtimeFor(row('conversation.member.added', { conversationId: 'c', userId: 'u2', role: 'member' })),
+    ).toMatchObject([
       { op: { op: 'join', workspaceId: 'w1', userIds: ['u2'], rooms: ['conv:c'] } },
       { emit: { type: 'conversation:member_added', rooms: ['conv:c'] } },
     ]);
-    expect(realtimeFor(row('conversation.member.removed', { conversationId: 'c', userId: 'u2' }))).toMatchObject([
+    expect(
+      realtimeFor(row('conversation.member.removed', { conversationId: 'c', userId: 'u2' })),
+    ).toMatchObject([
       { emit: { type: 'conversation:member_removed', rooms: ['conv:c', 'user:u2'] } },
       { op: { op: 'leave', userIds: ['u2'], rooms: ['conv:c'] } },
     ]);
@@ -139,8 +185,14 @@ describe('isUnavailable: retry later, not a bug', () => {
 
   it('recognises an exhausted pool, a lost connection and a database going away, wrapped or not', () => {
     expect(isUnavailable(new Error('timeout exceeded when trying to connect'))).toBe(true);
-    expect(isUnavailable(new Error('Failed query', { cause: new Error('timeout exceeded when trying to connect') }))).toBe(true);
-    expect(isUnavailable(Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }))).toBe(true);
+    expect(
+      isUnavailable(
+        new Error('Failed query', { cause: new Error('timeout exceeded when trying to connect') }),
+      ),
+    ).toBe(true);
+    expect(isUnavailable(Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }))).toBe(
+      true,
+    );
     expect(isUnavailable(new Error('Failed query', { cause: pg('57P01') }))).toBe(true);
     expect(isUnavailable(pg('08006'))).toBe(true);
   });

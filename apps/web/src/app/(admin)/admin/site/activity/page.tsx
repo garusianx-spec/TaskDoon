@@ -1,2 +1,4 @@
-import { SiteActivity } from '@/components/admin/site/SiteActivity';
-export default function Page() { return <SiteActivity />; }
+import { SiteActivity } from '@/features/admin/components/site/SiteActivity';
+export default function Page() {
+  return <SiteActivity />;
+}

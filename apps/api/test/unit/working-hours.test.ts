@@ -3,7 +3,11 @@ import { isWorkingTime, weekDayOf } from '../../src/modules/chat/working-hours.j
 
 /** An instant given as Tehran wall-clock time (UTC+03:30; Iran keeps no daylight saving). */
 const tehran = (isoDate: string, time: string) => new Date(`${isoDate}T${time}:00+03:30`);
-const office = { days: ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday'] as const, start: '09:00', end: '18:00' };
+const office = {
+  days: ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday'] as const,
+  start: '09:00',
+  end: '18:00',
+};
 
 describe('Phase 3.2: working hours', () => {
   it('names the weekday of a calendar date', () => {

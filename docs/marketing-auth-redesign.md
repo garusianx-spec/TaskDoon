@@ -27,13 +27,13 @@ homepage branch at `6b9ff0b23a75641a66a0005081e8b6a4d78e26a6`. See the
 
 ## Browser evidence
 
-| View | Before | Redesign |
-| --- | --- | --- |
-| Homepage desktop | [Public production](visual-review-v2/before/production-home-desktop.png) | [First view](visual-review-v2/marketing/home-hero-desktop.png) · [Full page](visual-review-v2/marketing/home-desktop.png) · [1280 × 720](visual-review-v2/marketing/home-hero-laptop.png) |
-| Homepage mobile | [Public production](visual-review-v2/before/production-home-mobile.png) | [First view](visual-review-v2/marketing/home-hero-mobile.png) · [Full page](visual-review-v2/marketing/home-mobile.png) |
-| Interactive project state |  | [Desktop](visual-review-v2/marketing/journey-project-desktop.png) · [Mobile](visual-review-v2/marketing/journey-project-mobile.png) |
-| Sign-in |  | [Desktop](visual-review-v2/authentication/entry-desktop.png) · [Mobile](visual-review-v2/authentication/entry-mobile.png) |
-| Verification and onboarding |  | [OTP](visual-review-v2/authentication/otp-mobile.png) · [Signup](visual-review-v2/authentication/signup-mobile.png) · [First workspace](visual-review-v2/authentication/first-workspace-mobile.png) · [Password recovery](visual-review-v2/authentication/password-recovery-mobile.png) |
+| View                        | Before                                                                   | Redesign                                                                                                                                                                                                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Homepage desktop            | [Public production](visual-review-v2/before/production-home-desktop.png) | [First view](visual-review-v2/marketing/home-hero-desktop.png) · [Full page](visual-review-v2/marketing/home-desktop.png) · [1280 × 720](visual-review-v2/marketing/home-hero-laptop.png)                                                                                               |
+| Homepage mobile             | [Public production](visual-review-v2/before/production-home-mobile.png)  | [First view](visual-review-v2/marketing/home-hero-mobile.png) · [Full page](visual-review-v2/marketing/home-mobile.png)                                                                                                                                                                 |
+| Interactive project state   |                                                                          | [Desktop](visual-review-v2/marketing/journey-project-desktop.png) · [Mobile](visual-review-v2/marketing/journey-project-mobile.png)                                                                                                                                                     |
+| Sign-in                     |                                                                          | [Desktop](visual-review-v2/authentication/entry-desktop.png) · [Mobile](visual-review-v2/authentication/entry-mobile.png)                                                                                                                                                               |
+| Verification and onboarding |                                                                          | [OTP](visual-review-v2/authentication/otp-mobile.png) · [Signup](visual-review-v2/authentication/signup-mobile.png) · [First workspace](visual-review-v2/authentication/first-workspace-mobile.png) · [Password recovery](visual-review-v2/authentication/password-recovery-mobile.png) |
 
 The public before images came from the running production site. Its source revision is unknown.
 The after images use the generated standalone Next.js server connected to an isolated PostgreSQL,
@@ -43,24 +43,24 @@ suspension. The [capture manifest](visual-review-v2/provenance.json) records the
 
 ## Verified checks
 
-| Check | Local result |
-| --- | --- |
-| Workspace lint and TypeScript | Passed |
-| Next.js live and demo production builds | Both passed with standalone output on Node 22.23.3 |
-| Workspace unit tests | 366 passed |
-| API integration on real services | 378 passed across 34 files, including 18 CMS cases |
-| Chromium demo suites | 507 checks passed across all 19 suites |
-| Live marketing and authentication | 68 passed with zero unexpected browser failures |
-| Live CMS editing and publication | 86 passed with zero browser console problems |
-| Live workspace | 149 passed with zero browser console problems, including invitations, realtime delivery and storage |
-| Conditional admin sign-in and verified email recovery | 37 passed with local console SMS and Mailpit |
-| Isolated authentication UI states | 27 passed |
-| Automated WCAG A/AA | 29 axe scans, zero violations in the tested views |
-| Responsive overflow | Homepage and sign-in verified at 360, 375, 390, 430, 768, 1024, 1280, 1440, and 1920 px |
-| Theme contrast | All 312 semantic contrast checks passed |
-| Migration and generated contracts | Drizzle check passed, schema generation found no drift, catalog and OpenAPI assertions passed |
-| Impeccable detector | Zero findings on the changed marketing, authentication, and shared public components |
-| Impeccable independent finish review | `ship` verdict for the four reviewed fixes |
+| Check                                                 | Local result                                                                                        |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Workspace lint and TypeScript                         | Passed                                                                                              |
+| Next.js live and demo production builds               | Both passed with standalone output on Node 22.23.3                                                  |
+| Workspace unit tests                                  | 366 passed                                                                                          |
+| API integration on real services                      | 378 passed across 34 files, including 18 CMS cases                                                  |
+| Chromium demo suites                                  | 507 checks passed across all 19 suites                                                              |
+| Live marketing and authentication                     | 68 passed with zero unexpected browser failures                                                     |
+| Live CMS editing and publication                      | 86 passed with zero browser console problems                                                        |
+| Live workspace                                        | 149 passed with zero browser console problems, including invitations, realtime delivery and storage |
+| Conditional admin sign-in and verified email recovery | 37 passed with local console SMS and Mailpit                                                        |
+| Isolated authentication UI states                     | 27 passed                                                                                           |
+| Automated WCAG A/AA                                   | 29 axe scans, zero violations in the tested views                                                   |
+| Responsive overflow                                   | Homepage and sign-in verified at 360, 375, 390, 430, 768, 1024, 1280, 1440, and 1920 px             |
+| Theme contrast                                        | All 312 semantic contrast checks passed                                                             |
+| Migration and generated contracts                     | Drizzle check passed, schema generation found no drift, catalog and OpenAPI assertions passed       |
+| Impeccable detector                                   | Zero findings on the changed marketing, authentication, and shared public components                |
+| Impeccable independent finish review                  | `ship` verdict for the four reviewed fixes                                                          |
 
 Chromium lab readings on the standalone local homepage with caching disabled and no throttling
 were 1,132 ms LCP and 0.0017 CLS at 1440 × 1000, and 432 ms LCP and 0 CLS at 390 × 844.

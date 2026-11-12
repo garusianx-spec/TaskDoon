@@ -1,5 +1,26 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
-import { ApiCreatedResponse, ApiHeader, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiHeader,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type {
   AcceptInvitationResult,
   CreateInvitationsResult,
@@ -83,7 +104,10 @@ export class WorkspaceEntryController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Join a workspace with an invitation link' })
   @ApiOkResponse({ type: AcceptInvitationResultDto })
-  accept(@CurrentAuth() principal: AuthPrincipal, @Body() body: AcceptInvitationDto): Promise<AcceptInvitationResult> {
+  accept(
+    @CurrentAuth() principal: AuthPrincipal,
+    @Body() body: AcceptInvitationDto,
+  ): Promise<AcceptInvitationResult> {
     return this.invitations.accept(principal, body.token);
   }
 }
@@ -112,7 +136,10 @@ export class WorkspaceController {
 
   @Patch()
   @ApiOkResponse({ type: WorkspaceViewDto })
-  update(@CurrentMember() member: MembershipContext, @Body() body: UpdateWorkspaceDto): Promise<WorkspaceView> {
+  update(
+    @CurrentMember() member: MembershipContext,
+    @Body() body: UpdateWorkspaceDto,
+  ): Promise<WorkspaceView> {
     return this.workspaces.update(member, body);
   }
 
@@ -152,7 +179,10 @@ export class WorkspaceController {
   @Get('members')
   @CheckPolicies(can('view', 'Member'))
   @ApiOkResponse({ type: MemberViewDto, isArray: true })
-  listMembers(@CurrentMember() member: MembershipContext, @Query() query: MemberListQueryDto): Promise<MemberView[]> {
+  listMembers(
+    @CurrentMember() member: MembershipContext,
+    @Query() query: MemberListQueryDto,
+  ): Promise<MemberView[]> {
     return this.members.list(member, { includeFormer: query.includeFormer === true });
   }
 
@@ -172,7 +202,10 @@ export class WorkspaceController {
   @Delete('members/:userId')
   @RequireStepUp()
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeMember(@CurrentMember() member: MembershipContext, @Param('userId', ParseUUIDPipe) userId: string): Promise<void> {
+  removeMember(
+    @CurrentMember() member: MembershipContext,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ): Promise<void> {
     return this.members.remove(member, userId);
   }
 
@@ -188,7 +221,10 @@ export class WorkspaceController {
   @Post('departments')
   @CheckPolicies(can('create', 'Department'))
   @ApiCreatedResponse({ type: DepartmentViewDto })
-  createDepartment(@CurrentMember() member: MembershipContext, @Body() body: CreateDepartmentDto): Promise<DepartmentView> {
+  createDepartment(
+    @CurrentMember() member: MembershipContext,
+    @Body() body: CreateDepartmentDto,
+  ): Promise<DepartmentView> {
     return this.departments.create(member, body);
   }
 
@@ -206,7 +242,10 @@ export class WorkspaceController {
   @Delete('departments/:id')
   @CheckPolicies(can('delete', 'Department'))
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeDepartment(@CurrentMember() member: MembershipContext, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  removeDepartment(
+    @CurrentMember() member: MembershipContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
     return this.departments.remove(member, id);
   }
 
@@ -224,14 +263,20 @@ export class WorkspaceController {
   @CheckPolicies(can('create', 'Invitation'))
   @ApiOperation({ summary: 'Invite by email or Iranian mobile; each entry is normalised and checked' })
   @ApiCreatedResponse({ type: CreateInvitationsResultDto })
-  invite(@CurrentMember() member: MembershipContext, @Body() body: CreateInvitationsDto): Promise<CreateInvitationsResult> {
+  invite(
+    @CurrentMember() member: MembershipContext,
+    @Body() body: CreateInvitationsDto,
+  ): Promise<CreateInvitationsResult> {
     return this.invitations.create(member, body);
   }
 
   @Delete('invitations/:id')
   @CheckPolicies(can('delete', 'Invitation'))
   @HttpCode(HttpStatus.NO_CONTENT)
-  revokeInvitation(@CurrentMember() member: MembershipContext, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  revokeInvitation(
+    @CurrentMember() member: MembershipContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
     return this.invitations.revoke(member, id);
   }
 
@@ -270,6 +315,7 @@ export class WorkspaceController {
 
   private assertSteppedUp(principal: AuthPrincipal): void {
     const age = Math.floor(Date.now() / 1000) - (principal.stepUpAt ?? 0);
-    if (!principal.stepUpAt || age > this.config.env.STEP_UP_TTL_SECONDS) throw new ApiError('STEP_UP_REQUIRED');
+    if (!principal.stepUpAt || age > this.config.env.STEP_UP_TTL_SECONDS)
+      throw new ApiError('STEP_UP_REQUIRED');
   }
 }

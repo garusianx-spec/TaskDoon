@@ -140,15 +140,15 @@ does not change how the production application obtains workspace data.
 
 Capabilities verified in the existing frontend include:
 
-| Capability | Implementation evidence |
-| --- | --- |
-| Kanban, list, Gantt, and backlog views | `apps/web/src/app/(app)/tasks/page.tsx`, `components/tasks/` |
+| Capability                                 | Implementation evidence                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------- |
+| Kanban, list, Gantt, and backlog views     | `apps/web/src/app/(app)/tasks/page.tsx`, `components/tasks/`                    |
 | Team conversations, attachments, and voice | `components/chat/ChatView.tsx`, `AttachmentPreviewModal.tsx`, `VoicePlayer.tsx` |
-| Tasks created from messages | `components/chat/ChatView.tsx` |
-| Notes and interactive checklists | `components/notes/NoteBlockEditor.tsx`, `NoteMarkdown.tsx` |
-| Calendar and events | `apps/web/src/app/(app)/calendar/page.tsx`, `components/calendar/` |
-| Workspaces and role settings | `components/workspace/`, `app/(app)/settings/roles/` |
-| Persian, RTL, Jalali dates, and themes | root layout, `packages/jalali`, `styles/fonts.css`, `styles/tokens.css` |
+| Tasks created from messages                | `components/chat/ChatView.tsx`                                                  |
+| Notes and interactive checklists           | `components/notes/NoteBlockEditor.tsx`, `NoteMarkdown.tsx`                      |
+| Calendar and events                        | `apps/web/src/app/(app)/calendar/page.tsx`, `components/calendar/`              |
+| Workspaces and role settings               | `components/workspace/`, `app/(app)/settings/roles/`                            |
+| Persian, RTL, Jalali dates, and themes     | root layout, `packages/jalali`, `styles/fonts.css`, `styles/tokens.css`         |
 
 The sign-in and free-start destination is `/feed`. The existing workspace authentication gate
 handles SMS codes, registration, and first-workspace onboarding there. A signed-in person
@@ -266,20 +266,19 @@ Reference: <https://web.dev/articles/vitals>.
 
 Record actual execution results rather than treating this checklist as a claim of completion:
 
-| Check | Evidence to record |
-| --- | --- |
-| Migration and public seed | Migration identifier, run date, target environment |
-| Type check, lint, tests, build | Exact commands and exit status |
-| CMS publication | Draft/published revision and observed public response |
-| Public forms | Submission identifier and authorized inbox read |
-| Authorization | Anonymous and non-platform-admin write refusals |
-| Crawlability | HTTP status, canonical, robots, and sitemap checks |
-| Mobile and accessibility | Viewports, keyboard flow, errors, and overflow review |
-| Search Console | Pending until real property verification and sitemap processing |
-| Analytics and consent | Pending until approved configuration and live verification |
-| Field performance | Pending until sufficient real-user measurements |
-| Legal content | Pending until legal/business approval |
-
+| Check                          | Evidence to record                                              |
+| ------------------------------ | --------------------------------------------------------------- |
+| Migration and public seed      | Migration identifier, run date, target environment              |
+| Type check, lint, tests, build | Exact commands and exit status                                  |
+| CMS publication                | Draft/published revision and observed public response           |
+| Public forms                   | Submission identifier and authorized inbox read                 |
+| Authorization                  | Anonymous and non-platform-admin write refusals                 |
+| Crawlability                   | HTTP status, canonical, robots, and sitemap checks              |
+| Mobile and accessibility       | Viewports, keyboard flow, errors, and overflow review           |
+| Search Console                 | Pending until real property verification and sitemap processing |
+| Analytics and consent          | Pending until approved configuration and live verification      |
+| Field performance              | Pending until sufficient real-user measurements                 |
+| Legal content                  | Pending until legal/business approval                           |
 
 ## Browser validation
 
@@ -339,10 +338,10 @@ a device scale factor of 1, no CPU/network throttling, and disabled browser cach
 viewport loads did not reuse a different desktop image candidate. They are not field Core Web
 Vitals results or production guarantees.
 
-| Viewport | LCP | CLS | Navigation TTFB |
-| --- | ---: | ---: | ---: |
-| Desktop, 1440 × 1000 | 336 ms | 0.0614 | 55 ms |
-| Mobile viewport, 390 × 844 | 112 ms | 0 | 32 ms |
+| Viewport                   |    LCP |    CLS | Navigation TTFB |
+| -------------------------- | -----: | -----: | --------------: |
+| Desktop, 1440 × 1000       | 336 ms | 0.0614 |           55 ms |
+| Mobile viewport, 390 × 844 | 112 ms |      0 |           32 ms |
 
 INP and the 75th-percentile real-user thresholds remain pending. Search Console, analytics,
 live-domain verification, consent operations, and Google's external structured-data tools were
@@ -361,22 +360,22 @@ by Git and are recreated by the live test:
 
 The following checks ran against this implementation in the cloud development machine:
 
-| Command/check | Observed result |
-| --- | --- |
-| `npm run build` | Passed, shared packages, API and Next.js production build |
-| `npm run typecheck` | Passed across workspaces |
-| `npm run lint` | Passed across workspaces |
-| `npm test` | 199 unit tests passed |
-| `npm run test:int -w @taskin/api -- --maxWorkers=3` | 308 tests passed in 25 files, including 16 new CMS integration tests |
-| `npm run test:e2e:site` | 86 passed, zero failures, zero console problems |
-| `npm run test:e2e:live` | Existing workspace regression: 114 passed, zero failures, zero console problems |
-| `npm run check:contrast` | Six palettes × two modes × 26 token pairs passed WCAG AA contrast checks |
-| `npm run db:check -w @taskin/api` | Passed |
-| `npm run db:generate -w @taskin/api` | No schema changes; no unexpected migration generated |
-| Fresh database migration/catalog snapshot | Migration 0021 applied and catalog snapshot generated from a fresh database |
-| `docker compose -f docker-compose.prod.yml config --no-interpolate --quiet` | Passed configuration parsing; production images/deployment were not executed by this check |
-| API restart persistence | Published homepage JSON was byte-equivalent after JSON serialization before/after restart; homepage returned HTTP 200 |
-| `git diff --check` | Passed |
+| Command/check                                                               | Observed result                                                                                                       |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `npm run build`                                                             | Passed, shared packages, API and Next.js production build                                                             |
+| `npm run typecheck`                                                         | Passed across workspaces                                                                                              |
+| `npm run lint`                                                              | Passed across workspaces                                                                                              |
+| `npm test`                                                                  | 199 unit tests passed                                                                                                 |
+| `npm run test:int -w @taskin/api -- --maxWorkers=3`                         | 308 tests passed in 25 files, including 16 new CMS integration tests                                                  |
+| `npm run test:e2e:site`                                                     | 86 passed, zero failures, zero console problems                                                                       |
+| `npm run test:e2e:live`                                                     | Existing workspace regression: 114 passed, zero failures, zero console problems                                       |
+| `npm run check:contrast`                                                    | Six palettes × two modes × 26 token pairs passed WCAG AA contrast checks                                              |
+| `npm run db:check -w @taskin/api`                                           | Passed                                                                                                                |
+| `npm run db:generate -w @taskin/api`                                        | No schema changes; no unexpected migration generated                                                                  |
+| Fresh database migration/catalog snapshot                                   | Migration 0021 applied and catalog snapshot generated from a fresh database                                           |
+| `docker compose -f docker-compose.prod.yml config --no-interpolate --quiet` | Passed configuration parsing; production images/deployment were not executed by this check                            |
+| API restart persistence                                                     | Published homepage JSON was byte-equivalent after JSON serialization before/after restart; homepage returned HTTP 200 |
+| `git diff --check`                                                          | Passed                                                                                                                |
 
 The checks establish local development and production-build behavior. They do not establish
 live deployment, real-domain Search Console ownership, production email delivery, billing,

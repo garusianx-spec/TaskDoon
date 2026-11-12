@@ -13,7 +13,8 @@ import { io } from 'socket.io-client';
 
 const EDGE = process.env.SCALE_EDGE_URL ?? 'http://localhost:8080';
 const NODES = (process.env.SCALE_WS_NODES ?? 'http://localhost:4101,http://localhost:4102').split(',');
-const DATABASE = process.env.SCALE_DATABASE_URL ?? 'postgres://taskin_migrator:taskin_migrator@localhost:5432/taskin';
+const DATABASE =
+  process.env.SCALE_DATABASE_URL ?? 'postgres://taskin_migrator:taskin_migrator@localhost:5432/taskin';
 
 const env = readFileSync(new URL('../../../infra/scale/dev.env', import.meta.url), 'utf8');
 const [jwk] = JSON.parse(/^JWT_PRIVATE_JWKS=(.*)$/m.exec(env)?.[1] ?? '[]');
@@ -41,7 +42,12 @@ async function token(userId) {
 async function rest(path, bearer, init = {}) {
   const response = await fetch(`${EDGE}/api/v1${path}`, {
     ...init,
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${bearer}`, 'idempotency-key': randomUUID(), ...(init.headers ?? {}) },
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${bearer}`,
+      'idempotency-key': randomUUID(),
+      ...(init.headers ?? {}),
+    },
   });
   const body = response.status === 204 ? null : await response.json();
   if (!response.ok) fail(`${init.method ?? 'GET'} ${path}: ${response.status} ${JSON.stringify(body)}`);
@@ -49,7 +55,13 @@ async function rest(path, bearer, init = {}) {
 }
 
 function connect(url, bearer) {
-  const socket = io(url, { path: '/rt', transports: ['websocket'], auth: { token: bearer }, reconnection: false, forceNew: true });
+  const socket = io(url, {
+    path: '/rt',
+    transports: ['websocket'],
+    auth: { token: bearer },
+    reconnection: false,
+    forceNew: true,
+  });
   const events = [];
   socket.onAny((type, envelope) => events.push({ type, envelope }));
   return new Promise((resolve, reject) => {
@@ -82,33 +94,57 @@ const ownerToken = await token(owner);
 const memberToken = await token(member);
 
 step('REST through nginx: create a workspace and a group');
-const workspace = await rest('/workspaces', ownerToken, { method: 'POST', body: JSON.stringify({ name: `مقیاس ${suffix}` }) });
-await db.query(`insert into workspace_members (workspace_id, user_id, role_id) select $1, $2, id from roles where workspace_id = $1 and key = 'member'`, [workspace.id, member]);
-const group = await rest(`/workspaces/${workspace.id}/conversations`, ownerToken, { method: 'POST', body: JSON.stringify({ kind: 'group', title: 'دو گره', memberIds: [member] }) });
+const workspace = await rest('/workspaces', ownerToken, {
+  method: 'POST',
+  body: JSON.stringify({ name: `مقیاس ${suffix}` }),
+});
+await db.query(
+  `insert into workspace_members (workspace_id, user_id, role_id) select $1, $2, id from roles where workspace_id = $1 and key = 'member'`,
+  [workspace.id, member],
+);
+const group = await rest(`/workspaces/${workspace.id}/conversations`, ownerToken, {
+  method: 'POST',
+  body: JSON.stringify({ kind: 'group', title: 'دو گره', memberIds: [member] }),
+});
 
 step(`WebSocket: member on ${NODES[0]}, owner on ${NODES[1]}, member again through nginx`);
 const onA = await connect(NODES[0], memberToken);
 const onB = await connect(NODES[1], ownerToken);
 const viaEdge = await connect(EDGE, memberToken);
 for (const client of [onA, onB, viaEdge]) {
-  const ack = await client.socket.timeout(5_000).emitWithAck('workspace:subscribe', { workspaceId: workspace.id });
+  const ack = await client.socket
+    .timeout(5_000)
+    .emitWithAck('workspace:subscribe', { workspaceId: workspace.id });
   if (!ack.ok) fail(`subscribe: ${JSON.stringify(ack)}`);
 }
 
 step('a message sent through node B reaches node A and the edge client');
-const sent = await onB.socket.timeout(5_000).emitWithAck('message:send', { conversationId: group.id, clientMsgId: randomUUID(), kind: 'text', text: 'سلام از گره دوم' });
+const sent = await onB.socket.timeout(5_000).emitWithAck('message:send', {
+  conversationId: group.id,
+  clientMsgId: randomUUID(),
+  kind: 'text',
+  text: 'سلام از گره دوم',
+});
 if (!sent.ok || sent.seq !== 1) fail(`send: ${JSON.stringify(sent)}`);
 await waitFor(onA, 'message:new', (envelope) => envelope.data.id === sent.id);
 await waitFor(viaEdge, 'message:new', (envelope) => envelope.data.id === sent.id);
 
 step('a REST removal travels through the worker relay to the WebSocket nodes');
-await rest(`/workspaces/${workspace.id}/conversations/${group.id}/members/${member}`, ownerToken, { method: 'DELETE' });
+await rest(`/workspaces/${workspace.id}/conversations/${group.id}/members/${member}`, ownerToken, {
+  method: 'DELETE',
+});
 await waitFor(onA, 'conversation:member_removed', (envelope) => envelope.data.userId === member, 10_000);
 await new Promise((resolve) => setTimeout(resolve, 300));
-const after = await onB.socket.timeout(5_000).emitWithAck('message:send', { conversationId: group.id, clientMsgId: randomUUID(), kind: 'text', text: 'دیگر نمی‌رسد' });
+const after = await onB.socket.timeout(5_000).emitWithAck('message:send', {
+  conversationId: group.id,
+  clientMsgId: randomUUID(),
+  kind: 'text',
+  text: 'دیگر نمی‌رسد',
+});
 if (!after.ok) fail(`send: ${JSON.stringify(after)}`);
 await new Promise((resolve) => setTimeout(resolve, 1_000));
-if (onA.events.some((entry) => entry.type === 'message:new' && entry.envelope.data.id === after.id)) fail('the removed member still received messages');
+if (onA.events.some((entry) => entry.type === 'message:new' && entry.envelope.data.id === after.id))
+  fail('the removed member still received messages');
 
 for (const client of [onA, onB, viaEdge]) client.socket.close();
 await db.end();

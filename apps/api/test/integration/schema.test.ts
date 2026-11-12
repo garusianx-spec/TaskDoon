@@ -14,12 +14,16 @@ describe('M1 checklist: migrations and generated contracts', () => {
   });
 
   it('applied every migration in the journal', async () => {
-    const journal = JSON.parse(await readFile(new URL('../../db/migrations/meta/_journal.json', import.meta.url), 'utf8')) as {
+    const journal = JSON.parse(
+      await readFile(new URL('../../db/migrations/meta/_journal.json', import.meta.url), 'utf8'),
+    ) as {
       entries: unknown[];
     };
     const client = new pg.Client({ connectionString: dbUrl(inject('templateDb'), 'migrator') });
     await client.connect();
-    const { rows } = await client.query<{ count: string }>('select count(*) from drizzle.__drizzle_migrations');
+    const { rows } = await client.query<{ count: string }>(
+      'select count(*) from drizzle.__drizzle_migrations',
+    );
     await client.end();
     expect(Number(rows[0]?.count)).toBe(journal.entries.length);
   });

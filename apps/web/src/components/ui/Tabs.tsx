@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { useNamespacedId } from '@/hooks/useId';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 
@@ -51,7 +51,7 @@ export function Tabs<TValue extends string>({
         role="tablist"
         aria-label={ariaLabel}
         onKeyDown={onKeyDown}
-        className="no-scrollbar -mb-px flex gap-3 overflow-x-auto border-b border-secondary"
+        className="-mb-px flex gap-3 overflow-x-auto border-b border-secondary no-scrollbar"
       >
         {items.map((item, index) => {
           const selected = item.value === value;
@@ -78,7 +78,7 @@ export function Tabs<TValue extends string>({
               {item.count !== undefined && (
                 <span
                   className={cn(
-                    'numeric rounded-full px-1.5 text-micro font-semibold leading-5',
+                    'rounded-full px-1.5 text-micro font-semibold leading-5 numeric',
                     selected ? 'bg-brand-subtle text-fg-brand' : 'bg-sunken text-fg-tertiary',
                   )}
                 >

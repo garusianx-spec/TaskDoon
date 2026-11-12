@@ -72,7 +72,10 @@ export class UnitOfWork {
           try {
             await effect();
           } catch (error) {
-            this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'after-commit effect failed');
+            this.logger.warn(
+              { error: error instanceof Error ? error.message : String(error) },
+              'after-commit effect failed',
+            );
           }
         }
         return result;

@@ -5,18 +5,32 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { formatJalali, toPersianDigits } from '@taskin/jalali';
 import type { PlatformModerationResult } from '@taskin/contracts';
-import { adminApi } from '@/admin/api';
-import { useAdminMe } from '@/admin/AdminSession';
-import { dateTimeLabel, MEMBER_STATUS, phoneLabel, PROJECT_ROLES, USER_STATUS } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { Fact, Loaded, PageHeader, Panel, TABLE, TableFrame, TD, TH } from '@/components/admin/AdminUi';
-import { ConversationList } from '@/components/admin/ConversationList';
-import { ForcePasswordResetDialog } from '@/components/admin/ForcePasswordResetDialog';
-import { ResetPasswordDialog } from '@/components/admin/ResetPasswordDialog';
-import { SessionsPanel } from '@/components/admin/SessionsPanel';
-import { SuspendUserDialog } from '@/components/admin/SuspendUserDialog';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { useAdminMe } from '@/features/admin/hooks/AdminSession';
+import {
+  dateTimeLabel,
+  MEMBER_STATUS,
+  phoneLabel,
+  PROJECT_ROLES,
+  USER_STATUS,
+} from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { Fact, Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { DataTable, TableFrame } from '@/components/shared/DataTable';
+import { ConversationList } from '@/features/admin/components/ConversationList';
+import { ForcePasswordResetDialog } from '@/features/admin/components/ForcePasswordResetDialog';
+import { ResetPasswordDialog } from '@/features/admin/components/ResetPasswordDialog';
+import { SessionsPanel } from '@/features/admin/components/SessionsPanel';
+import { SuspendUserDialog } from '@/features/admin/components/SuspendUserDialog';
 import { Badge, Button } from '@/components/ui';
-import { ArrowRightIcon, CheckCircleIcon, CrownIcon, KeyIcon, LockIcon, WarningIcon } from '@/components/icons';
+import {
+  ArrowRightIcon,
+  CheckCircleIcon,
+  CrownIcon,
+  KeyIcon,
+  LockIcon,
+  WarningIcon,
+} from '@/components/icons';
 
 /** A person, across the platform: profile, workspaces and exact roles, devices, conversations. */
 export default function AdminUserPage() {
@@ -48,7 +62,10 @@ export default function AdminUserPage() {
 
   return (
     <>
-      <Link href="/admin/users" className="mb-3 inline-flex items-center gap-1 text-body-sm text-fg-tertiary hover:text-fg-primary">
+      <Link
+        href="/admin/users"
+        className="mb-3 inline-flex items-center gap-1 text-body-sm text-fg-tertiary hover:text-fg-primary"
+      >
         <ArrowRightIcon size={16} />
         کاربران
       </Link>
@@ -60,16 +77,28 @@ export default function AdminUserPage() {
               description="پروفایل، ورک‌اسپیس‌ها، نشست‌ها و گفتگوهای این کاربر"
               actions={
                 <>
-                  <Button variant="secondary" iconStart={<KeyIcon size={16} />} onClick={() => setResetOpen(true)}>
+                  <Button
+                    variant="secondary"
+                    iconStart={<KeyIcon size={16} />}
+                    onClick={() => setResetOpen(true)}
+                  >
                     بازنشانی رمز عبور
                   </Button>
                   {profile.id !== self.userId && profile.status !== 'deleted' && (
                     <>
-                      <Button variant="secondary" iconStart={<KeyIcon size={16} />} onClick={() => setModerating('password')}>
+                      <Button
+                        variant="secondary"
+                        iconStart={<KeyIcon size={16} />}
+                        onClick={() => setModerating('password')}
+                      >
                         {profile.passwordResetRequired ? 'لغو اجبار تغییر رمز' : 'اجبار به تغییر رمز عبور'}
                       </Button>
                       {profile.status === 'suspended' ? (
-                        <Button variant="primary" iconStart={<CheckCircleIcon size={16} />} onClick={() => setModerating('suspension')}>
+                        <Button
+                          variant="primary"
+                          iconStart={<CheckCircleIcon size={16} />}
+                          onClick={() => setModerating('suspension')}
+                        >
                           رفع تعلیق
                         </Button>
                       ) : (
@@ -77,7 +106,11 @@ export default function AdminUserPage() {
                           variant="destructive"
                           iconStart={<LockIcon size={16} />}
                           disabled={profile.isPlatformAdmin}
-                          title={profile.isPlatformAdmin ? 'مدیران پلتفرم را نمی‌توان از اینجا معلق کرد.' : undefined}
+                          title={
+                            profile.isPlatformAdmin
+                              ? 'مدیران پلتفرم را نمی‌توان از اینجا معلق کرد.'
+                              : undefined
+                          }
                           onClick={() => setModerating('suspension')}
                         >
                           تعلیق کاربر
@@ -89,12 +122,18 @@ export default function AdminUserPage() {
               }
             />
             {notice && (
-              <p role="status" className="mb-4 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done">
+              <p
+                role="status"
+                className="mb-4 rounded-lg bg-status-done-subtle px-3 py-2 text-body-sm text-status-done"
+              >
                 {notice}
               </p>
             )}
             {profile.status === 'suspended' && (
-              <div role="note" className="mb-4 flex items-start gap-2 rounded-lg border border-secondary bg-sunken px-3 py-2 text-body-sm text-fg-secondary">
+              <div
+                role="note"
+                className="mb-4 flex items-start gap-2 rounded-lg border border-secondary bg-sunken px-3 py-2 text-body-sm text-fg-secondary"
+              >
                 <WarningIcon size={18} className="mt-0.5 shrink-0 text-warning-600" />
                 <span>
                   این حساب معلق است: ورود و همه درخواست‌هایش رد می‌شود.
@@ -125,8 +164,18 @@ export default function AdminUserPage() {
                     'ندارد'
                   )}
                 </Fact>
-                <Fact label="آخرین فعالیت">{profile.lastActiveAt ? dateTimeLabel(profile.lastActiveAt) : '—'}</Fact>
-                <Fact label="نقش پلتفرم">{profile.isPlatformAdmin ? <Badge tone="brand" size="sm">مدیر پلتفرم</Badge> : 'کاربر عادی'}</Fact>
+                <Fact label="آخرین فعالیت">
+                  {profile.lastActiveAt ? dateTimeLabel(profile.lastActiveAt) : '—'}
+                </Fact>
+                <Fact label="نقش پلتفرم">
+                  {profile.isPlatformAdmin ? (
+                    <Badge tone="brand" size="sm">
+                      مدیر پلتفرم
+                    </Badge>
+                  ) : (
+                    'کاربر عادی'
+                  )}
+                </Fact>
                 {profile.status === 'suspended' && profile.suspension && (
                   <>
                     <Fact label="تاریخ تعلیق">{dateTimeLabel(profile.suspension.at)}</Fact>
@@ -143,7 +192,7 @@ export default function AdminUserPage() {
                 <p className="py-2 text-body-sm text-fg-tertiary">عضو هیچ ورک‌اسپیسی نیست.</p>
               ) : (
                 <TableFrame label="عضویت در ورک‌اسپیس‌ها">
-                  <table className={TABLE}>
+                  <DataTable>
                     <thead>
                       <tr>
                         <th className={TH}>ورک‌اسپیس</th>
@@ -158,7 +207,10 @@ export default function AdminUserPage() {
                       {profile.memberships.map((membership) => (
                         <tr key={membership.workspaceId}>
                           <td className={TD}>
-                            <Link href={`/admin/workspaces/${membership.workspaceId}`} className="font-semibold text-fg-brand hover:underline">
+                            <Link
+                              href={`/admin/workspaces/${membership.workspaceId}`}
+                              className="font-semibold text-fg-brand hover:underline"
+                            >
                               {membership.workspaceName}
                             </Link>
                             {membership.workspaceDeleted && (
@@ -181,7 +233,9 @@ export default function AdminUserPage() {
                               {MEMBER_STATUS[membership.memberStatus].label}
                             </Badge>
                           </td>
-                          <td className={TD}>{[membership.department, membership.jobTitle].filter(Boolean).join(' / ') || '—'}</td>
+                          <td className={TD}>
+                            {[membership.department, membership.jobTitle].filter(Boolean).join(' / ') || '—'}
+                          </td>
                           <td className={TD}>
                             {membership.projects.length === 0 ? (
                               '—'
@@ -199,22 +253,44 @@ export default function AdminUserPage() {
                           </td>
                           <td className={TD}>
                             {formatJalali(membership.joinedAt, 'medium')}
-                            {membership.leftAt && <p className="text-caption text-fg-tertiary">خروج: {formatJalali(membership.leftAt, 'medium')}</p>}
+                            {membership.leftAt && (
+                              <p className="text-caption text-fg-tertiary">
+                                خروج: {formatJalali(membership.leftAt, 'medium')}
+                              </p>
+                            )}
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </DataTable>
                 </TableFrame>
               )}
             </Panel>
             <SessionsPanel key={sessionsVersion} userId={profile.id} onChanged={user.reload} />
             <ConversationList userId={profile.id} />
-            <ResetPasswordDialog user={profile} open={resetOpen} onClose={() => setResetOpen(false)} onIssued={user.reload} />
+            <ResetPasswordDialog
+              user={profile}
+              open={resetOpen}
+              onClose={() => setResetOpen(false)}
+              onIssued={user.reload}
+            />
             {moderating === 'suspension' && (
-              <SuspendUserDialog user={profile} mode={profile.status === 'suspended' ? 'unsuspend' : 'suspend'} open onClose={() => setModerating(null)} onDone={onModerated} />
+              <SuspendUserDialog
+                user={profile}
+                mode={profile.status === 'suspended' ? 'unsuspend' : 'suspend'}
+                open
+                onClose={() => setModerating(null)}
+                onDone={onModerated}
+              />
             )}
-            {moderating === 'password' && <ForcePasswordResetDialog user={profile} open onClose={() => setModerating(null)} onDone={onModerated} />}
+            {moderating === 'password' && (
+              <ForcePasswordResetDialog
+                user={profile}
+                open
+                onClose={() => setModerating(null)}
+                onDone={onModerated}
+              />
+            )}
           </>
         )}
       </Loaded>

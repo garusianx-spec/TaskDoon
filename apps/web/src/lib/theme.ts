@@ -93,6 +93,8 @@ export function parseThemeConfig(raw: string | null): ThemeConfig {
  * <html> from localStorage (or the OS preference), so there is never a flash of the wrong
  * palette on hard navigation. Kept as a string because it must run synchronously in <head>,
  * ahead of React hydration.
+ * TODO: Pass the per-request CSP nonce to this bootstrap and Next's scripts before enabling
+ * a nonce-based policy. Verify first paint on both static and dynamic routes.
  */
 export const THEME_BOOTSTRAP_SCRIPT = `(function(){try{
 var k=${JSON.stringify(THEME_STORAGE_KEY)};

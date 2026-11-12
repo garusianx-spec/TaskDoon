@@ -28,7 +28,12 @@ export interface IssuedRefresh {
 }
 
 export type RefreshOutcome =
-  | { readonly kind: 'rotated'; readonly session: SessionRow; readonly user: UserRow; readonly refresh: IssuedRefresh }
+  | {
+      readonly kind: 'rotated';
+      readonly session: SessionRow;
+      readonly user: UserRow;
+      readonly refresh: IssuedRefresh;
+    }
   | { readonly kind: 'invalid' }
   | { readonly kind: 'revoked' }
   /** The account is suspended by a platform admin: its sessions are revoked too, but this says why. */
@@ -54,7 +59,12 @@ export class SessionService {
     private readonly context: RequestContext,
   ) {}
 
-  async create(unit: Unit, userId: string, device: DeviceInfo, amr: readonly AuthMethod[]): Promise<{ session: SessionRow; refresh: IssuedRefresh }> {
+  async create(
+    unit: Unit,
+    userId: string,
+    device: DeviceInfo,
+    amr: readonly AuthMethod[],
+  ): Promise<{ session: SessionRow; refresh: IssuedRefresh }> {
     const now = Date.now();
     const absolute = new Date(now + this.config.env.REFRESH_ABSOLUTE_DAYS * DAY_MS);
     const idle = new Date(Math.min(now + this.config.env.REFRESH_IDLE_DAYS * DAY_MS, absolute.getTime()));
@@ -120,23 +130,44 @@ export class SessionService {
           type: 'notification.sms',
           aggregateType: 'user',
           aggregateId: user.id,
-          payload: { to: user.phone, template: 'alert', tokens: { event: 'نشستی به دلیل استفاده دوباره از توکن بسته شد' } },
+          payload: {
+            to: user.phone,
+            template: 'alert',
+            tokens: { event: 'نشستی به دلیل استفاده دوباره از توکن بسته شد' },
+          },
         });
         return { kind: 'reuse', userId: user.id };
       }
       if (row.tokenExpired) return { kind: 'invalid' };
 
-      const idle = new Date(Math.min(Date.now() + this.config.env.REFRESH_IDLE_DAYS * DAY_MS, session.absoluteExpiresAt.getTime()));
+      const idle = new Date(
+        Math.min(
+          Date.now() + this.config.env.REFRESH_IDLE_DAYS * DAY_MS,
+          session.absoluteExpiresAt.getTime(),
+        ),
+      );
       const refresh = await this.issueRefresh(tx, session.id, idle);
       if (!token.usedAt) {
-        await tx.update(refreshTokens).set({ usedAt: sql`now()` }).where(eq(refreshTokens.id, token.id));
+        await tx
+          .update(refreshTokens)
+          .set({ usedAt: sql`now()` })
+          .where(eq(refreshTokens.id, token.id));
       }
       const [updated] = await tx
         .update(authSessions)
-        .set({ lastActiveAt: sql`now()`, idleExpiresAt: idle, ...(this.context.ip ? { lastIp: this.context.ip } : {}) })
+        .set({
+          lastActiveAt: sql`now()`,
+          idleExpiresAt: idle,
+          ...(this.context.ip ? { lastIp: this.context.ip } : {}),
+        })
         .where(eq(authSessions.id, session.id))
         .returning();
-      await this.audit.write(tx, { action: 'auth.refresh', actorUserId: user.id, resourceType: 'session', resourceId: session.id });
+      await this.audit.write(tx, {
+        action: 'auth.refresh',
+        actorUserId: user.id,
+        resourceType: 'session',
+        resourceId: session.id,
+      });
       return { kind: 'rotated', session: updated ?? session, user, refresh };
     });
   }
@@ -145,7 +176,12 @@ export class SessionService {
    * Revokes sessions inside the caller's unit. After commit, their ids go into the revocation
    * cache (so access tokens die now, not at expiry) and an event tells the gateway to drop sockets.
    */
-  async revoke(unit: Unit, sessionIds: readonly string[], reason: RevokeReason, userId: string): Promise<void> {
+  async revoke(
+    unit: Unit,
+    sessionIds: readonly string[],
+    reason: RevokeReason,
+    userId: string,
+  ): Promise<void> {
     if (sessionIds.length === 0) return;
     const revoked = await unit.tx
       .update(authSessions)
@@ -164,7 +200,12 @@ export class SessionService {
   }
 
   /** Every other live session of the user (password change, "sign out everywhere else"). */
-  async revokeOthers(unit: Unit, userId: string, keepSessionId: string | null, reason: RevokeReason): Promise<number> {
+  async revokeOthers(
+    unit: Unit,
+    userId: string,
+    keepSessionId: string | null,
+    reason: RevokeReason,
+  ): Promise<number> {
     const others = await unit.tx
       .select({ id: authSessions.id })
       .from(authSessions)
@@ -175,7 +216,12 @@ export class SessionService {
           keepSessionId ? ne(authSessions.id, keepSessionId) : undefined,
         ),
       );
-    await this.revoke(unit, others.map((row) => row.id), reason, userId);
+    await this.revoke(
+      unit,
+      others.map((row) => row.id),
+      reason,
+      userId,
+    );
     return others.length;
   }
 

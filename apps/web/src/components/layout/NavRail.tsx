@@ -2,33 +2,27 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ModuleId, PresenceState } from '@taskin/contracts';
-import { MODULES, PRESENCE_OPTIONS } from '@/data/reference';
-import { cn } from '@/lib/cn';
+import type { ModuleId } from '@taskin/contracts';
+import { MODULES } from '@/data/reference';
+import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
-import { Avatar, Button, CountPill, IconButton, Popover, PopoverDivider, Tooltip } from '@/components/ui';
-import { MenuItem, MenuList } from '@/components/ui/Menu';
-import { WorkspaceAvatar } from '@/components/workspace/WorkspaceAvatar';
-import { WorkspaceMenu } from '@/components/workspace/WorkspaceMenu';
-import { ThemePicker } from '@/components/theme/ThemePicker';
-import { QuickCreateMenu } from './QuickCreateMenu';
+import { CountPill, Dropdown, IconButton, Tooltip } from '@/components/ui';
+import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
+import { ProfileMenu } from '@/components/layout/ProfileMenu';
+import { QuickCreateMenu } from '@/components/layout/QuickCreateMenu';
 import {
   AddIcon,
   CalendarIcon,
   HomeIcon,
-  LogoutIcon,
   MessagesIcon,
   NotebookIcon,
   NotificationIcon,
-  PaletteIcon,
   PeopleIcon,
   SettingsIcon,
-  ClockIcon,
-  ShieldIcon,
   TaskSquareIcon,
-  UserIcon,
 } from '@/components/icons';
 
 const MODULE_ICONS: Readonly<Record<ModuleId, typeof HomeIcon>> = {
@@ -58,7 +52,9 @@ export function NavRail() {
 
       <div className="my-2 h-px w-8 bg-gray-200" aria-hidden="true" />
 
-      <h2 id="desktop-navigation-title" className="mb-1 text-caption font-medium text-fg-secondary">منو</h2>
+      <h2 id="desktop-navigation-title" className="mb-1 text-caption font-medium text-fg-secondary">
+        منو
+      </h2>
       <ul aria-labelledby="desktop-navigation-title" className="flex flex-1 flex-col items-center gap-1">
         {MODULES.map((module) => {
           const Icon = MODULE_ICONS[module.id];
@@ -84,7 +80,7 @@ export function NavRail() {
                     <CountPill
                       value={badge}
                       tone="error"
-                      className="absolute -top-1 -end-1 ring-2 ring-rail"
+                      className="absolute -end-1 -top-1 ring-2 ring-rail"
                     />
                   )}
                 </Link>
@@ -95,15 +91,7 @@ export function NavRail() {
       </ul>
 
       <div className="flex flex-col items-center gap-1">
-        <Popover
-          label="انتخاب پوسته"
-          placement="top"
-          align="start"
-          panelClassName="min-w-0 p-3"
-          trigger={<IconButton label="پوسته و رنگ سازمان" icon={<PaletteIcon size={21} />} size="lg" />}
-        >
-          <ThemePicker />
-        </Popover>
+        <ThemeToggle />
 
         <Tooltip content="نقش‌ها و تنظیمات" placement="start">
           <Link
@@ -134,32 +122,11 @@ export function NavRail() {
   );
 }
 
-function WorkspaceSwitcher() {
-  const { activeWorkspace } = useWorkspace();
-  return (
-    <Popover
-      label="تعویض فضای کاری"
-      align="start"
-      haspopup="menu"
-      panelClassName="min-w-72"
-      trigger={
-        <button type="button" className="rounded-xl shadow-xs transition-opacity hover:opacity-90">
-          <WorkspaceAvatar workspace={activeWorkspace} size="md" />
-          <span className="sr-only">{`فضای کاری فعال: ${activeWorkspace.name} — تعویض فضای کاری`}</span>
-        </button>
-      }
-    >
-      {(close) => <WorkspaceMenu close={close} />}
-    </Popover>
-  );
-}
-
 function QuickCreate() {
   return (
-    <Popover
+    <Dropdown
       label="ایجاد سریع"
       align="start"
-      haspopup="menu"
       trigger={
         <IconButton
           label="ایجاد سریع"
@@ -171,7 +138,7 @@ function QuickCreate() {
       }
     >
       {(close) => <QuickCreateMenu close={close} />}
-    </Popover>
+    </Dropdown>
   );
 }
 
@@ -184,9 +151,7 @@ function NotificationsBell() {
     <span className="relative inline-flex">
       <IconButton
         label={
-          unreadNotifications > 0
-            ? `اعلان‌ها — ${formatCount(unreadNotifications)} خوانده‌نشده`
-            : 'اعلان‌ها'
+          unreadNotifications > 0 ? `اعلان‌ها — ${formatCount(unreadNotifications)} خوانده‌نشده` : 'اعلان‌ها'
         }
         icon={<NotificationIcon size={21} />}
         size="lg"
@@ -198,84 +163,9 @@ function NotificationsBell() {
         <CountPill
           value={formatCount(unreadNotifications)}
           tone="error"
-          className="pointer-events-none absolute -top-1 -end-1 ring-2 ring-rail"
+          className="pointer-events-none absolute -end-1 -top-1 ring-2 ring-rail"
         />
       )}
     </span>
-  );
-}
-
-interface ProfileMenuProps {
-  readonly fullName: string;
-  readonly initials: string;
-  readonly jobTitle: string;
-  readonly presence: PresenceState;
-  readonly statusMessage: string;
-}
-
-function ProfileMenu({ fullName, initials, jobTitle, presence, statusMessage }: ProfileMenuProps) {
-  const { open } = useOverlays();
-  const presenceLabel = PRESENCE_OPTIONS.find((option) => option.id === presence)?.label ?? '';
-
-  return (
-    <Popover
-      label="حساب کاربری"
-      placement="top"
-      align="start"
-      panelClassName="min-w-64"
-      trigger={
-        <button type="button" className="mt-1 rounded-full">
-          <Avatar name={fullName} initials={initials} tone="brand" size="md" presence={presence} decorative />
-          <span className="sr-only">{`حساب کاربری — ${fullName}، ${presenceLabel}`}</span>
-        </button>
-      }
-    >
-      {(close) => {
-        // Close first so focus returns to the avatar, then open the dialog, which records
-        // the avatar as the element to hand focus back to when it closes.
-        const run = (action: () => void) => () => {
-          close();
-          action();
-        };
-        return (
-          <>
-            <div className="flex items-center gap-3 px-2.5 py-2">
-              <Avatar name={fullName} initials={initials} tone="brand" size="md" presence={presence} decorative />
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-body-sm font-semibold text-fg-primary">{fullName}</span>
-                <span className="truncate text-micro text-fg-tertiary">
-                  {statusMessage ? `${presenceLabel}، ${statusMessage}` : `${jobTitle}، ${presenceLabel}`}
-                </span>
-              </span>
-            </div>
-            <PopoverDivider />
-            <MenuList>
-              <MenuItem onSelect={run(() => open({ kind: 'profile' }))} icon={<UserIcon size={18} />}>
-                پروفایل من
-              </MenuItem>
-              <MenuItem onSelect={run(() => open({ kind: 'security' }))} icon={<ShieldIcon size={18} />}>
-                امنیت و ورود
-              </MenuItem>
-              <MenuItem onSelect={run(() => open({ kind: 'working-hours' }))} icon={<ClockIcon size={18} />}>
-                ساعات کاری و پاسخ خودکار
-              </MenuItem>
-              <PopoverDivider />
-              <MenuItem
-                onSelect={run(() => open({ kind: 'sign-out' }))}
-                icon={<LogoutIcon size={18} />}
-                tone="danger"
-              >
-                خروج از حساب
-              </MenuItem>
-            </MenuList>
-            <div className="px-1 pt-1">
-              <Button variant="secondary" size="sm" fullWidth onClick={close}>
-                بستن
-              </Button>
-            </div>
-          </>
-        );
-      }}
-    </Popover>
   );
 }

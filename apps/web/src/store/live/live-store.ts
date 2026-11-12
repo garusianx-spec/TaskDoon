@@ -27,11 +27,11 @@ import type {
 } from '@taskin/contracts';
 import { toISODate } from '@taskin/jalali';
 import { api } from '@/api/endpoints';
-import { ApiProblem, http, isProblem, newIdempotencyKey } from '@/api/http';
-import { normalizeDepartmentName } from '@/lib/project-form';
-import { profileNameError } from '@/lib/profile-name';
-import { noteSaveError } from '@/lib/note-form';
-import { codeMessage, problemMessage } from '@/api/messages';
+import { ApiProblem, http, isProblem, newIdempotencyKey } from '@/lib/api-client';
+import { normalizeDepartmentName } from '@/features/board/lib/project-form';
+import { profileNameError } from '@/features/account/lib/profile-name';
+import { noteSaveError } from '@/features/notes/lib/note-form';
+import { codeMessage, problemMessage } from '@/lib/api-problem';
 import {
   activityFromView,
   apiColumnFor,
@@ -59,14 +59,23 @@ import {
   workspaceFromView,
 } from '@/api/mappers';
 import { RealtimeClient, type ConnectionStatus } from '@/api/realtime';
-import { blobFromDataUrl, postForm, uploadFile } from '@/api/uploads';
-import { setFileResolver, type FileDisposition } from '../files';
-import { session } from '@/api/session';
+import { blobFromDataUrl, uploadFile } from '@/api/uploads';
+import { uploadWorkspaceIcon } from '@/features/workspace/api/workspace-icon';
+import { setFileResolver, type FileDisposition } from '@/store/files';
+import { session } from '@/features/auth/api/session';
 import { DEFAULT_PERMISSION_MATRIX, DEPARTMENTS } from '@/data/reference';
-import { LIVE_EMPTY_STATE } from '../initial-state';
+import { LIVE_EMPTY_STATE } from '@/store/initial-state';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 import { broadcastJitter, broadcastTimerDelay } from '@/lib/broadcasts';
-import type { ConversationDraft, PickedFile, ProjectDraft, TaskPatch, VoiceRecording, WorkspaceAction, WorkspaceState } from '../workspace-reducer';
+import type {
+  ConversationDraft,
+  PickedFile,
+  ProjectDraft,
+  TaskPatch,
+  VoiceRecording,
+  WorkspaceAction,
+  WorkspaceState,
+} from '@/store/workspace-reducer';
 
 export type LivePhase = 'restoring' | 'signed-out' | 'loading' | 'no-workspace' | 'ready';
 
@@ -97,7 +106,8 @@ const TYPING_MS = 6_000;
 const NOTE_SAVE_MS = 800;
 const HISTORY_PAGE = 50;
 
-const byPosition = (a: { readonly position: string }, b: { readonly position: string }) => (a.position < b.position ? -1 : a.position > b.position ? 1 : 0);
+const byPosition = (a: { readonly position: string }, b: { readonly position: string }) =>
+  a.position < b.position ? -1 : a.position > b.position ? 1 : 0;
 
 /**
  * The bridge between the reducer the screens were built on and the Taskin API (RFC §12, M4).
@@ -110,7 +120,13 @@ const byPosition = (a: { readonly position: string }, b: { readonly position: st
  *   that arrive while the workspace is still loading wait, and are applied after it.
  */
 export class LiveStore {
-  private status: LiveStatus = { phase: 'restoring', connection: 'offline', user: null, toast: null, broadcasts: [] };
+  private status: LiveStatus = {
+    phase: 'restoring',
+    connection: 'offline',
+    user: null,
+    toast: null,
+    broadcasts: [],
+  };
   private readonly listeners = new Set<Listener>();
   private readonly realtime: RealtimeClient;
   private started = false;
@@ -143,7 +159,10 @@ export class LiveStore {
   private readonly typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly noteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly noteWrites = new Map<string, Promise<void>>();
-  private readonly noteCreateRequests = new Map<string, { readonly body: CreateNoteBody; readonly key: string }>();
+  private readonly noteCreateRequests = new Map<
+    string,
+    { readonly body: CreateNoteBody; readonly key: string }
+  >();
   private typingSentAt = new Map<string, number>();
   /** Signed file links, reused until shortly before they expire. */
   private readonly links = new Map<string, { readonly url: string; readonly expires: number }>();
@@ -176,7 +195,11 @@ export class LiveStore {
         this.patch({ connection });
         if (reconnected) this.scheduleBroadcasts(broadcastJitter());
       },
-      resumeFrom: () => ({ workspaceId: this.workspaceId, conversations: Object.fromEntries(this.lastSeq), lastEventId: this.lastEventId }),
+      resumeFrom: () => ({
+        workspaceId: this.workspaceId,
+        conversations: Object.fromEntries(this.lastSeq),
+        lastEventId: this.lastEventId,
+      }),
       onResumed: (result) => {
         for (const [conversationId, resumed] of Object.entries(result.conversations)) {
           if ('gap' in resumed) {
@@ -197,10 +220,14 @@ export class LiveStore {
         const adopted = current.sessionId !== this.broadcastSessionId;
         this.broadcastSessionId = current.sessionId;
         if (adopted && this.broadcastWatchers > 0) void this.refreshBroadcasts();
-      }
-      else {
+      } else {
         this.broadcastSessionId = null;
-        if (this.status.phase === 'ready' || this.status.phase === 'loading' || this.status.phase === 'no-workspace') this.ended();
+        if (
+          this.status.phase === 'ready' ||
+          this.status.phase === 'loading' ||
+          this.status.phase === 'no-workspace'
+        )
+          this.ended();
       }
     });
   }
@@ -282,7 +309,8 @@ export class LiveStore {
     const request = (async () => {
       try {
         const result = await api.broadcasts.active();
-        if (generation !== this.broadcastGeneration || this.broadcastWatchers === 0 || !session.current) return;
+        if (generation !== this.broadcastGeneration || this.broadcastWatchers === 0 || !session.current)
+          return;
         this.patch({ broadcasts: result.items });
         this.scheduleBroadcasts(broadcastTimerDelay(result.nextChangeAt, result.serverNow));
       } catch {
@@ -392,18 +420,27 @@ export class LiveStore {
       this.patch({ user: me.user });
       // Workspaces the platform's administrators suspended are listed (and marked) but never opened.
       const usable = me.workspaces.filter((entry) => !entry.suspended);
-      if (usable.length < me.workspaces.length && (usable.length === 0 || me.workspaces.some((entry) => entry.suspended && entry.id === preferred))) {
+      if (
+        usable.length < me.workspaces.length &&
+        (usable.length === 0 || me.workspaces.some((entry) => entry.suspended && entry.id === preferred))
+      ) {
         this.notify(codeMessage('WORKSPACE_SUSPENDED') ?? 'این فضای کاری معلق شده است.');
       }
       if (usable.length === 0) {
         this.realtime.disconnect();
         this.realtime.connect(null);
-        this.apply({ type: 'sync/merge', patch: { ...LIVE_EMPTY_STATE, meId: me.user.id, users: [meToUser(me.user)] } });
+        this.apply({
+          type: 'sync/merge',
+          patch: { ...LIVE_EMPTY_STATE, meId: me.user.id, users: [meToUser(me.user)] },
+        });
         this.patch({ phase: 'no-workspace' });
         return;
       }
       const remembered = readRemembered();
-      const target = usable.find((entry) => entry.id === preferred) ?? usable.find((entry) => entry.id === remembered) ?? usable[0];
+      const target =
+        usable.find((entry) => entry.id === preferred) ??
+        usable.find((entry) => entry.id === remembered) ??
+        usable[0];
       if (!target) return;
       if (target.id !== this.workspaceId) this.reset();
       this.workspaceId = target.id;
@@ -415,7 +452,25 @@ export class LiveStore {
       const today = new Date();
       const from = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 45));
       const to = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 54));
-      const [view, members, departments, projects, workflow, cards, conversations, inbox, activity, calendar, invitations, roles, categories, notes, sessions, scheduled, hours] = await Promise.all([
+      const [
+        view,
+        members,
+        departments,
+        projects,
+        workflow,
+        cards,
+        conversations,
+        inbox,
+        activity,
+        calendar,
+        invitations,
+        roles,
+        categories,
+        notes,
+        sessions,
+        scheduled,
+        hours,
+      ] = await Promise.all([
         api.workspaces.get(w),
         api.workspaces.members(w, true),
         optional(api.departments.list(w), []),
@@ -423,7 +478,11 @@ export class LiveStore {
         api.workflow.list(w),
         api.tasks.all(w),
         optional(api.conversations.list(w), []),
-        optional(api.me.notifications({ workspaceId: w, limit: 100 }), { items: [], nextCursor: null, unreadCount: 0 }),
+        optional(api.me.notifications({ workspaceId: w, limit: 100 }), {
+          items: [],
+          nextCursor: null,
+          unreadCount: 0,
+        }),
         optional(api.activity(w), { items: [], nextCursor: null }),
         optional(api.calendar.range(w, from, to), null),
         optional(api.workspaces.invitations(w), []),
@@ -438,12 +497,19 @@ export class LiveStore {
 
       this.departments = new Map(departments.map((department) => [department.id, department.name]));
       const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
-      const users = members.filter((member) => member.status === 'active').map((member) => memberToUser(member, departmentName));
+      const users = members
+        .filter((member) => member.status === 'active')
+        .map((member) => memberToUser(member, departmentName));
       // Removed members are still named on what they left behind (as former members).
-      const formerUsers = members.filter((member) => member.status === 'left').map((member) => memberToUser(member, departmentName));
-      const nameOf = (userId: string) => [...users, ...formerUsers].find((user) => user.id === userId)?.fullName;
+      const formerUsers = members
+        .filter((member) => member.status === 'left')
+        .map((member) => memberToUser(member, departmentName));
+      const nameOf = (userId: string) =>
+        [...users, ...formerUsers].find((user) => user.id === userId)?.fullName;
       const columns = columnsFromWorkflows(workflow);
-      const columnOrder = new Map(workflow.flatMap((view) => view.columns.map((column) => [column.id, column.position] as const)));
+      const columnOrder = new Map(
+        workflow.flatMap((view) => view.columns.map((column) => [column.id, column.position] as const)),
+      );
       const orderedCards = [...cards].sort((a, b) => {
         const byColumn = (columnOrder.get(a.columnId) ?? '').localeCompare(columnOrder.get(b.columnId) ?? '');
         return byColumn !== 0 ? byColumn : byPosition(a, b);
@@ -453,7 +519,8 @@ export class LiveStore {
       for (const note of notes) this.noteVersions.set(note.id, note.version);
       const mine = members.find((member) => member.userId === me.user.id);
       const conversationList = conversations.map((entry) => conversationFromView(entry, me.user.id, nameOf));
-      for (const entry of conversations) this.lastSeq.set(entry.id, Math.max(this.lastSeq.get(entry.id) ?? 0, entry.lastSeq));
+      for (const entry of conversations)
+        this.lastSeq.set(entry.id, Math.max(this.lastSeq.get(entry.id) ?? 0, entry.lastSeq));
       const state = this.getState();
       const keepConversation = conversationList.some((entry) => entry.id === state.activeConversationId);
       this.roleIds = new Map(roles.map((role) => [role.key, { id: role.id, version: role.version }]));
@@ -468,8 +535,12 @@ export class LiveStore {
           formerUsers,
           // Read from the server when «آرشیو / سطل زباله» opens.
           projectTrash: [],
-          projects: projects.filter((project) => !project.archived).map((project) => projectFromView(project, departmentName)),
-          workspaces: me.workspaces.map((entry) => (entry.id === w ? workspaceFromView(view) : workspaceFromMe(entry, me.user.id))),
+          projects: projects
+            .filter((project) => !project.archived)
+            .map((project) => projectFromView(project, departmentName)),
+          workspaces: me.workspaces.map((entry) =>
+            entry.id === w ? workspaceFromView(view) : workspaceFromMe(entry, me.user.id),
+          ),
           activeWorkspaceId: w,
           parkedWorkspaces: {},
           boardColumns: columns,
@@ -479,16 +550,27 @@ export class LiveStore {
           messages: [
             ...conversations.flatMap((entry) => (entry.lastMessage ? [previewMessage(entry, nameOf)] : [])),
             // Unsent messages of this member's stay, with their «ارسال دوباره», through a re-read.
-            ...state.messages.filter((message) => message.failed && conversations.some((entry) => entry.id === message.conversationId)),
+            ...state.messages.filter(
+              (message) =>
+                message.failed && conversations.some((entry) => entry.id === message.conversationId),
+            ),
           ],
-          unreadByConversation: Object.fromEntries(conversations.map((entry) => [entry.id, entry.unreadCount])),
+          unreadByConversation: Object.fromEntries(
+            conversations.map((entry) => [entry.id, entry.unreadCount]),
+          ),
           pinnedConversationIds: conversationList.filter((entry) => entry.pinned).map((entry) => entry.id),
           mutedConversationIds: conversationList.filter((entry) => entry.muted).map((entry) => entry.id),
-          activeConversationId: keepConversation ? state.activeConversationId : (conversationList[0]?.id ?? ''),
-          notifications: inbox.items.map(notificationFromView).filter((item): item is AppNotification => item !== null),
+          activeConversationId: keepConversation
+            ? state.activeConversationId
+            : (conversationList[0]?.id ?? ''),
+          notifications: inbox.items
+            .map(notificationFromView)
+            .filter((item): item is AppNotification => item !== null),
           activity: activity.items.map(activityFromView),
           calendarEvents: calendar ? calendar.events.map(eventFromView) : [],
-          invitations: invitations.filter((entry) => entry.status === 'pending').map((entry) => invitationFromView(entry, departmentName)),
+          invitations: invitations
+            .filter((entry) => entry.status === 'pending')
+            .map((entry) => invitationFromView(entry, departmentName)),
           permissions: roles.length > 0 ? matrixFrom(roles) : DEFAULT_PERMISSION_MATRIX,
           noteCategories: [...categories].sort((a, b) => a.position - b.position).map(noteCategoryFromView),
           notes: notes.map(noteFromView),
@@ -587,18 +669,48 @@ export class LiveStore {
   async sharedMedia(conversationId: string): Promise<Message[]> {
     if (isLocal(conversationId)) return [];
     const tabs = ['files', 'media', 'audio', 'links'] as const;
-    const pages = await Promise.all(tabs.map((tab) => api.conversations.media(this.workspaceId, conversationId, tab)));
+    const pages = await Promise.all(
+      tabs.map((tab) => api.conversations.media(this.workspaceId, conversationId, tab)),
+    );
     const messages: Message[] = [];
     pages.forEach((page, index) => {
       const tab = tabs[index];
       page.items.forEach((item, position) => {
-        const base = { conversationId, authorId: item.authorId ?? '', sentAt: item.createdAt, replyToId: null, reactions: [], edited: false, linkedTaskId: null, readByIds: [] };
+        const base = {
+          conversationId,
+          authorId: item.authorId ?? '',
+          sentAt: item.createdAt,
+          replyToId: null,
+          reactions: [],
+          edited: false,
+          linkedTaskId: null,
+          readByIds: [],
+        };
         if (tab === 'links') {
-          if (item.url) messages.push({ ...base, id: `${item.messageId}~link~${position}`, body: { kind: 'text', text: item.url } });
+          if (item.url)
+            messages.push({
+              ...base,
+              id: `${item.messageId}~link~${position}`,
+              body: { kind: 'text', text: item.url },
+            });
         } else if (tab === 'audio' && item.durationSec !== null) {
-          messages.push({ ...base, id: item.messageId, body: { kind: 'voice', durationSec: item.durationSec, waveform: [], src: null, ...(item.attachment ? { attachmentId: item.attachment.id } : {}) } });
+          messages.push({
+            ...base,
+            id: item.messageId,
+            body: {
+              kind: 'voice',
+              durationSec: item.durationSec,
+              waveform: [],
+              src: null,
+              ...(item.attachment ? { attachmentId: item.attachment.id } : {}),
+            },
+          });
         } else if (item.attachment) {
-          messages.push({ ...base, id: item.messageId, body: { kind: 'file', attachment: attachmentFromView(item.attachment), caption: null } });
+          messages.push({
+            ...base,
+            id: item.messageId,
+            body: { kind: 'file', attachment: attachmentFromView(item.attachment), caption: null },
+          });
         }
       });
     });
@@ -630,7 +742,13 @@ export class LiveStore {
         void this.addColumn(prev, next, action.title, action.tone);
         return;
       case 'rename-board-column':
-        this.run(() => api.workflow.updateColumn(this.workspaceId, action.columnId, { title: action.title.trim() }).then((view) => this.applyWorkflow(view)), () => this.refreshWorkflow());
+        this.run(
+          () =>
+            api.workflow
+              .updateColumn(this.workspaceId, action.columnId, { title: action.title.trim() })
+              .then((view) => this.applyWorkflow(view)),
+          () => this.refreshWorkflow(),
+        );
         return;
       case 'remove-board-column':
         this.run(
@@ -646,15 +764,29 @@ export class LiveStore {
         return;
       case 'toggle-task-star': {
         const starred = next.tasks.find((task) => task.id === action.taskId)?.starred ?? false;
-        this.run(async () => api.tasks.star(this.workspaceId, await this.serverId(action.taskId), starred), () => this.refreshTask(action.taskId));
+        this.run(
+          async () => api.tasks.star(this.workspaceId, await this.serverId(action.taskId), starred),
+          () => this.refreshTask(action.taskId),
+        );
         return;
       }
       case 'toggle-subtask': {
-        const done = next.tasks.find((task) => task.id === action.taskId)?.subtasks.find((subtask) => subtask.id === action.subtaskId)?.done ?? false;
-        this.run(async () => {
-          await api.tasks.updateSubtask(this.workspaceId, await this.serverId(action.taskId), action.subtaskId, { done });
-          await this.refreshTask(action.taskId);
-        }, () => this.refreshTask(action.taskId));
+        const done =
+          next.tasks
+            .find((task) => task.id === action.taskId)
+            ?.subtasks.find((subtask) => subtask.id === action.subtaskId)?.done ?? false;
+        this.run(
+          async () => {
+            await api.tasks.updateSubtask(
+              this.workspaceId,
+              await this.serverId(action.taskId),
+              action.subtaskId,
+              { done },
+            );
+            await this.refreshTask(action.taskId);
+          },
+          () => this.refreshTask(action.taskId),
+        );
         return;
       }
       case 'add-subtask': {
@@ -667,20 +799,38 @@ export class LiveStore {
         void settled.then(() => {
           if (this.subtaskAdds.get(action.taskId) === settled) this.subtaskAdds.delete(action.taskId);
         });
-        this.run(() => added, () => this.refreshTask(action.taskId));
+        this.run(
+          () => added,
+          () => this.refreshTask(action.taskId),
+        );
         return;
       }
       case 'remove-subtask':
-        this.run(async () => {
-          await api.tasks.removeSubtask(this.workspaceId, await this.serverId(action.taskId), action.subtaskId);
-          await this.refreshTask(action.taskId);
-        }, () => this.refreshTask(action.taskId));
+        this.run(
+          async () => {
+            await api.tasks.removeSubtask(
+              this.workspaceId,
+              await this.serverId(action.taskId),
+              action.subtaskId,
+            );
+            await this.refreshTask(action.taskId);
+          },
+          () => this.refreshTask(action.taskId),
+        );
         return;
       case 'add-task-comment':
-        this.run(async () => {
-          await api.tasks.comment(this.workspaceId, await this.serverId(action.taskId), action.body, action.replyToId);
-          await this.refreshTask(action.taskId);
-        }, () => this.refreshTask(action.taskId));
+        this.run(
+          async () => {
+            await api.tasks.comment(
+              this.workspaceId,
+              await this.serverId(action.taskId),
+              action.body,
+              action.replyToId,
+            );
+            await this.refreshTask(action.taskId);
+          },
+          () => this.refreshTask(action.taskId),
+        );
         return;
       case 'create-task':
         void this.createTask(action.draft, prev, next).catch(() => undefined);
@@ -690,7 +840,10 @@ export class LiveStore {
           async () => {
             const { id, projectId } = await this.agileTarget(action.taskId);
             const note = action.note.trim();
-            await api.agile.logWork(this.workspaceId, projectId, id, { durationMinutes: Math.round(action.minutes), ...(note ? { description: note } : {}) });
+            await api.agile.logWork(this.workspaceId, projectId, id, {
+              durationMinutes: Math.round(action.minutes),
+              ...(note ? { description: note } : {}),
+            });
             await Promise.all([this.refreshAgile(id), this.refreshTask(id)]);
           },
           () => Promise.all([this.refreshAgile(action.taskId), this.refreshTask(action.taskId)]),
@@ -709,15 +862,26 @@ export class LiveStore {
         return;
       case 'add-task-link': {
         // The reducer refuses what the rules refuse; only a link it added goes to the server.
-        if ((next.taskLinks?.[action.taskId]?.length ?? 0) === (prev.taskLinks?.[action.taskId]?.length ?? 0)) return;
+        if ((next.taskLinks?.[action.taskId]?.length ?? 0) === (prev.taskLinks?.[action.taskId]?.length ?? 0))
+          return;
         this.run(
           async () => {
             const { id, projectId } = await this.agileTarget(action.taskId);
             const other = await this.serverId(action.otherTaskId);
             await api.agile.link(this.workspaceId, projectId, id, { targetTaskId: other, type: action.kind });
-            await Promise.all([this.refreshAgile(id), this.refreshAgile(other, true), this.refreshTask(id), this.refreshTask(other)]);
+            await Promise.all([
+              this.refreshAgile(id),
+              this.refreshAgile(other, true),
+              this.refreshTask(id),
+              this.refreshTask(other),
+            ]);
           },
-          () => Promise.all([this.refreshAgile(action.taskId), this.refreshTask(action.taskId), this.refreshTask(action.otherTaskId)]),
+          () =>
+            Promise.all([
+              this.refreshAgile(action.taskId),
+              this.refreshTask(action.taskId),
+              this.refreshTask(action.otherTaskId),
+            ]),
         );
         return;
       }
@@ -728,9 +892,19 @@ export class LiveStore {
           async () => {
             const { id, projectId } = await this.agileTarget(action.taskId);
             await api.agile.unlink(this.workspaceId, projectId, id, link.id);
-            await Promise.all([this.refreshAgile(id), this.refreshAgile(link.taskId, true), this.refreshTask(id), this.refreshTask(link.taskId)]);
+            await Promise.all([
+              this.refreshAgile(id),
+              this.refreshAgile(link.taskId, true),
+              this.refreshTask(id),
+              this.refreshTask(link.taskId),
+            ]);
           },
-          () => Promise.all([this.refreshAgile(action.taskId), this.refreshTask(action.taskId), this.refreshTask(link.taskId)]),
+          () =>
+            Promise.all([
+              this.refreshAgile(action.taskId),
+              this.refreshTask(action.taskId),
+              this.refreshTask(link.taskId),
+            ]),
         );
         return;
       }
@@ -744,7 +918,15 @@ export class LiveStore {
         void this.removeTaskAttachment(action.taskId, action.attachmentId).catch(() => undefined);
         return;
       case 'send-file':
-        this.sendFile(action.conversationId, action.messageId, action.picked, action.caption, action.replyToId, action.asFile ?? false, next);
+        this.sendFile(
+          action.conversationId,
+          action.messageId,
+          action.picked,
+          action.caption,
+          action.replyToId,
+          action.asFile ?? false,
+          next,
+        );
         return;
       case 'resend-message':
         this.unsent.get(action.messageId)?.retry();
@@ -761,35 +943,50 @@ export class LiveStore {
         this.markRead(action.conversationId);
         return;
       case 'create-project':
-        if (prev.projects.some((project) => project.id === action.projectId) || !next.projects.some((project) => project.id === action.projectId)) return;
-        void this.track(action.projectId, () => this.createProject(action.draft, undefined, action.projectId)).catch(() => undefined);
+        if (
+          prev.projects.some((project) => project.id === action.projectId) ||
+          !next.projects.some((project) => project.id === action.projectId)
+        )
+          return;
+        void this.track(action.projectId, () =>
+          this.createProject(action.draft, undefined, action.projectId),
+        ).catch(() => undefined);
         return;
       case 'create-conversation':
         this.createConversation(action.draft, prev, next);
         return;
       case 'delete-project':
-        this.run(async () => {
-          await api.projects.remove(this.workspaceId, await this.serverId(action.projectId));
-          // Its channel went with it: the server archived it.
-          await this.refreshProjectTrash();
-        }, () => this.load(this.workspaceId, true));
+        this.run(
+          async () => {
+            await api.projects.remove(this.workspaceId, await this.serverId(action.projectId));
+            // Its channel went with it: the server archived it.
+            await this.refreshProjectTrash();
+          },
+          () => this.load(this.workspaceId, true),
+        );
         return;
       case 'restore-project':
-        this.run(async () => {
-          await api.projects.restore(this.workspaceId, action.projectId);
-          // Its tasks, board and channel come back from the server.
-          await this.load(this.workspaceId, true);
-        }, () => this.load(this.workspaceId, true));
+        this.run(
+          async () => {
+            await api.projects.restore(this.workspaceId, action.projectId);
+            // Its tasks, board and channel come back from the server.
+            await this.load(this.workspaceId, true);
+          },
+          () => this.load(this.workspaceId, true),
+        );
         return;
       case 'load-project-trash':
         void this.refreshProjectTrash();
         return;
       case 'remove-member':
-        this.run(async () => {
-          // Removing someone is a step-up action: the admin password confirms it.
-          if (action.password) await session.stepUp(action.password);
-          await api.workspaces.removeMember(this.workspaceId, action.userId);
-        }, () => this.load(this.workspaceId, true));
+        this.run(
+          async () => {
+            // Removing someone is a step-up action: the admin password confirms it.
+            if (action.password) await session.stepUp(action.password);
+            await api.workspaces.removeMember(this.workspaceId, action.userId);
+          },
+          () => this.load(this.workspaceId, true),
+        );
         return;
       case 'send-message':
         this.sendMessage(action.conversationId, action.text, action.replyToId, prev, next);
@@ -800,15 +997,23 @@ export class LiveStore {
         this.track(
           action.scheduledId,
           async () => {
-            const view = await api.scheduled.create(this.workspaceId, await this.serverId(action.conversationId), {
-              clientMsgId,
-              kind: 'text',
-              text: action.text,
-              scheduledAt: action.scheduledAt,
-              ...(action.replyToId ? { replyToId: await this.serverId(action.replyToId) } : {}),
-            });
+            const view = await api.scheduled.create(
+              this.workspaceId,
+              await this.serverId(action.conversationId),
+              {
+                clientMsgId,
+                kind: 'text',
+                text: action.text,
+                scheduledAt: action.scheduledAt,
+                ...(action.replyToId ? { replyToId: await this.serverId(action.replyToId) } : {}),
+              },
+            );
             this.scheduling.delete(clientMsgId);
-            this.apply({ type: 'sync/upsert-scheduled', scheduled: scheduledFromView(view), replaceId: action.scheduledId });
+            this.apply({
+              type: 'sync/upsert-scheduled',
+              scheduled: scheduledFromView(view),
+              replaceId: action.scheduledId,
+            });
             return view.id;
           },
           () => {
@@ -819,21 +1024,35 @@ export class LiveStore {
         return;
       }
       case 'cancel-scheduled-message':
-        this.run(async () => api.scheduled.cancel(this.workspaceId, await this.serverId(action.scheduledId)), () => this.refreshScheduled());
+        this.run(
+          async () => api.scheduled.cancel(this.workspaceId, await this.serverId(action.scheduledId)),
+          () => this.refreshScheduled(),
+        );
         return;
       case 'send-scheduled-now': {
         const scheduled = prev.scheduledMessages.find((entry) => entry.id === action.scheduledId);
-        const clientMsgId = scheduled?.clientMsgId ?? [...this.scheduling].find(([, localId]) => localId === action.scheduledId)?.[0];
+        const clientMsgId =
+          scheduled?.clientMsgId ??
+          [...this.scheduling].find(([, localId]) => localId === action.scheduledId)?.[0];
         if (clientMsgId) this.sendingNow.set(clientMsgId, action.messageId);
         this.run(
           async () => {
-            const view = await api.scheduled.sendNow(this.workspaceId, await this.serverId(action.scheduledId));
+            const view = await api.scheduled.sendNow(
+              this.workspaceId,
+              await this.serverId(action.scheduledId),
+            );
             // The stored message replaces the local copy; its message:new may have come first.
             const state = this.getState();
             const local = state.messages.find((message) => message.id === action.messageId);
             if (!view.messageId || !local) return;
-            if (state.messages.some((message) => message.id === view.messageId)) this.apply({ type: 'sync/remove-message', messageId: action.messageId });
-            else this.apply({ type: 'sync/upsert-messages', messages: [{ ...local, id: view.messageId }], replaceId: action.messageId });
+            if (state.messages.some((message) => message.id === view.messageId))
+              this.apply({ type: 'sync/remove-message', messageId: action.messageId });
+            else
+              this.apply({
+                type: 'sync/upsert-messages',
+                messages: [{ ...local, id: view.messageId }],
+                replaceId: action.messageId,
+              });
           },
           async () => {
             if (clientMsgId) this.sendingNow.delete(clientMsgId);
@@ -844,10 +1063,13 @@ export class LiveStore {
         return;
       }
       case 'update-working-hours':
-        this.run(async () => {
-          const view = await api.workingHours.put(this.workspaceId, action.hours);
-          this.apply({ type: 'sync/merge', patch: { workingHours: workingHoursFromView(view) } });
-        }, () => this.refreshWorkingHours());
+        this.run(
+          async () => {
+            const view = await api.workingHours.put(this.workspaceId, action.hours);
+            this.apply({ type: 'sync/merge', patch: { workingHours: workingHoursFromView(view) } });
+          },
+          () => this.refreshWorkingHours(),
+        );
         return;
       case 'toggle-reaction':
         void this.react(action.messageId, action.emoji, next);
@@ -856,25 +1078,44 @@ export class LiveStore {
         this.markRead(action.conversationId);
         return;
       case 'toggle-conversation-pin':
-        this.run(async () => {
-          const conversationId = await this.serverId(action.conversationId);
-          await api.conversations.updateMine(this.workspaceId, conversationId, { pinned: next.pinnedConversationIds.includes(action.conversationId) });
-        }, () => this.load(this.workspaceId, true));
+        this.run(
+          async () => {
+            const conversationId = await this.serverId(action.conversationId);
+            await api.conversations.updateMine(this.workspaceId, conversationId, {
+              pinned: next.pinnedConversationIds.includes(action.conversationId),
+            });
+          },
+          () => this.load(this.workspaceId, true),
+        );
         return;
       case 'toggle-conversation-mute':
-        this.run(async () => {
-          const conversationId = await this.serverId(action.conversationId);
-          const muted = next.mutedConversationIds.includes(action.conversationId);
-          await api.conversations.updateMine(this.workspaceId, conversationId, { mutedUntil: muted ? new Date(Date.now() + 10 * 365 * 86_400_000).toISOString() : null });
-        }, () => this.load(this.workspaceId, true));
+        this.run(
+          async () => {
+            const conversationId = await this.serverId(action.conversationId);
+            const muted = next.mutedConversationIds.includes(action.conversationId);
+            await api.conversations.updateMine(this.workspaceId, conversationId, {
+              mutedUntil: muted ? new Date(Date.now() + 10 * 365 * 86_400_000).toISOString() : null,
+            });
+          },
+          () => this.load(this.workspaceId, true),
+        );
         return;
       case 'create-calendar-event': {
-        const local = next.calendarEvents.find((event) => !prev.calendarEvents.some((entry) => entry.id === event.id));
+        const local = next.calendarEvents.find(
+          (event) => !prev.calendarEvents.some((entry) => entry.id === event.id),
+        );
         if (!local) return;
-        this.run(async () => {
-          const created = await api.calendar.create(this.workspaceId, { ...action.draft, projectId: action.draft.projectId, attendeeIds: action.draft.attendeeIds });
-          this.apply({ type: 'sync/upsert-event', event: eventFromView(created), replaceId: local.id });
-        }, () => this.load(this.workspaceId, true));
+        this.run(
+          async () => {
+            const created = await api.calendar.create(this.workspaceId, {
+              ...action.draft,
+              projectId: action.draft.projectId,
+              attendeeIds: action.draft.attendeeIds,
+            });
+            this.apply({ type: 'sync/upsert-event', event: eventFromView(created), replaceId: local.id });
+          },
+          () => this.load(this.workspaceId, true),
+        );
         return;
       }
       case 'create-note':
@@ -890,49 +1131,80 @@ export class LiveStore {
         this.noteTimers.delete(action.noteId);
         // A draft never stored has nothing to delete on the server.
         if (this.isNoteDraft(action.noteId)) return;
-        this.run(async () => api.notes.remove(this.workspaceId, await this.serverId(action.noteId)), () => this.load(this.workspaceId, true));
+        this.run(
+          async () => api.notes.remove(this.workspaceId, await this.serverId(action.noteId)),
+          () => this.load(this.workspaceId, true),
+        );
         return;
       case 'create-note-category':
         if (!next.noteCategories.some((category) => category.id === action.categoryId)) return;
         this.track(action.categoryId, async () => {
           const created = await api.notes.createCategory(this.workspaceId, action.label.trim());
-          this.apply({ type: 'sync/upsert-note-category', category: noteCategoryFromView(created), replaceId: action.categoryId });
+          this.apply({
+            type: 'sync/upsert-note-category',
+            category: noteCategoryFromView(created),
+            replaceId: action.categoryId,
+          });
           return created.id;
         });
         return;
       case 'delete-note-category':
         if (next.noteCategories.some((category) => category.id === action.categoryId)) return;
-        this.run(async () => {
-          await api.notes.removeCategory(this.workspaceId, await this.serverId(action.categoryId));
-          // Its notes were filed in no notebook, each with a new version: autosave needs them.
-          for (const note of await api.notes.all(this.workspaceId)) this.noteVersions.set(note.id, note.version);
-        }, () => this.load(this.workspaceId, true));
+        this.run(
+          async () => {
+            await api.notes.removeCategory(this.workspaceId, await this.serverId(action.categoryId));
+            // Its notes were filed in no notebook, each with a new version: autosave needs them.
+            for (const note of await api.notes.all(this.workspaceId))
+              this.noteVersions.set(note.id, note.version);
+          },
+          () => this.load(this.workspaceId, true),
+        );
         return;
       case 'mark-notification-read':
-        if (prev.notifications.find((notification) => notification.id === action.notificationId)?.read) return;
+        if (prev.notifications.find((notification) => notification.id === action.notificationId)?.read)
+          return;
         this.run(() => api.me.markNotificationsRead({ ids: [action.notificationId] }));
         return;
       case 'mark-all-notifications-read':
         this.run(() => api.me.markNotificationsRead({ all: true, workspaceId: this.workspaceId }));
         return;
       case 'invite-members': {
-        const created = next.invitations.filter((invitation) => !prev.invitations.some((entry) => entry.id === invitation.id));
+        const created = next.invitations.filter(
+          (invitation) => !prev.invitations.some((entry) => entry.id === invitation.id),
+        );
         if (created.length === 0) return;
-        this.run(async () => {
-          const result = await api.workspaces.invite(this.workspaceId, {
-            recipients: created.map(({ address, channel }) => ({ address, channel })),
-            role: action.draft.role,
-            message: action.draft.message,
-          });
-          if (result.rejected.length > 0) this.notify(`${result.rejected.length} دعوت‌نامه ارسال نشد (عضو فعلی، دعوت تکراری یا نشانی نامعتبر).`);
-          const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
-          const pending = await api.workspaces.invitations(this.workspaceId);
-          this.apply({ type: 'sync/merge', patch: { invitations: pending.filter((entry) => entry.status === 'pending').map((entry) => invitationFromView(entry, departmentName)) } });
-        }, () => this.load(this.workspaceId, true));
+        this.run(
+          async () => {
+            const result = await api.workspaces.invite(this.workspaceId, {
+              recipients: created.map(({ address, channel }) => ({ address, channel })),
+              role: action.draft.role,
+              message: action.draft.message,
+            });
+            if (result.rejected.length > 0)
+              this.notify(
+                `${result.rejected.length} دعوت‌نامه ارسال نشد (عضو فعلی، دعوت تکراری یا نشانی نامعتبر).`,
+              );
+            const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
+            const pending = await api.workspaces.invitations(this.workspaceId);
+            this.apply({
+              type: 'sync/merge',
+              patch: {
+                invitations: pending
+                  .filter((entry) => entry.status === 'pending')
+                  .map((entry) => invitationFromView(entry, departmentName)),
+              },
+            });
+          },
+          () => this.load(this.workspaceId, true),
+        );
         return;
       }
       case 'revoke-invitation':
-        this.run(async () => api.workspaces.revokeInvitation(this.workspaceId, await this.serverId(action.invitationId)), () => this.load(this.workspaceId, true));
+        this.run(
+          async () =>
+            api.workspaces.revokeInvitation(this.workspaceId, await this.serverId(action.invitationId)),
+          () => this.load(this.workspaceId, true),
+        );
         return;
       case 'update-profile': {
         const { presence, statusMessage } = action.profile;
@@ -942,10 +1214,16 @@ export class LiveStore {
         return;
       }
       case 'revoke-login-session':
-        this.run(() => api.sessions.revoke(action.sessionId), () => this.refreshSessions());
+        this.run(
+          () => api.sessions.revoke(action.sessionId),
+          () => this.refreshSessions(),
+        );
         return;
       case 'revoke-other-login-sessions':
-        this.run(() => api.sessions.revokeOthers(), () => this.refreshSessions());
+        this.run(
+          () => api.sessions.revokeOthers(),
+          () => this.refreshSessions(),
+        );
         return;
       case 'switch-workspace':
         if (this.getState().workspaces.find((entry) => entry.id === action.workspaceId)?.suspended) {
@@ -955,26 +1233,34 @@ export class LiveStore {
         void this.load(action.workspaceId);
         return;
       case 'create-workspace':
-        this.run(async () => {
-          if (action.adminPassword) await session.setPassword(action.adminPassword);
-          const iconUploadKey = action.draft.iconUrl ? await this.uploadIcon(action.draft.iconUrl) : undefined;
-          const created = await api.workspaces.create({
-            name: action.draft.name.trim(),
-            description: action.draft.description.trim(),
-            tone: action.draft.tone,
-            ...(iconUploadKey ? { iconUploadKey } : {}),
-          });
-          await this.load(created.id);
-        }, () => this.load(prev.activeWorkspaceId));
+        this.run(
+          async () => {
+            if (action.adminPassword) await session.setPassword(action.adminPassword);
+            const iconUploadKey = action.draft.iconUrl
+              ? await uploadWorkspaceIcon(await blobFromDataUrl(action.draft.iconUrl))
+              : undefined;
+            const created = await api.workspaces.create({
+              name: action.draft.name.trim(),
+              description: action.draft.description.trim(),
+              tone: action.draft.tone,
+              ...(iconUploadKey ? { iconUploadKey } : {}),
+            });
+            await this.load(created.id);
+          },
+          () => this.load(prev.activeWorkspaceId),
+        );
         return;
       case 'delete-workspace': {
         const workspace = prev.workspaces.find((entry) => entry.id === action.workspaceId);
         if (!workspace || next.workspaces.length === prev.workspaces.length) return;
-        this.run(async () => {
-          if (action.password) await session.stepUp(action.password);
-          await api.workspaces.remove(workspace.id, workspace.name);
-          await this.load();
-        }, () => this.load(prev.activeWorkspaceId));
+        this.run(
+          async () => {
+            if (action.password) await session.stepUp(action.password);
+            await api.workspaces.remove(workspace.id, workspace.name);
+            await this.load();
+          },
+          () => this.load(prev.activeWorkspaceId),
+        );
         return;
       }
       case 'sign-out':
@@ -987,10 +1273,13 @@ export class LiveStore {
         void this.saveRole(action.role, next.permissions);
         return;
       case 'replace-permissions':
-        this.run(async () => {
-          await http.post(`/workspaces/${this.workspaceId}/roles/reset-defaults`);
-          await this.refreshRoles();
-        }, () => this.refreshRoles());
+        this.run(
+          async () => {
+            await http.post(`/workspaces/${this.workspaceId}/roles/reset-defaults`);
+            await this.refreshRoles();
+          },
+          () => this.refreshRoles(),
+        );
         return;
       default:
         return;
@@ -1006,7 +1295,8 @@ export class LiveStore {
       return null;
     } catch (error) {
       if (isProblem(error, 'UNAUTHENTICATED') || isProblem(error, 'SESSION_REVOKED')) session.end();
-      if (isProblem(error, 'STEP_UP_REQUIRED')) return 'برای تعیین رمز، یک بار از حساب خارج و دوباره وارد شوید.';
+      if (isProblem(error, 'STEP_UP_REQUIRED'))
+        return 'برای تعیین رمز، یک بار از حساب خارج و دوباره وارد شوید.';
       return problemMessage(error, 'تغییر رمز ممکن نشد.');
     }
   }
@@ -1021,7 +1311,11 @@ export class LiveStore {
   }
 
   /** The composer waits for canonical memberships, board columns and companion channel. */
-  async createProject(draft: ProjectDraft, commandId = newIdempotencyKey(), replaceId?: string): Promise<string> {
+  async createProject(
+    draft: ProjectDraft,
+    commandId = newIdempotencyKey(),
+    replaceId?: string,
+  ): Promise<string> {
     const workspaceId = this.workspaceId;
     try {
       const selected = draft.departmentIds ?? [draft.departmentId];
@@ -1038,36 +1332,64 @@ export class LiveStore {
         let id = this.departments.has(selectedId) ? selectedId : undefined;
         const custom = draft.customDepartments?.find((department) => department.id === selectedId);
         const name = custom?.name ?? DEPARTMENTS.find((department) => department.id === selectedId)?.name;
-        if (!id && name) id = [...this.departments].find(([, existingName]) => normalizeDepartmentName(existingName) === normalizeDepartmentName(name))?.[0];
+        if (!id && name)
+          id = [...this.departments].find(
+            ([, existingName]) => normalizeDepartmentName(existingName) === normalizeDepartmentName(name),
+          )?.[0];
         if (!id && custom) {
           let department: DepartmentView;
           try {
-            department = await api.departments.create(workspaceId, { name: custom.name.trim() }, `${commandId}_dept_${index}`);
+            department = await api.departments.create(
+              workspaceId,
+              { name: custom.name.trim() },
+              `${commandId}_dept_${index}`,
+            );
           } catch (error) {
             if (!isProblem(error, 'CONFLICT')) throw error;
             const listed = await api.departments.list(workspaceId);
-            const existing = listed.find((entry) => normalizeDepartmentName(entry.name) === normalizeDepartmentName(custom.name));
+            const existing = listed.find(
+              (entry) => normalizeDepartmentName(entry.name) === normalizeDepartmentName(custom.name),
+            );
             if (!existing) throw error;
             department = existing;
           }
           if (workspaceId !== this.workspaceId) throw new Error('The active workspace changed.');
           id = department.id;
           this.departments.set(department.id, department.name);
-          this.apply({ type: 'sync/merge', patch: { departments: [
-            ...this.getState().departments.filter((entry) => entry.id !== department.id), department,
-          ] } });
+          this.apply({
+            type: 'sync/merge',
+            patch: {
+              departments: [
+                ...this.getState().departments.filter((entry) => entry.id !== department.id),
+                department,
+              ],
+            },
+          });
         }
-        if (!id && draft.departmentIds !== undefined) throw new ApiProblem(422, 'VALIDATION_FAILED', 'The selected department is no longer available.', null);
+        if (!id && draft.departmentIds !== undefined)
+          throw new ApiProblem(
+            422,
+            'VALIDATION_FAILED',
+            'The selected department is no longer available.',
+            null,
+          );
         if (id && !departmentIds.includes(id)) departmentIds.push(id);
       }
       const body = {
-        key: draft.key, name: draft.name.trim(), color: draft.color,
+        key: draft.key,
+        name: draft.name.trim(),
+        color: draft.color,
         ...(draft.description.trim() ? { description: draft.description.trim() } : {}),
-        departmentIds, memberIds: [...new Set(draft.memberIds ?? [])],
+        departmentIds,
+        memberIds: [...new Set(draft.memberIds ?? [])],
       };
       const created = await api.projects.create(workspaceId, body, commandId);
       if (workspaceId !== this.workspaceId) throw new Error('The active workspace changed.');
-      this.apply({ type: 'sync/upsert-project', project: projectFromView(created, (id) => (id ? this.departments.get(id) : undefined)), ...(replaceId ? { replaceId } : {}) });
+      this.apply({
+        type: 'sync/upsert-project',
+        project: projectFromView(created, (id) => (id ? this.departments.get(id) : undefined)),
+        ...(replaceId ? { replaceId } : {}),
+      });
       // The response itself reconciles the board and channel even if realtime was missed.
       // A partial refresh failure leaves the draft retryable with the same command key.
       await Promise.all([this.refreshWorkflow(), this.refreshProjectChannel(created.id)]);
@@ -1081,90 +1403,151 @@ export class LiveStore {
 
   /* ---------------------------------------------------------------- tasks */
 
-  createTask(draft: TaskDraft, prev: WorkspaceState, next: WorkspaceState, files: readonly File[] = [], commandId?: string): Promise<string> {
+  createTask(
+    draft: TaskDraft,
+    prev: WorkspaceState,
+    next: WorkspaceState,
+    files: readonly File[] = [],
+    commandId?: string,
+  ): Promise<string> {
     const local = next.tasks.find((task) => !prev.tasks.some((entry) => entry.id === task.id));
     if (!local) return Promise.reject(new Error('The task draft was not created.'));
-    return this.track(local.id, async () => {
-      // Complete every new upload before creating the task: a rejected file cannot leave a
-      // task that the open form would create again when the person retries.
-      const uploaded: AttachmentView[] = [];
-      for (const file of files) uploaded.push(await this.taskUpload(file, file.name));
-      const column = apiColumnFor(serverColumnsOf(this.getState(), local.projectId), { status: local.status, boardColumnId: local.boardColumnId });
-      let detail: TaskDetail;
-      const source = draft.sourceMessageId ? this.getState().messages.find((message) => message.id === draft.sourceMessageId) : undefined;
-      if (draft.sourceMessageId && source) {
-        // «تبدیل پیام به وظیفه»: the server links the task to the message (and the message's file).
-        const converted = await api.conversations.convert(this.workspaceId, await this.serverId(source.conversationId), await this.serverId(draft.sourceMessageId), {
-          projectId: await this.serverId(draft.projectId),
-          title: draft.title,
-          description: draft.description,
-          columnId: column?.id ?? null,
-          priority: draft.priority,
-          assigneeIds: draft.assigneeIds,
-          ...(draft.startDate ? { startDate: draft.startDate } : {}),
-          dueDate: draft.dueDate,
-          subtasks: draft.subtaskTitles,
-          attachmentIds: draft.attachments.filter((attachment) => !isLocal(attachment.id)).map((attachment) => attachment.id),
+    return this.track(
+      local.id,
+      async () => {
+        // Complete every new upload before creating the task: a rejected file cannot leave a
+        // task that the open form would create again when the person retries.
+        const uploaded: AttachmentView[] = [];
+        for (const file of files) uploaded.push(await this.taskUpload(file, file.name));
+        const column = apiColumnFor(serverColumnsOf(this.getState(), local.projectId), {
+          status: local.status,
+          boardColumnId: local.boardColumnId,
         });
-        if (converted.existing) this.notify(`این پیام پیش‌تر به وظیفه ${converted.task.code} تبدیل شده بود؛ همان وظیفه باز شد.`);
-        detail = converted.task;
-      } else if (draft.sourceNoteId) {
-        const converted = await api.notes.convert(this.workspaceId, await this.serverId(draft.sourceNoteId), {
-          projectId: await this.serverId(draft.projectId),
-          columnId: column?.id ?? null,
-          priority: draft.priority,
-          assigneeIds: draft.assigneeIds,
-          ...(draft.startDate ? { startDate: draft.startDate } : {}),
-          dueDate: draft.dueDate,
+        let detail: TaskDetail;
+        const source = draft.sourceMessageId
+          ? this.getState().messages.find((message) => message.id === draft.sourceMessageId)
+          : undefined;
+        if (draft.sourceMessageId && source) {
+          // «تبدیل پیام به وظیفه»: the server links the task to the message (and the message's file).
+          const converted = await api.conversations.convert(
+            this.workspaceId,
+            await this.serverId(source.conversationId),
+            await this.serverId(draft.sourceMessageId),
+            {
+              projectId: await this.serverId(draft.projectId),
+              title: draft.title,
+              description: draft.description,
+              columnId: column?.id ?? null,
+              priority: draft.priority,
+              assigneeIds: draft.assigneeIds,
+              ...(draft.startDate ? { startDate: draft.startDate } : {}),
+              dueDate: draft.dueDate,
+              subtasks: draft.subtaskTitles,
+              attachmentIds: draft.attachments
+                .filter((attachment) => !isLocal(attachment.id))
+                .map((attachment) => attachment.id),
+            },
+          );
+          if (converted.existing)
+            this.notify(`این پیام پیش‌تر به وظیفه ${converted.task.code} تبدیل شده بود؛ همان وظیفه باز شد.`);
+          detail = converted.task;
+        } else if (draft.sourceNoteId) {
+          const converted = await api.notes.convert(
+            this.workspaceId,
+            await this.serverId(draft.sourceNoteId),
+            {
+              projectId: await this.serverId(draft.projectId),
+              columnId: column?.id ?? null,
+              priority: draft.priority,
+              assigneeIds: draft.assigneeIds,
+              ...(draft.startDate ? { startDate: draft.startDate } : {}),
+              dueDate: draft.dueDate,
+            },
+          );
+          detail = converted.task;
+        } else {
+          const body: CreateTaskBody = {
+            projectId: await this.serverId(draft.projectId),
+            title: draft.title,
+            description: draft.description,
+            columnId: column?.id ?? null,
+            priority: draft.priority,
+            assigneeIds: draft.assigneeIds,
+            ...(draft.startDate ? { startDate: draft.startDate } : {}),
+            dueDate: draft.dueDate,
+            subtasks: draft.subtaskTitles,
+            attachmentIds: [
+              ...new Set([
+                ...draft.attachments
+                  .filter((attachment) => !isLocal(attachment.id))
+                  .map((attachment) => attachment.id),
+                ...uploaded.map((attachment) => attachment.id),
+              ]),
+            ],
+            ...agileFieldsOf(draft),
+          };
+          detail = commandId
+            ? await api.tasks.create(this.workspaceId, body, commandId)
+            : await api.tasks.create(this.workspaceId, body);
+        }
+        // Conversion routes deliberately accept only the source message's files. Newly picked
+        // files use the normal ownership-checked, idempotent attachment link afterwards.
+        if ((draft.sourceMessageId || draft.sourceNoteId) && uploaded.length > 0) {
+          for (const attachment of uploaded)
+            await api.tasks.attach(this.workspaceId, detail.id, attachment.id);
+          detail = await api.tasks.get(this.workspaceId, detail.id);
+        }
+        // Conversions take no agile fields: the converted task gets them in a second step.
+        const agile = agileFieldsOf(draft);
+        if ((draft.sourceMessageId || draft.sourceNoteId) && Object.keys(agile).length > 0) {
+          detail = await api.tasks.update(this.workspaceId, detail.id, detail.version, agile);
+        }
+        this.detailLoaded.add(detail.id);
+        this.upsertDetail(detail, local.id);
+        return detail.id;
+      },
+      () => {
+        this.apply({ type: 'sync/remove-task', taskId: local.id });
+        const state = this.getState();
+        this.apply({
+          type: 'sync/merge',
+          patch: {
+            messages: state.messages.map((message) =>
+              message.linkedTaskId === local.id
+                ? {
+                    ...message,
+                    linkedTaskId:
+                      prev.messages.find((entry) => entry.id === message.id)?.linkedTaskId ?? null,
+                  }
+                : message,
+            ),
+            notes: state.notes.map((note) =>
+              note.linkedTaskId === local.id
+                ? {
+                    ...note,
+                    linkedTaskId: prev.notes.find((entry) => entry.id === note.id)?.linkedTaskId ?? null,
+                  }
+                : note,
+            ),
+          },
         });
-        detail = converted.task;
-      } else {
-        const body: CreateTaskBody = {
-          projectId: await this.serverId(draft.projectId),
-          title: draft.title,
-          description: draft.description,
-          columnId: column?.id ?? null,
-          priority: draft.priority,
-          assigneeIds: draft.assigneeIds,
-          ...(draft.startDate ? { startDate: draft.startDate } : {}),
-          dueDate: draft.dueDate,
-          subtasks: draft.subtaskTitles,
-          attachmentIds: [...new Set([...draft.attachments.filter((attachment) => !isLocal(attachment.id)).map((attachment) => attachment.id), ...uploaded.map((attachment) => attachment.id)])],
-          ...agileFieldsOf(draft),
-        };
-        detail = commandId ? await api.tasks.create(this.workspaceId, body, commandId) : await api.tasks.create(this.workspaceId, body);
-      }
-      // Conversion routes deliberately accept only the source message's files. Newly picked
-      // files use the normal ownership-checked, idempotent attachment link afterwards.
-      if ((draft.sourceMessageId || draft.sourceNoteId) && uploaded.length > 0) {
-        for (const attachment of uploaded) await api.tasks.attach(this.workspaceId, detail.id, attachment.id);
-        detail = await api.tasks.get(this.workspaceId, detail.id);
-      }
-      // Conversions take no agile fields: the converted task gets them in a second step.
-      const agile = agileFieldsOf(draft);
-      if ((draft.sourceMessageId || draft.sourceNoteId) && Object.keys(agile).length > 0) {
-        detail = await api.tasks.update(this.workspaceId, detail.id, detail.version, agile);
-      }
-      this.detailLoaded.add(detail.id);
-      this.upsertDetail(detail, local.id);
-      return detail.id;
-    }, () => {
-      this.apply({ type: 'sync/remove-task', taskId: local.id });
-      const state = this.getState();
-      this.apply({ type: 'sync/merge', patch: {
-        messages: state.messages.map((message) => message.linkedTaskId === local.id ? { ...message, linkedTaskId: prev.messages.find((entry) => entry.id === message.id)?.linkedTaskId ?? null } : message),
-        notes: state.notes.map((note) => note.linkedTaskId === local.id ? { ...note, linkedTaskId: prev.notes.find((entry) => entry.id === note.id)?.linkedTaskId ?? null } : note),
-      } });
-    });
+      },
+    );
   }
 
   private async place(taskId: string, next: WorkspaceState): Promise<void> {
     const task = next.tasks.find((entry) => entry.id === taskId);
     if (!task) return;
-    const column = apiColumnFor(serverColumnsOf(next, task.projectId), { status: task.status, boardColumnId: task.boardColumnId });
+    const column = apiColumnFor(serverColumnsOf(next, task.projectId), {
+      status: task.status,
+      boardColumnId: task.boardColumnId,
+    });
     if (!column) return;
     await this.attempt(taskId, async (id, version) => {
-      const card = await api.tasks.move(this.workspaceId, id, { columnId: column.id, expectedVersion: version });
+      const card = await api.tasks.move(this.workspaceId, id, {
+        columnId: column.id,
+        expectedVersion: version,
+      });
       this.upsertCard(card);
     });
   }
@@ -1183,35 +1566,47 @@ export class LiveStore {
 
   /** A form waits for acknowledgement; failures keep its unsaved field draft available. */
   async saveTask(taskId: string, patch: TaskPatch): Promise<void> {
-    await this.attempt(taskId, async (id, version) => {
-      const body = {
-        ...(patch.title !== undefined ? { title: patch.title } : {}),
-        ...(patch.description !== undefined ? { description: patch.description } : {}),
-        ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
-        ...(patch.assigneeIds !== undefined ? { assigneeIds: patch.assigneeIds } : {}),
-        ...(patch.reviewerId !== undefined ? { reviewerId: patch.reviewerId } : {}),
-        ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : {}),
-        ...(patch.startDate !== undefined ? { startDate: patch.startDate } : {}),
-        ...(patch.type !== undefined ? { type: patch.type } : {}),
-        ...(patch.severity !== undefined ? { severity: patch.severity } : {}),
-        ...(patch.estimatedMinutes !== undefined ? { estimatedMinutes: patch.estimatedMinutes } : {}),
-        ...(patch.isBacklog !== undefined ? { isBacklog: patch.isBacklog } : {}),
-      };
-      this.upsertDetail(await api.tasks.update(this.workspaceId, id, version, body));
-    }, true);
+    await this.attempt(
+      taskId,
+      async (id, version) => {
+        const body = {
+          ...(patch.title !== undefined ? { title: patch.title } : {}),
+          ...(patch.description !== undefined ? { description: patch.description } : {}),
+          ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
+          ...(patch.assigneeIds !== undefined ? { assigneeIds: patch.assigneeIds } : {}),
+          ...(patch.reviewerId !== undefined ? { reviewerId: patch.reviewerId } : {}),
+          ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : {}),
+          ...(patch.startDate !== undefined ? { startDate: patch.startDate } : {}),
+          ...(patch.type !== undefined ? { type: patch.type } : {}),
+          ...(patch.severity !== undefined ? { severity: patch.severity } : {}),
+          ...(patch.estimatedMinutes !== undefined ? { estimatedMinutes: patch.estimatedMinutes } : {}),
+          ...(patch.isBacklog !== undefined ? { isBacklog: patch.isBacklog } : {}),
+        };
+        this.upsertDetail(await api.tasks.update(this.workspaceId, id, version, body));
+      },
+      true,
+    );
   }
 
   async saveTaskColumn(taskId: string, columnId: string): Promise<void> {
-    await this.attempt(taskId, async (id, version) => {
-      this.upsertCard(await api.tasks.move(this.workspaceId, id, { columnId, expectedVersion: version }));
-    }, true);
+    await this.attempt(
+      taskId,
+      async (id, version) => {
+        this.upsertCard(await api.tasks.move(this.workspaceId, id, { columnId, expectedVersion: version }));
+      },
+      true,
+    );
   }
 
   /**
    * Runs a versioned task change. The version comes from the last response or event; a stale one
    * (412) reloads the task as it is now, and any other failure puts the server's copy back.
    */
-  private async attempt(taskId: string, change: (id: string, version: number) => Promise<void>, reject = false): Promise<void> {
+  private async attempt(
+    taskId: string,
+    change: (id: string, version: number) => Promise<void>,
+    reject = false,
+  ): Promise<void> {
     try {
       const id = await this.serverId(taskId);
       let version = this.versions.get(id);
@@ -1233,7 +1628,11 @@ export class LiveStore {
     this.versions.set(card.id, card.version);
     const state = this.getState();
     const previous = state.tasks.find((task) => task.id === (replaceId ?? card.id));
-    this.apply({ type: 'sync/upsert-task', task: taskFromCard(card, state.boardColumns, previous), ...(replaceId ? { replaceId } : {}) });
+    this.apply({
+      type: 'sync/upsert-task',
+      task: taskFromCard(card, state.boardColumns, previous),
+      ...(replaceId ? { replaceId } : {}),
+    });
   }
 
   private upsertDetail(detail: TaskDetail, replaceId?: string): void {
@@ -1241,7 +1640,11 @@ export class LiveStore {
     if (known !== undefined && known > detail.version) return;
     this.versions.set(detail.id, detail.version);
     this.detailLoaded.add(detail.id);
-    this.apply({ type: 'sync/upsert-task', task: taskFromDetail(detail, this.getState().boardColumns), ...(replaceId ? { replaceId } : {}) });
+    this.apply({
+      type: 'sync/upsert-task',
+      task: taskFromDetail(detail, this.getState().boardColumns),
+      ...(replaceId ? { replaceId } : {}),
+    });
   }
 
   /** The server ids of a task and its project, for the agile routes. */
@@ -1267,7 +1670,12 @@ export class LiveStore {
         api.agile.worklogs(this.workspaceId, projectId, id),
         api.agile.dependencies(this.workspaceId, projectId, id),
       ]);
-      this.apply({ type: 'sync/task-agile', taskId: id, worklogs: worklogs.items.map(worklogFromView), links: links.map(linkFromView) });
+      this.apply({
+        type: 'sync/task-agile',
+        taskId: id,
+        worklogs: worklogs.items.map(worklogFromView),
+        links: links.map(linkFromView),
+      });
     } catch {
       // A task that just left (deleted, moved out of sight) is handled by its own refresh.
     }
@@ -1280,7 +1688,8 @@ export class LiveStore {
       const detail = await api.tasks.get(this.workspaceId, id);
       this.upsertDetail(detail);
     } catch (error) {
-      if (isProblem(error, 'NOT_FOUND') || isProblem(error, 'FORBIDDEN')) this.apply({ type: 'sync/remove-task', taskId: id });
+      if (isProblem(error, 'NOT_FOUND') || isProblem(error, 'FORBIDDEN'))
+        this.apply({ type: 'sync/remove-task', taskId: id });
       if (reject) throw error;
     }
   }
@@ -1295,7 +1704,10 @@ export class LiveStore {
       return id && !isLocal(id) ? id : null;
     };
     try {
-      await api.tasks.moveSubtask(this.workspaceId, await this.serverId(taskId), subtaskId, { afterId: neighbour(index - 1), beforeId: neighbour(index + 1) });
+      await api.tasks.moveSubtask(this.workspaceId, await this.serverId(taskId), subtaskId, {
+        afterId: neighbour(index - 1),
+        beforeId: neighbour(index + 1),
+      });
     } catch (error) {
       this.fail(error);
       await this.refreshTask(taskId).catch(() => undefined);
@@ -1343,13 +1755,27 @@ export class LiveStore {
 
   /* ---------------------------------------------------------------- board */
 
-  private async addColumn(prev: WorkspaceState, next: WorkspaceState, title: string, tone: BoardColumn['tone']): Promise<void> {
-    const local = next.boardColumns.find((column) => !prev.boardColumns.some((entry) => entry.id === column.id));
+  private async addColumn(
+    prev: WorkspaceState,
+    next: WorkspaceState,
+    title: string,
+    tone: BoardColumn['tone'],
+  ): Promise<void> {
+    const local = next.boardColumns.find(
+      (column) => !prev.boardColumns.some((entry) => entry.id === column.id),
+    );
     if (!local?.projectId) return;
     const projectId = local.projectId;
     this.track(local.id, async () => {
-      const view = await api.workflow.addColumn(this.workspaceId, { projectId: await this.serverId(projectId), title: title.trim(), tone, status: local.status });
-      const created = view.columns.find((column) => !this.getState().boardColumns.some((entry) => entry.id === column.id));
+      const view = await api.workflow.addColumn(this.workspaceId, {
+        projectId: await this.serverId(projectId),
+        title: title.trim(),
+        tone,
+        status: local.status,
+      });
+      const created = view.columns.find(
+        (column) => !this.getState().boardColumns.some((entry) => entry.id === column.id),
+      );
       this.applyWorkflow(view, created ? { from: local.id, to: created.id } : undefined);
       return created?.id ?? local.id;
     });
@@ -1363,11 +1789,15 @@ export class LiveStore {
       type: 'sync/merge',
       patch: {
         boardColumns: [
-          ...state.boardColumns.filter((column) => column.projectId !== view.projectId && (!rename || column.id !== rename.from)),
+          ...state.boardColumns.filter(
+            (column) => column.projectId !== view.projectId && (!rename || column.id !== rename.from),
+          ),
           ...columns,
         ],
         tasks: rename
-          ? state.tasks.map((task) => (task.boardColumnId === rename.from ? { ...task, boardColumnId: rename.to } : task))
+          ? state.tasks.map((task) =>
+              task.boardColumnId === rename.from ? { ...task, boardColumnId: rename.to } : task,
+            )
           : state.tasks,
       },
     });
@@ -1376,7 +1806,10 @@ export class LiveStore {
   /** Every project's columns (one request), and the cards too after a column took some with it. */
   private async refreshWorkflow(withTasks = false): Promise<void> {
     const workspaceId = this.workspaceId;
-    const [views, cards] = await Promise.all([api.workflow.list(workspaceId), withTasks ? api.tasks.all(workspaceId) : Promise.resolve(null)]);
+    const [views, cards] = await Promise.all([
+      api.workflow.list(workspaceId),
+      withTasks ? api.tasks.all(workspaceId) : Promise.resolve(null),
+    ]);
     if (workspaceId !== this.workspaceId) return;
     const columns = columnsFromWorkflows(views);
     const state = this.getState();
@@ -1394,7 +1827,9 @@ export class LiveStore {
   /* ---------------------------------------------------------------- chat */
 
   private createConversation(draft: ConversationDraft, prev: WorkspaceState, next: WorkspaceState): void {
-    const local = next.conversations.find((conversation) => !prev.conversations.some((entry) => entry.id === conversation.id));
+    const local = next.conversations.find(
+      (conversation) => !prev.conversations.some((entry) => entry.id === conversation.id),
+    );
     if (!local) return; // An existing direct chat was reopened.
     const me = next.meId;
     const others = draft.memberIds.filter((id) => id !== me);
@@ -1402,13 +1837,26 @@ export class LiveStore {
       const detail =
         draft.kind === 'direct'
           ? await api.conversations.create(this.workspaceId, { kind: 'direct', userId: others[0] ?? me })
-          : await api.conversations.create(this.workspaceId, { kind: 'group', title: draft.title, topic: draft.topic, tone: draft.tone, memberIds: others });
+          : await api.conversations.create(this.workspaceId, {
+              kind: 'group',
+              title: draft.title,
+              topic: draft.topic,
+              tone: draft.tone,
+              memberIds: others,
+            });
       this.cursorsFrom(detail);
       this.lastSeq.set(detail.id, detail.lastSeq);
       const selected = this.getState().activeConversationId === local.id;
-      this.apply({ type: 'sync/upsert-conversation', conversation: this.conversationFrom(detail), replaceId: local.id, select: selected });
+      this.apply({
+        type: 'sync/upsert-conversation',
+        conversation: this.conversationFrom(detail),
+        replaceId: local.id,
+        select: selected,
+      });
       // The optimistic "group created" line is replaced by the server's history.
-      for (const message of this.getState().messages.filter((entry) => entry.conversationId === detail.id && isLocal(entry.id))) {
+      for (const message of this.getState().messages.filter(
+        (entry) => entry.conversationId === detail.id && isLocal(entry.id),
+      )) {
         this.apply({ type: 'sync/remove-message', messageId: message.id });
       }
       this.historyLoaded.delete(detail.id);
@@ -1417,23 +1865,57 @@ export class LiveStore {
     });
   }
 
-  private sendMessage(conversationId: string, text: string, replyToId: string | null, prev: WorkspaceState, next: WorkspaceState): void {
-    const local = next.messages.find((message) => message.conversationId === conversationId && !prev.messages.some((entry) => entry.id === message.id));
+  private sendMessage(
+    conversationId: string,
+    text: string,
+    replyToId: string | null,
+    prev: WorkspaceState,
+    next: WorkspaceState,
+  ): void {
+    const local = next.messages.find(
+      (message) =>
+        message.conversationId === conversationId && !prev.messages.some((entry) => entry.id === message.id),
+    );
     if (!local) return;
     this.typing(conversationId, false);
     // One client id for every attempt: a resend after a lost acknowledgement is stored once.
     const clientMsgId = crypto.randomUUID();
     this.deliver(local.id, async () => {
-      const sent = await this.post(conversationId, { clientMsgId, kind: 'text', text, ...(replyToId ? { replyToId: await this.serverId(replyToId) } : {}) });
+      const sent = await this.post(conversationId, {
+        clientMsgId,
+        kind: 'text',
+        text,
+        ...(replyToId ? { replyToId: await this.serverId(replyToId) } : {}),
+      });
       const id = await this.serverId(conversationId);
       const current = this.getState().messages.find((message) => message.id === local.id) ?? local;
-      this.apply({ type: 'sync/upsert-messages', messages: [{ ...current, id: sent.id, conversationId: id, sentAt: sent.createdAt, readByIds: this.readersOf(id, sent.seq, next.meId) }], replaceId: local.id });
+      this.apply({
+        type: 'sync/upsert-messages',
+        messages: [
+          {
+            ...current,
+            id: sent.id,
+            conversationId: id,
+            sentAt: sent.createdAt,
+            readByIds: this.readersOf(id, sent.seq, next.meId),
+          },
+        ],
+        replaceId: local.id,
+      });
       return sent.id;
     });
   }
 
   /** Uploads the file, then sends it as a message (socket first, HTTP when the socket is down). */
-  private sendFile(conversationId: string, localId: string, picked: PickedFile, caption: string | null, replyToId: string | null, asFile: boolean, next: WorkspaceState): void {
+  private sendFile(
+    conversationId: string,
+    localId: string,
+    picked: PickedFile,
+    caption: string | null,
+    replyToId: string | null,
+    asFile: boolean,
+    next: WorkspaceState,
+  ): void {
     const clientMsgId = crypto.randomUUID();
     // Kept across attempts: a resend after a failed send does not upload the file again.
     let stored: AttachmentView | null = null;
@@ -1456,11 +1938,23 @@ export class LiveStore {
           type: 'sync/upsert-messages',
           messages: [
             {
-              ...(current ?? { conversationId: id, authorId: next.meId, replyToId, reactions: [], edited: false, linkedTaskId: null }),
+              ...(current ?? {
+                conversationId: id,
+                authorId: next.meId,
+                replyToId,
+                reactions: [],
+                edited: false,
+                linkedTaskId: null,
+              }),
               id: sent.id,
               conversationId: id,
               sentAt: sent.createdAt,
-              body: { kind: 'file', attachment: attachmentFromView(attachment), caption, ...(asFile ? { asFile: true } : {}) },
+              body: {
+                kind: 'file',
+                attachment: attachmentFromView(attachment),
+                caption,
+                ...(asFile ? { asFile: true } : {}),
+              },
               readByIds: this.readersOf(id, sent.seq, next.meId),
             } as Message,
           ],
@@ -1474,28 +1968,58 @@ export class LiveStore {
   }
 
   /** Uploads the recording, then sends it as a voice note. */
-  private sendVoice(conversationId: string, localId: string, recording: VoiceRecording, next: WorkspaceState): void {
+  private sendVoice(
+    conversationId: string,
+    localId: string,
+    recording: VoiceRecording,
+    next: WorkspaceState,
+  ): void {
     const clientMsgId = crypto.randomUUID();
     let stored: AttachmentView | null = null;
     this.deliver(
       localId,
       async () => {
-        const extension = recording.blob.type.includes('ogg') ? 'ogg' : recording.blob.type.includes('mp4') ? 'm4a' : recording.blob.type.includes('aac') ? 'aac' : 'webm';
+        const extension = recording.blob.type.includes('ogg')
+          ? 'ogg'
+          : recording.blob.type.includes('mp4')
+            ? 'm4a'
+            : recording.blob.type.includes('aac')
+              ? 'aac'
+              : 'webm';
         const attachment = stored ?? (await this.upload(recording.blob, `voice-${Date.now()}.${extension}`));
         stored = attachment;
-        const sent = await this.post(conversationId, { clientMsgId, kind: 'voice', attachmentId: attachment.id, durationSec: recording.durationSec, waveform: recording.waveform });
+        const sent = await this.post(conversationId, {
+          clientMsgId,
+          kind: 'voice',
+          attachmentId: attachment.id,
+          durationSec: recording.durationSec,
+          waveform: recording.waveform,
+        });
         const id = await this.serverId(conversationId);
         const current = this.getState().messages.find((message) => message.id === localId);
         this.apply({
           type: 'sync/upsert-messages',
           messages: [
             {
-              ...(current ?? { conversationId: id, authorId: next.meId, replyToId: null, reactions: [], edited: false, linkedTaskId: null }),
+              ...(current ?? {
+                conversationId: id,
+                authorId: next.meId,
+                replyToId: null,
+                reactions: [],
+                edited: false,
+                linkedTaskId: null,
+              }),
               id: sent.id,
               conversationId: id,
               sentAt: sent.createdAt,
               // The local recording keeps playing until the page reloads; then the stored copy does.
-              body: { kind: 'voice', durationSec: recording.durationSec, waveform: recording.waveform, src: recording.previewUrl, attachmentId: attachment.id },
+              body: {
+                kind: 'voice',
+                durationSec: recording.durationSec,
+                waveform: recording.waveform,
+                src: recording.previewUrl,
+                attachmentId: attachment.id,
+              },
               readByIds: this.readersOf(id, sent.seq, next.meId),
             } as Message,
           ],
@@ -1536,16 +2060,27 @@ export class LiveStore {
   }
 
   /** One send (socket, else HTTP with the same client id); a refusal is said, and fails the send. */
-  private async post(conversationId: string, body: SendMessageBody): Promise<{ readonly id: string; readonly seq: number; readonly createdAt: string }> {
+  private async post(
+    conversationId: string,
+    body: SendMessageBody,
+  ): Promise<{ readonly id: string; readonly seq: number; readonly createdAt: string }> {
     const id = await this.serverId(conversationId);
     let sent = await this.realtime.send(id, body);
     if (!sent.ok && sent.code === 'SERVICE_UNAVAILABLE' && !this.realtime.connected) {
       // No socket right now: the same send over HTTP (the client id keeps it single).
       try {
-        const rest = await http.post<{ readonly id: string; readonly seq: number; readonly createdAt: string; readonly duplicate: boolean }>(`/workspaces/${this.workspaceId}/conversations/${id}/messages`, body, { idempotent: true });
+        const rest = await http.post<{
+          readonly id: string;
+          readonly seq: number;
+          readonly createdAt: string;
+          readonly duplicate: boolean;
+        }>(`/workspaces/${this.workspaceId}/conversations/${id}/messages`, body, { idempotent: true });
         sent = { ok: true, ...rest };
       } catch (error) {
-        sent = { ok: false, code: error instanceof ApiProblem && error.code !== 'NETWORK' ? error.code : 'SERVICE_UNAVAILABLE' };
+        sent = {
+          ok: false,
+          code: error instanceof ApiProblem && error.code !== 'NETWORK' ? error.code : 'SERVICE_UNAVAILABLE',
+        };
       }
     }
     if (!sent.ok) {
@@ -1580,7 +2115,11 @@ export class LiveStore {
   }
 
   private async react(messageId: string, emoji: string, next: WorkspaceState): Promise<void> {
-    const on = next.messages.find((message) => message.id === messageId)?.reactions.some((reaction) => reaction.emoji === emoji && reaction.userIds.includes(next.meId)) ?? false;
+    const on =
+      next.messages
+        .find((message) => message.id === messageId)
+        ?.reactions.some((reaction) => reaction.emoji === emoji && reaction.userIds.includes(next.meId)) ??
+      false;
     try {
       const id = await this.serverId(messageId);
       const ack = await this.realtime.react(id, emoji, on);
@@ -1590,7 +2129,9 @@ export class LiveStore {
       }
       const conversationId = next.messages.find((message) => message.id === messageId)?.conversationId ?? '';
       const path = `/workspaces/${this.workspaceId}/conversations/${conversationId}/messages/${id}/reactions/${encodeURIComponent(emoji)}`;
-      const reaction = on ? await http.put<{ readonly userIds: readonly string[] }>(path) : await http.delete<{ readonly userIds: readonly string[] }>(path);
+      const reaction = on
+        ? await http.put<{ readonly userIds: readonly string[] }>(path)
+        : await http.delete<{ readonly userIds: readonly string[] }>(path);
       this.apply({ type: 'sync/reaction', messageId: id, emoji, userIds: reaction.userIds });
     } catch (error) {
       this.fail(error);
@@ -1605,7 +2146,10 @@ export class LiveStore {
     if (seq === 0 || (this.readCursors.get(conversationId)?.get(me) ?? 0) >= seq) return;
     this.cursor(conversationId, me, seq);
     void this.realtime.markRead(conversationId, seq).then((ack) => {
-      if (!ack.ok && !this.realtime.connected) void http.post(`/workspaces/${this.workspaceId}/conversations/${conversationId}/read`, { seq }).catch(() => undefined);
+      if (!ack.ok && !this.realtime.connected)
+        void http
+          .post(`/workspaces/${this.workspaceId}/conversations/${conversationId}/read`, { seq })
+          .catch(() => undefined);
     });
   }
 
@@ -1618,18 +2162,28 @@ export class LiveStore {
     const workspaceId = this.workspaceId;
     const userId = this.getState().meId;
     const before = this.getState();
-    if (before.users.find(user => user.id === userId)?.fullName !== fullName.trim()) {
+    if (before.users.find((user) => user.id === userId)?.fullName !== fullName.trim()) {
       const user = await api.me.update({ fullName: fullName.trim() });
-      if (this.getState().meId !== userId || user.id !== userId) throw new Error('The signed-in account changed.');
+      if (this.getState().meId !== userId || user.id !== userId)
+        throw new Error('The signed-in account changed.');
       this.apply({ type: 'update-display-name', fullName: user.fullName });
       this.patch({ user });
       session.updateUser(user);
     }
-    if (workspaceId !== this.workspaceId || this.getState().meId !== userId) throw new Error('The workspace changed.');
-    if (before.profile.presence !== profile.presence || before.profile.statusMessage !== profile.statusMessage) {
-      await api.workspaces.setPresence(workspaceId, profile.presence === 'offline' ? 'away' : profile.presence, profile.statusMessage);
+    if (workspaceId !== this.workspaceId || this.getState().meId !== userId)
+      throw new Error('The workspace changed.');
+    if (
+      before.profile.presence !== profile.presence ||
+      before.profile.statusMessage !== profile.statusMessage
+    ) {
+      await api.workspaces.setPresence(
+        workspaceId,
+        profile.presence === 'offline' ? 'away' : profile.presence,
+        profile.statusMessage,
+      );
     }
-    if (workspaceId !== this.workspaceId || this.getState().meId !== userId) throw new Error('The workspace changed.');
+    if (workspaceId !== this.workspaceId || this.getState().meId !== userId)
+      throw new Error('The workspace changed.');
     this.apply({ type: 'update-profile', profile });
   }
 
@@ -1648,37 +2202,68 @@ export class LiveStore {
     const workspaceId = this.workspaceId;
     const userId = this.getState().meId;
     const token = this.loadToken;
-    return this.track(noteId, async () => {
-      let request = this.noteCreateRequests.get(noteId);
-      if (!request) {
-        request = { key: newIdempotencyKey(), body: {
-          categoryId: draft.categoryId === null ? null : await this.serverId(draft.categoryId),
-          title: draft.title, body: draft.body, colors: draft.colors, pinned: draft.pinned,
-        } };
-        if (token !== this.loadToken || workspaceId !== this.workspaceId || userId !== this.getState().meId) throw new Error('The workspace changed.');
-        this.noteCreateRequests.set(noteId, request);
-      }
-      let created;
-      try {
-        created = await api.notes.create(workspaceId, request.body, request.key);
-      } catch (error) {
-        // A definite refusal did not commit; a network/5xx outcome retries the identical command.
-        if (isProblem(error) && error.status >= 400 && error.status < 500) this.noteCreateRequests.delete(noteId);
-        throw error;
-      }
-      if (token !== this.loadToken || workspaceId !== this.workspaceId || userId !== this.getState().meId) return created.id;
-      this.noteCreateRequests.delete(noteId);
-      this.noteVersions.set(created.id, created.version);
-      // Deleted while it was being stored: `delete-note` removes it from the server too.
-      const current = this.getState().notes.find((note) => note.id === noteId);
-      if (!current) return created.id;
-      clearTimeout(this.noteTimers.get(noteId));
-      this.noteTimers.delete(noteId);
-      this.apply({ type: 'sync/upsert-note', note: { ...noteFromView(created), title: current.title, body: current.body, categoryId: current.categoryId, colors: current.colors, pinned: current.pinned }, replaceId: noteId });
-      // Typed on while the note was being created: the usual autosave sends the rest.
-      if (current.title !== created.title || current.body !== created.body || current.categoryId !== created.categoryId || current.colors.join(',') !== created.colors.join(',') || current.pinned !== created.pinned) this.scheduleNote(created.id);
-      return created.id;
-    }, () => undefined); // Keep the draft and all its edits available for an explicit retry.
+    return this.track(
+      noteId,
+      async () => {
+        let request = this.noteCreateRequests.get(noteId);
+        if (!request) {
+          request = {
+            key: newIdempotencyKey(),
+            body: {
+              categoryId: draft.categoryId === null ? null : await this.serverId(draft.categoryId),
+              title: draft.title,
+              body: draft.body,
+              colors: draft.colors,
+              pinned: draft.pinned,
+            },
+          };
+          if (token !== this.loadToken || workspaceId !== this.workspaceId || userId !== this.getState().meId)
+            throw new Error('The workspace changed.');
+          this.noteCreateRequests.set(noteId, request);
+        }
+        let created;
+        try {
+          created = await api.notes.create(workspaceId, request.body, request.key);
+        } catch (error) {
+          // A definite refusal did not commit; a network/5xx outcome retries the identical command.
+          if (isProblem(error) && error.status >= 400 && error.status < 500)
+            this.noteCreateRequests.delete(noteId);
+          throw error;
+        }
+        if (token !== this.loadToken || workspaceId !== this.workspaceId || userId !== this.getState().meId)
+          return created.id;
+        this.noteCreateRequests.delete(noteId);
+        this.noteVersions.set(created.id, created.version);
+        // Deleted while it was being stored: `delete-note` removes it from the server too.
+        const current = this.getState().notes.find((note) => note.id === noteId);
+        if (!current) return created.id;
+        clearTimeout(this.noteTimers.get(noteId));
+        this.noteTimers.delete(noteId);
+        this.apply({
+          type: 'sync/upsert-note',
+          note: {
+            ...noteFromView(created),
+            title: current.title,
+            body: current.body,
+            categoryId: current.categoryId,
+            colors: current.colors,
+            pinned: current.pinned,
+          },
+          replaceId: noteId,
+        });
+        // Typed on while the note was being created: the usual autosave sends the rest.
+        if (
+          current.title !== created.title ||
+          current.body !== created.body ||
+          current.categoryId !== created.categoryId ||
+          current.colors.join(',') !== created.colors.join(',') ||
+          current.pinned !== created.pinned
+        )
+          this.scheduleNote(created.id);
+        return created.id;
+      },
+      () => undefined,
+    ); // Keep the draft and all its edits available for an explicit retry.
   }
 
   private scheduleNote(noteId: string): void {
@@ -1701,7 +2286,8 @@ export class LiveStore {
     const userId = this.getState().meId;
     const token = this.loadToken;
     const checkScope = () => {
-      if (workspaceId !== this.workspaceId || userId !== this.getState().meId || token !== this.loadToken) throw new Error('The workspace changed.');
+      if (workspaceId !== this.workspaceId || userId !== this.getState().meId || token !== this.loadToken)
+        throw new Error('The workspace changed.');
     };
     clearTimeout(this.noteTimers.get(noteId));
     this.noteTimers.delete(noteId);
@@ -1713,20 +2299,30 @@ export class LiveStore {
       clearTimeout(this.noteTimers.get(key));
       this.noteTimers.delete(key);
     }
-    const writing = (this.noteWrites.get(id) ?? Promise.resolve()).catch(() => undefined).then(async () => {
-      checkScope();
-      const note: Note | undefined = this.getState().notes.find(entry => entry.id === id);
-      if (!note) throw new Error('یادداشت دیگر در این فضای کاری در دسترس نیست.');
-      const categoryId = note.categoryId === null ? null : await this.serverId(note.categoryId);
-      checkScope();
-      const saved = await api.notes.update(workspaceId, id, this.noteVersions.get(id) ?? 1, {
-        title: note.title, body: note.body, colors: note.colors, pinned: note.pinned, categoryId,
+    const writing = (this.noteWrites.get(id) ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(async () => {
+        checkScope();
+        const note: Note | undefined = this.getState().notes.find((entry) => entry.id === id);
+        if (!note) throw new Error('یادداشت دیگر در این فضای کاری در دسترس نیست.');
+        const categoryId = note.categoryId === null ? null : await this.serverId(note.categoryId);
+        checkScope();
+        const saved = await api.notes.update(workspaceId, id, this.noteVersions.get(id) ?? 1, {
+          title: note.title,
+          body: note.body,
+          colors: note.colors,
+          pinned: note.pinned,
+          categoryId,
+        });
+        checkScope();
+        this.noteVersions.set(saved.id, saved.version);
       });
-      checkScope();
-      this.noteVersions.set(saved.id, saved.version);
-    });
     this.noteWrites.set(id, writing);
-    void writing.finally(() => { if (this.noteWrites.get(id) === writing) this.noteWrites.delete(id); }).catch(() => undefined);
+    void writing
+      .finally(() => {
+        if (this.noteWrites.get(id) === writing) this.noteWrites.delete(id);
+      })
+      .catch(() => undefined);
     await writing;
   }
 
@@ -1734,7 +2330,11 @@ export class LiveStore {
     const entry = this.roleIds.get(role);
     if (!entry) return;
     try {
-      const saved = await http.put<RoleView>(`/workspaces/${this.workspaceId}/roles/${entry.id}/permissions`, { permissions: matrix[role] }, { ifMatch: entry.version });
+      const saved = await http.put<RoleView>(
+        `/workspaces/${this.workspaceId}/roles/${entry.id}/permissions`,
+        { permissions: matrix[role] },
+        { ifMatch: entry.version },
+      );
       this.roleIds.set(role, { id: saved.id, version: saved.version });
     } catch (error) {
       this.fail(error);
@@ -1759,8 +2359,12 @@ export class LiveStore {
     this.apply({
       type: 'sync/merge',
       patch: {
-        users: members.filter((member) => member.status === 'active').map((member) => memberToUser(member, departmentName)),
-        formerUsers: members.filter((member) => member.status === 'left').map((member) => memberToUser(member, departmentName)),
+        users: members
+          .filter((member) => member.status === 'active')
+          .map((member) => memberToUser(member, departmentName)),
+        formerUsers: members
+          .filter((member) => member.status === 'left')
+          .map((member) => memberToUser(member, departmentName)),
       },
     });
   }
@@ -1777,11 +2381,19 @@ export class LiveStore {
   }
 
   private async refreshProjectTrash(): Promise<void> {
-    if (!this.getState().workspaces.some((workspace) => workspace.id === this.workspaceId && workspace.ownerId === this.getState().meId)) return;
+    if (
+      !this.getState().workspaces.some(
+        (workspace) => workspace.id === this.workspaceId && workspace.ownerId === this.getState().meId,
+      )
+    )
+      return;
     const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
     try {
       const trashed = await api.projects.trash(this.workspaceId);
-      this.apply({ type: 'sync/project-trash', entries: trashed.map((entry) => trashedProjectFromView(entry, departmentName)) });
+      this.apply({
+        type: 'sync/project-trash',
+        entries: trashed.map((entry) => trashedProjectFromView(entry, departmentName)),
+      });
     } catch (error) {
       this.fail(error);
     }
@@ -1790,7 +2402,8 @@ export class LiveStore {
   private async refreshProjects(): Promise<void> {
     const workspaceId = this.workspaceId;
     const [projects, departments] = await Promise.all([
-      api.projects.list(workspaceId), optional(api.departments.list(workspaceId), null),
+      api.projects.list(workspaceId),
+      optional(api.departments.list(workspaceId), null),
     ]);
     if (workspaceId !== this.workspaceId) return;
     if (departments) {
@@ -1798,15 +2411,34 @@ export class LiveStore {
       this.apply({ type: 'sync/merge', patch: { departments } });
     }
     const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
-    this.apply({ type: 'sync/merge', patch: { projects: projects.filter((project) => !project.archived).map((project) => projectFromView(project, departmentName)) } });
+    this.apply({
+      type: 'sync/merge',
+      patch: {
+        projects: projects
+          .filter((project) => !project.archived)
+          .map((project) => projectFromView(project, departmentName)),
+      },
+    });
   }
 
-  /** A workspace icon picked in the dialog (a data URL), sent to its upload ticket; returns the key. */
-  private async uploadIcon(dataUrl: string): Promise<string> {
-    const blob = await blobFromDataUrl(dataUrl);
-    const ticket = await api.files.iconTicket();
-    await postForm(ticket.url, ticket.fields, blob, blob.type || 'image/png');
-    return ticket.key;
+  async saveWorkspaceIcon(workspaceId: string, file: File | null): Promise<void> {
+    const userId = this.status.user?.id;
+    const stillActive = () =>
+      this.status.phase === 'ready' && this.workspaceId === workspaceId && this.status.user?.id === userId;
+    if (!userId || !stillActive()) throw new Error('The active workspace changed.');
+    const iconUploadKey = file ? await uploadWorkspaceIcon(file, file.name) : null;
+    if (!stillActive()) throw new Error('The active workspace changed.');
+    const saved = await api.workspaces.update(workspaceId, { iconUploadKey });
+    if (stillActive()) {
+      this.apply({
+        type: 'sync/merge',
+        patch: {
+          workspaces: this.getState().workspaces.map((workspace) =>
+            workspace.id === workspaceId ? workspaceFromView(saved) : workspace,
+          ),
+        },
+      });
+    }
   }
 
   /* ================================================================ realtime */
@@ -1821,14 +2453,20 @@ export class LiveStore {
       this.buffered.push(envelope);
       return;
     }
-    if (envelope.workspaceId && envelope.workspaceId !== this.workspaceId && envelope.type !== 'notification:new') return;
+    if (
+      envelope.workspaceId &&
+      envelope.workspaceId !== this.workspaceId &&
+      envelope.type !== 'notification:new'
+    )
+      return;
     if (envelope.eventId) this.lastEventId = envelope.eventId;
     void this.handle(envelope).catch(() => undefined);
   }
 
   private async handle(envelope: RealtimeEnvelope): Promise<void> {
     const me = this.getState().meId;
-    const event = <T extends RealtimeEventType>(type: T): RealtimeEventMap[T] | null => (envelope.type === type ? (envelope.data as RealtimeEventMap[T]) : null);
+    const event = <T extends RealtimeEventType>(type: T): RealtimeEventMap[T] | null =>
+      envelope.type === type ? (envelope.data as RealtimeEventMap[T]) : null;
     switch (envelope.type) {
       case 'message:new':
       case 'message:updated': {
@@ -1839,7 +2477,11 @@ export class LiveStore {
       case 'message:deleted': {
         const data = event('message:deleted');
         const existing = data && this.getState().messages.find((message) => message.id === data.messageId);
-        if (existing) this.apply({ type: 'sync/upsert-messages', messages: [{ ...existing, body: { kind: 'system', text: 'این پیام حذف شد.' }, reactions: [] }] });
+        if (existing)
+          this.apply({
+            type: 'sync/upsert-messages',
+            messages: [{ ...existing, body: { kind: 'system', text: 'این پیام حذف شد.' }, reactions: [] }],
+          });
         return;
       }
       case 'scheduled:updated': {
@@ -1848,7 +2490,11 @@ export class LiveStore {
         if (!data) return;
         const localId = this.scheduling.get(data.clientMsgId);
         if (data.status === 'pending') {
-          this.apply({ type: 'sync/upsert-scheduled', scheduled: scheduledFromView(data), ...(localId ? { replaceId: localId } : {}) });
+          this.apply({
+            type: 'sync/upsert-scheduled',
+            scheduled: scheduledFromView(data),
+            ...(localId ? { replaceId: localId } : {}),
+          });
           return;
         }
         this.apply({ type: 'sync/remove-scheduled', scheduledId: data.id });
@@ -1860,7 +2506,13 @@ export class LiveStore {
       }
       case 'reaction:updated': {
         const data = event('reaction:updated');
-        if (data) this.apply({ type: 'sync/reaction', messageId: data.messageId, emoji: data.emoji, userIds: data.userIds });
+        if (data)
+          this.apply({
+            type: 'sync/reaction',
+            messageId: data.messageId,
+            emoji: data.emoji,
+            userIds: data.userIds,
+          });
         return;
       }
       case 'read:updated': {
@@ -1873,9 +2525,26 @@ export class LiveStore {
         if (!data || data.userId === me) return;
         const key = `${data.conversationId}:${data.userId}`;
         clearTimeout(this.typingTimers.get(key));
-        this.apply({ type: 'sync/typing', conversationId: data.conversationId, userId: data.userId, typing: data.typing });
+        this.apply({
+          type: 'sync/typing',
+          conversationId: data.conversationId,
+          userId: data.userId,
+          typing: data.typing,
+        });
         if (data.typing) {
-          this.typingTimers.set(key, setTimeout(() => this.apply({ type: 'sync/typing', conversationId: data.conversationId, userId: data.userId, typing: false }), TYPING_MS));
+          this.typingTimers.set(
+            key,
+            setTimeout(
+              () =>
+                this.apply({
+                  type: 'sync/typing',
+                  conversationId: data.conversationId,
+                  userId: data.userId,
+                  typing: false,
+                }),
+              TYPING_MS,
+            ),
+          );
         }
         return;
       }
@@ -1884,7 +2553,11 @@ export class LiveStore {
         if (!data) return;
         const known = this.getState().users.find((user) => user.id === data.userId)?.presence;
         const manual = data.presence ?? (known && known !== 'offline' ? known : 'online');
-        this.apply({ type: 'sync/presence', userId: data.userId, presence: data.online ? manual : 'offline' });
+        this.apply({
+          type: 'sync/presence',
+          userId: data.userId,
+          presence: data.online ? manual : 'offline',
+        });
         return;
       }
       case 'conversation:created':
@@ -1897,7 +2570,8 @@ export class LiveStore {
       case 'conversation:member_removed': {
         const data = event('conversation:member_removed');
         if (!data) return;
-        if (data.userId === me) this.apply({ type: 'sync/remove-conversation', conversationId: data.conversationId });
+        if (data.userId === me)
+          this.apply({ type: 'sync/remove-conversation', conversationId: data.conversationId });
         else await this.refreshConversation(data.conversationId);
         return;
       }
@@ -1912,9 +2586,18 @@ export class LiveStore {
         const data = envelope.data as { readonly taskId: string; readonly fields?: readonly string[] };
         const known = this.versions.get(data.taskId);
         // Checklist, worklog and link changes keep the task's version (see the API): they always refetch.
-        const tracking = envelope.type === 'task:updated' && (data.fields ?? []).some((field) => field === 'worklogs' || field === 'dependencies');
+        const tracking =
+          envelope.type === 'task:updated' &&
+          (data.fields ?? []).some((field) => field === 'worklogs' || field === 'dependencies');
         const checklist = envelope.type === 'task:updated' && (data.fields ?? []).includes('subtasks');
-        if (!checklist && !tracking && known !== undefined && envelope.version !== undefined && envelope.version <= known) return;
+        if (
+          !checklist &&
+          !tracking &&
+          known !== undefined &&
+          envelope.version !== undefined &&
+          envelope.version <= known
+        )
+          return;
         await this.refreshTask(data.taskId);
         if (tracking) await this.refreshAgile(data.taskId, true);
         return;
@@ -1980,7 +2663,11 @@ export class LiveStore {
     // A scheduled message sent from here with «ارسال فوری»: the server's copy takes the local one's place.
     const localId = view.clientMsgId ? this.sendingNow.get(view.clientMsgId) : undefined;
     if (localId && view.clientMsgId) this.sendingNow.delete(view.clientMsgId);
-    this.apply({ type: 'sync/upsert-messages', messages: [existing ? { ...message, readByIds: existing.readByIds } : message], ...(localId ? { replaceId: localId } : {}) });
+    this.apply({
+      type: 'sync/upsert-messages',
+      messages: [existing ? { ...message, readByIds: existing.readByIds } : message],
+      ...(localId ? { replaceId: localId } : {}),
+    });
     if (!isNew || view.authorId === state.meId) return;
     const watching =
       state.activeConversationId === view.conversationId &&
@@ -1988,15 +2675,26 @@ export class LiveStore {
       document.visibilityState === 'visible' &&
       window.location.pathname.startsWith('/chats');
     if (watching) this.markRead(view.conversationId);
-    else this.apply({ type: 'sync/unread', conversationId: view.conversationId, count: (state.unreadByConversation[view.conversationId] ?? 0) + 1 });
+    else
+      this.apply({
+        type: 'sync/unread',
+        conversationId: view.conversationId,
+        count: (state.unreadByConversation[view.conversationId] ?? 0) + 1,
+      });
   }
 
   private async refreshProjectChannel(projectId: string): Promise<void> {
     const workspaceId = this.workspaceId;
     const conversations = await api.conversations.list(workspaceId);
     if (workspaceId !== this.workspaceId) return;
-    const channel = conversations.find((conversation) => conversation.projectId === projectId && conversation.membershipMode === 'project_synced' && !conversation.archived);
-    if (channel) this.apply({ type: 'sync/upsert-conversation', conversation: this.conversationFrom(channel) });
+    const channel = conversations.find(
+      (conversation) =>
+        conversation.projectId === projectId &&
+        conversation.membershipMode === 'project_synced' &&
+        !conversation.archived,
+    );
+    if (channel)
+      this.apply({ type: 'sync/upsert-conversation', conversation: this.conversationFrom(channel) });
   }
 
   private async refreshConversation(conversationId: string): Promise<void> {
@@ -2014,25 +2712,38 @@ export class LiveStore {
 
   private conversationFrom(view: ConversationView): ReturnType<typeof conversationFromView> {
     const { users, formerUsers } = this.getState();
-    return conversationFromView(view, this.getState().meId, (userId) => [...users, ...formerUsers].find((user) => user.id === userId)?.fullName);
+    return conversationFromView(
+      view,
+      this.getState().meId,
+      (userId) => [...users, ...formerUsers].find((user) => user.id === userId)?.fullName,
+    );
   }
 
   private messageFrom(view: MessageView): Message {
     this.seqOf.set(view.id, view.seq);
     const users = this.getState().users;
     const authorId = view.authorId ?? '';
-    return messageFromView(view, this.readersOf(view.conversationId, view.seq, authorId), (userId) => users.find((user) => user.id === userId)?.fullName);
+    return messageFromView(
+      view,
+      this.readersOf(view.conversationId, view.seq, authorId),
+      (userId) => users.find((user) => user.id === userId)?.fullName,
+    );
   }
 
   /** Everyone but the author whose read cursor has reached `seq`. */
   private readersOf(conversationId: string, seq: number, authorId: string): string[] {
     const cursors = this.readCursors.get(conversationId);
     if (!cursors) return [];
-    return [...cursors].filter(([userId, read]) => userId !== authorId && read >= seq).map(([userId]) => userId);
+    return [...cursors]
+      .filter(([userId, read]) => userId !== authorId && read >= seq)
+      .map(([userId]) => userId);
   }
 
   private cursorsFrom(detail: ConversationDetail): void {
-    this.readCursors.set(detail.id, new Map(detail.members.map((member) => [member.userId, member.lastReadSeq])));
+    this.readCursors.set(
+      detail.id,
+      new Map(detail.members.map((member) => [member.userId, member.lastReadSeq])),
+    );
   }
 
   /** A member's read cursor moved: their receipts appear on every message up to it. */
@@ -2042,7 +2753,12 @@ export class LiveStore {
     cursors.set(userId, seq);
     this.readCursors.set(conversationId, cursors);
     const messageIds = this.getState()
-      .messages.filter((message) => message.conversationId === conversationId && message.authorId !== userId && (this.seqOf.get(message.id) ?? Infinity) <= seq)
+      .messages.filter(
+        (message) =>
+          message.conversationId === conversationId &&
+          message.authorId !== userId &&
+          (this.seqOf.get(message.id) ?? Infinity) <= seq,
+      )
       .map((message) => message.id);
     if (messageIds.length > 0) this.apply({ type: 'sync/read', userId, messageIds });
   }
@@ -2088,7 +2804,11 @@ export class LiveStore {
 const isLocal = (id: string): boolean => id.includes('-local-');
 
 /** The agile fields a draft sets, for the create (or a follow-up update) body. */
-function agileFieldsOf(draft: TaskDraft): { type?: NonNullable<TaskDraft['type']>; severity?: NonNullable<TaskDraft['severity']>; isBacklog?: boolean } {
+function agileFieldsOf(draft: TaskDraft): {
+  type?: NonNullable<TaskDraft['type']>;
+  severity?: NonNullable<TaskDraft['severity']>;
+  isBacklog?: boolean;
+} {
   return {
     ...(draft.type !== undefined && draft.type !== 'task' ? { type: draft.type } : {}),
     ...(draft.type === 'bug' && draft.severity ? { severity: draft.severity } : {}),

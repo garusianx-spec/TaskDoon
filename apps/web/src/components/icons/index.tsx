@@ -6,10 +6,10 @@
  * tree-shakeable and removes a runtime dependency from the critical path.
  */
 import type { AttachmentKind } from '@taskin/contracts';
-import { createIcon, type IconProps } from './createIcon';
-import { cn } from '@/lib/cn';
+import { createIcon, type IconProps } from '@/components/icons/createIcon';
+import { cn } from '@/lib/utils';
 
-export type { IconProps, IconVariant } from './createIcon';
+export type { IconProps, IconVariant } from '@/components/icons/createIcon';
 
 /* ------------------------------- Navigation ------------------------------- */
 
@@ -19,9 +19,7 @@ export const HomeIcon = createIcon('HomeIcon', {
 });
 
 export const MessagesIcon = createIcon('MessagesIcon', {
-  primary: [
-    'M21 11.5a7.5 7.5 0 0 1-10.9 6.7L4 20l1.4-4.3A7.5 7.5 0 1 1 21 11.5Z',
-  ],
+  primary: ['M21 11.5a7.5 7.5 0 0 1-10.9 6.7L4 20l1.4-4.3A7.5 7.5 0 1 1 21 11.5Z'],
   secondary: ['M9 10.5h6', 'M9 14h3.5'],
 });
 
@@ -54,15 +52,16 @@ export const SettingsIcon = createIcon('SettingsIcon', {
 });
 
 export const NotificationIcon = createIcon('NotificationIcon', {
-  primary: [
-    'M18 9a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16S18 14 18 9Z',
-    'M13.7 19a2 2 0 0 1-3.4 0',
-  ],
+  primary: ['M18 9a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16S18 14 18 9Z', 'M13.7 19a2 2 0 0 1-3.4 0'],
 });
 
 export const DirectoryIcon = createIcon('DirectoryIcon', {
   primary: ['M5 4.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-15Z'],
-  secondary: ['M12 11.5a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z', 'M8.5 17c0-1.8 1.6-3 3.5-3s3.5 1.2 3.5 3', 'M2.5 7.5h2.5M2.5 12h2.5M2.5 16.5h2.5'],
+  secondary: [
+    'M12 11.5a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z',
+    'M8.5 17c0-1.8 1.6-3 3.5-3s3.5 1.2 3.5 3',
+    'M2.5 7.5h2.5M2.5 12h2.5M2.5 16.5h2.5',
+  ],
 });
 
 /* ------------------------------- Actions ------------------------------- */
@@ -99,7 +98,11 @@ export const EditIcon = createIcon('EditIcon', {
 });
 
 export const TrashIcon = createIcon('TrashIcon', {
-  primary: ['M4.5 6.5h15', 'M8.5 6.5V5a1.5 1.5 0 0 1 1.5-1.5h4A1.5 1.5 0 0 1 15.5 5v1.5', 'M6.5 6.5 7.3 19a2 2 0 0 0 2 1.9h5.4a2 2 0 0 0 2-1.9l.8-12.5'],
+  primary: [
+    'M4.5 6.5h15',
+    'M8.5 6.5V5a1.5 1.5 0 0 1 1.5-1.5h4A1.5 1.5 0 0 1 15.5 5v1.5',
+    'M6.5 6.5 7.3 19a2 2 0 0 0 2 1.9h5.4a2 2 0 0 0 2-1.9l.8-12.5',
+  ],
   secondary: ['M10.5 10.5v6M13.5 10.5v6'],
 });
 
@@ -175,7 +178,9 @@ export const PauseIcon = createIcon('PauseIcon', {
 });
 
 export const PaperclipIcon = createIcon('PaperclipIcon', {
-  primary: ['M19 11.5 12.3 18.2a4.3 4.3 0 0 1-6-6l7.5-7.5a2.9 2.9 0 0 1 4 4l-7.4 7.5a1.4 1.4 0 0 1-2-2l6.6-6.6'],
+  primary: [
+    'M19 11.5 12.3 18.2a4.3 4.3 0 0 1-6-6l7.5-7.5a2.9 2.9 0 0 1 4 4l-7.4 7.5a1.4 1.4 0 0 1-2-2l6.6-6.6',
+  ],
 });
 
 export const EmojiIcon = createIcon('EmojiIcon', {
@@ -242,16 +247,13 @@ export const StarIcon = createIcon('StarIcon', {
 });
 
 export function StarFilledIcon({ className, ...props }: IconProps) {
-  return (
-    <StarIcon
-      className={cn('[&_path]:fill-current', className)}
-      {...props}
-    />
-  );
+  return <StarIcon className={cn('[&_path]:fill-current', className)} {...props} />;
 }
 
 export const FolderIcon = createIcon('FolderIcon', {
-  primary: ['M3.5 7a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.5.7l1.1 1.3h7.2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7Z'],
+  primary: [
+    'M3.5 7a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.5.7l1.1 1.3h7.2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7Z',
+  ],
 });
 
 export const HashIcon = createIcon('HashIcon', {
@@ -320,7 +322,10 @@ export const DotIcon = createIcon('DotIcon', {
 
 export const SunIcon = createIcon('SunIcon', {
   primary: ['M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z'],
-  secondary: ['M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2', 'm5.3 5.3 1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4'],
+  secondary: [
+    'M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2',
+    'm5.3 5.3 1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4',
+  ],
 });
 
 export const MoonIcon = createIcon('MoonIcon', {
@@ -388,8 +393,14 @@ export const SidebarIcon = createIcon('SidebarIcon', {
 });
 
 export const GridIcon = createIcon('GridIcon', {
-  primary: ['M4 5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 10 5.5v3A1.5 1.5 0 0 1 8.5 10h-3A1.5 1.5 0 0 1 4 8.5v-3Z', 'M14 5.5A1.5 1.5 0 0 1 15.5 4h3A1.5 1.5 0 0 1 20 5.5v3A1.5 1.5 0 0 1 18.5 10h-3A1.5 1.5 0 0 1 14 8.5v-3Z'],
-  secondary: ['M4 15.5A1.5 1.5 0 0 1 5.5 14h3A1.5 1.5 0 0 1 10 15.5v3A1.5 1.5 0 0 1 8.5 20h-3A1.5 1.5 0 0 1 4 18.5v-3Z', 'M14 15.5a1.5 1.5 0 0 1 1.5-1.5h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a1.5 1.5 0 0 1-1.5-1.5v-3Z'],
+  primary: [
+    'M4 5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 10 5.5v3A1.5 1.5 0 0 1 8.5 10h-3A1.5 1.5 0 0 1 4 8.5v-3Z',
+    'M14 5.5A1.5 1.5 0 0 1 15.5 4h3A1.5 1.5 0 0 1 20 5.5v3A1.5 1.5 0 0 1 18.5 10h-3A1.5 1.5 0 0 1 14 8.5v-3Z',
+  ],
+  secondary: [
+    'M4 15.5A1.5 1.5 0 0 1 5.5 14h3A1.5 1.5 0 0 1 10 15.5v3A1.5 1.5 0 0 1 8.5 20h-3A1.5 1.5 0 0 1 4 18.5v-3Z',
+    'M14 15.5a1.5 1.5 0 0 1 1.5-1.5h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a1.5 1.5 0 0 1-1.5-1.5v-3Z',
+  ],
 });
 
 export const ChartIcon = createIcon('ChartIcon', {
@@ -403,13 +414,18 @@ export const SmsIcon = createIcon('SmsIcon', {
 });
 
 export const CallIcon = createIcon('CallIcon', {
-  primary: ['M21 17.2v2.3a1.8 1.8 0 0 1-2 1.8 17.8 17.8 0 0 1-7.8-2.8 17.5 17.5 0 0 1-5.4-5.4A17.8 17.8 0 0 1 3 5.2 1.8 1.8 0 0 1 4.8 3.2h2.3a1.8 1.8 0 0 1 1.8 1.6c.1.9.3 1.7.7 2.5a1.8 1.8 0 0 1-.4 2l-1 1a14 14 0 0 0 5.4 5.4l1-1a1.8 1.8 0 0 1 2-.4c.8.3 1.6.6 2.5.7a1.8 1.8 0 0 1 1.6 1.8Z'],
+  primary: [
+    'M21 17.2v2.3a1.8 1.8 0 0 1-2 1.8 17.8 17.8 0 0 1-7.8-2.8 17.5 17.5 0 0 1-5.4-5.4A17.8 17.8 0 0 1 3 5.2 1.8 1.8 0 0 1 4.8 3.2h2.3a1.8 1.8 0 0 1 1.8 1.6c.1.9.3 1.7.7 2.5a1.8 1.8 0 0 1-.4 2l-1 1a14 14 0 0 0 5.4 5.4l1-1a1.8 1.8 0 0 1 2-.4c.8.3 1.6.6 2.5.7a1.8 1.8 0 0 1 1.6 1.8Z',
+  ],
 });
 
 /* ------------------------------- Notes & editor ------------------------------- */
 
 export const NotebookIcon = createIcon('NotebookIcon', {
-  primary: ['M6.5 3.5h11a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-11a1.5 1.5 0 0 1-1.5-1.5v-14a1.5 1.5 0 0 1 1.5-1.5Z', 'M9 3.5v17'],
+  primary: [
+    'M6.5 3.5h11a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-11a1.5 1.5 0 0 1-1.5-1.5v-14a1.5 1.5 0 0 1 1.5-1.5Z',
+    'M9 3.5v17',
+  ],
   secondary: ['M12 8h4.5M12 11.5h4.5', 'M3.5 7.5H5M3.5 12H5M3.5 16.5H5'],
 });
 
@@ -427,7 +443,10 @@ export const ItalicIcon = createIcon('ItalicIcon', {
 
 export const ChecklistIcon = createIcon('ChecklistIcon', {
   primary: ['M11.5 7h8.5', 'M11.5 17h8.5'],
-  secondary: ['m3.5 6.5 1.8 1.8L8.5 5', 'M4 15.5a1 1 0 0 1 1-1h2.5a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.5Z'],
+  secondary: [
+    'm3.5 6.5 1.8 1.8L8.5 5',
+    'M4 15.5a1 1 0 0 1 1-1h2.5a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.5Z',
+  ],
 });
 
 /* ------------------------------- Calendar & account ------------------------------- */
@@ -450,7 +469,9 @@ export const EyeSlashIcon = createIcon('EyeSlashIcon', {
 /* ------------------------------- Media ------------------------------- */
 
 export const VideoIcon = createIcon('VideoIcon', {
-  primary: ['M3.5 7.5a2.5 2.5 0 0 1 2.5-2.5h8a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5H6a2.5 2.5 0 0 1-2.5-2.5v-9Z'],
+  primary: [
+    'M3.5 7.5a2.5 2.5 0 0 1 2.5-2.5h8a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5H6a2.5 2.5 0 0 1-2.5-2.5v-9Z',
+  ],
   secondary: ['m16.5 10 4-2.5v9l-4-2.5'],
 });
 
@@ -471,7 +492,9 @@ export const ATTACHMENT_ICONS = {
 } as const satisfies Record<AttachmentKind, typeof ImageIcon>;
 
 export const FolderAddIcon = createIcon('FolderAddIcon', {
-  primary: ['M3.5 7a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.5.7l1.1 1.3h7.2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7Z'],
+  primary: [
+    'M3.5 7a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.5.7l1.1 1.3h7.2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7Z',
+  ],
   secondary: ['M12 11v5.5M9.25 13.75h5.5'],
 });
 
@@ -479,7 +502,15 @@ export const FolderAddIcon = createIcon('FolderAddIcon', {
 
 export const BugIcon = createIcon('BugIcon', {
   primary: ['M8 11a4 4 0 0 1 8 0v3.5a4 4 0 0 1-8 0V11Z', 'M9.5 7.6 8 5.5', 'M14.5 7.6 16 5.5'],
-  secondary: ['M4 12.5h4', 'M16 12.5h4', 'M5 18l3-1.6', 'M19 18l-3-1.6', 'M5 7.5l3 1.6', 'M19 7.5l-3 1.6', 'M12 11v7'],
+  secondary: [
+    'M4 12.5h4',
+    'M16 12.5h4',
+    'M5 18l3-1.6',
+    'M19 18l-3-1.6',
+    'M5 7.5l3 1.6',
+    'M19 7.5l-3 1.6',
+    'M12 11v7',
+  ],
 });
 
 export const FeatureIcon = createIcon('FeatureIcon', {

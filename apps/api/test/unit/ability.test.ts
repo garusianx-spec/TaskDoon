@@ -10,7 +10,13 @@ import {
   SYSTEM_ROLES,
 } from '@taskin/contracts';
 import type { MembershipContext } from '../../src/platform/http/request.js';
-import { AbilityFactory, ALL_CELLS, cell, grantsToRow, MODULE_SUBJECTS } from '../../src/modules/rbac/ability.js';
+import {
+  AbilityFactory,
+  ALL_CELLS,
+  cell,
+  grantsToRow,
+  MODULE_SUBJECTS,
+} from '../../src/modules/rbac/ability.js';
 
 function memberOf(role: RoleId): MembershipContext {
   const isOwner = role === 'owner';
@@ -22,7 +28,9 @@ function memberOf(role: RoleId): MembershipContext {
     rank: SYSTEM_ROLES.find((entry) => entry.id === role)?.rank ?? 99,
     isOwner,
     ownerUserId: 'user-owner',
-    grants: isOwner ? ALL_CELLS : grantedCells(DEFAULT_PERMISSION_MATRIX[role]).map(({ module, action }) => cell(module, action)),
+    grants: isOwner
+      ? ALL_CELLS
+      : grantedCells(DEFAULT_PERMISSION_MATRIX[role]).map(({ module, action }) => cell(module, action)),
     rbacVersion: 1,
   };
 }
@@ -38,7 +46,10 @@ describe('M1 checklist: the ability factory matches DEFAULT_PERMISSION_MATRIX ex
         it(`${role} ${expected ? 'can' : 'cannot'} ${action} in ${module}`, () => {
           const ability = factory.forMember(memberOf(role));
           for (const name of MODULE_SUBJECTS[module]) {
-            expect({ subject: name, can: ability.can(action, name) }).toEqual({ subject: name, can: expected });
+            expect({ subject: name, can: ability.can(action, name) }).toEqual({
+              subject: name,
+              can: expected,
+            });
           }
         });
       }
@@ -66,7 +77,13 @@ describe('M1 checklist: the ability factory matches DEFAULT_PERMISSION_MATRIX ex
   });
 
   it('ranks roles strictly, owner first', () => {
-    expect([...SYSTEM_ROLES].sort((a, b) => a.rank - b.rank).map((role) => role.id)).toEqual(['owner', 'admin', 'manager', 'member', 'guest']);
+    expect([...SYSTEM_ROLES].sort((a, b) => a.rank - b.rank).map((role) => role.id)).toEqual([
+      'owner',
+      'admin',
+      'manager',
+      'member',
+      'guest',
+    ]);
     expect(SYSTEM_ROLES.filter((role) => role.locked).map((role) => role.id)).toEqual(['owner']);
   });
 });

@@ -2,7 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 import { sql } from 'drizzle-orm';
 import type { QueryConfig } from 'pg';
-import type { PlatformHealth, PlatformMetrics, PlatformOutboxHealth, PlatformProbe, PlatformQueueHealth } from '@taskin/contracts';
+import type {
+  PlatformHealth,
+  PlatformMetrics,
+  PlatformOutboxHealth,
+  PlatformProbe,
+  PlatformQueueHealth,
+} from '@taskin/contracts';
 import { Clock } from '../../platform/clock/clock.js';
 import { Database } from '../../platform/db/database.js';
 import { isoOrNull, num } from '../../platform/db/rows.js';
@@ -26,7 +32,10 @@ class HealthTimeoutError extends Error {
 }
 
 /** Bound the response and clear its timer; downstream probes cancel where supported. */
-export async function withHealthTimeout<T>(check: () => Promise<T>, timeoutMs = PROBE_TIMEOUT_MS): Promise<T> {
+export async function withHealthTimeout<T>(
+  check: () => Promise<T>,
+  timeoutMs = PROBE_TIMEOUT_MS,
+): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new HealthTimeoutError()), timeoutMs);
@@ -45,7 +54,10 @@ export function redactQueueFailure(reason: string): string {
     .replace(/https?:\/\/\S+/giu, '[link]')
     .replace(/[^\s@]+@[^\s@]+\.[^\s@]+/gu, '[email]')
     .replace(/\bbearer\s+\S+/giu, 'Bearer [redacted]')
-    .replace(/\b(password|token|secret|api[_-]?key|authorization)\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/giu, '$1=[redacted]')
+    .replace(
+      /\b(password|token|secret|api[_-]?key|authorization)\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/giu,
+      '$1=[redacted]',
+    )
     .replace(/\p{Nd}{4,}/gu, '****')
     .replace(/[\r\n\t]+/gu, ' ')
     .slice(0, 200);
@@ -74,7 +86,12 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function counts(value: unknown, keys: readonly string[]): boolean {
-  return record(value) && keys.every((key) => typeof value[key] === 'number' && Number.isFinite(value[key]) && (value[key] as number) >= 0);
+  return (
+    record(value) &&
+    keys.every(
+      (key) => typeof value[key] === 'number' && Number.isFinite(value[key]) && (value[key] as number) >= 0,
+    )
+  );
 }
 
 function cachedMetrics(value: unknown): value is PlatformMetrics {
@@ -82,7 +99,14 @@ function cachedMetrics(value: unknown): value is PlatformMetrics {
     record(value) &&
     typeof value.generatedAt === 'string' &&
     Number.isFinite(Date.parse(value.generatedAt)) &&
-    counts(value.users, ['total', 'active', 'suspended', 'newLast7Days', 'newLast30Days', 'activeLast7Days']) &&
+    counts(value.users, [
+      'total',
+      'active',
+      'suspended',
+      'newLast7Days',
+      'newLast30Days',
+      'activeLast7Days',
+    ]) &&
     counts(value.workspaces, ['total', 'active', 'suspended', 'deleted']) &&
     counts(value.content, ['readyFiles', 'storageUsedBytes', 'tasks', 'messages', 'messagesLast7Days'])
   );
@@ -114,7 +138,10 @@ export class PlatformHealthService {
       if (cached) {
         const parsed: unknown = JSON.parse(cached);
         if (cachedMetrics(parsed)) return { ...parsed, cached: true };
-        this.logger.warn({ event: 'platform.metrics.cache.invalid' }, 'Ignoring invalid platform metrics cache');
+        this.logger.warn(
+          { event: 'platform.metrics.cache.invalid' },
+          'Ignoring invalid platform metrics cache',
+        );
       }
     } catch (error) {
       this.warn('platform.metrics.cache.read_failed', 'redisCore', error);
@@ -133,7 +160,10 @@ export class PlatformHealthService {
     const [database, adminPool, redisCore, redisRt, storage, failedJobs] = await Promise.all([
       this.probe('database', async () => {
         // node-postgres supports a per-query read timeout; @types/pg omits this runtime field.
-        const query: QueryConfig & { query_timeout: number } = { text: 'select 1', query_timeout: PROBE_TIMEOUT_MS };
+        const query: QueryConfig & { query_timeout: number } = {
+          text: 'select 1',
+          query_timeout: PROBE_TIMEOUT_MS,
+        };
         await this.database.pool.query(query);
       }),
       this.probe('adminPool', () =>
@@ -166,7 +196,9 @@ export class PlatformHealthService {
           const oldest = isoOrNull(rows[0]?.oldest);
           return {
             count: num(rows[0]?.count),
-            oldestAgeSeconds: oldest ? Math.max(0, Math.floor((this.clock.now().getTime() - Date.parse(oldest)) / 1_000)) : 0,
+            oldestAgeSeconds: oldest
+              ? Math.max(0, Math.floor((this.clock.now().getTime() - Date.parse(oldest)) / 1_000))
+              : 0,
           };
         }),
       ),
@@ -246,7 +278,9 @@ export class PlatformHealthService {
       },
     };
     try {
-      await withHealthTimeout(() => this.redis.core.set(this.metricsKey(), JSON.stringify(metrics), 'EX', METRICS_TTL_SECONDS));
+      await withHealthTimeout(() =>
+        this.redis.core.set(this.metricsKey(), JSON.stringify(metrics), 'EX', METRICS_TTL_SECONDS),
+      );
     } catch (error) {
       this.warn('platform.metrics.cache.write_failed', 'redisCore', error);
     }
@@ -278,16 +312,29 @@ export class PlatformHealthService {
     }
   }
 
-  private async queueHealth(name: PlatformQueueHealth['name'], queue: Pick<Queue, 'getJobCounts' | 'getFailed' | 'isPaused'>): Promise<PlatformQueueHealth> {
+  private async queueHealth(
+    name: PlatformQueueHealth['name'],
+    queue: Pick<Queue, 'getJobCounts' | 'getFailed' | 'isPaused'>,
+  ): Promise<PlatformQueueHealth> {
     try {
       const [counts, failures, paused] = await withHealthTimeout(() =>
-        Promise.all([queue.getJobCounts(...QUEUE_STATES), queue.getFailed(0, RECENT_FAILURES_LIMIT - 1), queue.isPaused()]),
+        Promise.all([
+          queue.getJobCounts(...QUEUE_STATES),
+          queue.getFailed(0, RECENT_FAILURES_LIMIT - 1),
+          queue.isPaused(),
+        ]),
       );
       // BullMQ 6 keeps jobs in `wait` when paused and records pause state in queue metadata.
       const waiting = counts.waiting ?? 0;
       return {
         name,
-        counts: { waiting: paused ? 0 : waiting, active: counts.active ?? 0, delayed: counts.delayed ?? 0, failed: counts.failed ?? 0, paused: paused ? waiting : 0 },
+        counts: {
+          waiting: paused ? 0 : waiting,
+          active: counts.active ?? 0,
+          delayed: counts.delayed ?? 0,
+          failed: counts.failed ?? 0,
+          paused: paused ? waiting : 0,
+        },
         recentFailures: failures.map((job) => ({
           name: redactQueueFailure(job.name),
           attempts: job.attemptsMade,
@@ -297,11 +344,19 @@ export class PlatformHealthService {
       };
     } catch (error) {
       this.warn('platform.queue.health_failed', name, error);
-      return { name, counts: emptyQueueCounts(), recentFailures: [], error: error instanceof HealthTimeoutError ? 'Queue timed out' : 'Queue unavailable' };
+      return {
+        name,
+        counts: emptyQueueCounts(),
+        recentFailures: [],
+        error: error instanceof HealthTimeoutError ? 'Queue timed out' : 'Queue unavailable',
+      };
     }
   }
 
   private warn(event: string, dependency: string, error: unknown): void {
-    this.logger.warn({ event, dependency, errorType: error instanceof Error ? error.name : 'UnknownError' }, 'Platform monitoring dependency unavailable');
+    this.logger.warn(
+      { event, dependency, errorType: error instanceof Error ? error.name : 'UnknownError' },
+      'Platform monitoring dependency unavailable',
+    );
   }
 }

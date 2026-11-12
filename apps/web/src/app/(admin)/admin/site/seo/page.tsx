@@ -1,2 +1,4 @@
-import { SiteSeo } from '@/components/admin/site/SiteSeo';
-export default function Page() { return <SiteSeo />; }
+import { SiteSeo } from '@/features/admin/components/site/SiteSeo';
+export default function Page() {
+  return <SiteSeo />;
+}

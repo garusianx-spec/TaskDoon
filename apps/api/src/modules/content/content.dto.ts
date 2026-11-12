@@ -48,13 +48,47 @@ import type {
   UpdateNoteBody,
   UpdateNoteCategoryBody,
 } from '@taskin/contracts';
-import { IsCalendarDate, LatinDigits, OptionalNullableDate, OptionalNullableTime, OptionalNullableUuid } from '../../platform/http/dto.js';
-import { AttachmentViewDto, TAG_TONES, TASK_PRIORITIES, TASK_STATUSES, TaskDetailDto } from '../work/work.dto.js';
+import {
+  IsCalendarDate,
+  LatinDigits,
+  OptionalNullableDate,
+  OptionalNullableTime,
+  OptionalNullableUuid,
+} from '../../platform/http/dto.js';
+import {
+  AttachmentViewDto,
+  TAG_TONES,
+  TASK_PRIORITIES,
+  TASK_STATUSES,
+  TaskDetailDto,
+} from '../work/work.dto.js';
 
 const EVENT_KINDS: readonly CalendarEventKind[] = ['meeting', 'reminder', 'milestone'];
-const NOTIFICATION_KINDS: readonly NotificationKind[] = ['task-assigned', 'status-changed', 'comment', 'mention', 'reply', 'invitation', 'event-reminder', 'member-joined'];
-const ACTIVITY_KINDS: readonly ActivityKind[] = ['task-assigned', 'task-completed', 'task-commented', 'message-mention', 'file-shared', 'member-joined'];
-const TARGET_TYPES: readonly NotificationTargetType[] = ['task', 'conversation', 'message', 'event', 'workspace'];
+const NOTIFICATION_KINDS: readonly NotificationKind[] = [
+  'task-assigned',
+  'status-changed',
+  'comment',
+  'mention',
+  'reply',
+  'invitation',
+  'event-reminder',
+  'member-joined',
+];
+const ACTIVITY_KINDS: readonly ActivityKind[] = [
+  'task-assigned',
+  'task-completed',
+  'task-commented',
+  'message-mention',
+  'file-shared',
+  'member-joined',
+];
+const TARGET_TYPES: readonly NotificationTargetType[] = [
+  'task',
+  'conversation',
+  'message',
+  'event',
+  'workspace',
+];
 const FILTERS: readonly NotificationFilter[] = ['all', 'unread', 'mentions'];
 
 /** The largest file any plan could allow (the enterprise plan's per-file limit is lower today). */
@@ -62,13 +96,22 @@ const MAX_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
 
 export class PageQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) readonly cursor?: string;
-  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 50 }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) readonly limit?: number;
+  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  readonly limit?: number;
 }
 
 /* ============================== Files ============================== */
 
 export class CreateUploadDto implements CreateUploadBody {
-  @ApiProperty({ minLength: 1, maxLength: 255, example: 'گزارش فصل.pdf' }) @IsString() @Length(1, 255) readonly fileName!: string;
+  @ApiProperty({ minLength: 1, maxLength: 255, example: 'گزارش فصل.pdf' })
+  @IsString()
+  @Length(1, 255)
+  readonly fileName!: string;
   @ApiProperty({ minimum: 1 }) @IsInt() @Min(1) @Max(MAX_UPLOAD_BYTES) readonly size!: number;
   @ApiProperty({ example: 'application/pdf' }) @IsString() @Length(1, 127) readonly contentType!: string;
 }
@@ -82,9 +125,15 @@ export class UploadPartDto {
 export class UploadPlanDto {
   @ApiProperty({ enum: ['post', 'multipart'] }) readonly kind!: 'post' | 'multipart';
   @ApiPropertyOptional({ description: 'kind = post' }) readonly url?: string;
-  @ApiPropertyOptional({ type: 'object', additionalProperties: { type: 'string' }, description: 'kind = post' }) readonly fields?: Record<string, string>;
+  @ApiPropertyOptional({
+    type: 'object',
+    additionalProperties: { type: 'string' },
+    description: 'kind = post',
+  })
+  readonly fields?: Record<string, string>;
   @ApiPropertyOptional({ description: 'kind = multipart' }) readonly partSize?: number;
-  @ApiPropertyOptional({ type: UploadPartDto, isArray: true, description: 'kind = multipart' }) readonly parts?: UploadPartDto[];
+  @ApiPropertyOptional({ type: UploadPartDto, isArray: true, description: 'kind = multipart' })
+  readonly parts?: UploadPartDto[];
 }
 
 export class UploadViewDto {
@@ -131,13 +180,22 @@ export class CreateNoteCategoryDto implements CreateNoteCategoryBody {
 }
 
 export class UpdateNoteCategoryDto implements UpdateNoteCategoryBody {
-  @ApiPropertyOptional({ minLength: 1, maxLength: 40 }) @IsOptional() @IsString() @Length(1, 40) readonly label?: string;
+  @ApiPropertyOptional({ minLength: 1, maxLength: 40 })
+  @IsOptional()
+  @IsString()
+  @Length(1, 40)
+  readonly label?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) readonly position?: number;
 }
 
 export class NoteViewDto implements NoteView {
   @ApiProperty({ format: 'uuid' }) readonly id!: string;
-  @ApiProperty({ type: String, nullable: true, format: 'uuid', description: 'null: filed in no notebook (its notebook was deleted)' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    format: 'uuid',
+    description: 'null: filed in no notebook (its notebook was deleted)',
+  })
   readonly categoryId!: string | null;
   @ApiProperty() readonly title!: string;
   @ApiProperty() readonly body!: string;
@@ -160,32 +218,76 @@ export class NoteListQueryDto extends PageQueryDto {
 }
 
 export class CreateNoteDto implements CreateNoteBody {
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid', description: 'Omitted: «شخصی» while it exists; null: no notebook' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    format: 'uuid',
+    description: 'Omitted: «شخصی» while it exists; null: no notebook',
+  })
   @OptionalNullableUuid()
   readonly categoryId?: string | null;
   @ApiPropertyOptional({ maxLength: 200 }) @IsOptional() @IsString() @MaxLength(200) readonly title?: string;
-  @ApiPropertyOptional({ maxLength: 100000 }) @IsOptional() @IsString() @MaxLength(100000) readonly body?: string;
-  @ApiPropertyOptional({ enum: TAG_TONES, isArray: true }) @IsOptional() @IsArray() @ArrayMaxSize(8) @IsIn(TAG_TONES, { each: true }) readonly colors?: TagTone[];
+  @ApiPropertyOptional({ maxLength: 100000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100000)
+  readonly body?: string;
+  @ApiPropertyOptional({ enum: TAG_TONES, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(8)
+  @IsIn(TAG_TONES, { each: true })
+  readonly colors?: TagTone[];
   @ApiPropertyOptional() @IsOptional() @IsBoolean() readonly pinned?: boolean;
 }
 
 export class UpdateNoteDto implements UpdateNoteBody {
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid', description: 'null takes the note out of every notebook' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    format: 'uuid',
+    description: 'null takes the note out of every notebook',
+  })
   @OptionalNullableUuid()
   readonly categoryId?: string | null;
   @ApiPropertyOptional({ maxLength: 200 }) @IsOptional() @IsString() @MaxLength(200) readonly title?: string;
-  @ApiPropertyOptional({ maxLength: 100000 }) @IsOptional() @IsString() @MaxLength(100000) readonly body?: string;
-  @ApiPropertyOptional({ enum: TAG_TONES, isArray: true }) @IsOptional() @IsArray() @ArrayMaxSize(8) @IsIn(TAG_TONES, { each: true }) readonly colors?: TagTone[];
+  @ApiPropertyOptional({ maxLength: 100000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100000)
+  readonly body?: string;
+  @ApiPropertyOptional({ enum: TAG_TONES, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(8)
+  @IsIn(TAG_TONES, { each: true })
+  readonly colors?: TagTone[];
   @ApiPropertyOptional() @IsOptional() @IsBoolean() readonly pinned?: boolean;
 }
 
 export class ConvertNoteDto implements ConvertNoteBody {
   @ApiProperty({ format: 'uuid' }) @IsUUID() readonly projectId!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly columnId?: string | null;
-  @ApiPropertyOptional({ enum: TASK_PRIORITIES }) @IsOptional() @IsIn(TASK_PRIORITIES) readonly priority?: TaskPriority;
-  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' }) @IsOptional() @IsArray() @ArrayMaxSize(20) @IsUUID('all', { each: true }) readonly assigneeIds?: string[];
-  @ApiPropertyOptional({ format: 'date' }) @IsOptional() @LatinDigits() @IsCalendarDate() readonly startDate?: string;
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'date' }) @OptionalNullableDate() readonly dueDate?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' })
+  @OptionalNullableUuid()
+  readonly columnId?: string | null;
+  @ApiPropertyOptional({ enum: TASK_PRIORITIES })
+  @IsOptional()
+  @IsIn(TASK_PRIORITIES)
+  readonly priority?: TaskPriority;
+  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID('all', { each: true })
+  readonly assigneeIds?: string[];
+  @ApiPropertyOptional({ format: 'date' })
+  @IsOptional()
+  @LatinDigits()
+  @IsCalendarDate()
+  readonly startDate?: string;
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'date' })
+  @OptionalNullableDate()
+  readonly dueDate?: string | null;
 }
 
 export class ConvertNoteResultDto implements ConvertNoteResult {
@@ -237,24 +339,65 @@ export class CalendarViewDto implements CalendarView {
 export class CreateCalendarEventDto implements CreateCalendarEventBody {
   @ApiProperty({ enum: EVENT_KINDS }) @IsIn(EVENT_KINDS) readonly kind!: CalendarEventKind;
   @ApiProperty({ minLength: 1, maxLength: 120 }) @IsString() @Length(1, 120) readonly title!: string;
-  @ApiPropertyOptional({ maxLength: 2000 }) @IsOptional() @IsString() @MaxLength(2000) readonly description?: string;
+  @ApiPropertyOptional({ maxLength: 2000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  readonly description?: string;
   @ApiProperty({ format: 'date' }) @LatinDigits() @IsCalendarDate() readonly date!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'date' }) @OptionalNullableDate() readonly endDate?: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, example: '09:30' }) @OptionalNullableTime() readonly startTime?: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, example: '10:30' }) @OptionalNullableTime() readonly endTime?: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' }) @OptionalNullableUuid() readonly projectId?: string | null;
-  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' }) @IsOptional() @IsArray() @ArrayMaxSize(100) @IsUUID('all', { each: true }) readonly attendeeIds?: string[];
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'date' })
+  @OptionalNullableDate()
+  readonly endDate?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: '09:30' })
+  @OptionalNullableTime()
+  readonly startTime?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: '10:30' })
+  @OptionalNullableTime()
+  readonly endTime?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid' })
+  @OptionalNullableUuid()
+  readonly projectId?: string | null;
+  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID('all', { each: true })
+  readonly attendeeIds?: string[];
 }
 
 export class UpdateCalendarEventDto implements UpdateCalendarEventBody {
-  @ApiPropertyOptional({ enum: EVENT_KINDS }) @IsOptional() @IsIn(EVENT_KINDS) readonly kind?: CalendarEventKind;
-  @ApiPropertyOptional({ minLength: 1, maxLength: 120 }) @IsOptional() @IsString() @Length(1, 120) readonly title?: string;
-  @ApiPropertyOptional({ maxLength: 2000 }) @IsOptional() @IsString() @MaxLength(2000) readonly description?: string;
-  @ApiPropertyOptional({ format: 'date' }) @IsOptional() @LatinDigits() @IsCalendarDate() readonly date?: string;
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'date' }) @OptionalNullableDate() readonly endDate?: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) @OptionalNullableTime() readonly startTime?: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) @OptionalNullableTime() readonly endTime?: string | null;
-  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' }) @IsOptional() @IsArray() @ArrayMaxSize(100) @IsUUID('all', { each: true }) readonly attendeeIds?: string[];
+  @ApiPropertyOptional({ enum: EVENT_KINDS })
+  @IsOptional()
+  @IsIn(EVENT_KINDS)
+  readonly kind?: CalendarEventKind;
+  @ApiPropertyOptional({ minLength: 1, maxLength: 120 })
+  @IsOptional()
+  @IsString()
+  @Length(1, 120)
+  readonly title?: string;
+  @ApiPropertyOptional({ maxLength: 2000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  readonly description?: string;
+  @ApiPropertyOptional({ format: 'date' })
+  @IsOptional()
+  @LatinDigits()
+  @IsCalendarDate()
+  readonly date?: string;
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'date' })
+  @OptionalNullableDate()
+  readonly endDate?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) @OptionalNullableTime() readonly startTime?:
+    string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) @OptionalNullableTime() readonly endTime?:
+    string | null;
+  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID('all', { each: true })
+  readonly attendeeIds?: string[];
 }
 
 /* ============================== Notifications & activity ============================== */
@@ -280,11 +423,19 @@ export class NotificationPageDto implements NotificationPage {
 
 export class InboxQueryDto extends PageQueryDto {
   @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID() readonly workspaceId?: string;
-  @ApiPropertyOptional({ enum: FILTERS, default: 'all' }) @IsOptional() @IsIn(FILTERS) readonly filter?: NotificationFilter;
+  @ApiPropertyOptional({ enum: FILTERS, default: 'all' })
+  @IsOptional()
+  @IsIn(FILTERS)
+  readonly filter?: NotificationFilter;
 }
 
 export class MarkNotificationsReadDto implements MarkNotificationsReadBody {
-  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' }) @IsOptional() @IsArray() @ArrayMaxSize(500) @IsUUID('all', { each: true }) readonly ids?: string[];
+  @ApiPropertyOptional({ type: String, isArray: true, format: 'uuid' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  @IsUUID('all', { each: true })
+  readonly ids?: string[];
   @ApiPropertyOptional() @IsOptional() @IsBoolean() readonly all?: boolean;
   @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID() readonly workspaceId?: string;
 }
@@ -313,7 +464,12 @@ export class ActivityPageDto implements ActivityPage {
 /* ============================== Reports ============================== */
 
 export class ReportQueryDto {
-  @ApiProperty({ example: 1405 }) @Type(() => Number) @IsInt() @Min(1300) @Max(1600) readonly jalaliYear!: number;
+  @ApiProperty({ example: 1405 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1300)
+  @Max(1600)
+  readonly jalaliYear!: number;
 }
 
 export class JalaliMonthCountDto implements JalaliMonthCount {

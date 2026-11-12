@@ -13,7 +13,9 @@ const TIMEOUT_MS = 2_000;
 function withTimeout<T>(work: Promise<T>): Promise<T> {
   return Promise.race([
     work,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`timed out after ${TIMEOUT_MS} ms`)), TIMEOUT_MS).unref()),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`timed out after ${TIMEOUT_MS} ms`)), TIMEOUT_MS).unref(),
+    ),
   ]);
 }
 

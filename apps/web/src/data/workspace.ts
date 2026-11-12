@@ -43,8 +43,7 @@ const at = (dayOffset: number, hours = 9, minutes = 0): string => {
   return date.toISOString();
 };
 
-const minutesAgo = (minutes: number): string =>
-  new Date(NOW.getTime() - minutes * 60_000).toISOString();
+const minutesAgo = (minutes: number): string => new Date(NOW.getTime() - minutes * 60_000).toISOString();
 
 const dateOnly = (dayOffset: number): string => {
   const date = new Date(NOW);
@@ -744,7 +743,11 @@ export const MESSAGES: readonly Message[] = [
     conversationId: 'conv-product',
     authorId: 'u-sahar',
     sentAt: at(-2, 9, 34),
-    body: { kind: 'file', attachment: ATTACHMENTS['brief'] as Attachment, caption: 'بریف نهایی برای مرجع همه' },
+    body: {
+      kind: 'file',
+      attachment: ATTACHMENTS['brief'] as Attachment,
+      caption: 'بریف نهایی برای مرجع همه',
+    },
     replyToId: null,
     reactions: [],
     edited: false,
@@ -756,7 +759,11 @@ export const MESSAGES: readonly Message[] = [
     conversationId: 'conv-product',
     authorId: 'u-nasim',
     sentAt: at(-1, 11, 2),
-    body: { kind: 'file', attachment: ATTACHMENTS['wireframe'] as Attachment, caption: 'نسخه دوم وایرفریم داشبورد' },
+    body: {
+      kind: 'file',
+      attachment: ATTACHMENTS['wireframe'] as Attachment,
+      caption: 'نسخه دوم وایرفریم داشبورد',
+    },
     replyToId: null,
     reactions: [{ emoji: '🔥', userIds: ['u-sahar'] }],
     edited: false,
@@ -780,7 +787,11 @@ export const MESSAGES: readonly Message[] = [
     conversationId: 'conv-product',
     authorId: 'u-nasim',
     sentAt: at(-1, 12, 5),
-    body: { kind: 'file', attachment: ATTACHMENTS['screenshot'] as Attachment, caption: 'حالت تیره داشبورد با پالت جدید' },
+    body: {
+      kind: 'file',
+      attachment: ATTACHMENTS['screenshot'] as Attachment,
+      caption: 'حالت تیره داشبورد با پالت جدید',
+    },
     replyToId: null,
     reactions: [{ emoji: '❤️', userIds: ['u-sahar', 'u-mahtab'] }],
     edited: false,
@@ -807,7 +818,11 @@ export const MESSAGES: readonly Message[] = [
     conversationId: 'conv-product',
     authorId: 'u-nasim',
     sentAt: at(-1, 14, 10),
-    body: { kind: 'file', attachment: ATTACHMENTS['demo'] as Attachment, caption: 'دموی کوتاه جریان ورود دومرحله‌ای' },
+    body: {
+      kind: 'file',
+      attachment: ATTACHMENTS['demo'] as Attachment,
+      caption: 'دموی کوتاه جریان ورود دومرحله‌ای',
+    },
     replyToId: null,
     reactions: [],
     edited: false,
@@ -819,7 +834,11 @@ export const MESSAGES: readonly Message[] = [
     conversationId: 'conv-product',
     authorId: 'u-sahar',
     sentAt: at(-1, 16, 30),
-    body: { kind: 'file', attachment: ATTACHMENTS['recording'] as Attachment, caption: 'ضبط جلسه بازبینی برای کسانی که نبودند' },
+    body: {
+      kind: 'file',
+      attachment: ATTACHMENTS['recording'] as Attachment,
+      caption: 'ضبط جلسه بازبینی برای کسانی که نبودند',
+    },
     replyToId: null,
     reactions: [],
     edited: false,
@@ -1216,11 +1235,7 @@ export const NOTES: readonly Note[] = [
     id: 'note-4',
     categoryId: 'personal',
     title: 'برنامه این هفته',
-    body: [
-      '- [x] بازبینی نقشه راه فصل بعد',
-      '- [ ] یک‌به‌یک با نسیم',
-      '- [ ] مطالعه گزارش رقبا',
-    ].join('\n'),
+    body: ['- [x] بازبینی نقشه راه فصل بعد', '- [ ] یک‌به‌یک با نسیم', '- [ ] مطالعه گزارش رقبا'].join('\n'),
     colors: ['green'],
     pinned: false,
     createdAt: at(-2, 7, 50),

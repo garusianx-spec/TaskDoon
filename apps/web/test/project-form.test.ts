@@ -1,19 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import type { User } from '@taskin/contracts';
-import { departmentGlyph, matchingProjectMembers, normalizeDepartmentName, PROJECT_COLOR_SWATCHES, projectDepartmentOptions, projectMemberIds, toggleProjectSelection } from '../src/lib/project-form';
+import {
+  departmentGlyph,
+  matchingProjectMembers,
+  normalizeDepartmentName,
+  PROJECT_COLOR_SWATCHES,
+  projectDepartmentOptions,
+  projectMemberIds,
+  toggleProjectSelection,
+} from '@/features/board/lib/project-form';
 
 const person = (id: string, fullName: string, extra: Partial<User> = {}): User => ({
-  id, fullName, email: `${id}@example.test`, initials: 'AB', jobTitle: 'مهندس نرم‌افزار',
-  role: 'member', department: 'engineering', presence: 'offline', avatarTone: 'brand', phone: '', ...extra,
+  id,
+  fullName,
+  email: `${id}@example.test`,
+  initials: 'AB',
+  jobTitle: 'مهندس نرم‌افزار',
+  role: 'member',
+  department: 'engineering',
+  presence: 'offline',
+  avatarTone: 'brand',
+  phone: '',
+  ...extra,
 });
 
 describe('project form selections', () => {
   it('keeps one option when a pending custom department becomes canonical before the modal closes', () => {
     const department = { id: 'custom-1', name: 'پژوهش', memberCount: 0 };
-    expect(projectDepartmentOptions([{ ...department, memberCount: 2 }], [department]))
-      .toEqual([{ ...department, memberCount: 2 }]);
-    expect(projectDepartmentOptions([{ ...department, id: 'canonical-uuid' }], [department]))
-      .toEqual([department]);
+    expect(projectDepartmentOptions([{ ...department, memberCount: 2 }], [department])).toEqual([
+      { ...department, memberCount: 2 },
+    ]);
+    expect(projectDepartmentOptions([{ ...department, id: 'canonical-uuid' }], [department])).toEqual([
+      department,
+    ]);
   });
   it('normalizes department names before matching existing or inline draft options', () => {
     expect(normalizeDepartmentName('  تحقيقات‌  كاربردي  ')).toBe(normalizeDepartmentName('تحقیقات کاربردی'));
@@ -37,15 +56,28 @@ describe('project form selections', () => {
   });
 
   it('searches member names, emails and job titles while excluding former members', () => {
-    const people = [person('active', 'كيميا رضايي'), person('other', 'رضا احمدی'), person('former', 'كيميا رضايي', { former: true })];
+    const people = [
+      person('active', 'كيميا رضايي'),
+      person('other', 'رضا احمدی'),
+      person('former', 'كيميا رضايي', { former: true }),
+    ];
     expect(matchingProjectMembers(people, 'کیمیا')).toEqual([people[0]]);
     expect(matchingProjectMembers(people, 'ACTIVE@')).toEqual([people[0]]);
     expect(matchingProjectMembers(people, 'مهندس')).toHaveLength(2);
   });
 
   it('assigns different context glyphs even when live department IDs are UUIDs', () => {
-    const names = ['مهندسی و توسعه', 'محصول', 'طراحی تجربه کاربری', 'بازاریابی', 'مالی و اداری', 'عملیات و پشتیبانی'];
-    expect(new Set(names.map(name => departmentGlyph('01900000-0000-7000-8000-000000000001', name))).size).toBe(6);
+    const names = [
+      'مهندسی و توسعه',
+      'محصول',
+      'طراحی تجربه کاربری',
+      'بازاریابی',
+      'مالی و اداری',
+      'عملیات و پشتیبانی',
+    ];
+    expect(
+      new Set(names.map((name) => departmentGlyph('01900000-0000-7000-8000-000000000001', name))).size,
+    ).toBe(6);
     expect(departmentGlyph('custom-1', 'پژوهش')).toBe('custom');
     expect(departmentGlyph('engineering', 'Team')).toBe('engineering');
   });

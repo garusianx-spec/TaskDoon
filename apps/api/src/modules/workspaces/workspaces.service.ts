@@ -2,7 +2,13 @@ import { randomBytes } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
-import type { CreateWorkspaceBody, PlanLimits, UpdateWorkspaceBody, WorkspaceSettings, WorkspaceView } from '@taskin/contracts';
+import type {
+  CreateWorkspaceBody,
+  PlanLimits,
+  UpdateWorkspaceBody,
+  WorkspaceSettings,
+  WorkspaceView,
+} from '@taskin/contracts';
 import { monogram } from '@taskin/text';
 import { AppConfig } from '../../config/app-config.js';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
@@ -48,8 +54,11 @@ export class WorkspacesService {
     const [owner] = await this.uow.run({ workspaceId: null, userId: principal.userId }, ({ tx }) =>
       tx.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, principal.userId)),
     );
-    if (!owner?.passwordHash) throw new ApiError('PASSWORD_REQUIRED', 'Owners need an admin password; set one first.');
-    const iconKey = body.iconUploadKey ? await this.icons.claim(principal.userId, body.iconUploadKey, workspaceId) : null;
+    if (!owner?.passwordHash)
+      throw new ApiError('PASSWORD_REQUIRED', 'Owners need an admin password; set one first.');
+    const iconKey = body.iconUploadKey
+      ? await this.icons.claim(principal.userId, body.iconUploadKey, workspaceId)
+      : null;
 
     const row = await this.uow.run({ workspaceId, userId: principal.userId }, async (unit) => {
       const name = body.name.trim();
@@ -68,7 +77,9 @@ export class WorkspacesService {
         .returning();
       if (!workspace) throw new Error('workspace insert returned nothing');
       const roleIds = await seedWorkspace(unit.tx, workspaceId);
-      await unit.tx.insert(workspaceMembers).values({ workspaceId, userId: principal.userId, roleId: roleIds.owner });
+      await unit.tx
+        .insert(workspaceMembers)
+        .values({ workspaceId, userId: principal.userId, roleId: roleIds.owner });
       await this.audit.write(unit.tx, {
         action: 'workspace.create',
         workspaceId,
@@ -89,15 +100,18 @@ export class WorkspacesService {
   }
 
   async get(member: MembershipContext): Promise<WorkspaceView> {
-    const { row, limits } = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async ({ tx }) => {
-      const [joined] = await tx
-        .select({ row: workspaces, limits: plans.limits })
-        .from(workspaces)
-        .innerJoin(plans, eq(plans.id, workspaces.planId))
-        .where(and(eq(workspaces.id, member.workspaceId), isNull(workspaces.deletedAt)));
-      if (!joined) throw ApiError.notFound('The workspace');
-      return joined;
-    });
+    const { row, limits } = await this.uow.run(
+      { workspaceId: member.workspaceId, userId: member.userId },
+      async ({ tx }) => {
+        const [joined] = await tx
+          .select({ row: workspaces, limits: plans.limits })
+          .from(workspaces)
+          .innerJoin(plans, eq(plans.id, workspaces.planId))
+          .where(and(eq(workspaces.id, member.workspaceId), isNull(workspaces.deletedAt)));
+        if (!joined) throw ApiError.notFound('The workspace');
+        return joined;
+      },
+    );
     return this.view(row, mergeLimits(limits, row.limitOverrides));
   }
 
@@ -113,36 +127,55 @@ export class WorkspacesService {
           ? null
           : await this.icons.claim(member.userId, body.iconUploadKey, member.workspaceId);
 
-    const { before, after } = await this.uow.run({ workspaceId: member.workspaceId, userId: member.userId }, async (unit) => {
-      const before = await this.lock(unit.tx, member.workspaceId);
-      // DTO instances carry every declared field, set or not; merge only what was sent.
-      const patch = Object.fromEntries(Object.entries(body.settings ?? {}).filter(([, value]) => value !== undefined));
-      const settings: WorkspaceSettings | undefined = body.settings ? { ...before.settings, ...patch } : undefined;
-      const name = body.name?.trim();
-      const [after] = await unit.tx
-        .update(workspaces)
-        .set({
-          ...(name !== undefined ? { name, initials: monogram(name) } : {}),
-          ...(body.description !== undefined ? { description: body.description.trim() } : {}),
-          ...(body.tone !== undefined ? { tone: body.tone } : {}),
-          ...(iconKey !== undefined ? { iconKey } : {}),
-          ...(settings ? { settings } : {}),
-        })
-        .where(eq(workspaces.id, member.workspaceId))
-        .returning();
-      if (!after) throw ApiError.notFound('The workspace');
-      await this.audit.write(unit.tx, {
-        action: 'workspace.update',
-        workspaceId: member.workspaceId,
-        resourceType: 'workspace',
-        resourceId: member.workspaceId,
-        changes: {
-          before: { name: before.name, description: before.description, tone: before.tone, iconKey: before.iconKey, settings: before.settings },
-          after: { name: after.name, description: after.description, tone: after.tone, iconKey: after.iconKey, settings: after.settings },
-        },
-      });
-      return { before, after };
-    });
+    const { before, after } = await this.uow.run(
+      { workspaceId: member.workspaceId, userId: member.userId },
+      async (unit) => {
+        const before = await this.lock(unit.tx, member.workspaceId);
+        // DTO instances carry every declared field, set or not; merge only what was sent.
+        const patch = Object.fromEntries(
+          Object.entries(body.settings ?? {}).filter(([, value]) => value !== undefined),
+        );
+        const settings: WorkspaceSettings | undefined = body.settings
+          ? { ...before.settings, ...patch }
+          : undefined;
+        const name = body.name?.trim();
+        const [after] = await unit.tx
+          .update(workspaces)
+          .set({
+            ...(name !== undefined ? { name, initials: monogram(name) } : {}),
+            ...(body.description !== undefined ? { description: body.description.trim() } : {}),
+            ...(body.tone !== undefined ? { tone: body.tone } : {}),
+            ...(iconKey !== undefined ? { iconKey } : {}),
+            ...(settings ? { settings } : {}),
+          })
+          .where(eq(workspaces.id, member.workspaceId))
+          .returning();
+        if (!after) throw ApiError.notFound('The workspace');
+        await this.audit.write(unit.tx, {
+          action: 'workspace.update',
+          workspaceId: member.workspaceId,
+          resourceType: 'workspace',
+          resourceId: member.workspaceId,
+          changes: {
+            before: {
+              name: before.name,
+              description: before.description,
+              tone: before.tone,
+              iconKey: before.iconKey,
+              settings: before.settings,
+            },
+            after: {
+              name: after.name,
+              description: after.description,
+              tone: after.tone,
+              iconKey: after.iconKey,
+              settings: after.settings,
+            },
+          },
+        });
+        return { before, after };
+      },
+    );
     if (iconKey !== undefined && before.iconKey && before.iconKey !== after.iconKey) {
       await this.storage.delete(before.iconKey).catch(() => undefined);
     }
@@ -192,23 +225,45 @@ export class WorkspacesService {
         .select({ status: workspaceMembers.status, passwordHash: users.passwordHash })
         .from(workspaceMembers)
         .innerJoin(users, eq(users.id, workspaceMembers.userId))
-        .where(and(eq(workspaceMembers.workspaceId, member.workspaceId), eq(workspaceMembers.userId, targetUserId)));
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, member.workspaceId),
+            eq(workspaceMembers.userId, targetUserId),
+          ),
+        );
       if (!target || target.status !== 'active') throw ApiError.notFound('The member');
-      if (!target.passwordHash) throw new ApiError('PASSWORD_REQUIRED', 'The new owner needs an admin password first.');
+      if (!target.passwordHash)
+        throw new ApiError('PASSWORD_REQUIRED', 'The new owner needs an admin password first.');
       const roleIds = Object.fromEntries(
-        (await unit.tx.select({ id: roles.id, key: roles.key }).from(roles).where(eq(roles.workspaceId, member.workspaceId))).map(
-          (role) => [role.key, role.id],
-        ),
+        (
+          await unit.tx
+            .select({ id: roles.id, key: roles.key })
+            .from(roles)
+            .where(eq(roles.workspaceId, member.workspaceId))
+        ).map((role) => [role.key, role.id]),
       );
-      await unit.tx.update(workspaces).set({ ownerUserId: targetUserId }).where(eq(workspaces.id, member.workspaceId));
+      await unit.tx
+        .update(workspaces)
+        .set({ ownerUserId: targetUserId })
+        .where(eq(workspaces.id, member.workspaceId));
       await unit.tx
         .update(workspaceMembers)
         .set({ roleId: roleIds.owner })
-        .where(and(eq(workspaceMembers.workspaceId, member.workspaceId), eq(workspaceMembers.userId, targetUserId)));
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, member.workspaceId),
+            eq(workspaceMembers.userId, targetUserId),
+          ),
+        );
       await unit.tx
         .update(workspaceMembers)
         .set({ roleId: roleIds.admin })
-        .where(and(eq(workspaceMembers.workspaceId, member.workspaceId), eq(workspaceMembers.userId, member.userId)));
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, member.workspaceId),
+            eq(workspaceMembers.userId, member.userId),
+          ),
+        );
       await this.memberships.bump(unit, member.workspaceId);
       await this.audit.write(unit.tx, {
         action: 'workspace.ownership.transfer',
@@ -236,11 +291,26 @@ export class WorkspacesService {
     for (const { id } of due.rows) {
       await this.uow.run({ workspaceId: id, userId: null }, async (unit) => {
         await unit.tx.delete(workspaces).where(eq(workspaces.id, id));
-        await this.audit.write(unit.tx, { action: 'workspace.purge', workspaceId: id, actorUserId: null, resourceType: 'workspace', resourceId: id });
-        await this.outbox.add(unit.tx, { type: 'workspace.purged', aggregateType: 'workspace', aggregateId: id, workspaceId: id, payload: { workspaceId: id } });
+        await this.audit.write(unit.tx, {
+          action: 'workspace.purge',
+          workspaceId: id,
+          actorUserId: null,
+          resourceType: 'workspace',
+          resourceId: id,
+        });
+        await this.outbox.add(unit.tx, {
+          type: 'workspace.purged',
+          aggregateType: 'workspace',
+          aggregateId: id,
+          workspaceId: id,
+          payload: { workspaceId: id },
+        });
       });
       const files = await this.storage.deletePrefix(`ws/${id}/`).catch((error: unknown) => {
-        this.logger.error({ workspaceId: id, error: error instanceof Error ? error.message : String(error) }, 'purging workspace files failed');
+        this.logger.error(
+          { workspaceId: id, error: error instanceof Error ? error.message : String(error) },
+          'purging workspace files failed',
+        );
         return 0;
       });
       this.logger.log({ workspaceId: id, files }, 'workspace purged');

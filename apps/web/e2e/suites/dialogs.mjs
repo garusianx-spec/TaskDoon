@@ -22,7 +22,10 @@ for (const [item, title] of items) {
   await page.keyboard.press('Escape');
   await page.waitForTimeout(150);
   check(await eventually(async () => (await dialog.count()) === 0), `  Escape closes "${title}"`);
-  check(await eventually(async () => (await focusedLabel()) === 'ایجاد سریع'), `  focus restored to trigger (${await focusedLabel()})`);
+  check(
+    await eventually(async () => (await focusedLabel()) === 'ایجاد سریع'),
+    `  focus restored to trigger (${await focusedLabel()})`,
+  );
 }
 
 // Shortcuts
@@ -46,7 +49,10 @@ await dialog.getByRole('checkbox', { name: 'پیام صدیقی' }).click();
 await dialog.getByRole('button', { name: 'ایجاد گروه' }).click();
 await page.waitForURL('**/chats');
 await page.waitForTimeout(300);
-check(await visible(page.getByRole('region', { name: 'گفتگوی تیم انتشار نسخه ۳' })), 'new group opens in /chats');
+check(
+  await visible(page.getByRole('region', { name: 'گفتگوی تیم انتشار نسخه ۳' })),
+  'new group opens in /chats',
+);
 await page.screenshot({ path: `${out}/o_group.png` });
 
 // Direct chat to an existing contact reopens it
@@ -55,7 +61,10 @@ dialog = page.getByRole('dialog', { name: 'گفتگوی جدید' });
 await dialog.getByRole('radio', { name: /آرش کاویانی/ }).click();
 check(await visible(dialog.getByRole('button', { name: 'باز کردن گفتگو' })), 'existing direct chat detected');
 await dialog.getByRole('button', { name: 'باز کردن گفتگو' }).click();
-check(await visible(page.getByRole('region', { name: 'گفتگوی آرش کاویانی' })), 'existing direct chat reopened');
+check(
+  await visible(page.getByRole('region', { name: 'گفتگوی آرش کاویانی' })),
+  'existing direct chat reopened',
+);
 
 // Calendar event from quick create → lands on /calendar
 await rail.getByRole('button', { name: 'ایجاد سریع' }).click();
@@ -66,7 +75,12 @@ await dialog.getByLabel('عنوان').fill('تحویل نسخه بتا به مش
 await dialog.getByRole('button', { name: 'ثبت در تقویم' }).click();
 await page.waitForURL('**/calendar');
 await page.waitForTimeout(300);
-check(await eventually(async () => (await page.getByRole('button', { name: /نقطه عطف پروژه: تحویل نسخه بتا/ }).count()) >= 1), 'milestone appears on calendar');
+check(
+  await eventually(
+    async () => (await page.getByRole('button', { name: /نقطه عطف پروژه: تحویل نسخه بتا/ }).count()) >= 1,
+  ),
+  'milestone appears on calendar',
+);
 
 // Invite colleagues with chip validation
 await rail.getByRole('button', { name: 'ایجاد سریع' }).click();
@@ -76,14 +90,23 @@ const emails = dialog.getByLabel('ایمیل یا شماره موبایل همک
 await emails.fill('mina.karimi@rahnama.ir, bad-address, arash.kaviani@rahnama.ir');
 await emails.press('Enter');
 check(await visible(dialog.getByText('mina.karimi@rahnama.ir')), 'valid email became a chip');
-check(await visible(dialog.getByRole('alert').getByText('bad-address نه ایمیل معتبر است و نه شماره موبایل.')), 'invalid email flagged');
-check(await visible(dialog.getByRole('alert').getByText('arash.kaviani@rahnama.ir از قبل عضو سازمان است.')), 'existing member flagged');
+check(
+  await visible(dialog.getByRole('alert').getByText('bad-address نه ایمیل معتبر است و نه شماره موبایل.')),
+  'invalid email flagged',
+);
+check(
+  await visible(dialog.getByRole('alert').getByText('arash.kaviani@rahnama.ir از قبل عضو سازمان است.')),
+  'existing member flagged',
+);
 await page.screenshot({ path: `${out}/o_invite.png` });
 await dialog.getByRole('button', { name: 'ارسال دعوت‌نامه' }).click();
 await page.goto(base + '/directory', { waitUntil: 'networkidle' });
 // (full reload resets state — check live instead via directory button)
 await page.getByRole('button', { name: 'دعوت همکار' }).click();
-check(await visible(page.getByRole('dialog', { name: 'دعوت همکار' })), 'directory invite button opens dialog');
+check(
+  await visible(page.getByRole('dialog', { name: 'دعوت همکار' })),
+  'directory invite button opens dialog',
+);
 await page.keyboard.press('Escape');
 
 // Profile popover actions
@@ -96,7 +119,10 @@ await dialog.getByRole('radio', { name: /مشغول/ }).click();
 await dialog.getByRole('button', { name: 'در جلسه' }).click();
 await page.screenshot({ path: `${out}/o_profile.png` });
 await dialog.getByRole('button', { name: 'ذخیره تغییرات' }).click();
-check(await eventually(async () => (await rail.getByRole('button', { name: /مشغول/ }).count()) === 1), 'presence saved and reflected on rail avatar');
+check(
+  await eventually(async () => (await rail.getByRole('button', { name: /مشغول/ }).count()) === 1),
+  'presence saved and reflected on rail avatar',
+);
 
 await avatar.click();
 await page.getByRole('menuitem', { name: 'امنیت و ورود' }).click();
@@ -112,16 +138,30 @@ await dialog.getByLabel('تکرار رمز عبور جدید').fill('N3w-Strong-
 await dialog.getByRole('button', { name: 'به‌روزرسانی رمز عبور' }).click();
 check(await visible(dialog.getByText('رمز عبور با موفقیت تغییر کرد.')), 'password change succeeds');
 await dialog.getByRole('switch', { name: 'ورود دومرحله‌ای با پیامک' }).click();
-check(await eventually(async () => (await dialog.getByRole('switch', { name: 'ورود دومرحله‌ای با پیامک' }).getAttribute('aria-checked')) === 'true'), '2FA toggled on');
+check(
+  await eventually(
+    async () =>
+      (await dialog
+        .getByRole('switch', { name: 'ورود دومرحله‌ای با پیامک' })
+        .getAttribute('aria-checked')) === 'true',
+  ),
+  '2FA toggled on',
+);
 await dialog.getByRole('button', { name: 'خروج از همه نشست‌های دیگر' }).click();
-check(await eventually(async () => (await dialog.getByRole('button', { name: /خروج از نشست/ }).count()) === 0), 'other sessions revoked');
+check(
+  await eventually(async () => (await dialog.getByRole('button', { name: /خروج از نشست/ }).count()) === 0),
+  'other sessions revoked',
+);
 await page.screenshot({ path: `${out}/o_security.png` });
 await dialog.getByRole('button', { name: 'بستن' }).last().click();
 
 // Close button on the popover
 await avatar.click();
 await page.getByRole('dialog', { name: 'حساب کاربری' }).getByRole('button', { name: 'بستن' }).click();
-check(await eventually(async () => (await page.getByRole('dialog', { name: 'حساب کاربری' }).count()) === 0), 'popover بستن closes it');
+check(
+  await eventually(async () => (await page.getByRole('dialog', { name: 'حساب کاربری' }).count()) === 0),
+  'popover بستن closes it',
+);
 
 // Sign out
 await avatar.click();

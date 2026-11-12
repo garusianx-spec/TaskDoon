@@ -3,25 +3,25 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
-import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
-import { CreateProjectModal } from '@/components/tasks/CreateProjectModal';
-import { ProjectLimitDialog } from '@/components/tasks/ProjectLimitDialog';
-import { ProjectDeleteDialog, ProjectTrashModal } from '@/components/tasks/ProjectTrash';
+import { CreateTaskModal } from '@/features/tasks/components/CreateTaskModal';
+import { CreateProjectModal } from '@/features/board/components/CreateProjectModal';
+import { ProjectLimitDialog } from '@/features/board/components/ProjectLimitDialog';
+import { ProjectDeleteDialog, ProjectTrashModal } from '@/features/board/components/ProjectTrash';
 import { GlobalSearchModal } from '@/components/layout/GlobalSearchModal';
-import { NewConversationModal } from '@/components/chat/NewConversationModal';
-import { CalendarEventModal } from '@/components/calendar/CalendarEventModal';
-import { InviteMemberModal } from '@/components/directory/InviteMemberModal';
-import { ProfileModal } from '@/components/account/ProfileModal';
-import { SecurityModal } from '@/components/account/SecurityModal';
-import { WorkingHoursModal } from '@/components/account/WorkingHoursModal';
-import { SignOutModal } from '@/components/account/SignOutModal';
-import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal';
-import { WorkspaceSettingsModal } from '@/components/workspace/WorkspaceSettingsModal';
-import { DeleteWorkspaceModal } from '@/components/workspace/DeleteWorkspaceModal';
+import { NewConversationModal } from '@/features/chat/components/NewConversationModal';
+import { CalendarEventModal } from '@/features/calendar/components/CalendarEventModal';
+import { InviteMemberModal } from '@/features/workspace/components/directory/InviteMemberModal';
+import { ProfileModal } from '@/features/account/components/ProfileModal';
+import { SecurityModal } from '@/features/account/components/SecurityModal';
+import { WorkingHoursModal } from '@/features/account/components/WorkingHoursModal';
+import { SignOutModal } from '@/features/account/components/SignOutModal';
+import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
+import { CreateWorkspaceModal } from '@/features/workspace/components/CreateWorkspaceModal';
+import { WorkspaceSettingsModal } from '@/features/workspace/components/WorkspaceSettingsModal';
+import { DeleteWorkspaceModal } from '@/features/workspace/components/DeleteWorkspaceModal';
 import { nextLocalId } from '@/store/ids';
 import { userById } from '@/store/selectors';
-import { useOverlays } from './context';
+import { useOverlays } from '@/components/overlays/context';
 import { IconButton } from '@/components/ui';
 import { CheckCircleIcon, CloseIcon } from '@/components/icons';
 
@@ -33,7 +33,16 @@ import { CheckCircleIcon, CloseIcon } from '@/components/icons';
 export function OverlayHost() {
   const router = useRouter();
   const pathname = usePathname();
-  const { state, dispatch, createTask, createProject, saveProfile, currentUser, activeWorkspace, isWorkspaceOwner } = useWorkspace();
+  const {
+    state,
+    dispatch,
+    createTask,
+    createProject,
+    saveProfile,
+    currentUser,
+    activeWorkspace,
+    isWorkspaceOwner,
+  } = useWorkspace();
   const [taskNotice, setTaskNotice] = useState<string | null>(null);
   useEffect(() => {
     if (!taskNotice) return;
@@ -58,7 +67,10 @@ export function OverlayHost() {
   const projectLimit = activeWorkspace.projectLimit ?? null;
   const atProjectLimit = projectLimit !== null && state.projects.length >= projectLimit;
 
-  const deletingProject = active?.kind === 'project-delete' ? (state.projects.find((project) => project.id === active.projectId) ?? null) : null;
+  const deletingProject =
+    active?.kind === 'project-delete'
+      ? (state.projects.find((project) => project.id === active.projectId) ?? null)
+      : null;
 
   const pendingDeletion =
     active?.kind === 'workspace-delete'
@@ -72,7 +84,9 @@ export function OverlayHost() {
         draft={active?.kind === 'task-composer' ? active.draft : null}
         columns={state.boardColumns}
         timeZone={activeWorkspace.timeZone}
-        {...(pathname.startsWith('/tasks') && state.projectFilterId ? { fixedProjectId: state.projectFilterId } : {})}
+        {...(pathname.startsWith('/tasks') && state.projectFilterId
+          ? { fixedProjectId: state.projectFilterId }
+          : {})}
         onCreateProject={() => open({ kind: 'project-composer' })}
         onClose={close}
         onSubmit={async (draft, files, commandId) => {
@@ -84,10 +98,18 @@ export function OverlayHost() {
 
       {taskNotice && (
         <div className="pointer-events-none fixed inset-x-0 bottom-24 z-toast flex justify-center px-4 sm:bottom-6">
-          <div role="status" className="pointer-events-auto flex max-w-lg items-start gap-2.5 rounded-xl border border-secondary bg-surface p-3 shadow-lg">
+          <div
+            role="status"
+            className="pointer-events-auto flex max-w-lg items-start gap-2.5 rounded-xl border border-secondary bg-surface p-3 shadow-lg"
+          >
             <CheckCircleIcon size={20} className="mt-0.5 shrink-0 text-status-done" />
             <p className="min-w-0 flex-1 break-words text-body-sm text-fg-primary">{taskNotice}</p>
-            <IconButton label="بستن پیام موفقیت" icon={<CloseIcon size={16} />} size="xs" onClick={() => setTaskNotice(null)} />
+            <IconButton
+              label="بستن پیام موفقیت"
+              icon={<CloseIcon size={16} />}
+              size="xs"
+              onClick={() => setTaskNotice(null)}
+            />
           </div>
         </div>
       )}
@@ -190,6 +212,9 @@ export function OverlayHost() {
         isLastWorkspace={state.workspaces.length <= 1}
         onClose={close}
         onRequestDelete={() => open({ kind: 'workspace-delete', workspaceId: activeWorkspace.id })}
+        {...(live && (isWorkspaceOwner || state.permissions[currentUser.role]?.members.edit)
+          ? { onSaveIcon: (file: File | null) => live.store.saveWorkspaceIcon(activeWorkspace.id, file) }
+          : {})}
       />
 
       <DeleteWorkspaceModal
@@ -233,7 +258,14 @@ export function OverlayHost() {
         onToggleTwoFactor={(enabled) => dispatch({ type: 'set-two-factor', enabled })}
         onRevokeSession={(sessionId) => dispatch({ type: 'revoke-login-session', sessionId })}
         onRevokeOtherSessions={() => dispatch({ type: 'revoke-other-login-sessions' })}
-        {...(live ? { live: { hasPassword, onChangePassword: (current, next) => live.store.changePassword(current, next) } } : {})}
+        {...(live
+          ? {
+              live: {
+                hasPassword,
+                onChangePassword: (current, next) => live.store.changePassword(current, next),
+              },
+            }
+          : {})}
       />
 
       <WorkingHoursModal

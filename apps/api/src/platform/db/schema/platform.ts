@@ -53,7 +53,11 @@ export const outboxEvents = pgTable(
     publishedAt: instant(),
   },
   (t) => [
-    index('outbox_events_unpublished_idx').on(t.id).where(sql`${t.publishedAt} is null`),
-    index('outbox_events_published_idx').on(t.publishedAt).where(sql`${t.publishedAt} is not null`),
+    index('outbox_events_unpublished_idx')
+      .on(t.id)
+      .where(sql`${t.publishedAt} is null`),
+    index('outbox_events_published_idx')
+      .on(t.publishedAt)
+      .where(sql`${t.publishedAt} is not null`),
   ],
 );

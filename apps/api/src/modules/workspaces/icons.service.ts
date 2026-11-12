@@ -9,10 +9,23 @@ import { StorageService } from '../../platform/storage/storage.js';
 export const ICON_MAX_BYTES = 1024 * 1024;
 const TICKET_TTL_SECONDS = 600;
 
-const SIGNATURES: readonly { readonly type: string; readonly ext: string; readonly matches: (bytes: Buffer) => boolean }[] = [
-  { type: 'image/png', ext: 'png', matches: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
+const SIGNATURES: readonly {
+  readonly type: string;
+  readonly ext: string;
+  readonly matches: (bytes: Buffer) => boolean;
+}[] = [
+  {
+    type: 'image/png',
+    ext: 'png',
+    matches: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  },
   { type: 'image/jpeg', ext: 'jpg', matches: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
-  { type: 'image/webp', ext: 'webp', matches: (b) => b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP' },
+  {
+    type: 'image/webp',
+    ext: 'webp',
+    matches: (b) =>
+      b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP',
+  },
 ];
 
 /** What a file really is, by its magic number; never trust the uploaded Content-Type. */
@@ -35,7 +48,11 @@ export class IconsService {
 
   async ticket(userId: string): Promise<UploadTicket> {
     const key = `tmp/icons/${userId}/${randomUUID()}`;
-    const post = await this.storage.presignPost(key, { maxBytes: ICON_MAX_BYTES, contentTypePrefix: 'image/', expiresInSeconds: TICKET_TTL_SECONDS });
+    const post = await this.storage.presignPost(key, {
+      maxBytes: ICON_MAX_BYTES,
+      contentTypePrefix: 'image/',
+      expiresInSeconds: TICKET_TTL_SECONDS,
+    });
     await this.uow.run({ workspaceId: null, userId }, ({ tx }) =>
       this.audit.write(tx, { action: 'upload.ticket', resourceType: 'upload', resourceId: key }),
     );

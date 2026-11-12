@@ -51,13 +51,13 @@ import {
   statusLabel,
 } from '@/data/reference';
 import { toPersianDigits } from '@taskin/jalali';
-import { inverseKind, linkProblem, openBlockers } from '@/lib/agile';
+import { inverseKind, linkProblem, openBlockers } from '@/features/agile/lib/agile';
 import { attachmentKindOf } from '@/lib/attachments';
 import { AUTO_REPLY_WINDOW_MS, isWorkingTime } from '@/lib/working-hours';
-import { columnForTask, projectColumns } from './selectors';
-import { nextLocalId as nextId } from './ids';
-import { INITIAL_WORKSPACE_STATE } from './initial-state';
-import { EMPTY_SCOPE, scopeOf, type WorkspaceScope } from './workspace-scope';
+import { columnForTask, projectColumns } from '@/store/selectors';
+import { nextLocalId as nextId } from '@/store/ids';
+import { INITIAL_WORKSPACE_STATE } from '@/store/initial-state';
+import { EMPTY_SCOPE, scopeOf, type WorkspaceScope } from '@/store/workspace-scope';
 import { monogram } from '@taskin/text';
 
 export interface WorkspaceState {
@@ -162,21 +162,52 @@ export type WorkspaceAction =
   | { readonly type: 'move-task-to-column'; readonly taskId: string; readonly columnId: string }
   | { readonly type: 'set-task-completed'; readonly taskId: string; readonly completed: boolean }
   /** Adds a column to one project's board; no other board changes. */
-  | { readonly type: 'add-board-column'; readonly projectId: string; readonly title: string; readonly tone: TagTone }
+  | {
+      readonly type: 'add-board-column';
+      readonly projectId: string;
+      readonly title: string;
+      readonly tone: TagTone;
+    }
   | { readonly type: 'rename-board-column'; readonly columnId: string; readonly title: string }
-  | { readonly type: 'remove-board-column'; readonly columnId: string; readonly disposition: ColumnDisposition }
+  | {
+      readonly type: 'remove-board-column';
+      readonly columnId: string;
+      readonly disposition: ColumnDisposition;
+    }
   | { readonly type: 'patch-task'; readonly taskId: string; readonly patch: TaskPatch }
   | { readonly type: 'toggle-task-star'; readonly taskId: string }
   | { readonly type: 'toggle-subtask'; readonly taskId: string; readonly subtaskId: string }
   | { readonly type: 'add-subtask'; readonly taskId: string; readonly title: string }
   | { readonly type: 'remove-subtask'; readonly taskId: string; readonly subtaskId: string }
-  | { readonly type: 'move-subtask'; readonly taskId: string; readonly subtaskId: string; readonly delta: number }
-  | { readonly type: 'attach-task-files'; readonly taskId: string; readonly authorId: string; readonly files: readonly PickedFile[] }
+  | {
+      readonly type: 'move-subtask';
+      readonly taskId: string;
+      readonly subtaskId: string;
+      readonly delta: number;
+    }
+  | {
+      readonly type: 'attach-task-files';
+      readonly taskId: string;
+      readonly authorId: string;
+      readonly files: readonly PickedFile[];
+    }
   | { readonly type: 'remove-task-attachment'; readonly taskId: string; readonly attachmentId: string }
-  | { readonly type: 'add-task-comment'; readonly taskId: string; readonly authorId: string; readonly body: string; readonly replyToId: string | null }
+  | {
+      readonly type: 'add-task-comment';
+      readonly taskId: string;
+      readonly authorId: string;
+      readonly body: string;
+      readonly replyToId: string | null;
+    }
   | { readonly type: 'create-task'; readonly draft: TaskDraft; readonly authorId: string }
   | { readonly type: 'create-conversation'; readonly draft: ConversationDraft; readonly authorId: string }
-  | { readonly type: 'send-message'; readonly conversationId: string; readonly authorId: string; readonly text: string; readonly replyToId: string | null }
+  | {
+      readonly type: 'send-message';
+      readonly conversationId: string;
+      readonly authorId: string;
+      readonly text: string;
+      readonly replyToId: string | null;
+    }
   | {
       readonly type: 'send-file';
       readonly conversationId: string;
@@ -216,7 +247,12 @@ export type WorkspaceAction =
   /** Demo only: the schedules whose time has come go out (in the live app, the server's worker sends them). */
   | { readonly type: 'deliver-due-scheduled'; readonly now: string }
   | { readonly type: 'update-working-hours'; readonly hours: WorkingHours }
-  | { readonly type: 'toggle-reaction'; readonly messageId: string; readonly emoji: string; readonly userId: string }
+  | {
+      readonly type: 'toggle-reaction';
+      readonly messageId: string;
+      readonly emoji: string;
+      readonly userId: string;
+    }
   | { readonly type: 'mark-conversation-read'; readonly conversationId: string }
   | { readonly type: 'toggle-conversation-pin'; readonly conversationId: string }
   | { readonly type: 'toggle-conversation-mute'; readonly conversationId: string }
@@ -225,7 +261,12 @@ export type WorkspaceAction =
   /** `categoryId: null` files the note in no notebook. */
   | { readonly type: 'create-note'; readonly noteId: string; readonly categoryId: string | null }
   | { readonly type: 'create-note-category'; readonly categoryId: string; readonly label: string }
-  | { readonly type: 'create-project'; readonly projectId: string; readonly draft: ProjectDraft; readonly ownerId: string }
+  | {
+      readonly type: 'create-project';
+      readonly projectId: string;
+      readonly draft: ProjectDraft;
+      readonly ownerId: string;
+    }
   /** Workspace owner only: to the trash, restorable for 40 days. */
   | { readonly type: 'delete-project'; readonly projectId: string }
   | { readonly type: 'restore-project'; readonly projectId: string }
@@ -266,15 +307,36 @@ export type WorkspaceAction =
     }
   | { readonly type: 'sign-out' }
   | { readonly type: 'sign-in' }
-  | { readonly type: 'set-permission'; readonly role: RoleId; readonly module: PermissionModuleId; readonly action: PermissionActionId; readonly value: boolean }
-  | { readonly type: 'set-module-permissions'; readonly role: RoleId; readonly module: PermissionModuleId; readonly value: boolean }
-  | { readonly type: 'set-action-permissions'; readonly role: RoleId; readonly action: PermissionActionId; readonly value: boolean }
+  | {
+      readonly type: 'set-permission';
+      readonly role: RoleId;
+      readonly module: PermissionModuleId;
+      readonly action: PermissionActionId;
+      readonly value: boolean;
+    }
+  | {
+      readonly type: 'set-module-permissions';
+      readonly role: RoleId;
+      readonly module: PermissionModuleId;
+      readonly value: boolean;
+    }
+  | {
+      readonly type: 'set-action-permissions';
+      readonly role: RoleId;
+      readonly action: PermissionActionId;
+      readonly value: boolean;
+    }
   | { readonly type: 'set-role-permissions'; readonly role: RoleId; readonly value: boolean }
   | { readonly type: 'replace-permissions'; readonly permissions: PermissionMatrix }
   | { readonly type: 'announce'; readonly message: string }
   | { readonly type: 'log-work'; readonly taskId: string; readonly minutes: number; readonly note: string }
   | { readonly type: 'remove-worklog'; readonly taskId: string; readonly worklogId: string }
-  | { readonly type: 'add-task-link'; readonly taskId: string; readonly otherTaskId: string; readonly kind: TaskDependencyType }
+  | {
+      readonly type: 'add-task-link';
+      readonly taskId: string;
+      readonly otherTaskId: string;
+      readonly kind: TaskDependencyType;
+    }
   | { readonly type: 'remove-task-link'; readonly taskId: string; readonly linkId: string }
   | { readonly type: 'dismiss-blocked-notice' }
   | SyncAction;
@@ -287,31 +349,62 @@ export type SyncAction =
   | { readonly type: 'sync/merge'; readonly patch: Partial<WorkspaceState> }
   | { readonly type: 'sync/upsert-task'; readonly task: Task; readonly replaceId?: string }
   | { readonly type: 'sync/remove-task'; readonly taskId: string }
-  | { readonly type: 'sync/upsert-conversation'; readonly conversation: Conversation; readonly replaceId?: string; readonly select?: boolean }
+  | {
+      readonly type: 'sync/upsert-conversation';
+      readonly conversation: Conversation;
+      readonly replaceId?: string;
+      readonly select?: boolean;
+    }
   | { readonly type: 'sync/remove-conversation'; readonly conversationId: string }
-  | { readonly type: 'sync/upsert-messages'; readonly messages: readonly Message[]; readonly replaceId?: string }
+  | {
+      readonly type: 'sync/upsert-messages';
+      readonly messages: readonly Message[];
+      readonly replaceId?: string;
+    }
   | { readonly type: 'sync/remove-message'; readonly messageId: string }
-  | { readonly type: 'sync/upsert-scheduled'; readonly scheduled: ScheduledMessage; readonly replaceId?: string }
+  | {
+      readonly type: 'sync/upsert-scheduled';
+      readonly scheduled: ScheduledMessage;
+      readonly replaceId?: string;
+    }
   | { readonly type: 'sync/remove-scheduled'; readonly scheduledId: string }
   | { readonly type: 'sync/project-trash'; readonly entries: readonly TrashedProject[] }
   | { readonly type: 'sync/message-failed'; readonly messageId: string }
-  | { readonly type: 'sync/reaction'; readonly messageId: string; readonly emoji: string; readonly userIds: readonly string[] }
+  | {
+      readonly type: 'sync/reaction';
+      readonly messageId: string;
+      readonly emoji: string;
+      readonly userIds: readonly string[];
+    }
   | { readonly type: 'sync/read'; readonly userId: string; readonly messageIds: readonly string[] }
   | { readonly type: 'sync/unread'; readonly conversationId: string; readonly count: number }
-  | { readonly type: 'sync/typing'; readonly conversationId: string; readonly userId: string; readonly typing: boolean }
+  | {
+      readonly type: 'sync/typing';
+      readonly conversationId: string;
+      readonly userId: string;
+      readonly typing: boolean;
+    }
   | { readonly type: 'sync/message-linked'; readonly messageId: string; readonly taskId: string }
   | { readonly type: 'sync/upsert-notification'; readonly notification: AppNotification }
   | { readonly type: 'sync/upsert-event'; readonly event: CalendarEvent; readonly replaceId?: string }
   | { readonly type: 'sync/upsert-note'; readonly note: Note; readonly replaceId?: string }
-  | { readonly type: 'sync/upsert-note-category'; readonly category: NoteCategory; readonly replaceId?: string }
+  | {
+      readonly type: 'sync/upsert-note-category';
+      readonly category: NoteCategory;
+      readonly replaceId?: string;
+    }
   | { readonly type: 'sync/upsert-project'; readonly project: Project; readonly replaceId?: string }
   | { readonly type: 'sync/presence'; readonly userId: string; readonly presence: PresenceState }
-  | { readonly type: 'sync/task-agile'; readonly taskId: string; readonly worklogs?: readonly Worklog[]; readonly links?: readonly TaskLink[] };
+  | {
+      readonly type: 'sync/task-agile';
+      readonly taskId: string;
+      readonly worklogs?: readonly Worklog[];
+      readonly links?: readonly TaskLink[];
+    };
 
 /** What happens to the cards of a column being deleted. Irrelevant when it is empty. */
 export type ColumnDisposition =
-  | { readonly kind: 'migrate'; readonly targetColumnId: string }
-  | { readonly kind: 'archive' };
+  { readonly kind: 'migrate'; readonly targetColumnId: string } | { readonly kind: 'archive' };
 
 export interface ConversationDraft {
   readonly kind: 'direct' | 'group';
@@ -406,11 +499,8 @@ const LOCKED_ROLES: readonly RoleId[] = ['owner'];
 
 const isLocked = (role: RoleId): boolean => LOCKED_ROLES.includes(role);
 
-const mapTask = (
-  tasks: readonly Task[],
-  taskId: string,
-  update: (task: Task) => Task,
-): readonly Task[] => tasks.map((task) => (task.id === taskId ? update(task) : task));
+const mapTask = (tasks: readonly Task[], taskId: string, update: (task: Task) => Task): readonly Task[] =>
+  tasks.map((task) => (task.id === taskId ? update(task) : task));
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -465,11 +555,17 @@ function noticeIfBlocked(before: WorkspaceState, after: WorkspaceState, taskId: 
   if (blockers.length === 0) return after;
   return {
     ...after,
-    blockedDoneNotice: { id: (before.blockedDoneNotice?.id ?? 0) + 1, taskId, title: now.title, blockerCodes: blockers.map((task) => task.code) },
+    blockedDoneNotice: {
+      id: (before.blockedDoneNotice?.id ?? 0) + 1,
+      taskId,
+      title: now.title,
+      blockerCodes: blockers.map((task) => task.code),
+    },
   };
 }
 
-const without = (ids: readonly string[] | undefined, id: string): readonly string[] => (ids ?? []).filter((entry) => entry !== id);
+const without = (ids: readonly string[] | undefined, id: string): readonly string[] =>
+  (ids ?? []).filter((entry) => entry !== id);
 
 function columnTitle(columns: readonly BoardColumn[], placement: TaskPlacement): string {
   const id = placement.boardColumnId ?? placement.status;
@@ -541,26 +637,41 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return { ...state, taskSearch: action.query };
 
     case 'move-task':
-      return noticeIfBlocked(state, {
-        ...state,
-        tasks: mapTask(state.tasks, action.taskId, (task) =>
-          placeTask(task, { status: action.status, boardColumnId: null }),
-        ),
-      }, action.taskId);
+      return noticeIfBlocked(
+        state,
+        {
+          ...state,
+          tasks: mapTask(state.tasks, action.taskId, (task) =>
+            placeTask(task, { status: action.status, boardColumnId: null }),
+          ),
+        },
+        action.taskId,
+      );
 
     case 'move-task-to-column': {
       // The status columns of views across projects count as targets too.
-      const target = [...state.boardColumns, ...BUILT_IN_COLUMNS].find((column) => column.id === action.columnId);
+      const target = [...state.boardColumns, ...BUILT_IN_COLUMNS].find(
+        (column) => column.id === action.columnId,
+      );
       const placement = placementForColumn([...state.boardColumns, ...BUILT_IN_COLUMNS], action.columnId);
       if (!target || !placement) return state;
-      return noticeIfBlocked(state, {
-        ...state,
-        tasks: mapTask(state.tasks, action.taskId, (task) =>
-          // Another project's column (a sub-project's card on its parent's board) only lends its
-          // status: the card lands in its own project's column for that status.
-          placeTask(task, target.projectId === undefined || target.projectId === task.projectId ? placement : { status: target.status, boardColumnId: null }),
-        ),
-      }, action.taskId);
+      return noticeIfBlocked(
+        state,
+        {
+          ...state,
+          tasks: mapTask(state.tasks, action.taskId, (task) =>
+            // Another project's column (a sub-project's card on its parent's board) only lends its
+            // status: the card lands in its own project's column for that status.
+            placeTask(
+              task,
+              target.projectId === undefined || target.projectId === task.projectId
+                ? placement
+                : { status: target.status, boardColumnId: null },
+            ),
+          ),
+        },
+        action.taskId,
+      );
     }
 
     case 'set-task-completed': {
@@ -568,13 +679,17 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       if (!task || (task.status === 'done') === action.completed) return state;
 
       if (action.completed) {
-        return noticeIfBlocked(state, {
-          ...state,
-          tasks: mapTask(state.tasks, action.taskId, (entry) =>
-            placeTask(entry, { status: 'done', boardColumnId: null }),
-          ),
-          announcement: `وظیفه «${task.title}» انجام شد.`,
-        }, action.taskId);
+        return noticeIfBlocked(
+          state,
+          {
+            ...state,
+            tasks: mapTask(state.tasks, action.taskId, (entry) =>
+              placeTask(entry, { status: 'done', boardColumnId: null }),
+            ),
+            announcement: `وظیفه «${task.title}» انجام شد.`,
+          },
+          action.taskId,
+        );
       }
 
       // Back to where it was — unless that custom column has since been removed, in which
@@ -582,8 +697,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const remembered = task.reopenTo;
       const rememberedColumnId = remembered?.boardColumnId ?? null;
       const columnStillExists =
-        rememberedColumnId === null ||
-        state.boardColumns.some((column) => column.id === rememberedColumnId);
+        rememberedColumnId === null || state.boardColumns.some((column) => column.id === rememberedColumnId);
       const target: TaskPlacement =
         remembered && remembered.status !== 'done'
           ? columnStillExists
@@ -621,11 +735,16 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const column = state.boardColumns.find((entry) => entry.id === action.columnId);
       if (!column || !title || title === column.title) return state;
       // Names are unique per board: another project may use the same one.
-      const taken = state.boardColumns.some((entry) => entry.id !== column.id && entry.projectId === column.projectId && entry.title.trim() === title);
+      const taken = state.boardColumns.some(
+        (entry) =>
+          entry.id !== column.id && entry.projectId === column.projectId && entry.title.trim() === title,
+      );
       if (taken) return state;
       return {
         ...state,
-        boardColumns: state.boardColumns.map((entry) => (entry.id === column.id ? { ...entry, title } : entry)),
+        boardColumns: state.boardColumns.map((entry) =>
+          entry.id === column.id ? { ...entry, title } : entry,
+        ),
         announcement: `ستون «${column.title}» به «${title}» تغییر نام داد.`,
       };
     }
@@ -639,7 +758,9 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       // Only the project's own cards can be in its column.
       const inColumn = new Set(
         state.tasks
-          .filter((task) => task.projectId === column.projectId && columnForTask(board, task)?.id === column.id)
+          .filter(
+            (task) => task.projectId === column.projectId && columnForTask(board, task)?.id === column.id,
+          )
           .map((task) => task.id),
       );
       const remaining = state.boardColumns.filter((entry) => entry.id !== column.id);
@@ -768,7 +889,9 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const { draft } = action;
       const id = nextId('t');
       const today = new Date();
-      const startDate = draft.startDate ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const startDate =
+        draft.startDate ??
+        `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const placement: TaskPlacement = (draft.boardColumnId
         ? placementForColumn(state.boardColumns, draft.boardColumnId)
         : null) ?? { status: draft.status, boardColumnId: null };
@@ -813,9 +936,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
             )
           : state.messages,
         notes: draft.sourceNoteId
-          ? state.notes.map((note) =>
-              note.id === draft.sourceNoteId ? { ...note, linkedTaskId: id } : note,
-            )
+          ? state.notes.map((note) => (note.id === draft.sourceNoteId ? { ...note, linkedTaskId: id } : note))
           : state.notes,
         announcement: `وظیفه «${draft.title}» ایجاد شد.`,
       };
@@ -824,11 +945,23 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'log-work': {
       const minutes = Math.round(action.minutes);
       if (minutes < 1 || !state.tasks.some((task) => task.id === action.taskId)) return state;
-      const entry: Worklog = { id: nextId('wl'), userId: state.meId, minutes, note: action.note.trim(), loggedAt: nowIso() };
+      const entry: Worklog = {
+        id: nextId('wl'),
+        userId: state.meId,
+        minutes,
+        note: action.note.trim(),
+        loggedAt: nowIso(),
+      };
       return {
         ...state,
-        taskWorklogs: { ...state.taskWorklogs, [action.taskId]: [entry, ...(state.taskWorklogs?.[action.taskId] ?? [])] },
-        tasks: mapTask(state.tasks, action.taskId, (task) => ({ ...task, spentMinutes: (task.spentMinutes ?? 0) + minutes })),
+        taskWorklogs: {
+          ...state.taskWorklogs,
+          [action.taskId]: [entry, ...(state.taskWorklogs?.[action.taskId] ?? [])],
+        },
+        tasks: mapTask(state.tasks, action.taskId, (task) => ({
+          ...task,
+          spentMinutes: (task.spentMinutes ?? 0) + minutes,
+        })),
         announcement: `زمان کار روی «${state.tasks.find((task) => task.id === action.taskId)?.title ?? ''}» ثبت شد.`,
       };
     }
@@ -838,8 +971,16 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       if (!entry) return state;
       return {
         ...state,
-        taskWorklogs: { ...state.taskWorklogs, [action.taskId]: (state.taskWorklogs?.[action.taskId] ?? []).filter((worklog) => worklog.id !== entry.id) },
-        tasks: mapTask(state.tasks, action.taskId, (task) => ({ ...task, spentMinutes: Math.max(0, (task.spentMinutes ?? 0) - entry.minutes) })),
+        taskWorklogs: {
+          ...state.taskWorklogs,
+          [action.taskId]: (state.taskWorklogs?.[action.taskId] ?? []).filter(
+            (worklog) => worklog.id !== entry.id,
+          ),
+        },
+        tasks: mapTask(state.tasks, action.taskId, (task) => ({
+          ...task,
+          spentMinutes: Math.max(0, (task.spentMinutes ?? 0) - entry.minutes),
+        })),
       };
     }
 
@@ -849,21 +990,45 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const links = state.taskLinks?.[action.taskId] ?? [];
       if (!task || !other || linkProblem(state.tasks, links, task, other, action.kind) !== null) return state;
       const id = nextId('lnk');
-      const mine: TaskLink = { id, kind: action.kind, taskId: other.id, code: other.code, title: other.title, status: other.status };
-      const theirs: TaskLink = { id, kind: inverseKind(action.kind), taskId: task.id, code: task.code, title: task.title, status: task.status };
+      const mine: TaskLink = {
+        id,
+        kind: action.kind,
+        taskId: other.id,
+        code: other.code,
+        title: other.title,
+        status: other.status,
+      };
+      const theirs: TaskLink = {
+        id,
+        kind: inverseKind(action.kind),
+        taskId: task.id,
+        code: task.code,
+        title: task.title,
+        status: task.status,
+      };
       const blocked = action.kind === 'blocks' ? other.id : action.kind === 'blocked_by' ? task.id : null;
       const blocker = blocked === other.id ? task.id : other.id;
       return {
         ...state,
-        taskLinks: { ...state.taskLinks, [task.id]: [...links, mine], [other.id]: [...(state.taskLinks?.[other.id] ?? []), theirs] },
-        tasks: blocked ? mapTask(state.tasks, blocked, (entry) => ({ ...entry, blockedByIds: [...without(entry.blockedByIds, blocker), blocker] })) : state.tasks,
+        taskLinks: {
+          ...state.taskLinks,
+          [task.id]: [...links, mine],
+          [other.id]: [...(state.taskLinks?.[other.id] ?? []), theirs],
+        },
+        tasks: blocked
+          ? mapTask(state.tasks, blocked, (entry) => ({
+              ...entry,
+              blockedByIds: [...without(entry.blockedByIds, blocker), blocker],
+            }))
+          : state.tasks,
       };
     }
 
     case 'remove-task-link': {
       const link = state.taskLinks?.[action.taskId]?.find((entry) => entry.id === action.linkId);
       if (!link) return state;
-      const blocked = link.kind === 'blocks' ? link.taskId : link.kind === 'blocked_by' ? action.taskId : null;
+      const blocked =
+        link.kind === 'blocks' ? link.taskId : link.kind === 'blocked_by' ? action.taskId : null;
       const blocker = blocked === link.taskId ? action.taskId : link.taskId;
       return {
         ...state,
@@ -872,7 +1037,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
           [action.taskId]: (state.taskLinks?.[action.taskId] ?? []).filter((entry) => entry.id !== link.id),
           [link.taskId]: (state.taskLinks?.[link.taskId] ?? []).filter((entry) => entry.id !== link.id),
         },
-        tasks: blocked ? mapTask(state.tasks, blocked, (entry) => ({ ...entry, blockedByIds: without(entry.blockedByIds, blocker) })) : state.tasks,
+        tasks: blocked
+          ? mapTask(state.tasks, blocked, (entry) => ({
+              ...entry,
+              blockedByIds: without(entry.blockedByIds, blocker),
+            }))
+          : state.tasks,
       };
     }
 
@@ -930,9 +1100,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         unreadByConversation: { ...state.unreadByConversation, [conversation.id]: 0 },
         activeConversationId: conversation.id,
         announcement:
-          draft.kind === 'direct'
-            ? `گفتگو با ${draft.title} ایجاد شد.`
-            : `گروه «${draft.title}» ایجاد شد.`,
+          draft.kind === 'direct' ? `گفتگو با ${draft.title} ایجاد شد.` : `گروه «${draft.title}» ایجاد شد.`,
       };
     }
 
@@ -959,7 +1127,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         conversationId: action.conversationId,
         authorId: action.authorId,
         sentAt: nowIso(),
-        body: { kind: 'file', attachment: pickedAttachment(picked, action.authorId), caption: action.caption, ...(action.asFile ? { asFile: true } : {}) },
+        body: {
+          kind: 'file',
+          attachment: pickedAttachment(picked, action.authorId),
+          caption: action.caption,
+          ...(action.asFile ? { asFile: true } : {}),
+        },
         replyToId: action.replyToId,
         reactions: [],
         edited: false,
@@ -976,7 +1149,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         conversationId: action.conversationId,
         authorId: action.authorId,
         sentAt: nowIso(),
-        body: { kind: 'voice', durationSec: recording.durationSec, waveform: recording.waveform, src: recording.previewUrl },
+        body: {
+          kind: 'voice',
+          durationSec: recording.durationSec,
+          waveform: recording.waveform,
+          src: recording.previewUrl,
+        },
         replyToId: null,
         reactions: [],
         edited: false,
@@ -987,7 +1165,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     }
 
     case 'resend-message':
-      return { ...state, messages: state.messages.map((message) => (message.id === action.messageId ? { ...message, failed: false } : message)) };
+      return {
+        ...state,
+        messages: state.messages.map((message) =>
+          message.id === action.messageId ? { ...message, failed: false } : message,
+        ),
+      };
 
     case 'discard-message':
       return { ...state, messages: state.messages.filter((message) => message.id !== action.messageId) };
@@ -1018,15 +1201,22 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'send-scheduled-now': {
       const scheduled = state.scheduledMessages.find((entry) => entry.id === action.scheduledId);
       if (!scheduled) return state;
-      const rest = { ...state, scheduledMessages: state.scheduledMessages.filter((entry) => entry.id !== scheduled.id) };
+      const rest = {
+        ...state,
+        scheduledMessages: state.scheduledMessages.filter((entry) => entry.id !== scheduled.id),
+      };
       return deliverScheduled(rest, scheduled, action.messageId, new Date());
     }
 
     case 'deliver-due-scheduled': {
       const due = state.scheduledMessages.filter((entry) => entry.scheduledAt <= action.now);
       if (due.length === 0) return state;
-      let next: WorkspaceState = { ...state, scheduledMessages: state.scheduledMessages.filter((entry) => entry.scheduledAt > action.now) };
-      for (const scheduled of due) next = deliverScheduled(next, scheduled, nextId('m'), new Date(action.now));
+      let next: WorkspaceState = {
+        ...state,
+        scheduledMessages: state.scheduledMessages.filter((entry) => entry.scheduledAt > action.now),
+      };
+      for (const scheduled of due)
+        next = deliverScheduled(next, scheduled, nextId('m'), new Date(action.now));
       return next;
     }
 
@@ -1034,7 +1224,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return { ...state, workingHours: action.hours, announcement: 'ساعات کاری و پاسخ خودکار ذخیره شد.' };
 
     case 'focus-message':
-      return { ...state, activeConversationId: action.conversationId, focusedMessageId: action.messageId, inspector: { kind: 'none' } };
+      return {
+        ...state,
+        activeConversationId: action.conversationId,
+        focusedMessageId: action.messageId,
+        inspector: { kind: 'none' },
+      };
 
     case 'clear-message-focus':
       return state.focusedMessageId === null ? state : { ...state, focusedMessageId: null };
@@ -1044,7 +1239,10 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         ...state,
         tasks: mapTask(state.tasks, action.taskId, (task) => ({
           ...task,
-          attachments: [...task.attachments, ...action.files.map((picked) => pickedAttachment(picked, action.authorId))],
+          attachments: [
+            ...task.attachments,
+            ...action.files.map((picked) => pickedAttachment(picked, action.authorId)),
+          ],
         })),
         announcement: `${toPersianDigits(action.files.length)} فایل پیوست شد.`,
       };
@@ -1170,9 +1368,16 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         projects: [...state.projects, project],
-        departments: [...state.departments, ...(action.draft.customDepartments ?? [])
-          .filter((department) => departmentIds.includes(department.id) && !state.departments.some((entry) => entry.id === department.id))
-          .map((department) => ({ ...department, memberCount: 0 }))],
+        departments: [
+          ...state.departments,
+          ...(action.draft.customDepartments ?? [])
+            .filter(
+              (department) =>
+                departmentIds.includes(department.id) &&
+                !state.departments.some((entry) => entry.id === department.id),
+            )
+            .map((department) => ({ ...department, memberCount: 0 })),
+        ],
         // Every project starts with a board of its own: its copy of the four built-in columns.
         boardColumns: [...state.boardColumns, ...builtInColumnsFor(project.id)],
         conversations: [...state.conversations, channel],
@@ -1192,18 +1397,29 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         deletedAt: deletedAt.toISOString(),
         purgeAt: new Date(deletedAt.getTime() + PROJECT_TRASH_DAYS * 86_400_000).toISOString(),
         taskCount: tasks.length,
-        stash: { tasks, boardColumns: state.boardColumns.filter((column) => column.projectId === project.id), conversations: channels },
+        stash: {
+          tasks,
+          boardColumns: state.boardColumns.filter((column) => column.projectId === project.id),
+          conversations: channels,
+        },
       };
       return {
         ...state,
         projects: state.projects.filter((entry) => entry.id !== project.id),
         tasks: state.tasks.filter((task) => !taskIds.has(task.id)),
         boardColumns: state.boardColumns.filter((column) => column.projectId !== project.id),
-        conversations: state.conversations.map(conversation => conversation.projectId === project.id ? { ...conversation, archived: true } : conversation),
-        activeConversationId: channels.some((channel) => channel.id === state.activeConversationId) ? '' : state.activeConversationId,
+        conversations: state.conversations.map((conversation) =>
+          conversation.projectId === project.id ? { ...conversation, archived: true } : conversation,
+        ),
+        activeConversationId: channels.some((channel) => channel.id === state.activeConversationId)
+          ? ''
+          : state.activeConversationId,
         projectTrash: [entry, ...state.projectTrash.filter((trashed) => trashed.project.id !== project.id)],
         projectFilterId: state.projectFilterId === project.id ? null : state.projectFilterId,
-        inspector: state.inspector.kind === 'task' && taskIds.has(state.inspector.taskId) ? { kind: 'none' } : state.inspector,
+        inspector:
+          state.inspector.kind === 'task' && taskIds.has(state.inspector.taskId)
+            ? { kind: 'none' }
+            : state.inspector,
         announcement: `پروژه «${project.name}» به سطل زباله رفت و تا ${toPersianDigits(PROJECT_TRASH_DAYS)} روز بازیابی‌پذیر است.`,
       };
     }
@@ -1232,7 +1448,10 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         users: state.users.filter((entry) => entry.id !== user.id),
-        formerUsers: [...state.formerUsers.filter((entry) => entry.id !== user.id), { ...user, former: true, presence: 'offline' }],
+        formerUsers: [
+          ...state.formerUsers.filter((entry) => entry.id !== user.id),
+          { ...user, former: true, presence: 'offline' },
+        ],
         // Out of every group and channel; a direct chat keeps naming both people.
         conversations: state.conversations.map((conversation) =>
           conversation.kind !== 'direct' && conversation.memberIds.includes(user.id)
@@ -1240,7 +1459,9 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
             : conversation,
         ),
         projects: state.projects.map((project) =>
-          project.memberIds.includes(user.id) ? { ...project, memberIds: project.memberIds.filter((id) => id !== user.id) } : project,
+          project.memberIds.includes(user.id)
+            ? { ...project, memberIds: project.memberIds.filter((id) => id !== user.id) }
+            : project,
         ),
         announcement: `${user.fullName} از فضای کاری حذف شد؛ پیام‌ها و کارهایش می‌ماند.`,
       };
@@ -1264,7 +1485,9 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         noteCategories: state.noteCategories.filter((entry) => entry.id !== category.id),
-        notes: state.notes.map((note) => (note.categoryId === category.id ? { ...note, categoryId: null } : note)),
+        notes: state.notes.map((note) =>
+          note.categoryId === category.id ? { ...note, categoryId: null } : note,
+        ),
         announcement:
           released > 0
             ? `دسته «${category.label}» حذف شد و ${toPersianDigits(released)} یادداشت آن بدون دسته ماند.`
@@ -1352,7 +1575,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case 'update-display-name': {
       const fullName = action.fullName.trim();
-      return { ...state, users: state.users.map(user => user.id === state.meId ? { ...user, fullName, initials: monogram(fullName) } : user) };
+      return {
+        ...state,
+        users: state.users.map((user) =>
+          user.id === state.meId ? { ...user, fullName, initials: monogram(fullName) } : user,
+        ),
+      };
     }
 
     case 'set-two-factor':
@@ -1383,7 +1611,10 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'switch-workspace': {
       const target = state.workspaces.find((workspace) => workspace.id === action.workspaceId);
       if (!target || target.id === state.activeWorkspaceId) return state;
-      return { ...activateWorkspace(state, target.id, true), announcement: `فضای کاری «${target.name}» فعال شد.` };
+      return {
+        ...activateWorkspace(state, target.id, true),
+        announcement: `فضای کاری «${target.name}» فعال شد.`,
+      };
     }
 
     case 'create-workspace': {
@@ -1463,10 +1694,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       if (isLocked(action.role)) return state;
       const role = state.permissions[action.role];
       const nextRole = Object.fromEntries(
-        PERMISSION_MODULES.map((entry) => [
-          entry.id,
-          { ...role[entry.id], [action.action]: action.value },
-        ]),
+        PERMISSION_MODULES.map((entry) => [entry.id, { ...role[entry.id], [action.action]: action.value }]),
       ) as PermissionMatrix[RoleId];
       return { ...state, permissions: { ...state.permissions, [action.role]: nextRole } };
     }
@@ -1521,7 +1749,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 }
 
 /** Replaces the entry with `replaceId` (or the same id), or adds it to the front. */
-function upsert<T extends { readonly id: string }>(items: readonly T[], item: T, replaceId?: string, atEnd = false): readonly T[] {
+function upsert<T extends { readonly id: string }>(
+  items: readonly T[],
+  item: T,
+  replaceId?: string,
+  atEnd = false,
+): readonly T[] {
   const matchId = replaceId ?? item.id;
   let found = false;
   const next: T[] = [];
@@ -1539,10 +1772,16 @@ function upsert<T extends { readonly id: string }>(items: readonly T[], item: T,
 
 const byTime = (a: Message, b: Message): number => a.sentAt.localeCompare(b.sentAt);
 
-const bySchedule = (a: ScheduledMessage, b: ScheduledMessage): number => a.scheduledAt.localeCompare(b.scheduledAt) || a.id.localeCompare(b.id);
+const bySchedule = (a: ScheduledMessage, b: ScheduledMessage): number =>
+  a.scheduledAt.localeCompare(b.scheduledAt) || a.id.localeCompare(b.id);
 
 /** A scheduled message going out: a plain message of its author's, now. */
-function deliverScheduled(state: WorkspaceState, scheduled: ScheduledMessage, messageId: string, at: Date): WorkspaceState {
+function deliverScheduled(
+  state: WorkspaceState,
+  scheduled: ScheduledMessage,
+  messageId: string,
+  at: Date,
+): WorkspaceState {
   const message: Message = {
     id: messageId,
     conversationId: scheduled.conversationId,
@@ -1585,7 +1824,11 @@ function answerIfAway(state: WorkspaceState, message: Message): WorkspaceState {
     readByIds: [],
     autoReply: true,
   };
-  return { ...state, messages: [...state.messages, reply], autoRepliedAt: { ...state.autoRepliedAt, [key]: at.toISOString() } };
+  return {
+    ...state,
+    messages: [...state.messages, reply],
+    autoRepliedAt: { ...state.autoRepliedAt, [key]: at.toISOString() },
+  };
 }
 
 function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState {
@@ -1600,16 +1843,31 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
       return {
         ...state,
         tasks: inArchive ? state.tasks : upsert(state.tasks, task, replaceId),
-        inspector: state.inspector.kind === 'task' ? { kind: 'task', taskId: swap(state.inspector.taskId) } : state.inspector,
-        messages: replaceId === undefined ? state.messages : state.messages.map((message) => (message.linkedTaskId === replaceId ? { ...message, linkedTaskId: task.id } : message)),
-        notes: replaceId === undefined ? state.notes : state.notes.map((note) => (note.linkedTaskId === replaceId ? { ...note, linkedTaskId: task.id } : note)),
+        inspector:
+          state.inspector.kind === 'task'
+            ? { kind: 'task', taskId: swap(state.inspector.taskId) }
+            : state.inspector,
+        messages:
+          replaceId === undefined
+            ? state.messages
+            : state.messages.map((message) =>
+                message.linkedTaskId === replaceId ? { ...message, linkedTaskId: task.id } : message,
+              ),
+        notes:
+          replaceId === undefined
+            ? state.notes
+            : state.notes.map((note) =>
+                note.linkedTaskId === replaceId ? { ...note, linkedTaskId: task.id } : note,
+              ),
       };
     }
 
     case 'sync/task-agile':
       return {
         ...state,
-        ...(action.worklogs ? { taskWorklogs: { ...state.taskWorklogs, [action.taskId]: action.worklogs } } : {}),
+        ...(action.worklogs
+          ? { taskWorklogs: { ...state.taskWorklogs, [action.taskId]: action.worklogs } }
+          : {}),
         ...(action.links ? { taskLinks: { ...state.taskLinks, [action.taskId]: action.links } } : {}),
       };
 
@@ -1617,46 +1875,76 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
       return {
         ...state,
         tasks: state.tasks.filter((task) => task.id !== action.taskId),
-        inspector: state.inspector.kind === 'task' && state.inspector.taskId === action.taskId ? { kind: 'none' } : state.inspector,
+        inspector:
+          state.inspector.kind === 'task' && state.inspector.taskId === action.taskId
+            ? { kind: 'none' }
+            : state.inspector,
       };
 
     case 'sync/upsert-conversation': {
       const { conversation } = action;
       // A project's companion starts with a local id. Match that stand-in by the reconciled
       // project id, never by its title (unrelated groups may have exactly the same name).
-      const replaceId = action.replaceId ?? (
-        conversation.kind === 'channel' && conversation.projectId && !conversation.id.includes('-local-')
-          ? state.conversations.find((entry) => entry.kind === 'channel' && entry.projectId === conversation.projectId && entry.id !== conversation.id)?.id
-          : undefined
-      );
-      const swap = (id: string): string => (replaceId !== undefined && id === replaceId ? conversation.id : id);
+      const replaceId =
+        action.replaceId ??
+        (conversation.kind === 'channel' && conversation.projectId && !conversation.id.includes('-local-')
+          ? state.conversations.find(
+              (entry) =>
+                entry.kind === 'channel' &&
+                entry.projectId === conversation.projectId &&
+                entry.id !== conversation.id,
+            )?.id
+          : undefined);
+      const swap = (id: string): string =>
+        replaceId !== undefined && id === replaceId ? conversation.id : id;
       const unread = { ...state.unreadByConversation };
       if (replaceId !== undefined && replaceId in unread) delete unread[replaceId];
-      if (!(conversation.id in unread) || action.select) unread[conversation.id] = action.select ? 0 : conversation.unreadCount;
+      if (!(conversation.id in unread) || action.select)
+        unread[conversation.id] = action.select ? 0 : conversation.unreadCount;
       const pinned = state.pinnedConversationIds.filter((id) => id !== replaceId && id !== conversation.id);
       const muted = state.mutedConversationIds.filter((id) => id !== replaceId && id !== conversation.id);
       return {
         ...state,
         conversations: upsert(state.conversations, conversation, replaceId),
-        messages: replaceId === undefined ? state.messages : state.messages.map((message) => (message.conversationId === replaceId ? { ...message, conversationId: conversation.id } : message)),
+        messages:
+          replaceId === undefined
+            ? state.messages
+            : state.messages.map((message) =>
+                message.conversationId === replaceId
+                  ? { ...message, conversationId: conversation.id }
+                  : message,
+              ),
         unreadByConversation: unread,
         pinnedConversationIds: conversation.pinned ? [...pinned, conversation.id] : pinned,
         mutedConversationIds: conversation.muted ? [...muted, conversation.id] : muted,
         activeConversationId: action.select ? conversation.id : swap(state.activeConversationId),
-        inspector: state.inspector.kind === 'conversation' ? { kind: 'conversation', conversationId: swap(state.inspector.conversationId) } : state.inspector,
+        inspector:
+          state.inspector.kind === 'conversation'
+            ? { kind: 'conversation', conversationId: swap(state.inspector.conversationId) }
+            : state.inspector,
       };
     }
 
     case 'sync/remove-conversation': {
-      const conversations = state.conversations.filter((conversation) => conversation.id !== action.conversationId);
-      const unread = Object.fromEntries(Object.entries(state.unreadByConversation).filter(([id]) => id !== action.conversationId));
+      const conversations = state.conversations.filter(
+        (conversation) => conversation.id !== action.conversationId,
+      );
+      const unread = Object.fromEntries(
+        Object.entries(state.unreadByConversation).filter(([id]) => id !== action.conversationId),
+      );
       return {
         ...state,
         conversations,
         messages: state.messages.filter((message) => message.conversationId !== action.conversationId),
         unreadByConversation: unread,
-        activeConversationId: state.activeConversationId === action.conversationId ? (conversations[0]?.id ?? '') : state.activeConversationId,
-        inspector: state.inspector.kind === 'conversation' && state.inspector.conversationId === action.conversationId ? { kind: 'none' } : state.inspector,
+        activeConversationId:
+          state.activeConversationId === action.conversationId
+            ? (conversations[0]?.id ?? '')
+            : state.activeConversationId,
+        inspector:
+          state.inspector.kind === 'conversation' && state.inspector.conversationId === action.conversationId
+            ? { kind: 'none' }
+            : state.inspector,
       };
     }
 
@@ -1670,13 +1958,26 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
       return { ...state, messages: state.messages.filter((message) => message.id !== action.messageId) };
 
     case 'sync/upsert-scheduled':
-      return { ...state, scheduledMessages: [...upsert(state.scheduledMessages, action.scheduled, action.replaceId, true)].sort(bySchedule) };
+      return {
+        ...state,
+        scheduledMessages: [
+          ...upsert(state.scheduledMessages, action.scheduled, action.replaceId, true),
+        ].sort(bySchedule),
+      };
 
     case 'sync/remove-scheduled':
-      return { ...state, scheduledMessages: state.scheduledMessages.filter((entry) => entry.id !== action.scheduledId) };
+      return {
+        ...state,
+        scheduledMessages: state.scheduledMessages.filter((entry) => entry.id !== action.scheduledId),
+      };
 
     case 'sync/message-failed':
-      return { ...state, messages: state.messages.map((message) => (message.id === action.messageId ? { ...message, failed: true } : message)) };
+      return {
+        ...state,
+        messages: state.messages.map((message) =>
+          message.id === action.messageId ? { ...message, failed: true } : message,
+        ),
+      };
 
     case 'sync/project-trash':
       return { ...state, projectTrash: action.entries };
@@ -1691,7 +1992,10 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
           if (action.userIds.length === 0) return { ...message, reactions: others };
           const next = { emoji: action.emoji, userIds: action.userIds };
           if (at === -1) return { ...message, reactions: [...others, next] };
-          return { ...message, reactions: message.reactions.map((reaction, index) => (index === at ? next : reaction)) };
+          return {
+            ...message,
+            reactions: message.reactions.map((reaction, index) => (index === at ? next : reaction)),
+          };
         }),
       };
 
@@ -1700,18 +2004,25 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
       return {
         ...state,
         messages: state.messages.map((message) =>
-          ids.has(message.id) && !message.readByIds.includes(action.userId) ? { ...message, readByIds: [...message.readByIds, action.userId] } : message,
+          ids.has(message.id) && !message.readByIds.includes(action.userId)
+            ? { ...message, readByIds: [...message.readByIds, action.userId] }
+            : message,
         ),
       };
     }
 
     case 'sync/unread':
-      return { ...state, unreadByConversation: { ...state.unreadByConversation, [action.conversationId]: action.count } };
+      return {
+        ...state,
+        unreadByConversation: { ...state.unreadByConversation, [action.conversationId]: action.count },
+      };
 
     case 'sync/message-linked':
       return {
         ...state,
-        messages: state.messages.map((message) => (message.id === action.messageId ? { ...message, linkedTaskId: action.taskId } : message)),
+        messages: state.messages.map((message) =>
+          message.id === action.messageId ? { ...message, linkedTaskId: action.taskId } : message,
+        ),
       };
 
     case 'sync/typing': {
@@ -1719,7 +2030,10 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
       const has = current.includes(action.userId);
       if (has === action.typing) return state;
       const next = action.typing ? [...current, action.userId] : current.filter((id) => id !== action.userId);
-      return { ...state, typingByConversation: { ...state.typingByConversation, [action.conversationId]: next } };
+      return {
+        ...state,
+        typingByConversation: { ...state.typingByConversation, [action.conversationId]: next },
+      };
     }
 
     case 'sync/upsert-notification':
@@ -1735,17 +2049,27 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
 
     case 'sync/upsert-project': {
       const { project, replaceId } = action;
-      if (replaceId === undefined) return { ...state, projects: upsert(state.projects, project, undefined, true) };
+      if (replaceId === undefined)
+        return { ...state, projects: upsert(state.projects, project, undefined, true) };
       const next = {
         ...state,
         projects: upsert(state.projects, project, replaceId, true),
-        tasks: state.tasks.map((task) => (task.projectId === replaceId ? { ...task, projectId: project.id } : task)),
-        conversations: state.conversations.map((conversation) => conversation.projectId === replaceId ? { ...conversation, projectId: project.id } : conversation),
+        tasks: state.tasks.map((task) =>
+          task.projectId === replaceId ? { ...task, projectId: project.id } : task,
+        ),
+        conversations: state.conversations.map((conversation) =>
+          conversation.projectId === replaceId ? { ...conversation, projectId: project.id } : conversation,
+        ),
         projectFilterId: state.projectFilterId === replaceId ? project.id : state.projectFilterId,
       };
       // Realtime can beat the POST response. Once both project ids agree, reconcile the
       // existing server channel through the same path, including selection and message refs.
-      const channel = next.conversations.find((conversation) => conversation.kind === 'channel' && conversation.projectId === project.id && !conversation.id.includes('-local-'));
+      const channel = next.conversations.find(
+        (conversation) =>
+          conversation.kind === 'channel' &&
+          conversation.projectId === project.id &&
+          !conversation.id.includes('-local-'),
+      );
       return channel ? syncReducer(next, { type: 'sync/upsert-conversation', conversation: channel }) : next;
     }
 
@@ -1754,14 +2078,23 @@ function syncReducer(state: WorkspaceState, action: SyncAction): WorkspaceState 
       return {
         ...state,
         noteCategories: upsert(state.noteCategories, category, replaceId, true),
-        notes: replaceId === undefined ? state.notes : state.notes.map((note) => (note.categoryId === replaceId ? { ...note, categoryId: category.id } : note)),
+        notes:
+          replaceId === undefined
+            ? state.notes
+            : state.notes.map((note) =>
+                note.categoryId === replaceId ? { ...note, categoryId: category.id } : note,
+              ),
       };
     }
 
     case 'sync/presence':
       return {
         ...state,
-        users: state.users.map((user) => (user.id === action.userId && user.presence !== action.presence ? { ...user, presence: action.presence } : user)),
+        users: state.users.map((user) =>
+          user.id === action.userId && user.presence !== action.presence
+            ? { ...user, presence: action.presence }
+            : user,
+        ),
       };
   }
 }

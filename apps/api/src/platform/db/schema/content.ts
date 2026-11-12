@@ -91,7 +91,11 @@ export const taskAttachments = pgTable(
   },
   (t) => [
     primaryKey({ name: 'task_attachments_pk', columns: [t.taskId, t.attachmentId] }),
-    foreignKey({ name: 'task_attachments_task_fk', columns: [t.workspaceId, t.taskId], foreignColumns: [tasks.workspaceId, tasks.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'task_attachments_task_fk',
+      columns: [t.workspaceId, t.taskId],
+      foreignColumns: [tasks.workspaceId, tasks.id],
+    }).onDelete('cascade'),
     foreignKey({
       name: 'task_attachments_attachment_fk',
       columns: [t.workspaceId, t.attachmentId],
@@ -131,10 +135,18 @@ export const calendarEvents = pgTable(
   },
   (t) => [
     unique('calendar_events_ws_id_uq').on(t.workspaceId, t.id),
-    foreignKey({ name: 'calendar_events_project_fk', columns: [t.workspaceId, t.projectId], foreignColumns: [projects.workspaceId, projects.id] }),
+    foreignKey({
+      name: 'calendar_events_project_fk',
+      columns: [t.workspaceId, t.projectId],
+      foreignColumns: [projects.workspaceId, projects.id],
+    }),
     member('calendar_events_created_by_fk', [t.workspaceId, t.createdBy]),
-    index('calendar_events_starts_idx').on(t.workspaceId, t.startsAt).where(sql`${t.deletedAt} is null`),
-    index('calendar_events_start_date_idx').on(t.workspaceId, t.startDate).where(sql`${t.deletedAt} is null`),
+    index('calendar_events_starts_idx')
+      .on(t.workspaceId, t.startsAt)
+      .where(sql`${t.deletedAt} is null`),
+    index('calendar_events_start_date_idx')
+      .on(t.workspaceId, t.startDate)
+      .where(sql`${t.deletedAt} is null`),
     check('calendar_events_title_len', sql`char_length(${t.title}) between 1 and 120`),
     check(
       'calendar_events_timing',
@@ -187,8 +199,12 @@ export const noteCategories = pgTable(
     unique('note_categories_ws_id_uq').on(t.workspaceId, t.id),
     member('note_categories_owner_fk', [t.workspaceId, t.ownerId]),
     // A deleted built-in's name is free again for a notebook of one's own.
-    uniqueIndex('note_categories_label_uq').on(t.workspaceId, t.ownerId, sql`lower(${t.label})`).where(sql`${t.deletedAt} is null`),
-    uniqueIndex('note_categories_key_uq').on(t.workspaceId, t.ownerId, t.key).where(sql`${t.key} is not null`),
+    uniqueIndex('note_categories_label_uq')
+      .on(t.workspaceId, t.ownerId, sql`lower(${t.label})`)
+      .where(sql`${t.deletedAt} is null`),
+    uniqueIndex('note_categories_key_uq')
+      .on(t.workspaceId, t.ownerId, t.key)
+      .where(sql`${t.key} is not null`),
     check('note_categories_label_len', sql`char_length(${t.label}) between 1 and 40`),
   ],
 );
@@ -206,7 +222,10 @@ export const notes = pgTable(
     categoryId: uuid(),
     title: text().notNull().default(''),
     body: text().notNull().default(''),
-    colors: tagTone().array().notNull().default(sql`'{}'`),
+    colors: tagTone()
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
     pinnedAt: instant(),
     version: integer().notNull().default(1),
     searchText: text().notNull(),
@@ -216,7 +235,11 @@ export const notes = pgTable(
   (t) => [
     unique('notes_ws_id_uq').on(t.workspaceId, t.id),
     member('notes_owner_fk', [t.workspaceId, t.ownerId]),
-    foreignKey({ name: 'notes_category_fk', columns: [t.workspaceId, t.categoryId], foreignColumns: [noteCategories.workspaceId, noteCategories.id] }),
+    foreignKey({
+      name: 'notes_category_fk',
+      columns: [t.workspaceId, t.categoryId],
+      foreignColumns: [noteCategories.workspaceId, noteCategories.id],
+    }),
     index('notes_owner_category_idx').on(t.workspaceId, t.ownerId, t.categoryId, t.updatedAt.desc()),
     index('notes_search_idx').using('gin', t.workspaceId, t.searchText.op('gin_trgm_ops')),
     check('notes_title_len', sql`char_length(${t.title}) <= 200`),
@@ -247,9 +270,16 @@ export const notifications = pgTable(
   },
   (t) => [
     index('notifications_recipient_idx').on(t.recipientId, t.workspaceId, t.createdAt.desc()),
-    index('notifications_unread_idx').on(t.recipientId).where(sql`${t.readAt} is null`),
-    uniqueIndex('notifications_dedupe_uq').on(t.recipientId, t.dedupeKey).where(sql`${t.dedupeKey} is not null and ${t.readAt} is null`),
-    check('notifications_target_type', sql`${t.targetType} in ('task', 'conversation', 'message', 'event', 'workspace')`),
+    index('notifications_unread_idx')
+      .on(t.recipientId)
+      .where(sql`${t.readAt} is null`),
+    uniqueIndex('notifications_dedupe_uq')
+      .on(t.recipientId, t.dedupeKey)
+      .where(sql`${t.dedupeKey} is not null and ${t.readAt} is null`),
+    check(
+      'notifications_target_type',
+      sql`${t.targetType} in ('task', 'conversation', 'message', 'event', 'workspace')`,
+    ),
   ],
 );
 
@@ -272,6 +302,8 @@ export const activityEvents = pgTable(
   },
   (t) => [
     index('activity_events_ws_idx').on(t.workspaceId, t.createdAt.desc(), t.id.desc()),
-    uniqueIndex('activity_events_source_uq').on(t.sourceEventId).where(sql`${t.sourceEventId} is not null`),
+    uniqueIndex('activity_events_source_uq')
+      .on(t.sourceEventId)
+      .where(sql`${t.sourceEventId} is not null`),
   ],
 );

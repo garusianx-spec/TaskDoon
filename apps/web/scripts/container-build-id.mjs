@@ -20,9 +20,14 @@ export function containerBuildId() {
     'apps/web/tailwind.config.ts',
     'apps/web/scripts/container-build-id.mjs',
   ];
-  const ignored = (name) => name === '.env' || name.startsWith('.env.') ||
-    name === 'node_modules' || name === 'dist' || name === '.next' ||
-    name === 'coverage' || name.endsWith('.tsbuildinfo');
+  const ignored = (name) =>
+    name === '.env' ||
+    name.startsWith('.env.') ||
+    name === 'node_modules' ||
+    name === 'dist' ||
+    name === '.next' ||
+    name === 'coverage' ||
+    name.endsWith('.tsbuildinfo');
 
   function collect(directory) {
     for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {

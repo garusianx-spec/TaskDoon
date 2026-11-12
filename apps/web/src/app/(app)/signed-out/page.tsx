@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { Button } from '@/components/ui';
-import { WorkspaceAvatar } from '@/components/workspace/WorkspaceAvatar';
+import { WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
 import { CheckCircleIcon, LogoutIcon } from '@/components/icons';
 
 /**

@@ -81,7 +81,9 @@ export class PlatformAdminUnitOfWork {
     try {
       return await db.transaction(
         async (tx) => {
-          await tx.execute(sql`select set_config('app.user_id', ${admin.userId}, true), set_config('app.request_id', ${this.context.requestId ?? ''}, true)`);
+          await tx.execute(
+            sql`select set_config('app.user_id', ${admin.userId}, true), set_config('app.request_id', ${this.context.requestId ?? ''}, true)`,
+          );
           return work(tx);
         },
         { accessMode: 'read only' },
@@ -92,7 +94,10 @@ export class PlatformAdminUnitOfWork {
       if (!problem) throw error;
       this.probed = { ok: false, at: Date.now() };
       this.report(problem.code, problem.cause);
-      throw new ApiError('PLATFORM_ADMIN_UNAVAILABLE', 'The platform admin database refused this request; see the API log.');
+      throw new ApiError(
+        'PLATFORM_ADMIN_UNAVAILABLE',
+        'The platform admin database refused this request; see the API log.',
+      );
     }
   }
 

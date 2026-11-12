@@ -10,18 +10,30 @@ export function broadcastJitter(random = Math.random()): number {
 }
 
 /** Use the server's clock: a device's time or timezone cannot move the visibility window. */
-export function broadcastTimerDelay(nextChangeAt: string | null, serverNow: string, jitter = broadcastJitter()): number {
-  const boundary = nextChangeAt === null ? BROADCAST_POLL_MS : Date.parse(nextChangeAt) - Date.parse(serverNow);
-  const delay = (Number.isFinite(boundary) ? boundary : BROADCAST_POLL_MS) + Math.max(0, Math.min(5_000, jitter));
+export function broadcastTimerDelay(
+  nextChangeAt: string | null,
+  serverNow: string,
+  jitter = broadcastJitter(),
+): number {
+  const boundary =
+    nextChangeAt === null ? BROADCAST_POLL_MS : Date.parse(nextChangeAt) - Date.parse(serverNow);
+  const delay =
+    (Number.isFinite(boundary) ? boundary : BROADCAST_POLL_MS) + Math.max(0, Math.min(5_000, jitter));
   return Math.max(BROADCAST_MIN_DELAY_MS, Math.min(BROADCAST_MAX_DELAY_MS, delay));
 }
 
-export const broadcastDismissalKey = (item: Pick<ActiveBroadcastView, 'id' | 'updatedAt'>): string => `${item.id}:${item.updatedAt}`;
+export const broadcastDismissalKey = (item: Pick<ActiveBroadcastView, 'id' | 'updatedAt'>): string =>
+  `${item.id}:${item.updatedAt}`;
 export type BroadcastStorage = (kind: 'local' | 'session') => Pick<Storage, 'getItem' | 'setItem'>;
-const browserStorage: BroadcastStorage = (kind) => kind === 'session' ? window.sessionStorage : window.localStorage;
-const storageKind = (level: BroadcastLevel): 'local' | 'session' => level === 'critical' ? 'session' : 'local';
+const browserStorage: BroadcastStorage = (kind) =>
+  kind === 'session' ? window.sessionStorage : window.localStorage;
+const storageKind = (level: BroadcastLevel): 'local' | 'session' =>
+  level === 'critical' ? 'session' : 'local';
 
-export function isBroadcastDismissed(item: Pick<ActiveBroadcastView, 'id' | 'updatedAt' | 'level'>, storage: BroadcastStorage = browserStorage): boolean {
+export function isBroadcastDismissed(
+  item: Pick<ActiveBroadcastView, 'id' | 'updatedAt' | 'level'>,
+  storage: BroadcastStorage = browserStorage,
+): boolean {
   try {
     return storage(storageKind(item.level)).getItem(broadcastDismissalKey(item)) === '1';
   } catch {
@@ -30,7 +42,10 @@ export function isBroadcastDismissed(item: Pick<ActiveBroadcastView, 'id' | 'upd
 }
 
 /** In private mode the banner also remembers the dismissal in component state. */
-export function dismissBroadcast(item: Pick<ActiveBroadcastView, 'id' | 'updatedAt' | 'level'>, storage: BroadcastStorage = browserStorage): void {
+export function dismissBroadcast(
+  item: Pick<ActiveBroadcastView, 'id' | 'updatedAt' | 'level'>,
+  storage: BroadcastStorage = browserStorage,
+): void {
   try {
     storage(storageKind(item.level)).setItem(broadcastDismissalKey(item), '1');
   } catch {

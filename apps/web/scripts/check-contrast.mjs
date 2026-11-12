@@ -26,7 +26,9 @@ const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body
   ),
 }));
 
-const accents = [...new Set(blocks.map((b) => /^\[data-accent='(\w+)'\]$/.exec(b.selector)?.[1]).filter(Boolean))];
+const accents = [
+  ...new Set(blocks.map((b) => /^\[data-accent='(\w+)'\]$/.exec(b.selector)?.[1]).filter(Boolean)),
+];
 
 function tokensFor(mode, accent) {
   const appliesOne = (selector) =>
@@ -35,7 +37,9 @@ function tokensFor(mode, accent) {
     selector === '[data-accent]' ||
     selector === `[data-accent='${accent}']`;
   const merged = {};
-  for (const block of blocks) if (block.selector.split(',').some(selector => appliesOne(selector.trim()))) Object.assign(merged, block.declarations);
+  for (const block of blocks)
+    if (block.selector.split(',').some((selector) => appliesOne(selector.trim())))
+      Object.assign(merged, block.declarations);
   return merged;
 }
 
@@ -46,7 +50,8 @@ function resolveRgb(tokens, name, depth = 0) {
   const ref = /^var\((--[\w-]+)\)$/.exec(value);
   if (ref) return resolveRgb(tokens, ref[1], depth + 1);
   const channels = value.split(/\s+/).map(Number);
-  if (channels.length !== 3 || channels.some(Number.isNaN)) throw new Error(`${name} is not an R G B triplet: ${value}`);
+  if (channels.length !== 3 || channels.some(Number.isNaN))
+    throw new Error(`${name} is not an R G B triplet: ${value}`);
   return channels;
 }
 
@@ -103,12 +108,17 @@ for (const mode of ['light', 'dark']) {
       const value = ratio(resolveRgb(tokens, fg), resolveRgb(tokens, bg));
       const ok = value >= min;
       if (!ok) failures += 1;
-      lines.push(`  ${ok ? 'pass' : 'FAIL'}  ${value.toFixed(2).padStart(5)}:1  (≥${min})  ${label}  ${fg} on ${bg}`);
+      lines.push(
+        `  ${ok ? 'pass' : 'FAIL'}  ${value.toFixed(2).padStart(5)}:1  (≥${min})  ${label}  ${fg} on ${bg}`,
+      );
     }
     const failed = lines.filter((line) => line.includes('FAIL'));
-    console.log(`${mode.padEnd(5)} ${accent.padEnd(7)} ${failed.length === 0 ? `all ${PAIRS.length} pairs pass` : `${failed.length} failing`}`);
+    console.log(
+      `${mode.padEnd(5)} ${accent.padEnd(7)} ${failed.length === 0 ? `all ${PAIRS.length} pairs pass` : `${failed.length} failing`}`,
+    );
     for (const line of failed) console.log(line);
-    if (process.argv.includes('--verbose')) for (const line of lines) if (!line.includes('FAIL')) console.log(line);
+    if (process.argv.includes('--verbose'))
+      for (const line of lines) if (!line.includes('FAIL')) console.log(line);
   }
 }
 

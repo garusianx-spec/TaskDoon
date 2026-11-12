@@ -1,17 +1,8 @@
 import type { ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 
 export type BadgeTone =
-  | 'neutral'
-  | 'brand'
-  | 'success'
-  | 'warning'
-  | 'error'
-  | 'done'
-  | 'progress'
-  | 'blocked'
-  | 'todo'
-  | 'review';
+  'neutral' | 'brand' | 'success' | 'warning' | 'error' | 'done' | 'progress' | 'blocked' | 'todo' | 'review';
 
 export type BadgeSize = 'sm' | 'md';
 
@@ -100,7 +91,7 @@ export function CountPill({ value, tone = 'brand', className }: CountPillProps) 
   return (
     <span
       className={cn(
-        'numeric inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-micro font-semibold leading-none',
+        'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-micro font-semibold leading-none numeric',
         tones[tone],
         className,
       )}

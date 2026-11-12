@@ -100,11 +100,7 @@ function jalCal(jy: number): LeapResult {
 
 /** Gregorian calendar date -> Julian Day Number. */
 function gregorianToJdn(gy: number, gm: number, gd: number): number {
-  const d =
-    div((gy + div(gm - 8, 6) + 100100) * 1461, 4) +
-    div(153 * mod(gm + 9, 12) + 2, 5) +
-    gd -
-    34840408;
+  const d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * mod(gm + 9, 12) + 2, 5) + gd - 34840408;
   return d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752;
 }
 
@@ -199,9 +195,7 @@ export function formatJalali(iso: string | Date, format: JalaliFormat = 'medium'
 
   switch (format) {
     case 'short':
-      return toPersianDigits(
-        `${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`,
-      );
+      return toPersianDigits(`${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`);
     case 'day-month':
       return `${toPersianDigits(day)} ${monthName}`;
     case 'medium':
@@ -288,11 +282,7 @@ export interface DeadlineLabel {
   readonly tone: 'done' | 'progress' | 'blocked' | 'todo';
 }
 
-export function describeDeadline(
-  iso: string,
-  now: Date = new Date(),
-  completed = false,
-): DeadlineLabel {
+export function describeDeadline(iso: string, now: Date = new Date(), completed = false): DeadlineLabel {
   const date = parseISODate(iso);
   const delta = daysBetween(now, date);
 
@@ -350,7 +340,8 @@ export function toISODate(date: Date, timeZone?: string): string {
       month: '2-digit',
       day: '2-digit',
     }).formatToParts(date);
-    const part = (type: Intl.DateTimeFormatPartTypes): string => parts.find((entry) => entry.type === type)?.value ?? '';
+    const part = (type: Intl.DateTimeFormatPartTypes): string =>
+      parts.find((entry) => entry.type === type)?.value ?? '';
     return `${part('year')}-${part('month')}-${part('day')}`;
   }
   const y = date.getFullYear();
@@ -381,6 +372,6 @@ export function addDays(iso: string, days: number): string {
 export function shiftJalaliMonth(jy: number, jm: number, delta: number): JalaliDate {
   const zeroBased = jm - 1 + delta;
   const year = jy + Math.floor(zeroBased / 12);
-  const month = ((zeroBased % 12) + 12) % 12 + 1;
+  const month = (((zeroBased % 12) + 12) % 12) + 1;
   return { year, month, day: 1 };
 }

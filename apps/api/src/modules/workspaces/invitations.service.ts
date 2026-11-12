@@ -15,7 +15,14 @@ import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import { randomToken, SecretBox, sha256 } from '../../platform/crypto/crypto.js';
 import type { Tx } from '../../platform/db/database.js';
 import { effectiveLimits } from '../../platform/db/plan-limits.js';
-import { departments, invitations, roles, users, workspaceMembers, workspaces } from '../../platform/db/schema/all.js';
+import {
+  departments,
+  invitations,
+  roles,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../../platform/db/schema/all.js';
 import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { AuthPrincipal, MembershipContext } from '../../platform/http/request.js';
@@ -61,12 +68,16 @@ export class InvitationsService {
     for (const recipient of body.recipients) {
       const candidate = this.classify(recipient.address, recipient.channel);
       if (!candidate) rejected.push({ address: recipient.address, reason: 'invalid_address' });
-      else if (!candidates.some((c) => c.channel === candidate.channel && c.address === candidate.address)) candidates.push(candidate);
+      else if (!candidates.some((c) => c.channel === candidate.channel && c.address === candidate.address))
+        candidates.push(candidate);
     }
 
     return this.uow.run({ workspaceId: actor.workspaceId, userId: actor.userId }, async (unit) => {
       const { tx } = unit;
-      const [role] = await tx.select().from(roles).where(and(eq(roles.workspaceId, actor.workspaceId), eq(roles.key, body.role)));
+      const [role] = await tx
+        .select()
+        .from(roles)
+        .where(and(eq(roles.workspaceId, actor.workspaceId), eq(roles.key, body.role)));
       if (!role) throw ApiError.validation([{ field: 'role', message: 'unknown role' }]);
       if (!actor.isOwner && role.rank <= actor.rank) throw new ApiError('ROLE_RANK_VIOLATION');
       if (body.departmentId) {
@@ -74,7 +85,8 @@ export class InvitationsService {
           .select({ id: departments.id })
           .from(departments)
           .where(and(eq(departments.workspaceId, actor.workspaceId), eq(departments.id, body.departmentId)));
-        if (!department) throw ApiError.validation([{ field: 'departmentId', message: 'unknown department' }]);
+        if (!department)
+          throw ApiError.validation([{ field: 'departmentId', message: 'unknown department' }]);
       }
       const [workspace] = await tx
         .select({ name: workspaces.name, settings: workspaces.settings })
@@ -86,7 +98,13 @@ export class InvitationsService {
       await tx
         .update(invitations)
         .set({ status: 'expired' })
-        .where(and(eq(invitations.workspaceId, actor.workspaceId), eq(invitations.status, 'pending'), lt(invitations.expiresAt, sql`now()`)));
+        .where(
+          and(
+            eq(invitations.workspaceId, actor.workspaceId),
+            eq(invitations.status, 'pending'),
+            lt(invitations.expiresAt, sql`now()`),
+          ),
+        );
 
       const members = await this.existingMembers(tx, actor.workspaceId, candidates);
       const pending = await tx
@@ -103,7 +121,8 @@ export class InvitationsService {
 
       const accepted: Candidate[] = [];
       for (const candidate of candidates) {
-        if (members.has(candidate.address)) rejected.push({ address: candidate.raw, reason: 'already_member' });
+        if (members.has(candidate.address))
+          rejected.push({ address: candidate.raw, reason: 'already_member' });
         else if (pending.some((p) => p.channel === candidate.channel && p.address === candidate.address)) {
           rejected.push({ address: candidate.raw, reason: 'already_invited' });
         } else if (
@@ -133,7 +152,9 @@ export class InvitationsService {
           })
           .returning();
         if (!row) throw new Error('invitation insert returned nothing');
-        const link = this.box.seal(`${new URL('/invite', this.config.env.PUBLIC_WEB_ORIGIN).toString()}?token=${token}`);
+        const link = this.box.seal(
+          `${new URL('/invite', this.config.env.PUBLIC_WEB_ORIGIN).toString()}?token=${token}`,
+        );
         await this.outbox.add(
           tx,
           candidate.channel === 'sms'
@@ -142,14 +163,24 @@ export class InvitationsService {
                 aggregateType: 'invitation',
                 aggregateId: row.id,
                 workspaceId: actor.workspaceId,
-                payload: { to: candidate.address, template: 'invite', tokens: { workspace: workspace.name, link }, sealed: ['link'] },
+                payload: {
+                  to: candidate.address,
+                  template: 'invite',
+                  tokens: { workspace: workspace.name, link },
+                  sealed: ['link'],
+                },
               }
             : {
                 type: 'notification.email',
                 aggregateType: 'invitation',
                 aggregateId: row.id,
                 workspaceId: actor.workspaceId,
-                payload: { to: candidate.address, template: 'invite', params: { workspace: workspace.name, link, message: row.message }, sealed: ['link'] },
+                payload: {
+                  to: candidate.address,
+                  template: 'invite',
+                  params: { workspace: workspace.name, link, message: row.message },
+                  sealed: ['link'],
+                },
               },
         );
         created.push(this.view(row, role.key as RoleId));
@@ -172,8 +203,17 @@ export class InvitationsService {
       tx
         .select({ invitation: invitations, roleKey: roles.key })
         .from(invitations)
-        .innerJoin(roles, and(eq(roles.workspaceId, invitations.workspaceId), eq(roles.id, invitations.roleId)))
-        .where(and(eq(invitations.workspaceId, member.workspaceId), eq(invitations.status, 'pending'), sql`${invitations.expiresAt} > now()`))
+        .innerJoin(
+          roles,
+          and(eq(roles.workspaceId, invitations.workspaceId), eq(roles.id, invitations.roleId)),
+        )
+        .where(
+          and(
+            eq(invitations.workspaceId, member.workspaceId),
+            eq(invitations.status, 'pending'),
+            sql`${invitations.expiresAt} > now()`,
+          ),
+        )
         .orderBy(desc(invitations.createdAt)),
     );
     return rows.map(({ invitation, roleKey }) => this.view(invitation, roleKey as RoleId));
@@ -185,10 +225,21 @@ export class InvitationsService {
       const revoked = await tx
         .update(invitations)
         .set({ status: 'revoked' })
-        .where(and(eq(invitations.workspaceId, actor.workspaceId), eq(invitations.id, invitationId), eq(invitations.status, 'pending')))
+        .where(
+          and(
+            eq(invitations.workspaceId, actor.workspaceId),
+            eq(invitations.id, invitationId),
+            eq(invitations.status, 'pending'),
+          ),
+        )
         .returning({ id: invitations.id });
       if (revoked.length === 0) throw ApiError.notFound('The invitation');
-      await this.audit.write(tx, { action: 'invitation.revoke', workspaceId: actor.workspaceId, resourceType: 'invitation', resourceId: invitationId });
+      await this.audit.write(tx, {
+        action: 'invitation.revoke',
+        workspaceId: actor.workspaceId,
+        resourceType: 'invitation',
+        resourceId: invitationId,
+      });
     });
   }
 
@@ -199,7 +250,9 @@ export class InvitationsService {
   async accept(principal: AuthPrincipal, token: string): Promise<AcceptInvitationResult> {
     const tokenHash = sha256(token);
     const found = await this.uow.run({ workspaceId: null, userId: principal.userId }, ({ tx }) =>
-      tx.execute<{ workspace_id: string; invitation_id: string }>(sql`select workspace_id, invitation_id from app.find_invitation(${tokenHash})`),
+      tx.execute<{ workspace_id: string; invitation_id: string }>(
+        sql`select workspace_id, invitation_id from app.find_invitation(${tokenHash})`,
+      ),
     );
     const location = found.rows[0];
     if (!location) throw new ApiError('INVITATION_INVALID');
@@ -215,23 +268,33 @@ export class InvitationsService {
           suspended: sql<boolean>`${workspaces.suspendedAt} is not null`,
         })
         .from(invitations)
-        .innerJoin(roles, and(eq(roles.workspaceId, invitations.workspaceId), eq(roles.id, invitations.roleId)))
+        .innerJoin(
+          roles,
+          and(eq(roles.workspaceId, invitations.workspaceId), eq(roles.id, invitations.roleId)),
+        )
         .innerJoin(workspaces, eq(workspaces.id, invitations.workspaceId))
         .where(eq(invitations.id, location.invitation_id))
         .for('update', { of: invitations });
-      if (!row || row.invitation.status !== 'pending' || row.expired || row.deleted) throw new ApiError('INVITATION_INVALID');
+      if (!row || row.invitation.status !== 'pending' || row.expired || row.deleted)
+        throw new ApiError('INVITATION_INVALID');
       // Suspended by a platform admin: the invitation stays, and works again once it is lifted.
       if (row.suspended) throw new ApiError('WORKSPACE_SUSPENDED');
       const { invitation } = row;
 
-      const [user] = await tx.select().from(users).where(and(eq(users.id, principal.userId), isNull(users.deletedAt)));
+      const [user] = await tx
+        .select()
+        .from(users)
+        .where(and(eq(users.id, principal.userId), isNull(users.deletedAt)));
       if (!user) throw new ApiError('UNAUTHENTICATED');
-      if (invitation.channel === 'sms' && user.phone !== invitation.address) throw new ApiError('INVITATION_ADDRESS_MISMATCH');
+      if (invitation.channel === 'sms' && user.phone !== invitation.address)
+        throw new ApiError('INVITATION_ADDRESS_MISMATCH');
 
       const [existing] = await tx
         .select({ status: workspaceMembers.status })
         .from(workspaceMembers)
-        .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userId, user.id)));
+        .where(
+          and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userId, user.id)),
+        );
       if (existing && existing.status !== 'left') throw new ApiError('ALREADY_MEMBER');
 
       const seat = await tx.execute(sql`
@@ -240,7 +303,8 @@ export class InvitationsService {
         where w.id = ${invitation.workspaceId} and p.id = w.plan_id
           and w.member_count < (${effectiveLimits('w', 'p')} ->> 'maxMembers')::int
         returning w.member_count`);
-      if (seat.rows.length === 0) throw new ApiError('PLAN_LIMIT_REACHED', 'The workspace has no free seats.');
+      if (seat.rows.length === 0)
+        throw new ApiError('PLAN_LIMIT_REACHED', 'The workspace has no free seats.');
 
       // Back within 40 days of being removed: the conversations the removal closed (in the same
       // transaction, so at the same instant) open again. Their project memberships never went.
@@ -266,9 +330,16 @@ export class InvitationsService {
         await tx
           .update(workspaceMembers)
           .set(membership)
-          .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userId, user.id)));
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, invitation.workspaceId),
+              eq(workspaceMembers.userId, user.id),
+            ),
+          );
       } else {
-        await tx.insert(workspaceMembers).values({ workspaceId: invitation.workspaceId, userId: user.id, ...membership });
+        await tx
+          .insert(workspaceMembers)
+          .values({ workspaceId: invitation.workspaceId, userId: user.id, ...membership });
       }
       await tx
         .update(invitations)
@@ -314,7 +385,11 @@ export class InvitationsService {
   }
 
   /** Normalised addresses (phones and emails) that already belong to active or suspended members. */
-  private async existingMembers(tx: Tx, workspaceId: string, candidates: readonly Candidate[]): Promise<Set<string>> {
+  private async existingMembers(
+    tx: Tx,
+    workspaceId: string,
+    candidates: readonly Candidate[],
+  ): Promise<Set<string>> {
     const phones = candidates.filter((c) => c.channel === 'sms').map((c) => c.address);
     const emails = candidates.filter((c) => c.channel === 'email').map((c) => c.address);
     if (phones.length === 0 && emails.length === 0) return new Set();

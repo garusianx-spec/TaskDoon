@@ -27,10 +27,14 @@ export type RequestWithLogContext = IncomingMessage & { logContext?: LogContext 
  * Settles the request id and trace id once per request, whichever middleware asks first (pino-http
  * or the request-context middleware); the other reuses them.
  */
-export function ensureLogContext(request: RequestWithLogContext): LogContext & { requestId: string; traceId: string } {
+export function ensureLogContext(
+  request: RequestWithLogContext,
+): LogContext & { requestId: string; traceId: string } {
   const current = request.logContext;
-  if (current?.requestId && current.traceId) return current as LogContext & { requestId: string; traceId: string };
-  const traceparent = typeof request.headers.traceparent === 'string' ? request.headers.traceparent : undefined;
+  if (current?.requestId && current.traceId)
+    return current as LogContext & { requestId: string; traceId: string };
+  const traceparent =
+    typeof request.headers.traceparent === 'string' ? request.headers.traceparent : undefined;
   const settled = {
     ...current,
     requestId: acceptRequestId(request.headers['x-request-id']),
@@ -62,7 +66,11 @@ export function maskPhone(phone: string): string {
   return phone.length > 8 ? `${phone.slice(0, 6)}***${phone.slice(-4)}` : '***';
 }
 
-export function loggerParams(config: AppConfig, cls: ClsService<RequestContextStore>, destination?: DestinationStream): Params {
+export function loggerParams(
+  config: AppConfig,
+  cls: ClsService<RequestContextStore>,
+  destination?: DestinationStream,
+): Params {
   const env = config.env;
   return {
     pinoHttp: [
@@ -70,7 +78,10 @@ export function loggerParams(config: AppConfig, cls: ClsService<RequestContextSt
         level: env.LOG_LEVEL,
         base: { service: env.OTEL_SERVICE_NAME, role: env.APP_ROLE },
         redact: { paths: [...REDACT_PATHS], censor: '[redacted]' },
-        transport: env.LOG_PRETTY && !destination ? { target: 'pino-pretty', options: { singleLine: true } } : undefined,
+        transport:
+          env.LOG_PRETTY && !destination
+            ? { target: 'pino-pretty', options: { singleLine: true } }
+            : undefined,
         // The response echoes the id, whether the client sent it or we made it up.
         genReqId: (req: IncomingMessage, res: ServerResponse) => {
           const { requestId } = ensureLogContext(req as RequestWithLogContext);
@@ -82,7 +93,8 @@ export function loggerParams(config: AppConfig, cls: ClsService<RequestContextSt
         // fields mirrored onto the request fill in, so no key is ever written twice.
         customProps: (req: IncomingMessage) => {
           if (cls.isActive()) return {};
-          const { requestId, traceId, userId, sessionId, workspaceId } = (req as RequestWithLogContext).logContext ?? {};
+          const { requestId, traceId, userId, sessionId, workspaceId } =
+            (req as RequestWithLogContext).logContext ?? {};
           return { requestId, traceId, userId, sessionId, workspaceId };
         },
         // Application log lines inside a request or job get the same correlation fields.

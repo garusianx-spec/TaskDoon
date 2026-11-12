@@ -1,6 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { type CryptoKey, errors, exportJWK, generateKeyPair, importJWK, type JWK, jwtVerify, SignJWT } from 'jose';
+import {
+  type CryptoKey,
+  errors,
+  exportJWK,
+  generateKeyPair,
+  importJWK,
+  type JWK,
+  jwtVerify,
+  SignJWT,
+} from 'jose';
 import type { AuthMethod } from '@taskin/contracts';
 import { AppConfig } from '../../config/app-config.js';
 import { ApiError } from '../../platform/http/api-error.js';
@@ -57,7 +66,8 @@ export class TokenService implements OnModuleInit {
     const raw = this.config.env.JWT_PRIVATE_JWKS;
     if (raw) {
       const jwks = JSON.parse(raw) as JWK[];
-      if (!Array.isArray(jwks) || jwks.length === 0) throw new Error('JWT_PRIVATE_JWKS must be a non-empty JSON array');
+      if (!Array.isArray(jwks) || jwks.length === 0)
+        throw new Error('JWT_PRIVATE_JWKS must be a non-empty JSON array');
       this.keys = await Promise.all(
         jwks.map(async (jwk) => {
           if (!jwk.kid || jwk.kty !== 'OKP' || jwk.crv !== 'Ed25519' || !jwk.d || !jwk.x) {
@@ -76,8 +86,18 @@ export class TokenService implements OnModuleInit {
     }
     const { privateKey, publicKey } = await generateKeyPair(ALG, { crv: 'Ed25519' });
     const kid = `ephemeral-${randomUUID().slice(0, 8)}`;
-    this.keys = [{ kid, privateKey, publicKey, publicJwk: { ...(await exportJWK(publicKey)), kid, alg: ALG, use: 'sig' } }];
-    this.logger.warn({ kid }, 'no JWT_PRIVATE_JWKS configured; using an ephemeral signing key (tokens die with the process)');
+    this.keys = [
+      {
+        kid,
+        privateKey,
+        publicKey,
+        publicJwk: { ...(await exportJWK(publicKey)), kid, alg: ALG, use: 'sig' },
+      },
+    ];
+    this.logger.warn(
+      { kid },
+      'no JWT_PRIVATE_JWKS configured; using an ephemeral signing key (tokens die with the process)',
+    );
   }
 
   /** The public keys, as a JWKS document for other services (the WebSocket nodes) to verify with. */

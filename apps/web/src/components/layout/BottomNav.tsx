@@ -2,17 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { CountPill } from '@/components/ui';
-import {
-  CalendarIcon,
-  GridIcon,
-  HomeIcon,
-  MessagesIcon,
-  TaskSquareIcon,
-} from '@/components/icons';
+import { CalendarIcon, GridIcon, HomeIcon, MessagesIcon, TaskSquareIcon } from '@/components/icons';
 
 interface MobileTab {
   readonly href: string;
@@ -62,7 +56,7 @@ export function BottomNav() {
                 <CountPill
                   value={badge}
                   tone="error"
-                  className="absolute -top-1 -end-2.5 ring-2 ring-surface"
+                  className="absolute -end-2.5 -top-1 ring-2 ring-surface"
                 />
               )}
             </span>

@@ -76,7 +76,13 @@ export function GlobalSearchModal({
     messageResults.length === 0;
 
   return (
-    <Modal open={open} onClose={onClose} size="md" title="جستجوی سراسری" description="در وظایف، گفتگوها و پیام‌ها جستجو کنید.">
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="md"
+      title="جستجوی سراسری"
+      description="در وظایف، گفتگوها و پیام‌ها جستجو کنید."
+    >
       <div className="flex flex-col gap-4">
         <Input
           label="عبارت جستجو"
@@ -90,15 +96,11 @@ export function GlobalSearchModal({
         />
 
         {normalised.length === 0 && (
-          <p className="py-6 text-center text-body-sm text-fg-tertiary">
-            برای شروع، عبارتی را تایپ کنید.
-          </p>
+          <p className="py-6 text-center text-body-sm text-fg-tertiary">برای شروع، عبارتی را تایپ کنید.</p>
         )}
 
         {empty && (
-          <p className="py-6 text-center text-body-sm text-fg-tertiary">
-            نتیجه‌ای برای «{query}» یافت نشد.
-          </p>
+          <p className="py-6 text-center text-body-sm text-fg-tertiary">نتیجه‌ای برای «{query}» یافت نشد.</p>
         )}
 
         {taskResults.length > 0 && (
@@ -117,7 +119,7 @@ export function GlobalSearchModal({
                     <TaskSquareIcon size={18} className="shrink-0 text-fg-quaternary" />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-body-sm font-medium text-fg-primary">{task.title}</span>
-                      <span className="numeric truncate text-micro text-fg-tertiary">
+                      <span className="truncate text-micro text-fg-tertiary numeric">
                         {`${task.code}، ${formatJalali(task.dueDate, 'medium')}`}
                       </span>
                     </span>
@@ -183,7 +185,7 @@ export function GlobalSearchModal({
                         <span className="truncate text-body-sm text-fg-primary">
                           {truncate(messagePreview(message), 70)}
                         </span>
-                        <span className="numeric truncate text-micro text-fg-tertiary">
+                        <span className="truncate text-micro text-fg-tertiary numeric">
                           {`${author?.fullName ?? ''}، ${conversation?.title ?? ''}، ${formatJalali(message.sentAt, 'day-month')}`}
                         </span>
                       </span>

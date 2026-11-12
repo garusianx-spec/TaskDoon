@@ -31,7 +31,11 @@ const providers = [
   EventStream,
   RealtimePublisher,
   PresenceDirectory,
-  { provide: SecretBox, inject: [AppConfig], useFactory: (config: AppConfig) => new SecretBox(config.env.APP_ENCRYPTION_KEY) },
+  {
+    provide: SecretBox,
+    inject: [AppConfig],
+    useFactory: (config: AppConfig) => new SecretBox(config.env.APP_ENCRYPTION_KEY),
+  },
 ];
 
 /** Infrastructure every role needs: database, Redis, queues, storage, SMS, mail, audit, outbox, realtime publishing. */

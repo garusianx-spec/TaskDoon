@@ -45,7 +45,9 @@ export interface ProjectScopedSubject {
 }
 
 /** One tagged variant per project subject, so CASL can tell `Task` rules from `Project` rules. */
-type ProjectScopedSubjects = { [K in ProjectSubjectName]: ProjectScopedSubject & ForcedSubject<K> }[ProjectSubjectName];
+type ProjectScopedSubjects = {
+  [K in ProjectSubjectName]: ProjectScopedSubject & ForcedSubject<K>;
+}[ProjectSubjectName];
 
 export type AppSubject = SubjectName | (MemberSubject & ForcedSubject<'Member'>) | ProjectScopedSubjects;
 export type AppAbility = MongoAbility<[Action, AppSubject]>;
@@ -77,7 +79,10 @@ export const PROJECT_ROLE_ACTIONS: Readonly<Record<ProjectRole, readonly Permiss
 };
 
 /** Guests never hold more than `contributor` in a project, whatever they were given. */
-export function effectiveProjectRole(member: Pick<MembershipContext, 'roleKey'>, role: ProjectRole): ProjectRole {
+export function effectiveProjectRole(
+  member: Pick<MembershipContext, 'roleKey'>,
+  role: ProjectRole,
+): ProjectRole {
   return member.roleKey === 'guest' && role === 'lead' ? 'contributor' : role;
 }
 

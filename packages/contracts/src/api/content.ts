@@ -18,7 +18,11 @@ export interface CreateUploadBody {
  */
 export type UploadPlan =
   | { readonly kind: 'post'; readonly url: string; readonly fields: Readonly<Record<string, string>> }
-  | { readonly kind: 'multipart'; readonly partSize: number; readonly parts: readonly { readonly partNumber: number; readonly url: string }[] };
+  | {
+      readonly kind: 'multipart';
+      readonly partSize: number;
+      readonly parts: readonly { readonly partNumber: number; readonly url: string }[];
+    };
 
 export interface UploadView {
   readonly attachment: AttachmentView;

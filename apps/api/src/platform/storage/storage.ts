@@ -29,7 +29,10 @@ export interface StoredObject {
 
 /** RFC 5987 `filename*` encoding: percent-encode everything outside attr-char. */
 export function encodeRfc5987(value: string): string {
-  return encodeURIComponent(value).replace(/['()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+  return encodeURIComponent(value).replace(
+    /['()*]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
 }
 
 /**
@@ -97,7 +100,9 @@ export class StorageService implements OnModuleDestroy {
       new GetObjectCommand({
         Bucket: this.bucket,
         Key: key,
-        ResponseContentDisposition: downloadName ? `${disposition}; filename*=UTF-8''${encodeRfc5987(downloadName)}` : undefined,
+        ResponseContentDisposition: downloadName
+          ? `${disposition}; filename*=UTF-8''${encodeRfc5987(downloadName)}`
+          : undefined,
         ResponseContentType: contentType,
       }),
       { expiresIn: expiresInSeconds },
@@ -107,30 +112,51 @@ export class StorageService implements OnModuleDestroy {
   /* ---------------------------------------------------------------- multipart (files over 16 MB) */
 
   async createMultipart(key: string, contentType: string): Promise<string> {
-    const created = await this.internal.send(new CreateMultipartUploadCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }));
+    const created = await this.internal.send(
+      new CreateMultipartUploadCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+    );
     if (!created.UploadId) throw new Error('the store returned no multipart upload id');
     return created.UploadId;
   }
 
-  async presignPart(key: string, uploadId: string, partNumber: number, expiresInSeconds: number): Promise<string> {
-    return getSignedUrl(this.signer, new UploadPartCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId, PartNumber: partNumber }), {
-      expiresIn: expiresInSeconds,
-    });
+  async presignPart(
+    key: string,
+    uploadId: string,
+    partNumber: number,
+    expiresInSeconds: number,
+  ): Promise<string> {
+    return getSignedUrl(
+      this.signer,
+      new UploadPartCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId, PartNumber: partNumber }),
+      {
+        expiresIn: expiresInSeconds,
+      },
+    );
   }
 
-  async completeMultipart(key: string, uploadId: string, parts: readonly { partNumber: number; etag: string }[]): Promise<void> {
+  async completeMultipart(
+    key: string,
+    uploadId: string,
+    parts: readonly { partNumber: number; etag: string }[],
+  ): Promise<void> {
     await this.internal.send(
       new CompleteMultipartUploadCommand({
         Bucket: this.bucket,
         Key: key,
         UploadId: uploadId,
-        MultipartUpload: { Parts: [...parts].sort((a, b) => a.partNumber - b.partNumber).map((part) => ({ PartNumber: part.partNumber, ETag: part.etag })) },
+        MultipartUpload: {
+          Parts: [...parts]
+            .sort((a, b) => a.partNumber - b.partNumber)
+            .map((part) => ({ PartNumber: part.partNumber, ETag: part.etag })),
+        },
       }),
     );
   }
 
   async abortMultipart(key: string, uploadId: string): Promise<void> {
-    await this.internal.send(new AbortMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId }));
+    await this.internal.send(
+      new AbortMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId }),
+    );
   }
 
   /** Size and type of an object, or `null` when it does not exist. */
@@ -139,14 +165,17 @@ export class StorageService implements OnModuleDestroy {
       const head = await this.internal.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
       return { size: head.ContentLength ?? 0, contentType: head.ContentType };
     } catch (error) {
-      if ((error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) return null;
+      if ((error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
+        return null;
       throw error;
     }
   }
 
   /** The first `length` bytes, for sniffing a file's real type from its magic number. */
   async readPrefix(key: string, length: number): Promise<Buffer> {
-    const object = await this.internal.send(new GetObjectCommand({ Bucket: this.bucket, Key: key, Range: `bytes=0-${length - 1}` }));
+    const object = await this.internal.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key, Range: `bytes=0-${length - 1}` }),
+    );
     const bytes = await object.Body?.transformToByteArray();
     return Buffer.from(bytes ?? []);
   }
@@ -172,10 +201,14 @@ export class StorageService implements OnModuleDestroy {
     let deleted = 0;
     let token: string | undefined;
     do {
-      const page = await this.internal.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ContinuationToken: token }));
+      const page = await this.internal.send(
+        new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ContinuationToken: token }),
+      );
       const keys = (page.Contents ?? []).flatMap((object) => (object.Key ? [{ Key: object.Key }] : []));
       if (keys.length > 0) {
-        await this.internal.send(new DeleteObjectsCommand({ Bucket: this.bucket, Delete: { Objects: keys, Quiet: true } }));
+        await this.internal.send(
+          new DeleteObjectsCommand({ Bucket: this.bucket, Delete: { Objects: keys, Quiet: true } }),
+        );
         deleted += keys.length;
       }
       token = page.IsTruncated ? page.NextContinuationToken : undefined;

@@ -38,9 +38,21 @@ async function removeBuildMetadata(directory) {
         await removeBuildMetadata(file);
       }
     } else if (
-      ['.ts', '.mts', '.cts', '.map', '.tsbuildinfo', '.c', '.cc', '.cpp', '.h', '.hpp', '.gyp', '.gypi']
-        .some((suffix) => entry.name.endsWith(suffix))
-      || entry.name.endsWith('.glibc.node')
+      [
+        '.ts',
+        '.mts',
+        '.cts',
+        '.map',
+        '.tsbuildinfo',
+        '.c',
+        '.cc',
+        '.cpp',
+        '.h',
+        '.hpp',
+        '.gyp',
+        '.gypi',
+      ].some((suffix) => entry.name.endsWith(suffix)) ||
+      entry.name.endsWith('.glibc.node')
     ) {
       await rm(file);
     }
@@ -70,7 +82,10 @@ async function copyMigrationDependencies(destination) {
         directory = parent;
       }
     }
-    if (!directory.startsWith(source + '/node_modules/') && !directory.startsWith(source + '/apps/api/node_modules/')) {
+    if (
+      !directory.startsWith(source + '/node_modules/') &&
+      !directory.startsWith(source + '/apps/api/node_modules/')
+    ) {
       throw new Error('Dependency escaped the isolated installation: ' + directory);
     }
     if (visited.has(directory)) return;
@@ -103,7 +118,8 @@ if (mode === 'dependencies') {
   await removeBuildMetadata(join(source, 'apps/api/node_modules'));
 } else if (mode === 'migrations') {
   const destination = resolve(destinationArg ?? '');
-  if (destination !== '/migration-runtime') throw new Error('Expected the isolated /migration-runtime directory.');
+  if (destination !== '/migration-runtime')
+    throw new Error('Expected the isolated /migration-runtime directory.');
   await copyMigrationDependencies(destination);
 } else if (mode === 'assets') {
   const destination = resolve(destinationArg ?? '');
@@ -118,5 +134,7 @@ if (mode === 'dependencies') {
   await rm(join(destination, 'apps/api/dist/cli'), { recursive: true });
   await rm(join(destination, 'apps/api/dist/platform/db/migrate.js'));
 } else {
-  throw new Error('Usage: api-runtime.mjs dependencies /repo | migrations /repo /migration-runtime | assets /repo /runtime');
+  throw new Error(
+    'Usage: api-runtime.mjs dependencies /repo | migrations /repo /migration-runtime | assets /repo /runtime',
+  );
 }

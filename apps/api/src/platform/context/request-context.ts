@@ -26,7 +26,9 @@ const TRACEPARENT = /^00-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$/;
 
 /** A client-supplied request id is kept only when it is a sane token; otherwise a fresh one. */
 export function acceptRequestId(candidate: unknown): string {
-  return typeof candidate === 'string' && REQUEST_ID.test(candidate) ? candidate : randomBytes(12).toString('base64url');
+  return typeof candidate === 'string' && REQUEST_ID.test(candidate)
+    ? candidate
+    : randomBytes(12).toString('base64url');
 }
 
 /** The trace id of a valid W3C `traceparent`, or a new random one. */

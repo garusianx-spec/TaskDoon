@@ -22,7 +22,11 @@ export const blockId = (prefix: 'b' | 'i'): string => {
   return `${prefix}${sequence}`;
 };
 
-export const checklistEntry = (text: string, done = false): ChecklistEntry => ({ id: blockId('i'), text, done });
+export const checklistEntry = (text: string, done = false): ChecklistEntry => ({
+  id: blockId('i'),
+  text,
+  done,
+});
 
 export function parseNoteBlocks(body: string): readonly NoteBlock[] {
   const blocks: NoteBlock[] = [];
@@ -63,7 +67,10 @@ export function normaliseNoteBlocks(blocks: readonly NoteBlock[]): readonly Note
     if (block.kind === 'checklist' && block.items.length === 0) continue;
     const last = out[out.length - 1];
     if (block.kind === 'text' && last?.kind === 'text') {
-      out[out.length - 1] = { ...last, text: last.text && block.text ? `${last.text}\n${block.text}` : last.text || block.text };
+      out[out.length - 1] = {
+        ...last,
+        text: last.text && block.text ? `${last.text}\n${block.text}` : last.text || block.text,
+      };
     } else {
       out.push(block);
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useNamespacedId } from '@/hooks/useId';
 import { CheckIcon, ChevronDownIcon } from '@/components/icons';
@@ -47,7 +47,10 @@ export function Select<TValue extends string>({
 }: SelectProps<TValue>) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(() =>
-    Math.max(0, options.findIndex((option) => option.value === value)),
+    Math.max(
+      0,
+      options.findIndex((option) => option.value === value),
+    ),
   );
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
@@ -89,7 +92,9 @@ export function Select<TValue extends string>({
   useEffect(() => {
     if (!open) return;
     const frame = requestAnimationFrame(() => {
-      listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
+      listRef.current
+        ?.querySelector<HTMLElement>('[data-active="true"]')
+        ?.scrollIntoView({ block: 'nearest' });
     });
     return () => cancelAnimationFrame(frame);
   }, [open, activeIndex]);
@@ -98,7 +103,12 @@ export function Select<TValue extends string>({
     if (disabled) return;
     if (!open && ['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(event.key)) {
       event.preventDefault();
-      setActiveIndex(Math.max(0, options.findIndex((option) => option.value === value)));
+      setActiveIndex(
+        Math.max(
+          0,
+          options.findIndex((option) => option.value === value),
+        ),
+      );
       setOpen(true);
       return;
     }
@@ -141,9 +151,7 @@ export function Select<TValue extends string>({
         state.timer = window.setTimeout(() => {
           state.query = '';
         }, 600);
-        const match = options.findIndex(
-          (option) => !option.disabled && option.label.startsWith(state.query),
-        );
+        const match = options.findIndex((option) => !option.disabled && option.label.startsWith(state.query));
         if (match !== -1) setActiveIndex(match);
         break;
       }
@@ -214,7 +222,9 @@ export function Select<TValue extends string>({
               >
                 {option.icon}
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className={cn('truncate font-medium', isSelected ? 'text-fg-brand' : 'text-fg-primary')}>
+                  <span
+                    className={cn('truncate font-medium', isSelected ? 'text-fg-brand' : 'text-fg-primary')}
+                  >
                     {option.label}
                   </span>
                   {option.description && (

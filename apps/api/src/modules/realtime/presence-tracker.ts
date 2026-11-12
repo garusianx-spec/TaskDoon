@@ -90,7 +90,10 @@ export class PresenceTracker {
       // Back within the grace: nobody saw them leave, so there is nothing to announce.
       if (count === 1 && !wasPending) this.transitions.set(userId, true);
     } catch (error) {
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'presence connect failed');
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        'presence connect failed',
+      );
     }
   }
 
@@ -103,9 +106,13 @@ export class PresenceTracker {
         .srem(this.keys.nodeConnections(this.nodeId), `${userId}|${this.nodeId}|${socket.id}`)
         .scard(this.keys.connections(userId))
         .exec();
-      if (Number(results?.[2]?.[1] ?? 1) === 0) await this.redis.rt.zadd(this.keys.pending, this.clock.now().getTime() + PRESENCE.graceMs, userId);
+      if (Number(results?.[2]?.[1] ?? 1) === 0)
+        await this.redis.rt.zadd(this.keys.pending, this.clock.now().getTime() + PRESENCE.graceMs, userId);
     } catch (error) {
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'presence disconnect failed');
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        'presence disconnect failed',
+      );
     }
   }
 
@@ -117,7 +124,10 @@ export class PresenceTracker {
         .sadd(this.keys.nodes, this.nodeId)
         .exec();
     } catch (error) {
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'presence heartbeat failed');
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        'presence heartbeat failed',
+      );
     }
   }
 
@@ -135,25 +145,47 @@ export class PresenceTracker {
       const now = this.clock.now().getTime();
 
       for (const nodeId of await this.redis.rt.smembers(this.keys.nodes)) {
-        if (nodeId === this.nodeId || (await this.redis.rt.exists(this.keys.heartbeat(nodeId))) === 1) continue;
+        if (nodeId === this.nodeId || (await this.redis.rt.exists(this.keys.heartbeat(nodeId))) === 1)
+          continue;
         const entries = await this.redis.rt.smembers(this.keys.nodeConnections(nodeId));
         for (const entry of entries) {
           const [userId, node, socketId] = entry.split('|');
           if (!userId || !node || !socketId) continue;
-          const results = await this.redis.rt.multi().srem(this.keys.connections(userId), `${node}|${socketId}`).scard(this.keys.connections(userId)).exec();
-          if (Number(results?.[1]?.[1] ?? 1) === 0) await this.redis.rt.zadd(this.keys.pending, 'NX', now + PRESENCE.graceMs, userId);
+          const results = await this.redis.rt
+            .multi()
+            .srem(this.keys.connections(userId), `${node}|${socketId}`)
+            .scard(this.keys.connections(userId))
+            .exec();
+          if (Number(results?.[1]?.[1] ?? 1) === 0)
+            await this.redis.rt.zadd(this.keys.pending, 'NX', now + PRESENCE.graceMs, userId);
         }
-        await this.redis.rt.multi().del(this.keys.nodeConnections(nodeId)).srem(this.keys.nodes, nodeId).exec();
-        this.logger.warn({ nodeId, connections: entries.length }, 'cleared a WebSocket node whose heartbeat lapsed');
+        await this.redis.rt
+          .multi()
+          .del(this.keys.nodeConnections(nodeId))
+          .srem(this.keys.nodes, nodeId)
+          .exec();
+        this.logger.warn(
+          { nodeId, connections: entries.length },
+          'cleared a WebSocket node whose heartbeat lapsed',
+        );
       }
 
       const due = await this.redis.rt.zrangebyscore(this.keys.pending, '-inf', now, 'LIMIT', 0, 1000);
       for (const userId of due) {
-        const taken = await this.redis.rt.eval(TAKE_IF_OFFLINE, 1, this.keys.pending, userId, this.redis.key('presence', 'conn', ''));
+        const taken = await this.redis.rt.eval(
+          TAKE_IF_OFFLINE,
+          1,
+          this.keys.pending,
+          userId,
+          this.redis.key('presence', 'conn', ''),
+        );
         if (taken === 1) this.transitions.set(userId, false);
       }
     } catch (error) {
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'presence sweep failed');
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        'presence sweep failed',
+      );
     } finally {
       this.sweeping = false;
     }
@@ -181,7 +213,10 @@ export class PresenceTracker {
         })),
       );
     } catch (error) {
-      this.logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'presence announcement failed');
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        'presence announcement failed',
+      );
     }
   }
 }

@@ -33,18 +33,18 @@ The server's project creation/idempotency flow was not changed. The reducer now 
 
 Tests were written before the corresponding fixes. The recorder baseline had 12 expected failures out of 15 focused cases. Against original reducer/LiveStore source, seven of eight channel tests failed, including both event orders and missing socket delivery. The AAC delivery test failed specifically on the `.webm` filename. The initial composer boundary reproduction failed on the false short-recording error before its guard was added; final coverage uses a real-browser double-click case rather than a mocked React-state test.
 
-| Check | Result |
-|---|---|
-| `npm run -ws typecheck` | Passed all five workspaces |
-| `npm run -ws lint` | Passed all five workspaces |
-| API unit tests | 200 passed: existing 186 plus 14 audio-classification regressions |
-| Web unit tests | 40 passed: recorder 24, identity reconciliation 8, delivery 8 |
-| Shared Jalali/text unit tests | 13 passed |
-| API integration suite | 297 passed across 25 files: existing 292 plus five voice-upload regressions |
-| Demo production build | Passed compilation, lint/types and all 23 generated routes |
-| Chat/project browser suites | 166 checks passed, zero failures or console problems |
-| CI workflow validation | `actionlint` passed |
-| Clean dependency install | Passed with the project's Node 22/npm toolchain |
+| Check                         | Result                                                                      |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| `npm run -ws typecheck`       | Passed all five workspaces                                                  |
+| `npm run -ws lint`            | Passed all five workspaces                                                  |
+| API unit tests                | 200 passed: existing 186 plus 14 audio-classification regressions           |
+| Web unit tests                | 40 passed: recorder 24, identity reconciliation 8, delivery 8               |
+| Shared Jalali/text unit tests | 13 passed                                                                   |
+| API integration suite         | 297 passed across 25 files: existing 292 plus five voice-upload regressions |
+| Demo production build         | Passed compilation, lint/types and all 23 generated routes                  |
+| Chat/project browser suites   | 166 checks passed, zero failures or console problems                        |
+| CI workflow validation        | `actionlint` passed                                                         |
+| Clean dependency install      | Passed with the project's Node 22/npm toolchain                             |
 
 The five browser suites were `phase31`, `phase2`, `files-and-bridge`, `interactions`, and the new `voice-recording`. The latter uses a synthetic microphone with the real browser MediaRecorder, decodes the nonempty finalized audio, verifies that exactly one note appears and every capture track ends, and checks actionable permission-denied UI. It never opens a physical microphone.
 

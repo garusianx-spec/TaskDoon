@@ -60,7 +60,11 @@ export class OtpService {
     private readonly sms: SmsService,
   ) {}
 
-  async request(rawPhone: string, client: { ip?: string; userAgent?: string }, purpose: OtpPurpose = 'login'): Promise<OtpChallenge> {
+  async request(
+    rawPhone: string,
+    client: { ip?: string; userAgent?: string },
+    purpose: OtpPurpose = 'login',
+  ): Promise<OtpChallenge> {
     const phone = toIranMobileE164(rawPhone);
     if (!phone) throw ApiError.validation([{ field: 'phone', message: 'not an Iranian mobile number' }]);
 
@@ -70,7 +74,11 @@ export class OtpService {
     const code = numericCode(OTP_LENGTH);
     let receipt;
     try {
-      receipt = await this.sms.send({ to: phone, template: purpose === 'password_reset' ? 'otp_reset' : 'otp', tokens: { code } });
+      receipt = await this.sms.send({
+        to: phone,
+        template: purpose === 'password_reset' ? 'otp_reset' : 'otp',
+        tokens: { code },
+      });
     } catch (error) {
       if (error instanceof SmsUnavailableError) {
         // Let the person try again right away instead of waiting out a cooldown for nothing.
@@ -126,7 +134,12 @@ export class OtpService {
   }
 
   /** Consumes the challenge when the code matches; counts the attempt when it does not. */
-  async verify(challengeId: string, code: string, ip: string | undefined, purpose: OtpPurpose = 'login'): Promise<VerifiedPhone> {
+  async verify(
+    challengeId: string,
+    code: string,
+    ip: string | undefined,
+    purpose: OtpPurpose = 'login',
+  ): Promise<VerifiedPhone> {
     await this.hit(this.redis.key('otp', 'verify', 'ip', ip ?? 'unknown'), 3600, VERIFIES_PER_IP_PER_HOUR);
 
     const outcome = await this.uow.run({ workspaceId: null, userId: null }, async ({ tx }) => {
@@ -146,10 +159,20 @@ export class OtpService {
       if (!safeEqual(this.hash(row.id, code), row.codeHash)) {
         const attempts = row.attempts + 1;
         await tx.update(otpChallenges).set({ attempts }).where(eq(otpChallenges.id, row.id));
-        return attempts >= MAX_ATTEMPTS ? ({ kind: 'locked' as const }) : { kind: 'invalid' as const, remaining: MAX_ATTEMPTS - attempts };
+        return attempts >= MAX_ATTEMPTS
+          ? { kind: 'locked' as const }
+          : { kind: 'invalid' as const, remaining: MAX_ATTEMPTS - attempts };
       }
-      await tx.update(otpChallenges).set({ consumedAt: sql`now()` }).where(eq(otpChallenges.id, row.id));
-      await this.audit.write(tx, { action: 'auth.otp.verify', actorUserId: null, resourceType: 'otp_challenge', resourceId: row.id });
+      await tx
+        .update(otpChallenges)
+        .set({ consumedAt: sql`now()` })
+        .where(eq(otpChallenges.id, row.id));
+      await this.audit.write(tx, {
+        action: 'auth.otp.verify',
+        actorUserId: null,
+        resourceType: 'otp_challenge',
+        resourceId: row.id,
+      });
       return { kind: 'ok' as const, phone: row.phone };
     });
 
@@ -161,7 +184,10 @@ export class OtpService {
       case 'locked':
         throw new ApiError('OTP_ATTEMPTS_EXCEEDED', 'Request a new code.');
       case 'invalid':
-        throw new ApiError('OTP_INVALID', outcome.remaining > 0 ? `${outcome.remaining} attempts left.` : undefined);
+        throw new ApiError(
+          'OTP_INVALID',
+          outcome.remaining > 0 ? `${outcome.remaining} attempts left.` : undefined,
+        );
     }
   }
 
@@ -194,7 +220,12 @@ export class OtpService {
     let count: number;
     let ttl: number;
     try {
-      const results = await this.redis.core.multi().incr(key).expire(key, windowSeconds, 'NX').ttl(key).exec();
+      const results = await this.redis.core
+        .multi()
+        .incr(key)
+        .expire(key, windowSeconds, 'NX')
+        .ttl(key)
+        .exec();
       count = Number(results?.[0]?.[1] ?? 0);
       ttl = Number(results?.[2]?.[1] ?? windowSeconds);
     } catch {

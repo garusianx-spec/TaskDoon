@@ -1,2 +1,4 @@
-import { SiteMediaLibrary } from '@/components/admin/site/SiteMediaLibrary';
-export default function Page() { return <SiteMediaLibrary />; }
+import { SiteMediaLibrary } from '@/features/admin/components/site/SiteMediaLibrary';
+export default function Page() {
+  return <SiteMediaLibrary />;
+}

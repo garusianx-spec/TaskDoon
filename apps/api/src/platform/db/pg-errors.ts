@@ -14,8 +14,18 @@ export function pgError(error: unknown): PgErrorInfo | undefined {
   let current: unknown = error;
   for (let depth = 0; depth < 5 && current; depth += 1) {
     if (typeof current === 'object' && current !== null) {
-      const candidate = current as { code?: unknown; constraint?: unknown; hint?: unknown; cause?: unknown; severity?: unknown };
-      if (typeof candidate.code === 'string' && /^[0-9A-Z]{5}$/.test(candidate.code) && 'severity' in candidate) {
+      const candidate = current as {
+        code?: unknown;
+        constraint?: unknown;
+        hint?: unknown;
+        cause?: unknown;
+        severity?: unknown;
+      };
+      if (
+        typeof candidate.code === 'string' &&
+        /^[0-9A-Z]{5}$/.test(candidate.code) &&
+        'severity' in candidate
+      ) {
         return {
           code: candidate.code,
           constraint: typeof candidate.constraint === 'string' ? candidate.constraint : undefined,
@@ -70,10 +80,12 @@ const NETWORK_CODES = new Set(['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'EPIPE
 export function isUnavailable(error: unknown): boolean {
   const code = pgError(error)?.code;
   // Class 08 is connection exceptions; 53300 too many connections; 57P01/57P03 shutting down or starting.
-  if (code && (code.startsWith('08') || code === '53300' || code === '57P01' || code === '57P03')) return true;
+  if (code && (code.startsWith('08') || code === '53300' || code === '57P01' || code === '57P03'))
+    return true;
   let current: unknown = error;
   for (let depth = 0; depth < 5 && current instanceof Error; depth += 1) {
-    if (current.message === POOL_TIMEOUT || NETWORK_CODES.has((current as { code?: unknown }).code as string)) return true;
+    if (current.message === POOL_TIMEOUT || NETWORK_CODES.has((current as { code?: unknown }).code as string))
+      return true;
     current = current.cause;
   }
   return false;

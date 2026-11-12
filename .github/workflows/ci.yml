@@ -16,6 +16,7 @@ permissions:
 
 env:
   CI: 'true'
+  HUSKY: '0'
   NEXT_TELEMETRY_DISABLED: '1'
 
 defaults:
@@ -38,8 +39,11 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --no-audit --no-fund
-      - run: npm run -ws lint
-      - run: npm run -ws typecheck
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run format:check
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run test --workspace @taskin/jalali --workspace @taskin/text
       - run: npm run test:broadcasts
       - run: npm run check:contrast
@@ -143,7 +147,7 @@ jobs:
       - name: Web unit regressions
         run: npm run test --workspace @taskin/web
       - name: Validate the demo production build
-        run: npm run build --workspace @taskin/web
+        run: npm run build
         env:
           NEXT_PUBLIC_DATA_SOURCE: demo
       - name: Demo smoke and regression suites
@@ -187,13 +191,25 @@ jobs:
           target: ${{ matrix.target }}
           platforms: linux/amd64
           push: false
-          load: false
+          load: ${{ matrix.image == 'web' }}
+          tags: taskdoon-${{ matrix.image }}:ci
           build-args: |
             NEXT_PUBLIC_DATA_SOURCE=api
             NEXT_PUBLIC_RT_URL=
             TASKIN_API_ORIGIN=http://api:4000
           cache-from: type=gha,version=2,scope=taskdoon-${{ matrix.image }}
           cache-to: type=gha,version=2,mode=max,scope=taskdoon-${{ matrix.image }}
+      - name: Verify the unprivileged web runner and health route
+        if: matrix.image == 'web'
+        run: |
+          image=taskdoon-web:ci
+          test "$(docker image inspect "$image" --format '{{.Config.User}}')" = node
+          container=$(docker run --detach --rm --publish 127.0.0.1::3000 "$image")
+          trap 'docker stop "$container" >/dev/null 2>&1 || true' EXIT
+          endpoint=$(docker port "$container" 3000/tcp)
+          body=$(curl --fail --silent --show-error --retry 20 --retry-delay 1 --retry-connrefused --max-time 3 "http://$endpoint/api/health")
+          test "$body" = '{"status":"ok"}'
+          docker image inspect "$image" --format '{{.Size}} bytes'
 
   compose:
     name: Compose stack (API image, migrator, PgBouncer, health)

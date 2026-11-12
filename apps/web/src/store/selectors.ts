@@ -17,7 +17,7 @@ import type {
   User,
 } from '@taskin/contracts';
 import { BUILT_IN_COLUMNS } from '@/data/reference';
-import { directory } from './directory';
+import { directory } from '@/store/directory';
 import { daysBetween, parseISODate, toISODate } from '@taskin/jalali';
 
 /* ------------------------------ People & projects ------------------------------ */
@@ -133,7 +133,9 @@ export function columnForPlacement(
  */
 export function columnForTask(columns: readonly BoardColumn[], task: Task): BoardColumn | undefined {
   const own = columns.filter((column) => column.projectId === task.projectId);
-  return own.length > 0 ? columnForPlacement(own, task) : columnForPlacement(columns, { status: task.status, boardColumnId: null });
+  return own.length > 0
+    ? columnForPlacement(own, task)
+    : columnForPlacement(columns, { status: task.status, boardColumnId: null });
 }
 
 /** A project's own board columns, start to end; the status columns while it has none yet. */
@@ -257,10 +259,7 @@ export const conversationMessages = (
   conversationId: string,
 ): readonly Message[] => messages.filter((message) => message.conversationId === conversationId);
 
-export const lastMessage = (
-  messages: readonly Message[],
-  conversationId: string,
-): Message | undefined => {
+export const lastMessage = (messages: readonly Message[], conversationId: string): Message | undefined => {
   const thread = conversationMessages(messages, conversationId);
   return thread[thread.length - 1];
 };
@@ -333,7 +332,8 @@ export function filterConversations(
 
     const aTime = lastMessage(messages, a.id)?.sentAt;
     const bTime = lastMessage(messages, b.id)?.sentAt;
-    if (!aTime || !bTime) return 0;
+    if (!aTime) return bTime ? 1 : 0;
+    if (!bTime) return -1;
     return parseISODate(bTime).getTime() - parseISODate(aTime).getTime();
   });
 }

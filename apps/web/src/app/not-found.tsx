@@ -6,7 +6,7 @@ export default function NotFound() {
   return (
     <PublicSurface>
       <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
-        <p className="numeric text-display font-extrabold text-fg-brand">۴۰۴</p>
+        <p className="text-display font-extrabold text-fg-brand numeric">۴۰۴</p>
         <h1 className="text-heading font-bold text-fg-primary">این صفحه پیدا نشد</h1>
         <p className="max-w-md text-body text-fg-tertiary">
           نشانی را بررسی کنید یا از صفحهٔ اصلی مسیر تازه‌ای پیدا کنید.

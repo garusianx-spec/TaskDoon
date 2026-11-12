@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { useNamespacedId } from '@/hooks/useId';
-import { IconButton } from './IconButton';
+import { IconButton } from '@/components/ui/IconButton';
 import { CloseIcon } from '@/components/icons';
 
 export interface SlideOverProps {
@@ -78,7 +78,7 @@ export function SlideOver({
         className={cn(
           'absolute inset-y-0 start-0 flex w-full flex-col border-e border-secondary bg-surface shadow-xl outline-none',
           'sm:w-[26rem] lg:start-rail',
-          'rtl:animate-slide-in-right ltr:animate-slide-in-start',
+          'ltr:animate-slide-in-start rtl:animate-slide-in-right',
           className,
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -95,10 +95,16 @@ export function SlideOver({
             )}
           </div>
           {actions}
-          <IconButton label="بستن" icon={<CloseIcon size={20} />} onClick={onClose} size="sm" className="-me-1" />
+          <IconButton
+            label="بستن"
+            icon={<CloseIcon size={20} />}
+            onClick={onClose}
+            size="sm"
+            className="-me-1"
+          />
         </header>
         {toolbar && <div className="border-b border-secondary px-4 py-3">{toolbar}</div>}
-        <div className="scrollbar-thin flex-1 overflow-y-auto">{children}</div>
+        <div className="flex-1 overflow-y-auto scrollbar-thin">{children}</div>
         {footer && <footer className="border-t border-secondary bg-sunken px-4 py-3">{footer}</footer>}
       </div>
     </div>,

@@ -10,7 +10,10 @@ await page.waitForURL('**/tasks');
 await page.getByRole('checkbox', { name: /تهیه سند معماری/ }).click();
 await rail.getByRole('button', { name: /حساب کاربری/ }).click();
 await page.getByRole('menuitem', { name: 'خروج از حساب' }).click();
-await page.getByRole('dialog', { name: 'خروج از حساب کاربری' }).getByRole('button', { name: 'خروج از حساب' }).click();
+await page
+  .getByRole('dialog', { name: 'خروج از حساب کاربری' })
+  .getByRole('button', { name: 'خروج از حساب' })
+  .click();
 await page.waitForURL('**/signed-out');
 await page.evaluate(() => window.history.back());
 await page.waitForTimeout(1000);
@@ -20,5 +23,8 @@ await page.waitForURL('**/feed');
 await rail.getByRole('link', { name: 'پروژه‌ها و وظایف' }).click();
 await page.waitForURL('**/tasks');
 const done = page.getByRole('region', { name: 'ستون انجام شد' });
-check(await done.getByRole('group', { name: /تهیه سند معماری/ }).count() === 0, 'session state cleared on sign-out');
+check(
+  (await done.getByRole('group', { name: /تهیه سند معماری/ }).count()) === 0,
+  'session state cleared on sign-out',
+);
 await finish(browser);

@@ -1,5 +1,25 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query, Req, Res } from '@nestjs/common';
-import { ApiExtraModels, ApiOkResponse, ApiOperation, ApiQuery, ApiTags, getSchemaPath } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
+import {
+  ApiExtraModels,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import type { AuthSession, OtpChallenge, OtpVerifyResult, SessionView } from '@taskin/contracts';
 import { AppConfig } from '../../config/app-config.js';
@@ -33,7 +53,11 @@ import { SessionService } from './session.service.js';
 import { TokenService } from './token.service.js';
 
 function device(request: Request, label?: string) {
-  return { deviceLabel: label ?? null, userAgent: request.headers['user-agent'] ?? null, ip: request.ip ?? null };
+  return {
+    deviceLabel: label ?? null,
+    userAgent: request.headers['user-agent'] ?? null,
+    ip: request.ip ?? null,
+  };
 }
 
 @ApiTags('auth')
@@ -51,7 +75,9 @@ export class AuthController {
   @Public()
   @Post('otp/request')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Text a sign-in code to a mobile number (same answer whether or not it has an account)' })
+  @ApiOperation({
+    summary: 'Text a sign-in code to a mobile number (same answer whether or not it has an account)',
+  })
   @ApiOkResponse({ type: OtpChallengeDto })
   request(@Body() body: OtpRequestDto, @Req() request: Request): Promise<OtpChallenge> {
     return this.otp.request(body.phone, { ip: request.ip, userAgent: request.headers['user-agent'] });
@@ -64,14 +90,42 @@ export class AuthController {
   @ApiOkResponse({
     schema: {
       oneOf: [
-        { type: 'object', properties: { status: { type: 'string', enum: ['signed_in'] }, session: { $ref: getSchemaPath(AuthSessionDto) } } },
-        { type: 'object', properties: { status: { type: 'string', enum: ['password_required', 'admin_setup_required'] }, temporaryToken: { type: 'string' }, expiresInSeconds: { type: 'integer' } } },
-        { type: 'object', properties: { status: { type: 'string', enum: ['signup_required'] }, signupToken: { type: 'string' }, expiresInSeconds: { type: 'integer' } } },
+        {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['signed_in'] },
+            session: { $ref: getSchemaPath(AuthSessionDto) },
+          },
+        },
+        {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['password_required', 'admin_setup_required'] },
+            temporaryToken: { type: 'string' },
+            expiresInSeconds: { type: 'integer' },
+          },
+        },
+        {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['signup_required'] },
+            signupToken: { type: 'string' },
+            expiresInSeconds: { type: 'integer' },
+          },
+        },
       ],
     },
   })
-  async verify(@Body() body: OtpVerifyDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<OtpVerifyResult> {
-    const { result, refresh } = await this.auth.verifyOtp(body.challengeId, body.code, device(request, body.deviceLabel));
+  async verify(
+    @Body() body: OtpVerifyDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<OtpVerifyResult> {
+    const { result, refresh } = await this.auth.verifyOtp(
+      body.challengeId,
+      body.code,
+      device(request, body.deviceLabel),
+    );
     if (refresh) setAuthCookies(response, this.config, refresh.token, refresh.expiresAt);
     return result;
   }
@@ -79,22 +133,36 @@ export class AuthController {
   @Public()
   @Post('admin/setup/request')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Send the pending administrator setup code to the assigned recovery email after OTP proof' })
-  requestAdminSetup(@Body() body: AdminRecoveryRequestDto): Promise<void> { return this.auth.requestAdminSetup(body.temporaryToken); }
+  @ApiOperation({
+    summary: 'Send the pending administrator setup code to the assigned recovery email after OTP proof',
+  })
+  requestAdminSetup(@Body() body: AdminRecoveryRequestDto): Promise<void> {
+    return this.auth.requestAdminSetup(body.temporaryToken);
+  }
 
   @Public()
   @Post('admin/setup/complete')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Complete phone/email/password setup without issuing a session' })
-  completeAdminSetup(@Body() body: AdminRecoveryCompleteDto): Promise<void> { return this.auth.completeAdminSetup(body.temporaryToken, body.code, body.newPassword); }
+  completeAdminSetup(@Body() body: AdminRecoveryCompleteDto): Promise<void> {
+    return this.auth.completeAdminSetup(body.temporaryToken, body.code, body.newPassword);
+  }
 
   @Public()
   @Post('admin/password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Complete the admin password challenge after a successful phone OTP' })
   @ApiOkResponse({ type: AuthSessionDto })
-  async adminPassword(@Body() body: AdminPasswordDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthSession> {
-    const issued = await this.auth.adminPassword(body.temporaryToken, body.password, device(request, body.deviceLabel));
+  async adminPassword(
+    @Body() body: AdminPasswordDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthSession> {
+    const issued = await this.auth.adminPassword(
+      body.temporaryToken,
+      body.password,
+      device(request, body.deviceLabel),
+    );
     setAuthCookies(response, this.config, issued.refresh.token, issued.refresh.expiresAt);
     return issued.body;
   }
@@ -110,7 +178,9 @@ export class AuthController {
   @Public()
   @Post('admin/recovery/complete')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Reset the admin password with OTP proof and a verified email recovery code; end all sessions' })
+  @ApiOperation({
+    summary: 'Reset the admin password with OTP proof and a verified email recovery code; end all sessions',
+  })
   completeAdminRecovery(@Body() body: AdminRecoveryCompleteDto): Promise<void> {
     return this.auth.completeAdminRecovery(body.temporaryToken, body.code, body.newPassword);
   }
@@ -119,7 +189,10 @@ export class AuthController {
   @Post('email/verification/request')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Send a verification code to the current profile email' })
-  requestEmailVerification(@CurrentAuth() principal: AuthPrincipal, @Body() _body: EmailVerificationRequestDto): Promise<void> {
+  requestEmailVerification(
+    @CurrentAuth() principal: AuthPrincipal,
+    @Body() _body: EmailVerificationRequestDto,
+  ): Promise<void> {
     return this.auth.requestEmailVerification(principal);
   }
 
@@ -127,17 +200,30 @@ export class AuthController {
   @Post('email/verification/confirm')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Verify the current profile email with its single-use code' })
-  confirmEmailVerification(@CurrentAuth() principal: AuthPrincipal, @Body() body: EmailVerificationConfirmDto): Promise<void> {
+  confirmEmailVerification(
+    @CurrentAuth() principal: AuthPrincipal,
+    @Body() body: EmailVerificationConfirmDto,
+  ): Promise<void> {
     return this.auth.confirmEmailVerification(principal, body.code);
   }
 
   @Public()
   @Post('password/login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Sign in with phone and password (for accounts that set one); the SMS code stays the default' })
+  @ApiOperation({
+    summary: 'Sign in with phone and password (for accounts that set one); the SMS code stays the default',
+  })
   @ApiOkResponse({ type: AuthSessionDto })
-  async passwordLogin(@Body() body: PasswordSignInDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthSession> {
-    const issued = await this.auth.passwordSignIn(body.phone, body.password, device(request, body.deviceLabel));
+  async passwordLogin(
+    @Body() body: PasswordSignInDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthSession> {
+    const issued = await this.auth.passwordSignIn(
+      body.phone,
+      body.password,
+      device(request, body.deviceLabel),
+    );
     setAuthCookies(response, this.config, issued.refresh.token, issued.refresh.expiresAt);
     return issued.body;
   }
@@ -145,7 +231,9 @@ export class AuthController {
   @Public()
   @Post('password/forgot')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Text a password reset code to the number (same answer whether or not it has an account)' })
+  @ApiOperation({
+    summary: 'Text a password reset code to the number (same answer whether or not it has an account)',
+  })
   @ApiOkResponse({ type: OtpChallengeDto })
   forgotPassword(@Body() body: PasswordForgotDto, @Req() request: Request): Promise<OtpChallenge> {
     return this.auth.forgotPassword(body.phone, { ip: request.ip, userAgent: request.headers['user-agent'] });
@@ -163,7 +251,11 @@ export class AuthController {
   @Post('signup')
   @ApiOperation({ summary: 'Create the account for a verified number and sign in' })
   @ApiOkResponse({ type: AuthSessionDto })
-  async signup(@Body() body: SignupDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthSession> {
+  async signup(
+    @Body() body: SignupDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthSession> {
     const issued = await this.auth.signup(body.signupToken, body.fullName, device(request, body.deviceLabel));
     setAuthCookies(response, this.config, issued.refresh.token, issued.refresh.expiresAt);
     return issued.body;
@@ -175,8 +267,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rotate the refresh cookie and get a new access token' })
   @ApiOkResponse({ type: AuthSessionDto })
-  async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthSession> {
-    const presented = (request.cookies as Record<string, string | undefined>)[authCookies(this.config).refresh.name];
+  async refresh(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthSession> {
+    const presented = (request.cookies as Record<string, string | undefined>)[
+      authCookies(this.config).refresh.name
+    ];
     try {
       const issued = await this.auth.refresh(presented);
       setAuthCookies(response, this.config, issued.refresh.token, issued.refresh.expiresAt);
@@ -192,8 +289,14 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Sign this device out' })
-  async logout(@Req() request: Request, @OptionalAuth() principal: AuthPrincipal | undefined, @Res({ passthrough: true }) response: Response): Promise<void> {
-    const presented = (request.cookies as Record<string, string | undefined>)[authCookies(this.config).refresh.name];
+  async logout(
+    @Req() request: Request,
+    @OptionalAuth() principal: AuthPrincipal | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    const presented = (request.cookies as Record<string, string | undefined>)[
+      authCookies(this.config).refresh.name
+    ];
     await this.auth.logout(presented, principal);
     clearAuthCookies(response, this.config);
   }
@@ -201,7 +304,9 @@ export class AuthController {
   @Authenticated()
   @Post('step-up')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Re-verify the admin password; the returned token allows sensitive actions for 15 minutes' })
+  @ApiOperation({
+    summary: 'Re-verify the admin password; the returned token allows sensitive actions for 15 minutes',
+  })
   @ApiOkResponse({ type: AuthSessionDto })
   stepUp(@CurrentAuth() principal: AuthPrincipal, @Body() body: StepUpDto): Promise<AuthSession> {
     return this.auth.stepUp(principal, body.password);
@@ -212,16 +317,28 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Text a confirmation code to the signed-in account’s own phone' })
   @ApiOkResponse({ type: OtpChallengeDto })
-  requestConfirmation(@CurrentAuth() principal: AuthPrincipal, @Req() request: Request): Promise<OtpChallenge> {
-    return this.auth.requestSessionConfirmation(principal, { ip: request.ip, userAgent: request.headers['user-agent'] });
+  requestConfirmation(
+    @CurrentAuth() principal: AuthPrincipal,
+    @Req() request: Request,
+  ): Promise<OtpChallenge> {
+    return this.auth.requestSessionConfirmation(principal, {
+      ip: request.ip,
+      userAgent: request.headers['user-agent'],
+    });
   }
 
   @Authenticated()
   @Post('otp/confirm')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Confirm this session with that code (a password session then counts as SMS-confirmed)' })
+  @ApiOperation({
+    summary: 'Confirm this session with that code (a password session then counts as SMS-confirmed)',
+  })
   @ApiOkResponse({ type: AuthSessionDto })
-  confirmSession(@CurrentAuth() principal: AuthPrincipal, @Body() body: OtpConfirmDto, @Req() request: Request): Promise<AuthSession> {
+  confirmSession(
+    @CurrentAuth() principal: AuthPrincipal,
+    @Body() body: OtpConfirmDto,
+    @Req() request: Request,
+  ): Promise<AuthSession> {
     return this.auth.confirmSession(principal, body.challengeId, body.code, request.ip);
   }
 
@@ -245,7 +362,10 @@ export class AuthController {
   @Delete('sessions/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Sign another device out' })
-  revokeSession(@CurrentAuth() principal: AuthPrincipal, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  revokeSession(
+    @CurrentAuth() principal: AuthPrincipal,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
     return this.auth.revokeSession(principal, id);
   }
 

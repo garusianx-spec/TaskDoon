@@ -40,7 +40,8 @@ export class WorkspaceMemberGuard implements CanActivate {
     if (!workspaceId || !UUID.test(workspaceId)) throw ApiError.notFound('The workspace');
     const member = await this.memberships.load(workspaceId.toLowerCase(), request.auth.userId);
     if (!member) {
-      if (await this.memberships.suspendedFor(workspaceId.toLowerCase(), request.auth.userId)) throw new ApiError('WORKSPACE_SUSPENDED');
+      if (await this.memberships.suspendedFor(workspaceId.toLowerCase(), request.auth.userId))
+        throw new ApiError('WORKSPACE_SUSPENDED');
       throw ApiError.notFound('The workspace');
     }
     request.member = member;
@@ -51,7 +52,10 @@ export class WorkspaceMemberGuard implements CanActivate {
 
 /** For controllers under `/workspaces/:workspaceId`. */
 export const WorkspaceScoped = () =>
-  applyDecorators(ApiParam({ name: 'workspaceId', format: 'uuid' }), UseGuards(WorkspaceMemberGuard, PoliciesGuard));
+  applyDecorators(
+    ApiParam({ name: 'workspaceId', format: 'uuid' }),
+    UseGuards(WorkspaceMemberGuard, PoliciesGuard),
+  );
 
 export type PolicyCheck = (ability: AppAbility, member: MembershipContext) => boolean;
 
@@ -71,7 +75,10 @@ export class PoliciesGuard implements CanActivate {
   ) {}
 
   canActivate(execution: ExecutionContext): boolean {
-    const checks = this.reflector.getAllAndOverride<PolicyCheck[] | undefined>(POLICIES, [execution.getHandler(), execution.getClass()]);
+    const checks = this.reflector.getAllAndOverride<PolicyCheck[] | undefined>(POLICIES, [
+      execution.getHandler(),
+      execution.getClass(),
+    ]);
     if (!checks?.length) return true;
     const request = execution.switchToHttp().getRequest<HttpRequest>();
     if (!request.member) throw new ApiError('FORBIDDEN');
@@ -84,8 +91,10 @@ export class PoliciesGuard implements CanActivate {
 }
 
 /** The caller's membership in the route's workspace. */
-export const CurrentMember = createParamDecorator((_: unknown, execution: ExecutionContext): MembershipContext => {
-  const member = execution.switchToHttp().getRequest<HttpRequest>().member;
-  if (!member) throw new ApiError('FORBIDDEN');
-  return member;
-});
+export const CurrentMember = createParamDecorator(
+  (_: unknown, execution: ExecutionContext): MembershipContext => {
+    const member = execution.switchToHttp().getRequest<HttpRequest>().member;
+    if (!member) throw new ApiError('FORBIDDEN');
+    return member;
+  },
+);

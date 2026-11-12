@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { useNamespacedId } from '@/hooks/useId';
 import { CloseIcon, SearchIcon } from '@/components/icons';
 

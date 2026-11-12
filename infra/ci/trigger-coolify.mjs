@@ -57,44 +57,62 @@ export function triggerCoolify({ env = process.env, spawn = spawnSync } = {}) {
   }
 
   const config =
-    'url = ' + quoteConfig(credentials.url) + '\n' +
-    'header = ' + quoteConfig('Authorization: Bearer ' + credentials.token) + '\n';
+    'url = ' +
+    quoteConfig(credentials.url) +
+    '\n' +
+    'header = ' +
+    quoteConfig('Authorization: Bearer ' + credentials.token) +
+    '\n';
   const childEnv = { ...process.env };
   delete childEnv.COOLIFY_WEBHOOK_URL;
   delete childEnv.COOLIFY_API_TOKEN;
 
   let result;
   try {
-    result = spawn('curl', [
-      '--disable', // Must be first: ignore any inherited .curlrc.
-      '--config', '-',
-      '--silent',
-      '--fail',
-      '--globoff',
-      '--request', 'POST',
-      '--proto', '=https',
-      '--proto-redir', '=https',
-      '--tlsv1.2',
-      '--no-location',
-      '--no-netrc',
-      '--connect-timeout', '10',
-      '--max-time', '30',
-      '--retry', '3',
-      '--retry-connrefused',
-      '--retry-max-time', '120',
-      '--output', '/dev/null',
-      '--write-out', '%{http_code}',
-    ], {
-      input: config,
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'ignore'],
-      env: childEnv,
-      shell: false,
-      // The final transfer can overrun curl's retry timer by at most 30s.
-      timeout: 155_000,
-      killSignal: 'SIGKILL',
-      maxBuffer: 1024,
-    });
+    result = spawn(
+      'curl',
+      [
+        '--disable', // Must be first: ignore any inherited .curlrc.
+        '--config',
+        '-',
+        '--silent',
+        '--fail',
+        '--globoff',
+        '--request',
+        'POST',
+        '--proto',
+        '=https',
+        '--proto-redir',
+        '=https',
+        '--tlsv1.2',
+        '--no-location',
+        '--no-netrc',
+        '--connect-timeout',
+        '10',
+        '--max-time',
+        '30',
+        '--retry',
+        '3',
+        '--retry-connrefused',
+        '--retry-max-time',
+        '120',
+        '--output',
+        '/dev/null',
+        '--write-out',
+        '%{http_code}',
+      ],
+      {
+        input: config,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'ignore'],
+        env: childEnv,
+        shell: false,
+        // The final transfer can overrun curl's retry timer by at most 30s.
+        timeout: 155_000,
+        killSignal: 'SIGKILL',
+        maxBuffer: 1024,
+      },
+    );
   } catch {
     return { ok: false, reason: 'transport' };
   }
@@ -116,11 +134,13 @@ export function main({ env = process.env, spawn = spawnSync, log = console.log }
     log(JSON.stringify({ event: 'coolify.deployment.failed', reason: result.reason }));
     return 1;
   }
-  log(JSON.stringify({
-    event: 'coolify.deployment.accepted',
-    httpStatus: result.httpStatus,
-    message: 'Webhook accepted; verify deployment health in Coolify.',
-  }));
+  log(
+    JSON.stringify({
+      event: 'coolify.deployment.accepted',
+      httpStatus: result.httpStatus,
+      message: 'Webhook accepted; verify deployment health in Coolify.',
+    }),
+  );
   return 0;
 }
 
