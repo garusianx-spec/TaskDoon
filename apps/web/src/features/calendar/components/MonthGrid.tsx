@@ -1,27 +1,12 @@
 'use client';
 
-import { jalaliFromIsoDate } from '@/lib/jalali';
+import { shiftMonthKeepingDay } from '@/lib/jalali';
 import { useEffect,useMemo,useRef,useState,type KeyboardEvent } from 'react';
 import type { CalendarCell } from '@taskin/jalali';
 import type { CalendarItem } from '@/store/selectors';
 import { cn } from '@/lib/utils';
-import {
-JALALI_WEEKDAYS,
-JALALI_WEEKDAYS_SHORT,
-addDays,jalaliMonthLength,
-jalaliToGregorian,
-shiftJalaliMonth,
-toISODate
-} from '@taskin/jalali';
+import { JALALI_WEEKDAYS, JALALI_WEEKDAYS_SHORT, addDays } from '@taskin/jalali';
 import { DayCell } from '@/features/calendar/components/DayCell';
-
-/** Same day-of-month in the neighbouring Jalali month, clamped (31 Shahrivar → 30 Mehr). */
-function shiftMonthKeepingDay(iso: string, delta: number): string {
-  const { year, month, day } = jalaliFromIsoDate(iso);
-  const target = shiftJalaliMonth(year, month, delta);
-  const clamped = Math.min(day, jalaliMonthLength(target.year, target.month));
-  return toISODate(jalaliToGregorian(target.year, target.month, clamped));
-}
 
 export interface MonthGridProps {
   readonly cells: readonly CalendarCell[];

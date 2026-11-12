@@ -333,7 +333,8 @@ export function filterConversations(
 
     const aTime = lastMessage(messages, a.id)?.sentAt;
     const bTime = lastMessage(messages, b.id)?.sentAt;
-    if (!aTime || !bTime) return 0;
+    if (!aTime) return bTime ? 1 : 0;
+    if (!bTime) return -1;
     return parseISODate(bTime).getTime() - parseISODate(aTime).getTime();
   });
 }
