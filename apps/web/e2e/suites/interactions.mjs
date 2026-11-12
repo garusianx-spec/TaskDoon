@@ -623,6 +623,12 @@ check(
   await eventually(async () => (await createDialog.locator('img[src^="data:image/png"]').count()) >= 1),
   'uploaded icon replaces the monogram',
 );
+await createDialog.locator('input[type=file]').setInputFiles({
+  name: 'logo.svg',
+  mimeType: 'image/svg+xml',
+  buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'),
+});
+check(await visible(createDialog.locator('img[src^="data:image/svg+xml"]')), 'demo can preview an SVG icon');
 await createDialog
   .locator('input[type=file]')
   .setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('x') });

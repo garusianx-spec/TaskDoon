@@ -4,9 +4,10 @@ import { formatFileSize } from '@/lib/format';
 export const WORKSPACE_ICON_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 const MAX_ICON_BYTES = 1024 * 1024;
 
-export function workspaceIconError(file: File): string | undefined {
+export function workspaceIconError(file: File, usage: 'upload' | 'preview' = 'upload'): string | undefined {
   const type = contentTypeOf(file, file.name);
-  if (!WORKSPACE_ICON_TYPES.some((allowed) => allowed === type))
+  if (!type.startsWith('image/')) return 'فقط فایل تصویری پذیرفته می‌شود.';
+  if (usage === 'upload' && !WORKSPACE_ICON_TYPES.some((allowed) => allowed === type))
     return 'فقط تصویر PNG، JPEG یا WebP پذیرفته می‌شود.';
   if (file.size === 0) return 'فایل تصویر خالی است.';
   if (file.size > MAX_ICON_BYTES) return `حجم تصویر نباید بیشتر از ${formatFileSize(MAX_ICON_BYTES)} باشد.`;

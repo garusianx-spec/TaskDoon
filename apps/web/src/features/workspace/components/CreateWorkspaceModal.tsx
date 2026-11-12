@@ -5,6 +5,7 @@ import type { AvatarTone, WorkspaceDraft } from '@taskin/contracts';
 import { cn } from '@/lib/utils';
 import { toPersianDigits } from '@taskin/jalali';
 import { monogram } from '@taskin/text';
+import { IS_LIVE } from '@/lib/data-source';
 import { useNamespacedId } from '@/hooks/useId';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
@@ -25,7 +26,7 @@ export interface CreateWorkspaceModalProps {
   readonly onSubmit: (draft: WorkspaceDraft, adminPassword?: string) => void;
   /** The account has no admin password yet, and owning a workspace needs one. */
   readonly requirePassword?: boolean;
-  /** Offer an uploaded image as the icon (the live app shows the monogram until uploads land). */
+  /** Offer a custom image as the workspace icon. */
   readonly allowIcon?: boolean;
 }
 
@@ -84,7 +85,7 @@ export function CreateWorkspaceModal({
       : undefined;
 
   const onPickIcon = async (file: File) => {
-    const error = workspaceIconError(file);
+    const error = workspaceIconError(file, IS_LIVE ? 'upload' : 'preview');
     setIconError(error);
     if (error) return;
     try {
@@ -137,7 +138,7 @@ export function CreateWorkspaceModal({
               <div className="flex flex-wrap items-center gap-2">
                 <FileUploader
                   id={`${id}-icon`}
-                  accept={WORKSPACE_ICON_TYPES.join(',')}
+                  accept={IS_LIVE ? WORKSPACE_ICON_TYPES.join(',') : 'image/*'}
                   icon={<ImageIcon size={14} />}
                   onPick={(file) => void onPickIcon(file)}
                 >
