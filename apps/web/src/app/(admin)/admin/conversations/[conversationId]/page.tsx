@@ -1,19 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
-import type { MessageView, PlatformMessagePage } from '@taskin/contracts';
+import { useParams,useSearchParams } from 'next/navigation';
+import { useState,type FormEvent } from 'react';
+import type { MessageView,PlatformMessagePage } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
-import { adminApi, type MessageFilters } from '@/admin/api';
-import { useAdmin } from '@/admin/AdminSession';
-import { CONVERSATION_KINDS, CONVERSATION_ROLES } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { problemMessage } from '@/api/messages';
-import { Loaded, PageHeader, Panel } from '@/components/admin/AdminUi';
-import { MessageItem } from '@/components/admin/MessageItem';
-import { Badge, Button, Input, Select } from '@/components/ui';
-import { ArrowRightIcon, FilterIcon } from '@/components/icons';
+import { adminApi,type MessageFilters } from '@/features/admin/api/admin-api';
+import { useAdmin } from '@/features/admin/hooks/AdminSession';
+import { CONVERSATION_KINDS,CONVERSATION_ROLES } from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { problemMessage } from '@/lib/api-problem';
+import { Loaded,PageHeader,Panel } from '@/features/admin/components/AdminUi';
+import { MessageItem } from '@/features/admin/components/MessageItem';
+import { Badge,Button,Input,Select } from '@/components/ui';
+import { ArrowRightIcon,FilterIcon } from '@/components/icons';
 
 interface FilterDraft {
   readonly from: string;

@@ -1,9 +1,9 @@
 'use client';
 
-import { forwardRef, type ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { forwardRef,type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 import { useNamespacedId } from '@/hooks/useId';
-import { CheckIcon, MinusIcon } from '@/components/icons';
+import { CheckIcon,MinusIcon } from '@/components/icons';
 
 export interface CheckboxProps {
   readonly checked: boolean;

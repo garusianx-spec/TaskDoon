@@ -1,21 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState, type FormEvent } from 'react';
-import type { PlatformModerationResult, PlatformUserSummary } from '@taskin/contracts';
+import { useRef,useState,type FormEvent } from 'react';
+import type { PlatformModerationResult,PlatformUserSummary } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
-import { adminApi, type UserFilters } from '@/admin/api';
-import { phoneLabel, USER_STATUS } from '@/admin/format';
-import { useAdmin, useAdminMe } from '@/admin/AdminSession';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { Loaded, PageHeader, Panel, TABLE, TableFrame, TD, TH } from '@/components/admin/AdminUi';
-import { ForcePasswordResetDialog } from '@/components/admin/ForcePasswordResetDialog';
-import { SessionsDrawer } from '@/components/admin/SessionsDrawer';
-import { SuspendUserDialog } from '@/components/admin/SuspendUserDialog';
-import { type UserAction, UserActionsMenu } from '@/components/admin/UserActionsMenu';
-import { Badge, Button, Input, RelativeTime, Select } from '@/components/ui';
+import { adminApi,type UserFilters } from '@/features/admin/api/admin-api';
+import { phoneLabel,USER_STATUS } from '@/features/admin/lib/format';
+import { useAdmin,useAdminMe } from '@/features/admin/hooks/AdminSession';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { Loaded,PageHeader,Panel,TD,TH } from '@/features/admin/components/AdminUi';
+import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { ForcePasswordResetDialog } from '@/features/admin/components/ForcePasswordResetDialog';
+import { SessionsDrawer } from '@/features/admin/components/SessionsDrawer';
+import { SuspendUserDialog } from '@/features/admin/components/SuspendUserDialog';
+import { type UserAction,UserActionsMenu } from '@/features/admin/components/UserActionsMenu';
+import { Badge,Button,Input,RelativeTime,Select } from '@/components/ui';
 import { SearchIcon } from '@/components/icons';
-import { problemMessage } from '@/api/messages';
+import { problemMessage } from '@/lib/api-problem';
 
 const EMPTY: UserFilters = { q: '', phone: '', email: '', status: '', platformRole: '' };
 
@@ -149,7 +150,7 @@ export default function AdminUsersPage() {
           {(data) => (
             <>
               <TableFrame label="فهرست کاربران">
-                <table className={TABLE}>
+                <DataTable>
                   <thead>
                     <tr>
                       <th className={TH}>نام</th>
@@ -192,7 +193,7 @@ export default function AdminUsersPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               </TableFrame>
               {moreError && <p role="alert" className="mt-3 text-caption text-status-blocked">{moreError}</p>}
               {cursor && (

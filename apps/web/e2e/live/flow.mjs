@@ -25,6 +25,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { check, eventually, finish, launch, out, visible, watchConsole } from '../lib/harness.mjs';
 import { verifyProjectCreation } from './project-creation.mjs';
 import { verifyProfileNavNotes } from './profile-nav-notes.mjs';
+import { verifySettings } from './settings.mjs';
 
 /** The API accepts its cookie routes (refresh, sign-out) only from its web origin: PUBLIC_WEB_ORIGIN or CORS_ORIGINS. */
 const base = process.env.BASE_URL ?? 'http://localhost:3000';
@@ -46,6 +47,7 @@ const guestName = `علی آزمون ${runId}`;
 const workspaceName = `فضای آزمون ${runId}`;
 const projectName = 'بازطراحی اپلیکیشن';
 const taskTitle = `بازبینی جریان ورود ${runId}`;
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64');
 
 const logSize = () => statSync(apiLog).size;
 
@@ -155,6 +157,7 @@ try {
   await guest.waitForURL('**/feed', { timeout: 20_000 });
   check(await visible(railOf(guest), 20_000), 'the guest lands on the desk');
   check(await visible(guest.getByText(workspaceName).first()), 'the guest is in the inviting workspace');
+  await verifySettings(owner, guest, PNG);
 
   /* ------------------------------------------------ tasks: created by one, seen live by the other */
 
@@ -291,7 +294,6 @@ try {
 
   /* ------------------------------------------------ M4: files and images in the chat */
 
-  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64');
   const PDF = Buffer.from(`%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\n${' '.repeat(200)}\n%%EOF\n`);
   const guestChat = guest.getByRole('region', { name: `گفتگوی ${ownerName}` });
   await owner.getByTestId('chat-file-input').setInputFiles([

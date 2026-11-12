@@ -6,21 +6,21 @@ import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { roleLabel } from '@/data/reference';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
-import { ThemePicker } from '@/components/theme/ThemePicker';
-import { Avatar, Badge, Button, Popover } from '@/components/ui';
-import { WorkspaceAvatar } from '@/components/workspace/WorkspaceAvatar';
-import { WorkspaceMenu } from '@/components/workspace/WorkspaceMenu';
+import { ThemePicker } from '@/components/layout/ThemePicker';
+import { Avatar,Badge,Button,Popover } from '@/components/ui';
+import { WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
+import { WorkspaceMenu } from '@/features/workspace/components/WorkspaceMenu';
 import {
-  ChevronForwardIcon,
-  ClockIcon,
-  KeyIcon,
-  LogoutIcon,
-  NotebookIcon,
-  PeopleIcon,
-  SettingsIcon,
-  ShieldIcon,
-  UserAddIcon,
-  UserIcon,
+ChevronForwardIcon,
+ClockIcon,
+KeyIcon,
+LogoutIcon,
+NotebookIcon,
+PeopleIcon,
+SettingsIcon,
+ShieldIcon,
+UserAddIcon,
+UserIcon,
 } from '@/components/icons';
 
 const LINKS = [

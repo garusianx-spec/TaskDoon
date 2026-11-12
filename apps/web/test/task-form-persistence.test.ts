@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AttachmentView, TaskDetail, TaskDraft } from '@taskin/contracts';
-import { api } from '../src/api/endpoints';
-import { ApiProblem } from '../src/api/http';
-import { taskDraft } from '../src/store/drafts';
-import { LIVE_EMPTY_STATE } from '../src/store/initial-state';
-import { LiveStore } from '../src/store/live/live-store';
-import { workspaceReducer, type WorkspaceAction, type WorkspaceState } from '../src/store/workspace-reducer';
+import { afterEach,describe,expect,it,vi } from 'vitest';
+import type { AttachmentView,TaskDetail,TaskDraft } from '@taskin/contracts';
+import { api } from '@/api/endpoints';
+import { ApiProblem } from '@/lib/api-client';
+import { taskDraft } from '@/store/drafts';
+import { LIVE_EMPTY_STATE } from '@/store/initial-state';
+import { LiveStore } from '@/store/live/live-store';
+import { workspaceReducer,type WorkspaceAction,type WorkspaceState } from '@/store/workspace-reducer';
 
 const taskId = '01900000-0000-7000-8000-000000000021';
 const attachmentId = '01900000-0000-7000-8000-000000000022';

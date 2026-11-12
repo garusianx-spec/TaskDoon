@@ -5,11 +5,11 @@ import { MODULES } from '@/data/reference';
 import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
-import { CountPill, IconButton, Popover } from '@/components/ui';
-import { WorkspaceAvatar } from '@/components/workspace/WorkspaceAvatar';
-import { WorkspaceMenu } from '@/components/workspace/WorkspaceMenu';
-import { QuickCreateMenu } from './QuickCreateMenu';
-import { AddIcon, ChevronDownIcon, NotificationIcon, SearchIcon } from '@/components/icons';
+import { CountPill,IconButton,Dropdown } from '@/components/ui';
+import { WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
+import { WorkspaceMenu } from '@/features/workspace/components/WorkspaceMenu';
+import { QuickCreateMenu } from '@/components/layout/QuickCreateMenu';
+import { AddIcon,ChevronDownIcon,NotificationIcon,SearchIcon } from '@/components/icons';
 
 /**
  * Mobile top bar: workspace badge + switcher, quick create, global search and the
@@ -23,10 +23,9 @@ export function TopAppBar() {
 
   return (
     <header className="sticky top-0 z-sticky flex h-14 shrink-0 items-center gap-2 border-b border-secondary bg-surface/95 px-3 backdrop-blur lg:hidden">
-      <Popover
+      <Dropdown
         label="تعویض فضای کاری"
         align="start"
-        haspopup="menu"
         panelClassName="min-w-72"
         trigger={
           <button
@@ -47,17 +46,16 @@ export function TopAppBar() {
         }
       >
         {(close) => <WorkspaceMenu close={close} />}
-      </Popover>
+      </Dropdown>
 
       <div className="flex-1" />
 
-      <Popover
+      <Dropdown
         label="ایجاد سریع"
-        haspopup="menu"
         trigger={<IconButton label="ایجاد سریع" icon={<AddIcon size={20} />} />}
       >
         {(close) => <QuickCreateMenu close={close} />}
-      </Popover>
+      </Dropdown>
       <IconButton
         label="جستجوی سراسری"
         icon={<SearchIcon size={20} />}

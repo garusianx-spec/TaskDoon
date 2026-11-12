@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import type { PublishedSiteDocument } from '@taskin/contracts';
-import { getSiteDocuments, getSiteSettings, publicSiteFetch } from '@/lib/site-public';
-import { asText, siteLinks } from '@/lib/site-utils';
+import { getSiteDocuments,getSiteSettings,publicSiteFetch } from '@/lib/site-public';
+import { asText,siteLinks } from '@/lib/site-utils';
 import { PublicSurface } from '@/components/public/PublicSurface';
-import { MarketingHeader } from '@/components/marketing/MarketingHeader';
-import { MarketingFooter } from '@/components/marketing/MarketingFooter';
-import '@/components/marketing/marketing.css';
-import '@/components/marketing/homepage.css';
+import { MarketingHeader } from '@/features/marketing/components/MarketingHeader';
+import { MarketingFooter } from '@/features/marketing/components/MarketingFooter';
+import '@/features/marketing/components/marketing.css';
+import '@/features/marketing/components/homepage.css';
 
 export const dynamic = 'force-dynamic';
 

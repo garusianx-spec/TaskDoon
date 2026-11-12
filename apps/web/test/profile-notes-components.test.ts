@@ -1,19 +1,34 @@
-import { createElement, type ReactNode } from 'react';
+import { createElement,type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
-import { ProfileModal } from '../src/components/account/ProfileModal';
-import { NoteEditor } from '../src/components/notes/NoteEditor';
-import { DEMO_WORKSPACE_STATE } from '../src/store/initial-state';
-import { workspaceReducer } from '../src/store/workspace-reducer';
-import { profileNameError } from '../src/lib/profile-name';
-import { newNoteCategory, noteSaveError, reconcileNoteCategory } from '../src/lib/note-form';
-import { ApiProblem } from '../src/api/http';
+import { describe,expect,it,vi } from 'vitest';
+import { ProfileModal } from '@/features/account/components/ProfileModal';
+import { PasswordManagement } from '@/features/account/components/PasswordManagement';
+import { NoteEditor } from '@/features/notes/components/NoteEditor';
+import { DEMO_WORKSPACE_STATE } from '@/store/initial-state';
+import { workspaceReducer } from '@/store/workspace-reducer';
+import { profileNameError } from '@/features/account/lib/profile-name';
+import { newNoteCategory,noteSaveError,reconcileNoteCategory } from '@/features/notes/lib/note-form';
+import { ApiProblem } from '@/lib/api-client';
 
-vi.mock('../src/components/ui/Modal', () => ({
+vi.mock('@/components/ui/Modal', () => ({
   Modal: ({ children, footer }: { children: ReactNode; footer: ReactNode }) => createElement('section', null, children, footer),
 }));
 
 describe('profile and note forms', () => {
+  it('asks for the current password only when a live account already has one', () => {
+    const state = DEMO_WORKSPACE_STATE;
+    const user = state.users.find((entry) => entry.id === state.meId)!;
+    const render = (hasPassword: boolean) => renderToStaticMarkup(createElement(PasswordManagement, {
+      open: true, user, passwordChangedAt: state.passwordChangedAt, onPasswordChanged: () => undefined,
+      live: { hasPassword, onChangePassword: async () => null },
+    }));
+
+    expect(render(false)).toContain('تعیین رمز مدیر');
+    expect(render(false)).not.toContain('autoComplete="current-password"');
+    expect(render(true)).toContain('تغییر رمز مدیر');
+    expect(render(true)).toContain('autoComplete="current-password"');
+  });
+
   it('renders an editable, labelled account name with keyboard submission', () => {
     const state = DEMO_WORKSPACE_STATE;
     const user = state.users.find(user => user.id === state.meId)!;

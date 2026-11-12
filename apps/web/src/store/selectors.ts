@@ -1,24 +1,24 @@
 import type {
-  AppNotification,
-  BoardColumn,
-  CalendarEvent,
-  ChatFilterId,
-  Conversation,
-  Message,
-  Note,
-  NoteCategory,
-  NotificationFilterId,
-  Project,
-  SmartViewId,
-  TagTone,
-  Task,
-  TaskPlacement,
-  TaskStatus,
-  User,
+AppNotification,
+BoardColumn,
+CalendarEvent,
+ChatFilterId,
+Conversation,
+Message,
+Note,
+NoteCategory,
+NotificationFilterId,
+Project,
+SmartViewId,
+TagTone,
+Task,
+TaskPlacement,
+TaskStatus,
+User,
 } from '@taskin/contracts';
 import { BUILT_IN_COLUMNS } from '@/data/reference';
-import { directory } from './directory';
-import { daysBetween, parseISODate, toISODate } from '@taskin/jalali';
+import { directory } from '@/store/directory';
+import { daysBetween,parseISODate,toISODate } from '@taskin/jalali';
 
 /* ------------------------------ People & projects ------------------------------ */
 

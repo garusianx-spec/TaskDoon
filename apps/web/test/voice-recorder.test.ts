@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { afterEach, test, vi } from 'vitest';
-import { useVoiceRecorder, type RecorderState } from '../src/hooks/useVoiceRecorder';
+import { afterEach,test,vi } from 'vitest';
+import { useVoiceRecorder,type RecorderState } from '@/features/chat/hooks/useVoiceRecorder';
 
 interface Hooks {
   useState(initial: RecorderState): [RecorderState, (value: RecorderState) => void];

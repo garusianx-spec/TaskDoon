@@ -1,18 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import type { SystemBroadcastPage, SystemBroadcastView } from '@taskin/contracts';
+import { useEffect,useRef,useState } from 'react';
+import type { SystemBroadcastPage,SystemBroadcastView } from '@taskin/contracts';
 import { toPersianDigits } from '@taskin/jalali';
-import { adminApi } from '@/admin/api';
-import { useAdmin } from '@/admin/AdminSession';
-import { dateTimeLabel } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { problemMessage } from '@/api/messages';
-import { Loaded, Panel, TableFrame, TD, TH } from '@/components/admin/AdminUi';
-import { BroadcastDialog } from '@/components/admin/BroadcastDialog';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { useAdmin } from '@/features/admin/hooks/AdminSession';
+import { dateTimeLabel } from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { problemMessage } from '@/lib/api-problem';
+import { Loaded,Panel,TD,TH } from '@/features/admin/components/AdminUi';
+import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { BroadcastDialog } from '@/features/admin/components/BroadcastDialog';
 import { BROADCAST_LEVEL_LABELS } from '@/components/layout/BroadcastStrip';
-import { Badge, Button, Input, Modal } from '@/components/ui';
-import { AddIcon, RefreshIcon, SearchIcon } from '@/components/icons';
+import { Badge,Button,Input,Modal } from '@/components/ui';
+import { AddIcon,RefreshIcon,SearchIcon } from '@/components/icons';
 
 const LEVEL_TONE = { info: 'brand', warning: 'warning', critical: 'error' } as const;
 interface BroadcastPage extends SystemBroadcastPage {
@@ -130,7 +131,7 @@ export default function AdminBroadcastsPage() {
             return (
               <>
                 <TableFrame label="فهرست اطلاعیه‌ها">
-                  <table className="w-full min-w-[760px] border-collapse text-start text-sm">
+                  <DataTable className="w-full min-w-[760px] border-collapse text-start text-sm">
                     <thead><tr>
                       <th className={TH}>متن و اهمیت</th><th className={TH}>وضعیت</th><th className={TH}>بازه نمایش</th><th className={TH}>سازنده</th><th className={TH}>اقدام‌ها</th>
                     </tr></thead>
@@ -168,7 +169,7 @@ export default function AdminBroadcastsPage() {
                         <Button variant="link" className="mt-3 min-h-11 text-sm" onClick={() => search.trim() ? setSearch('') : setDialog({ broadcast: null })}>{search.trim() ? 'پاک‌کردن جستجو' : 'ساخت اولین اطلاعیه'}</Button>
                       </td></tr>}
                     </tbody>
-                  </table>
+                  </DataTable>
                 </TableFrame>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <p className="text-xs text-fg-tertiary">{toPersianDigits(data.items.length + (currentMore?.items.length ?? 0))} اطلاعیه بارگذاری شده؛ ترتیب: تازه‌ترین</p>

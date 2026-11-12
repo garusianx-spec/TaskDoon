@@ -1,7 +1,7 @@
 'use client';
 
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { forwardRef,type ButtonHTMLAttributes,type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 export type IconButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 export type IconButtonVariant = 'ghost' | 'secondary' | 'primary' | 'subtle';

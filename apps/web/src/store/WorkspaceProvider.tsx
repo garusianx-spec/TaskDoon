@@ -1,26 +1,26 @@
 'use client';
 
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type Dispatch,
-  type ReactNode,
+createContext,
+useCallback,
+useContext,
+useEffect,
+useMemo,
+useRef,
+useState,
+useSyncExternalStore,
+type Dispatch,
+type ReactNode,
 } from 'react';
-import type { Conversation, ProfileSettings, TaskDraft, User, Workspace } from '@taskin/contracts';
-import { profileNameError } from '@/lib/profile-name';
+import type { Conversation,ProfileSettings,TaskDraft,User,Workspace } from '@taskin/contracts';
+import { profileNameError } from '@/features/account/lib/profile-name';
 import { IS_LIVE } from '@/lib/data-source';
-import { workspaceReducer, type ProjectDraft, type TaskPatch, type WorkspaceAction, type WorkspaceState } from './workspace-reducer';
-import { nextLocalId } from './ids';
-import { INITIAL_WORKSPACE_STATE } from './initial-state';
-import { setDirectory } from './directory';
-import { LiveStore, type LiveStatus } from './live/live-store';
-import { LiveGate } from '@/components/auth/LiveGate';
+import { workspaceReducer,type ProjectDraft,type TaskPatch,type WorkspaceAction,type WorkspaceState } from '@/store/workspace-reducer';
+import { nextLocalId } from '@/store/ids';
+import { INITIAL_WORKSPACE_STATE } from '@/store/initial-state';
+import { setDirectory } from '@/store/directory';
+import { LiveStore,type LiveStatus } from '@/store/live/live-store';
+import { LiveGate } from '@/features/auth/components/LiveGate';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
 
 interface WorkspaceContextValue {

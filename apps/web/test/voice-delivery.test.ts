@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AttachmentView, Conversation, SendMessageBody } from '@taskin/contracts';
-import { api } from '../src/api/endpoints';
-import { http } from '../src/api/http';
-import { RealtimeClient } from '../src/api/realtime';
-import { LIVE_EMPTY_STATE } from '../src/store/initial-state';
-import { LiveStore } from '../src/store/live/live-store';
-import { workspaceReducer, type VoiceRecording, type WorkspaceAction, type WorkspaceState } from '../src/store/workspace-reducer';
+import { afterEach,describe,expect,it,vi } from 'vitest';
+import type { AttachmentView,Conversation,SendMessageBody } from '@taskin/contracts';
+import { api } from '@/api/endpoints';
+import { http } from '@/lib/api-client';
+import { RealtimeClient } from '@/api/realtime';
+import { LIVE_EMPTY_STATE } from '@/store/initial-state';
+import { LiveStore } from '@/store/live/live-store';
+import { workspaceReducer,type VoiceRecording,type WorkspaceAction,type WorkspaceState } from '@/store/workspace-reducer';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 

@@ -1,5 +1,5 @@
-import type { WorkspaceState } from './workspace-reducer';
-import { BUILT_IN_NOTE_CATEGORIES, DEPARTMENTS } from '@/data/reference';
+import type { WorkspaceState } from '@/store/workspace-reducer';
+import { BUILT_IN_NOTE_CATEGORIES,DEPARTMENTS } from '@/data/reference';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 
 /**

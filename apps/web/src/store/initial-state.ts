@@ -1,24 +1,24 @@
-import type { WorkspaceState } from './workspace-reducer';
+import type { WorkspaceState } from '@/store/workspace-reducer';
 import {
-  ACTIVITY,
-  CALENDAR_EVENTS,
-  CONVERSATIONS,
-  CURRENT_USER,
-  CURRENT_USER_ID,
-  INVITATIONS,
-  LOGIN_SESSIONS,
-  MESSAGES,
-  NOTES,
-  NOTIFICATIONS,
-  PASSWORD_CHANGED_AT,
-  PRIMARY_WORKSPACE_ID,
-  PROJECTS,
-  TASKS,
-  TEAMMATE_WORKING_HOURS,
-  USERS,
-  WORKSPACES,
+ACTIVITY,
+CALENDAR_EVENTS,
+CONVERSATIONS,
+CURRENT_USER,
+CURRENT_USER_ID,
+INVITATIONS,
+LOGIN_SESSIONS,
+MESSAGES,
+NOTES,
+NOTIFICATIONS,
+PASSWORD_CHANGED_AT,
+PRIMARY_WORKSPACE_ID,
+PROJECTS,
+TASKS,
+TEAMMATE_WORKING_HOURS,
+USERS,
+WORKSPACES,
 } from '@/data/workspace';
-import { builtInColumnsFor, BUILT_IN_NOTE_CATEGORIES, DEFAULT_PERMISSION_MATRIX, DEPARTMENTS } from '@/data/reference';
+import { builtInColumnsFor,BUILT_IN_NOTE_CATEGORIES,DEFAULT_PERMISSION_MATRIX,DEPARTMENTS } from '@/data/reference';
 import { IS_LIVE } from '@/lib/data-source';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 

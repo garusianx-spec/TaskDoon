@@ -3,20 +3,21 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { formatJalali, toPersianDigits } from '@taskin/jalali';
+import { formatJalali,toPersianDigits } from '@taskin/jalali';
 import type { PlatformModerationResult } from '@taskin/contracts';
-import { adminApi } from '@/admin/api';
-import { useAdminMe } from '@/admin/AdminSession';
-import { dateTimeLabel, MEMBER_STATUS, phoneLabel, PROJECT_ROLES, USER_STATUS } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { Fact, Loaded, PageHeader, Panel, TABLE, TableFrame, TD, TH } from '@/components/admin/AdminUi';
-import { ConversationList } from '@/components/admin/ConversationList';
-import { ForcePasswordResetDialog } from '@/components/admin/ForcePasswordResetDialog';
-import { ResetPasswordDialog } from '@/components/admin/ResetPasswordDialog';
-import { SessionsPanel } from '@/components/admin/SessionsPanel';
-import { SuspendUserDialog } from '@/components/admin/SuspendUserDialog';
-import { Badge, Button } from '@/components/ui';
-import { ArrowRightIcon, CheckCircleIcon, CrownIcon, KeyIcon, LockIcon, WarningIcon } from '@/components/icons';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { useAdminMe } from '@/features/admin/hooks/AdminSession';
+import { dateTimeLabel,MEMBER_STATUS,phoneLabel,PROJECT_ROLES,USER_STATUS } from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { Fact,Loaded,PageHeader,Panel,TD,TH } from '@/features/admin/components/AdminUi';
+import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { ConversationList } from '@/features/admin/components/ConversationList';
+import { ForcePasswordResetDialog } from '@/features/admin/components/ForcePasswordResetDialog';
+import { ResetPasswordDialog } from '@/features/admin/components/ResetPasswordDialog';
+import { SessionsPanel } from '@/features/admin/components/SessionsPanel';
+import { SuspendUserDialog } from '@/features/admin/components/SuspendUserDialog';
+import { Badge,Button } from '@/components/ui';
+import { ArrowRightIcon,CheckCircleIcon,CrownIcon,KeyIcon,LockIcon,WarningIcon } from '@/components/icons';
 
 /** A person, across the platform: profile, workspaces and exact roles, devices, conversations. */
 export default function AdminUserPage() {
@@ -143,7 +144,7 @@ export default function AdminUserPage() {
                 <p className="py-2 text-body-sm text-fg-tertiary">عضو هیچ ورک‌اسپیسی نیست.</p>
               ) : (
                 <TableFrame label="عضویت در ورک‌اسپیس‌ها">
-                  <table className={TABLE}>
+                  <DataTable>
                     <thead>
                       <tr>
                         <th className={TH}>ورک‌اسپیس</th>
@@ -204,7 +205,7 @@ export default function AdminUserPage() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </DataTable>
                 </TableFrame>
               )}
             </Panel>

@@ -1,5 +1,5 @@
-import type { AvatarTone, PresenceState } from '@taskin/contracts';
-import { cn } from '@/lib/cn';
+import type { AvatarTone,PresenceState } from '@taskin/contracts';
+import { cn } from '@/lib/utils';
 import { toPersianDigits } from '@taskin/jalali';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';

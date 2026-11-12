@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { constrainedPopoverPosition, constrainedPopoverVerticalPosition } from '../src/lib/popover-position';
+import { describe,expect,it } from 'vitest';
+import { constrainedPopoverPosition,constrainedPopoverVerticalPosition } from '@/lib/popover-position';
 
 describe('constrained popover positioning', () => {
   it('keeps an RTL calendar inside the mobile modal when the trigger is in its left column', () => {

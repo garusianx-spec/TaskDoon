@@ -1,8 +1,8 @@
 import 'server-only';
-import { notFound, permanentRedirect } from 'next/navigation';
-import type { SiteDocumentKind, SiteRedirect } from '@taskin/contracts';
-import { getSiteDocument, getSitePage, publicSiteFetch } from './site-public';
-import { siteHref } from './site-utils';
+import { notFound,permanentRedirect } from 'next/navigation';
+import type { SiteDocumentKind,SiteRedirect } from '@taskin/contracts';
+import { getSiteDocument,getSitePage,publicSiteFetch } from '@/lib/site-public';
+import { siteHref } from '@/lib/site-utils';
 
 export async function resolveSiteDocument(kind: SiteDocumentKind, slug: string) {
   // The generic CMS route cannot claim any part of the private application's namespace.

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { challengeTiming, maskedMobile, otpDigits } from '../src/lib/auth-input';
+import { describe,expect,it } from 'vitest';
+import { challengeTiming,maskedMobile,otpDigits } from '@/features/auth/lib/auth-input';
 
 describe('authentication input and challenge boundaries', () => {
   it('accepts Persian, Arabic and Latin digits including formatted paste', () => {

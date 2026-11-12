@@ -1,8 +1,8 @@
 import 'server-only';
 import { cache } from 'react';
 import type { Metadata } from 'next';
-import type { PublishedSiteDocument, SiteDocumentKind } from '@taskin/contracts';
-import { asText, siteHref, sitePath } from './site-utils';
+import type { PublishedSiteDocument,SiteDocumentKind } from '@taskin/contracts';
+import { asText,siteHref,sitePath } from '@/lib/site-utils';
 
 const apiOrigin = process.env.TASKIN_API_ORIGIN ?? 'http://localhost:4000';
 

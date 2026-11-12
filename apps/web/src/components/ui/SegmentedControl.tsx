@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 import { useNamespacedId } from '@/hooks/useId';
 import type { ReactNode } from 'react';

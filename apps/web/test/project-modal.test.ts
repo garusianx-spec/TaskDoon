@@ -1,13 +1,13 @@
-import { createElement, type ReactNode } from 'react';
+import { createElement,type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
-import { DEPARTMENTS } from '../src/data/reference';
-import { USERS, CURRENT_USER_ID } from '../src/data/workspace';
-import { CreateProjectModal } from '../src/components/tasks/CreateProjectModal';
-import { DepartmentIcon } from '../src/components/tasks/DepartmentIcon';
+import { describe,expect,it,vi } from 'vitest';
+import { DEPARTMENTS } from '@/data/reference';
+import { USERS,CURRENT_USER_ID } from '@/data/workspace';
+import { CreateProjectModal } from '@/features/board/components/CreateProjectModal';
+import { DepartmentIcon } from '@/features/board/components/DepartmentIcon';
 
 // Only replace the browser portal; the actual form, Select, Avatar and icon components render.
-vi.mock('../src/components/ui/Modal', () => ({
+vi.mock('@/components/ui/Modal', () => ({
   Modal: ({ children, footer }: { children: ReactNode; footer: ReactNode }) => createElement('section', null, children, footer),
 }));
 

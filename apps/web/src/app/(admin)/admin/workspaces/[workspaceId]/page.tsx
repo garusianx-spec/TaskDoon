@@ -4,17 +4,18 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import type { PlatformWorkspaceModerationResult } from '@taskin/contracts';
-import { formatJalali, toPersianDigits } from '@taskin/jalali';
-import { adminApi } from '@/admin/api';
-import { dateTimeLabel, MEMBER_STATUS, phoneLabel, USER_STATUS, WORKSPACE_STATUS } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { Fact, Loaded, PageHeader, Panel, TABLE, TableFrame, TD, TH } from '@/components/admin/AdminUi';
-import { SuspendWorkspaceDialog } from '@/components/admin/SuspendWorkspaceDialog';
-import { TransferOwnershipDialog } from '@/components/admin/TransferOwnershipDialog';
-import { WorkspaceQuotaPanel } from '@/components/admin/WorkspaceQuotaPanel';
-import { Badge, Button } from '@/components/ui';
-import { ArrowRightIcon, CheckCircleIcon, CheckIcon, CrownIcon, LockIcon, MinusIcon, WarningIcon } from '@/components/icons';
-import { PERMISSION_ACTIONS, PERMISSION_MODULES } from '@/data/reference';
+import { formatJalali,toPersianDigits } from '@taskin/jalali';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { dateTimeLabel,MEMBER_STATUS,phoneLabel,USER_STATUS,WORKSPACE_STATUS } from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { Fact,Loaded,PageHeader,Panel,TD,TH } from '@/features/admin/components/AdminUi';
+import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { SuspendWorkspaceDialog } from '@/features/admin/components/SuspendWorkspaceDialog';
+import { TransferOwnershipDialog } from '@/features/admin/components/TransferOwnershipDialog';
+import { WorkspaceQuotaPanel } from '@/features/admin/components/WorkspaceQuotaPanel';
+import { Badge,Button } from '@/components/ui';
+import { ArrowRightIcon,CheckCircleIcon,CheckIcon,CrownIcon,LockIcon,MinusIcon,WarningIcon } from '@/components/icons';
+import { PERMISSION_ACTIONS,PERMISSION_MODULES } from '@/data/reference';
 
 /** A workspace: each role with its permission matrix, and who holds which role. */
 export default function AdminWorkspacePage() {
@@ -110,7 +111,7 @@ export default function AdminWorkspacePage() {
             )}
             <Panel title="نقش‌ها و ماتریس دسترسی">
               <TableFrame label="ماتریس دسترسی نقش‌ها">
-                <table className={TABLE}>
+                <DataTable>
                   <thead>
                     <tr>
                       <th className={TH}>نقش</th>
@@ -151,12 +152,12 @@ export default function AdminWorkspacePage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               </TableFrame>
             </Panel>
             <Panel title="اعضا">
               <TableFrame label="اعضای ورک‌اسپیس">
-                <table className={TABLE}>
+                <DataTable>
                   <thead>
                     <tr>
                       <th className={TH}>نام</th>
@@ -201,7 +202,7 @@ export default function AdminWorkspacePage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               </TableFrame>
             </Panel>
             {acting === 'suspension' && (

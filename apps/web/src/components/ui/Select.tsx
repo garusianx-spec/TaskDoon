@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { useCallback,useEffect,useMemo,useRef,useState,type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useNamespacedId } from '@/hooks/useId';
-import { CheckIcon, ChevronDownIcon } from '@/components/icons';
+import { CheckIcon,ChevronDownIcon } from '@/components/icons';
 
 export interface SelectOption<TValue extends string> {
   readonly value: TValue;

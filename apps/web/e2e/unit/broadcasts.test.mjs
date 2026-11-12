@@ -55,12 +55,12 @@ test('browser storage refusal does not throw or hide an undismissed notice', () 
 
 /** Exercise the actual client request boundary against the strict broadcast query contract. */
 async function broadcastRequests() {
-  const httpSource = readFileSync(new URL('../../src/api/http.ts', import.meta.url), 'utf8');
+  const httpSource = readFileSync(new URL('../../src/lib/api-client.ts', import.meta.url), 'utf8');
   const compiledHttp = ts.transpileModule(httpSource, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.ESNext } }).outputText;
   const httpUrl = 'data:text/javascript;base64,' + Buffer.from(compiledHttp).toString('base64');
-  const apiSource = readFileSync(new URL('../../src/admin/api.ts', import.meta.url), 'utf8');
+  const apiSource = readFileSync(new URL('../../src/features/admin/api/admin-api.ts', import.meta.url), 'utf8');
   const compiledApi = ts.transpileModule(apiSource, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.ESNext } }).outputText;
-  const seam = /import \{ http, query \} from ['"]@\/api\/http['"];?/;
+  const seam = /import \{ http, query \} from ['"]@\/lib\/api-client['"];?/;
   assert.match(compiledApi, seam);
   const stubbed = compiledApi.replace(seam, 'import { query } from ' + JSON.stringify(httpUrl) + '; const http = { get: async (url) => url };');
   return (await import('data:text/javascript;base64,' + Buffer.from(stubbed).toString('base64'))).adminApi;
@@ -115,17 +115,18 @@ function broadcastPageHarness() {
     },
     'react/jsx-runtime': { jsx: element, jsxs: element, Fragment: 'Fragment' },
     '@taskin/jalali': { toPersianDigits: String },
-    '@/admin/api': { adminApi: { broadcasts: async (filters) => {
+    '@/features/admin/api/admin-api': { adminApi: { broadcasts: async (filters) => {
       requests.push({ ...filters });
       assert.ok(responses.length > 0, 'every request needs a controlled reply');
       return responses.shift();
     } } },
-    '@/admin/AdminSession': { useAdmin: () => ({ call: (operation) => operation(), generation: adminGeneration }) },
-    '@/admin/format': { dateTimeLabel: String },
-    '@/admin/use-admin-load': { useAdminLoad: (_key, nextLoader) => { loader = nextLoader; return load; } },
-    '@/api/messages': { problemMessage: String },
-    '@/components/admin/AdminUi': { Loaded: 'Loaded', Panel: 'Panel', TableFrame: 'TableFrame', TD: '', TH: '' },
-    '@/components/admin/BroadcastDialog': { BroadcastDialog: 'BroadcastDialog' },
+    '@/features/admin/hooks/AdminSession': { useAdmin: () => ({ call: (operation) => operation(), generation: adminGeneration }) },
+    '@/features/admin/lib/format': { dateTimeLabel: String },
+    '@/features/admin/hooks/use-admin-load': { useAdminLoad: (_key, nextLoader) => { loader = nextLoader; return load; } },
+    '@/lib/api-problem': { problemMessage: String },
+    '@/features/admin/components/AdminUi': { Loaded: 'Loaded', Panel: 'Panel', TD: '', TH: '' },
+    '@/components/shared/DataTable': { DataTable: 'DataTable', TableFrame: 'TableFrame' },
+    '@/features/admin/components/BroadcastDialog': { BroadcastDialog: 'BroadcastDialog' },
     '@/components/layout/BroadcastStrip': { BROADCAST_LEVEL_LABELS: { info: 'info', warning: 'warning', critical: 'critical' } },
     '@/components/ui': { Badge: 'Badge', Button: 'Button', Input: 'Input', Modal: 'Modal' },
     '@/components/icons': { AddIcon: 'AddIcon', RefreshIcon: 'RefreshIcon', SearchIcon: 'SearchIcon' },

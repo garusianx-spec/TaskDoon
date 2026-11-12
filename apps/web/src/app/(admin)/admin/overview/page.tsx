@@ -2,11 +2,12 @@
 
 import type { ReactNode } from 'react';
 import { toPersianDigits } from '@taskin/jalali';
-import { adminApi } from '@/admin/api';
-import { bytesLabel, dateTimeLabel } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { Loaded, Panel, TableFrame, TD, TH } from '@/components/admin/AdminUi';
-import { Badge, Button } from '@/components/ui';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { bytesLabel,dateTimeLabel } from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { Loaded,Panel,TD,TH } from '@/features/admin/components/AdminUi';
+import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { Badge,Button } from '@/components/ui';
 import { RefreshIcon } from '@/components/icons';
 
 const SERVICES = { database: 'پایگاه داده', adminPool: 'اتصال مدیریت', redisCore: 'ردیس اصلی', redisRt: 'ردیس ارتباط زنده', storage: 'ذخیره‌سازی فایل‌ها' } as const;
@@ -94,13 +95,13 @@ export default function AdminOverviewPage() {
               {data.pending.oldestAgeSeconds !== null ? `؛ قدیمی‌ترین: ${toPersianDigits(Math.round(data.pending.oldestAgeSeconds))} ثانیه` : ''}
             </p>
             <TableFrame label="وضعیت صف‌ها">
-              <table className="w-full min-w-[640px] border-collapse text-start text-sm">
+              <DataTable className="w-full min-w-[640px] border-collapse text-start text-sm">
                 <thead><tr><th className={TH}>صف</th><th className={TH}>منتظر</th><th className={TH}>در حال اجرا</th><th className={TH}>زمان‌بندی‌شده</th><th className={TH}>ناموفق</th><th className={TH}>متوقف</th></tr></thead>
                 <tbody>{data.queues.map((queue) => <tr key={queue.name}>
                   <td className={TD}>{QUEUES[queue.name] ?? queue.name}{queue.error && <p className="mt-1 text-sm text-status-blocked">{queue.error}</p>}</td>
                   {(['waiting', 'active', 'delayed', 'failed', 'paused'] as const).map((state) => <td key={state} className={TD}>{queue.error ? '—' : toPersianDigits(queue.counts[state])}</td>)}
                 </tr>)}</tbody>
-              </table>
+              </DataTable>
             </TableFrame>
             {data.queues.map((queue) => queue.recentFailures.length > 0 && <section key={queue.name} className="mt-4 rounded-lg border border-secondary p-3">
               <h3 className="mb-2 text-sm font-semibold text-fg-primary">خطاهای اخیر {QUEUES[queue.name] ?? queue.name}</h3>

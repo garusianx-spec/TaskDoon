@@ -1,5 +1,5 @@
-import { forwardRef, type SVGProps } from 'react';
-import { cn } from '@/lib/cn';
+import { forwardRef,type SVGProps } from 'react';
+import { cn } from '@/lib/utils';
 
 export type IconVariant = 'linear' | 'twotone' | 'bold';
 

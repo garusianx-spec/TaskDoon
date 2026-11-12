@@ -1,6 +1,6 @@
-import type { AttachmentView, UploadPlan } from '@taskin/contracts';
-import { api } from './endpoints';
-import { ApiProblem } from './http';
+import type { AttachmentView,UploadPlan } from '@taskin/contracts';
+import { api } from '@/api/endpoints';
+import { ApiProblem } from '@/lib/api-client';
 
 /**
  * Files go straight from the browser to object storage (RFC §11): the API plans the upload and

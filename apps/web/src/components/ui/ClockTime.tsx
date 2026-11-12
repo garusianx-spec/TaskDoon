@@ -1,7 +1,7 @@
 'use client';
 
 import { formatTime } from '@taskin/jalali';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { useHydrated } from '@/hooks/useHydrated';
 
 export interface ClockTimeProps {

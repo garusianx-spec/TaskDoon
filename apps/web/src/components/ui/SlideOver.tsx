@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect,useRef,type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { useNamespacedId } from '@/hooks/useId';
-import { IconButton } from './IconButton';
+import { IconButton } from '@/components/ui/IconButton';
 import { CloseIcon } from '@/components/icons';
 
 export interface SlideOverProps {

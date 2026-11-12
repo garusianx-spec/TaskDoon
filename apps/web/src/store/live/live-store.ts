@@ -1,72 +1,73 @@
 import type {
-  ActiveBroadcastView,
-  AppNotification,
-  AttachmentView,
-  BoardColumn,
-  ConversationDetail,
-  ConversationView,
-  MeUser,
-  Note,
-  CreateNoteBody,
-  ProfileSettings,
-  Message,
-  MessageView,
-  PermissionMatrix,
-  RealtimeEnvelope,
-  RealtimeEventMap,
-  RealtimeEventType,
-  RoleId,
-  RoleView,
-  SendMessageBody,
-  TaskCard,
-  TaskDetail,
-  TaskDraft,
-  CreateTaskBody,
-  DepartmentView,
-  WorkflowView,
+ActiveBroadcastView,
+AppNotification,
+AttachmentView,
+BoardColumn,
+ConversationDetail,
+ConversationView,
+MeUser,
+Note,
+CreateNoteBody,
+ProfileSettings,
+Message,
+MessageView,
+PermissionMatrix,
+RealtimeEnvelope,
+RealtimeEventMap,
+RealtimeEventType,
+RoleId,
+RoleView,
+SendMessageBody,
+TaskCard,
+TaskDetail,
+TaskDraft,
+CreateTaskBody,
+DepartmentView,
+WorkflowView,
 } from '@taskin/contracts';
 import { toISODate } from '@taskin/jalali';
 import { api } from '@/api/endpoints';
-import { ApiProblem, http, isProblem, newIdempotencyKey } from '@/api/http';
-import { normalizeDepartmentName } from '@/lib/project-form';
-import { profileNameError } from '@/lib/profile-name';
-import { noteSaveError } from '@/lib/note-form';
-import { codeMessage, problemMessage } from '@/api/messages';
+import { ApiProblem,http,isProblem,newIdempotencyKey } from '@/lib/api-client';
+import { normalizeDepartmentName } from '@/features/board/lib/project-form';
+import { profileNameError } from '@/features/account/lib/profile-name';
+import { noteSaveError } from '@/features/notes/lib/note-form';
+import { codeMessage,problemMessage } from '@/lib/api-problem';
 import {
-  activityFromView,
-  apiColumnFor,
-  attachmentFromView,
-  columnsFromWorkflows,
-  conversationFromView,
-  eventFromView,
-  invitationFromView,
-  linkFromView,
-  meToUser,
-  memberToUser,
-  messageFromView,
-  noteCategoryFromView,
-  noteFromView,
-  notificationFromView,
-  projectFromView,
-  scheduledFromView,
-  trashedProjectFromView,
-  workingHoursFromView,
-  sessionFromView,
-  taskFromCard,
-  taskFromDetail,
-  worklogFromView,
-  workspaceFromMe,
-  workspaceFromView,
+activityFromView,
+apiColumnFor,
+attachmentFromView,
+columnsFromWorkflows,
+conversationFromView,
+eventFromView,
+invitationFromView,
+linkFromView,
+meToUser,
+memberToUser,
+messageFromView,
+noteCategoryFromView,
+noteFromView,
+notificationFromView,
+projectFromView,
+scheduledFromView,
+trashedProjectFromView,
+workingHoursFromView,
+sessionFromView,
+taskFromCard,
+taskFromDetail,
+worklogFromView,
+workspaceFromMe,
+workspaceFromView,
 } from '@/api/mappers';
-import { RealtimeClient, type ConnectionStatus } from '@/api/realtime';
-import { blobFromDataUrl, postForm, uploadFile } from '@/api/uploads';
-import { setFileResolver, type FileDisposition } from '../files';
-import { session } from '@/api/session';
-import { DEFAULT_PERMISSION_MATRIX, DEPARTMENTS } from '@/data/reference';
-import { LIVE_EMPTY_STATE } from '../initial-state';
+import { RealtimeClient,type ConnectionStatus } from '@/api/realtime';
+import { blobFromDataUrl,uploadFile } from '@/api/uploads';
+import { uploadWorkspaceIcon } from '@/features/workspace/api/workspace-icon';
+import { setFileResolver,type FileDisposition } from '@/store/files';
+import { session } from '@/features/auth/api/session';
+import { DEFAULT_PERMISSION_MATRIX,DEPARTMENTS } from '@/data/reference';
+import { LIVE_EMPTY_STATE } from '@/store/initial-state';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
-import { broadcastJitter, broadcastTimerDelay } from '@/lib/broadcasts';
-import type { ConversationDraft, PickedFile, ProjectDraft, TaskPatch, VoiceRecording, WorkspaceAction, WorkspaceState } from '../workspace-reducer';
+import { broadcastJitter,broadcastTimerDelay } from '@/lib/broadcasts';
+import type { ConversationDraft,PickedFile,ProjectDraft,TaskPatch,VoiceRecording,WorkspaceAction,WorkspaceState } from '@/store/workspace-reducer';
 
 export type LivePhase = 'restoring' | 'signed-out' | 'loading' | 'no-workspace' | 'ready';
 
@@ -957,7 +958,7 @@ export class LiveStore {
       case 'create-workspace':
         this.run(async () => {
           if (action.adminPassword) await session.setPassword(action.adminPassword);
-          const iconUploadKey = action.draft.iconUrl ? await this.uploadIcon(action.draft.iconUrl) : undefined;
+          const iconUploadKey = action.draft.iconUrl ? await uploadWorkspaceIcon(await blobFromDataUrl(action.draft.iconUrl)) : undefined;
           const created = await api.workspaces.create({
             name: action.draft.name.trim(),
             description: action.draft.description.trim(),
@@ -1801,12 +1802,19 @@ export class LiveStore {
     this.apply({ type: 'sync/merge', patch: { projects: projects.filter((project) => !project.archived).map((project) => projectFromView(project, departmentName)) } });
   }
 
-  /** A workspace icon picked in the dialog (a data URL), sent to its upload ticket; returns the key. */
-  private async uploadIcon(dataUrl: string): Promise<string> {
-    const blob = await blobFromDataUrl(dataUrl);
-    const ticket = await api.files.iconTicket();
-    await postForm(ticket.url, ticket.fields, blob, blob.type || 'image/png');
-    return ticket.key;
+  async saveWorkspaceIcon(workspaceId: string, file: File | null): Promise<void> {
+    const userId = this.status.user?.id;
+    const stillActive = () => this.status.phase === 'ready' && this.workspaceId === workspaceId && this.status.user?.id === userId;
+    if (!userId || !stillActive()) throw new Error('The active workspace changed.');
+    const iconUploadKey = file ? await uploadWorkspaceIcon(file, file.name) : null;
+    if (!stillActive()) throw new Error('The active workspace changed.');
+    const saved = await api.workspaces.update(workspaceId, { iconUploadKey });
+    if (stillActive()) {
+      this.apply({
+        type: 'sync/merge',
+        patch: { workspaces: this.getState().workspaces.map((workspace) => workspace.id === workspaceId ? workspaceFromView(saved) : workspace) },
+      });
+    }
   }
 
   /* ================================================================ realtime */

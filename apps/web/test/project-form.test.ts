@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe,expect,it } from 'vitest';
 import type { User } from '@taskin/contracts';
-import { departmentGlyph, matchingProjectMembers, normalizeDepartmentName, PROJECT_COLOR_SWATCHES, projectDepartmentOptions, projectMemberIds, toggleProjectSelection } from '../src/lib/project-form';
+import { departmentGlyph,matchingProjectMembers,normalizeDepartmentName,PROJECT_COLOR_SWATCHES,projectDepartmentOptions,projectMemberIds,toggleProjectSelection } from '@/features/board/lib/project-form';
 
 const person = (id: string, fullName: string, extra: Partial<User> = {}): User => ({
   id, fullName, email: `${id}@example.test`, initials: 'AB', jobTitle: 'مهندس نرم‌افزار',

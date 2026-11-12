@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthCard } from '@/components/auth/AuthCard';
+import { AuthCard } from '@/features/auth/components/AuthCard';
 
 /**
  * The link in an invitation SMS or email (`/invite?token=…`). The live store keeps the token

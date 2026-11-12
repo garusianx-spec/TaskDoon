@@ -1,14 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach,beforeEach,describe,expect,it,vi } from 'vitest';
 import type { AuthSession } from '@taskin/contracts';
 
 const { post } = vi.hoisted(() => ({ post: vi.fn() }));
-vi.mock('../src/api/http', () => ({
+vi.mock('@/lib/api-client', () => ({
   ApiProblem: class extends Error {},
   http: { post },
   installCredentials: vi.fn(),
 }));
 
-import { session } from '../src/api/session';
+import { session } from '@/features/auth/api/session';
 
 const grant: AuthSession = {
   accessToken: 'full-session', tokenType: 'Bearer', expiresInSeconds: 900, sessionId: 'session-1',

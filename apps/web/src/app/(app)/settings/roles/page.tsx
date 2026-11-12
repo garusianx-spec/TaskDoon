@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import type { RoleId } from '@taskin/contracts';
-import { DEFAULT_PERMISSION_MATRIX, PERMISSION_ACTIONS, PERMISSION_MODULES, ROLES } from '@/data/reference';
+import { DEFAULT_PERMISSION_MATRIX,PERMISSION_ACTIONS,PERMISSION_MODULES,ROLES } from '@/data/reference';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
-import { PermissionMatrixTable, RoleList } from '@/components/rbac/PermissionMatrixTable';
-import { RolePermissionsModal } from '@/components/rbac/RolePermissionsModal';
-import { Badge, Button } from '@/components/ui';
-import { InfoCircleIcon, KeyIcon, RefreshIcon, ShieldIcon } from '@/components/icons';
+import { PermissionMatrixTable } from '@/features/workspace/components/roles/PermissionMatrixTable';
+import { RoleList } from '@/features/workspace/components/roles/RoleList';
+import { RolePermissionsModal } from '@/features/workspace/components/roles/RolePermissionsModal';
+import { Badge,Button } from '@/components/ui';
+import { InfoCircleIcon,KeyIcon,RefreshIcon,ShieldIcon } from '@/components/icons';
 
 export default function RolesSettingsPage() {
   const { state, dispatch } = useWorkspace();

@@ -1,19 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
-import { conversationById, messagePreview, projectColumns, taskById, userById } from '@/store/selectors';
+import { useCallback,useEffect,useMemo,useState,type ReactNode } from 'react';
+import { usePathname,useRouter } from 'next/navigation';
+import { useLive,useWorkspace } from '@/store/WorkspaceProvider';
+import { conversationById,messagePreview,projectColumns,taskById,userById } from '@/store/selectors';
 import { nextLocalId } from '@/store/ids';
-import { NavRail } from './NavRail';
-import { TopAppBar } from './TopAppBar';
-import { SystemBroadcastBanner } from './SystemBroadcastBanner';
-import { BottomNav } from './BottomNav';
+import { NavRail } from '@/components/layout/NavRail';
+import { TopAppBar } from '@/components/layout/TopAppBar';
+import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
+import { BottomNav } from '@/components/layout/BottomNav';
 import { Drawer } from '@/components/ui';
-import { TaskInspector, type TaskSourceView } from '@/components/tasks/TaskInspector';
-import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
-import { BlockedDoneNotice } from '@/components/tasks/agile/BlockedDoneNotice';
-import { ConversationInspector } from '@/components/chat/ConversationInspector';
+import { TaskInspector } from '@/features/tasks/components/TaskInspector';
+import type { TaskSourceView } from '@/features/tasks/types/inspector';
+import { TaskDetailDialog } from '@/features/tasks/components/TaskDetailDialog';
+import { BlockedDoneNotice } from '@/features/agile/components/BlockedDoneNotice';
+import { ConversationInspector } from '@/features/chat/components/ConversationInspector';
 
 export interface AppShellProps {
   /** Contextual sidebar for the active module; `null` on modules that have none. */

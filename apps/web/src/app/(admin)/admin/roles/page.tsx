@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import type { AdministrativeUser, AssignAdminRoleBody } from '@taskin/contracts';
+import { useState,type FormEvent } from 'react';
+import type { AdministrativeUser,AssignAdminRoleBody } from '@taskin/contracts';
 import { normaliseIranMobile } from '@taskin/text';
-import { adminApi } from '@/admin/api';
-import { useAdmin, useAdminMe } from '@/admin/AdminSession';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { dateTimeLabel, phoneLabel } from '@/admin/format';
-import { problemMessage } from '@/api/messages';
-import { Loaded, PageHeader, Panel, TableFrame, TD, TH } from '@/components/admin/AdminUi';
-import { Badge, Button, Input, Modal, Select } from '@/components/ui';
-import { AddIcon, RefreshIcon } from '@/components/icons';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { useAdmin,useAdminMe } from '@/features/admin/hooks/AdminSession';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { dateTimeLabel,phoneLabel } from '@/features/admin/lib/format';
+import { problemMessage } from '@/lib/api-problem';
+import { Loaded,PageHeader,Panel,TD,TH } from '@/features/admin/components/AdminUi';
+import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { Badge,Button,Input,Modal,Select } from '@/components/ui';
+import { AddIcon,RefreshIcon } from '@/components/icons';
 
 const ROLE_LABEL = { SUPER_ADMIN: 'مدیر ارشد', ADMIN: 'مدیر', OPERATOR: 'اپراتور' } as const;
 const ROLE_OPTIONS = [{ value: 'ADMIN' as const, label: 'مدیر (ADMIN)' }, { value: 'OPERATOR' as const, label: 'اپراتور (OPERATOR)' }];
@@ -49,7 +50,7 @@ export default function AdminRolesPage() {
       {notice && <p role="status" className="mb-4 text-body-sm text-status-done">{notice}</p>}
       <Panel title="مدیران پلتفرم">
         <Loaded load={load} empty={users => users.length === 0}>{users => <TableFrame label="فهرست مدیران و دسترسی‌ها">
-          <table className="w-full min-w-[1100px] border-collapse text-start text-body-sm"><thead><tr>{['نام', 'شماره موبایل', 'ایمیل بازیابی', 'نقش', 'تاریخ ایجاد', 'وضعیت', 'عملیات'].map(label => <th key={label} className={TH} scope="col">{label}</th>)}</tr></thead>
+          <DataTable className="w-full min-w-[1100px] border-collapse text-start text-body-sm"><thead><tr>{['نام', 'شماره موبایل', 'ایمیل بازیابی', 'نقش', 'تاریخ ایجاد', 'وضعیت', 'عملیات'].map(label => <th key={label} className={TH} scope="col">{label}</th>)}</tr></thead>
             <tbody>{users.map(user => <tr key={user.id}>
               <td className={TD}>{user.fullName}{user.protected && <span className="mt-1 block text-caption text-fg-tertiary">مالک اصلی · محافظت‌شده</span>}</td>
               <td className={`${TD} whitespace-nowrap`} dir="ltr">{phoneLabel(user.phone)}</td><td className={`${TD} min-w-[180px] break-words`} dir="ltr">{user.email ?? '—'}</td>
@@ -61,7 +62,7 @@ export default function AdminRolesPage() {
                 <Button size="sm" variant="secondary" onClick={() => { setError(null); setAction({ user, kind: 'revoke' }); }}>لغو دسترسی مدیریت</Button>
               </div> : <span className="text-caption text-fg-tertiary">غیرقابل تغییر</span>}</td>
             </tr>)}</tbody>
-          </table>
+          </DataTable>
         </TableFrame>}</Loaded>
       </Panel>
       {adding && <AssignAdminDialog onClose={() => setAdding(false)} onDone={() => { setAdding(false); setNotice('مدیر اضافه شد. راه‌اندازی با کد موبایل، تأیید ایمیل و رمز جدید در ورود بعدی انجام می‌شود.'); load.reload(); }} />}

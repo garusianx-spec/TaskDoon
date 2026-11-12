@@ -1,10 +1,10 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Conversation, ConversationView, Message, Project, ProjectView } from '@taskin/contracts';
-import { LIVE_EMPTY_STATE } from '../src/store/initial-state';
-import { workspaceReducer, type WorkspaceAction, type WorkspaceState } from '../src/store/workspace-reducer';
+import { afterEach,describe,expect,it,vi } from 'vitest';
+import type { Conversation,ConversationView,Message,Project,ProjectView } from '@taskin/contracts';
+import { LIVE_EMPTY_STATE } from '@/store/initial-state';
+import { workspaceReducer,type WorkspaceAction,type WorkspaceState } from '@/store/workspace-reducer';
 
-import { LiveStore } from '../src/store/live/live-store';
-import { api } from '../src/api/endpoints';
+import { LiveStore } from '@/store/live/live-store';
+import { api } from '@/api/endpoints';
 
 afterEach(() => { vi.restoreAllMocks(); });
 

@@ -1,29 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
-import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
-import { CreateProjectModal } from '@/components/tasks/CreateProjectModal';
-import { ProjectLimitDialog } from '@/components/tasks/ProjectLimitDialog';
-import { ProjectDeleteDialog, ProjectTrashModal } from '@/components/tasks/ProjectTrash';
+import { useEffect,useState } from 'react';
+import { usePathname,useRouter } from 'next/navigation';
+import { useLive,useWorkspace } from '@/store/WorkspaceProvider';
+import { CreateTaskModal } from '@/features/tasks/components/CreateTaskModal';
+import { CreateProjectModal } from '@/features/board/components/CreateProjectModal';
+import { ProjectLimitDialog } from '@/features/board/components/ProjectLimitDialog';
+import { ProjectDeleteDialog,ProjectTrashModal } from '@/features/board/components/ProjectTrash';
 import { GlobalSearchModal } from '@/components/layout/GlobalSearchModal';
-import { NewConversationModal } from '@/components/chat/NewConversationModal';
-import { CalendarEventModal } from '@/components/calendar/CalendarEventModal';
-import { InviteMemberModal } from '@/components/directory/InviteMemberModal';
-import { ProfileModal } from '@/components/account/ProfileModal';
-import { SecurityModal } from '@/components/account/SecurityModal';
-import { WorkingHoursModal } from '@/components/account/WorkingHoursModal';
-import { SignOutModal } from '@/components/account/SignOutModal';
-import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal';
-import { WorkspaceSettingsModal } from '@/components/workspace/WorkspaceSettingsModal';
-import { DeleteWorkspaceModal } from '@/components/workspace/DeleteWorkspaceModal';
+import { NewConversationModal } from '@/features/chat/components/NewConversationModal';
+import { CalendarEventModal } from '@/features/calendar/components/CalendarEventModal';
+import { InviteMemberModal } from '@/features/workspace/components/directory/InviteMemberModal';
+import { ProfileModal } from '@/features/account/components/ProfileModal';
+import { SecurityModal } from '@/features/account/components/SecurityModal';
+import { WorkingHoursModal } from '@/features/account/components/WorkingHoursModal';
+import { SignOutModal } from '@/features/account/components/SignOutModal';
+import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
+import { CreateWorkspaceModal } from '@/features/workspace/components/CreateWorkspaceModal';
+import { WorkspaceSettingsModal } from '@/features/workspace/components/WorkspaceSettingsModal';
+import { DeleteWorkspaceModal } from '@/features/workspace/components/DeleteWorkspaceModal';
 import { nextLocalId } from '@/store/ids';
 import { userById } from '@/store/selectors';
-import { useOverlays } from './context';
+import { useOverlays } from '@/components/overlays/context';
 import { IconButton } from '@/components/ui';
-import { CheckCircleIcon, CloseIcon } from '@/components/icons';
+import { CheckCircleIcon,CloseIcon } from '@/components/icons';
 
 /**
  * Renders every app-level dialog exactly once, at the root, bound to the global overlay
@@ -190,6 +190,9 @@ export function OverlayHost() {
         isLastWorkspace={state.workspaces.length <= 1}
         onClose={close}
         onRequestDelete={() => open({ kind: 'workspace-delete', workspaceId: activeWorkspace.id })}
+        {...(live && (isWorkspaceOwner || state.permissions[currentUser.role]?.members.edit)
+          ? { onSaveIcon: (file: File | null) => live.store.saveWorkspaceIcon(activeWorkspace.id, file) }
+          : {})}
       />
 
       <DeleteWorkspaceModal

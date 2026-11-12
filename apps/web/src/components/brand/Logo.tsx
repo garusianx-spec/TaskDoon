@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 
 /**
  * The TaskDoon logo, from the brand's vector artwork: the mark (a tick over stacked cards) and

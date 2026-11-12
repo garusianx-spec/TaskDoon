@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect,useState } from 'react';
 import { useLive } from '@/store/WorkspaceProvider';
-import { broadcastDismissalKey, dismissBroadcast, isBroadcastDismissed } from '@/lib/broadcasts';
-import { BroadcastStrip } from './BroadcastStrip';
+import { broadcastDismissalKey,dismissBroadcast,isBroadcastDismissed } from '@/lib/broadcasts';
+import { BroadcastStrip } from '@/components/layout/BroadcastStrip';
 
 /** Platform notices only: demo data never creates a banner or calls the API. */
 export function SystemBroadcastBanner() {

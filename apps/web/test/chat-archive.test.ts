@@ -1,10 +1,10 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { expect, it } from 'vitest';
-import { DEMO_WORKSPACE_STATE } from '../src/store/initial-state';
-import { workspaceReducer } from '../src/store/workspace-reducer';
-import { MessageBubble } from '../src/components/chat/MessageBubble';
-import { ChatView } from '../src/components/chat/ChatView';
+import { expect,it } from 'vitest';
+import { DEMO_WORKSPACE_STATE } from '@/store/initial-state';
+import { workspaceReducer } from '@/store/workspace-reducer';
+import { MessageBubble } from '@/features/chat/components/MessageBubble';
+import { ChatView } from '@/features/chat/components/ChatView';
 it('archives project companions without removing their history and keeps them archived after restoration', () => {
   const project=DEMO_WORKSPACE_STATE.projects[0]!;
   const conversation={...DEMO_WORKSPACE_STATE.conversations[0]!, id:'companion',kind:'channel' as const,projectId:project.id};

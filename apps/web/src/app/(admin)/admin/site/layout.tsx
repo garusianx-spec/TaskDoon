@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { SiteNavigation } from '@/components/admin/site/SiteNavigation';
-import '@/components/marketing/marketing.css';
+import { SiteNavigation } from '@/features/admin/components/site/SiteNavigation';
+import '@/features/marketing/components/marketing.css';
 
 export default function SiteAdminLayout({ children }: { children: ReactNode }) {
   return <><SiteNavigation />{children}</>;

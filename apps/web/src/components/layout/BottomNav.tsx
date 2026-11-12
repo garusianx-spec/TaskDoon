@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { CountPill } from '@/components/ui';
 import {
-  CalendarIcon,
-  GridIcon,
-  HomeIcon,
-  MessagesIcon,
-  TaskSquareIcon,
+CalendarIcon,
+GridIcon,
+HomeIcon,
+MessagesIcon,
+TaskSquareIcon,
 } from '@/components/icons';
 
 interface MobileTab {

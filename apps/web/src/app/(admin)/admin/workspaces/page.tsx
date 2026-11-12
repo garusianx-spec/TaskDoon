@@ -2,19 +2,20 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
-import type { PlatformWorkspaceModerationResult, PlatformWorkspaceStatus, PlatformWorkspaceSummary } from '@taskin/contracts';
-import { formatJalali, toPersianDigits } from '@taskin/jalali';
-import { adminApi } from '@/admin/api';
-import { useAdmin } from '@/admin/AdminSession';
-import { WORKSPACE_STATUS } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { problemMessage } from '@/api/messages';
-import { Loaded, PageHeader, Panel, TABLE, TableFrame, TD, TH } from '@/components/admin/AdminUi';
-import { SuspendWorkspaceDialog } from '@/components/admin/SuspendWorkspaceDialog';
-import { TransferOwnershipDialog } from '@/components/admin/TransferOwnershipDialog';
-import { type WorkspaceAction, WorkspaceActionsMenu } from '@/components/admin/WorkspaceActionsMenu';
-import { Badge, Button, Input, Select } from '@/components/ui';
+import { useState,type FormEvent } from 'react';
+import type { PlatformWorkspaceModerationResult,PlatformWorkspaceStatus,PlatformWorkspaceSummary } from '@taskin/contracts';
+import { formatJalali,toPersianDigits } from '@taskin/jalali';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { useAdmin } from '@/features/admin/hooks/AdminSession';
+import { WORKSPACE_STATUS } from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { problemMessage } from '@/lib/api-problem';
+import { Loaded,PageHeader,Panel,TD,TH } from '@/features/admin/components/AdminUi';
+import { DataTable,TableFrame } from '@/components/shared/DataTable';
+import { SuspendWorkspaceDialog } from '@/features/admin/components/SuspendWorkspaceDialog';
+import { TransferOwnershipDialog } from '@/features/admin/components/TransferOwnershipDialog';
+import { type WorkspaceAction,WorkspaceActionsMenu } from '@/features/admin/components/WorkspaceActionsMenu';
+import { Badge,Button,Input,Select } from '@/components/ui';
 import { SearchIcon } from '@/components/icons';
 
 /** What the list says once a workspace action is done. */
@@ -115,7 +116,7 @@ export default function AdminWorkspacesPage() {
           {(data) => (
             <>
               <TableFrame label="فهرست ورک‌اسپیس‌ها">
-                <table className={TABLE}>
+                <DataTable>
                   <thead>
                     <tr>
                       <th className={TH}>نام</th>
@@ -164,7 +165,7 @@ export default function AdminWorkspacesPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               </TableFrame>
               {moreError && <p role="alert" className="mt-3 text-caption text-status-blocked">{moreError}</p>}
               {cursor && (

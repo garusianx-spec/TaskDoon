@@ -1,6 +1,6 @@
 import { resolveSiteDocument } from '@/lib/site-route';
-import { getSiteDocuments, getSiteDocument, siteMetadata } from '@/lib/site-public';
-import { DocumentPage } from '@/components/marketing/DocumentPage';
+import { getSiteDocuments,getSiteDocument,siteMetadata } from '@/lib/site-public';
+import { DocumentPage } from '@/features/marketing/components/DocumentPage';
 
 type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props) { return siteMetadata(await getSiteDocument('article', (await params).slug)); }

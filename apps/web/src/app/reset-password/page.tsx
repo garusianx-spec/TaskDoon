@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type FormEvent } from 'react';
-import { completePasswordReset } from '@/admin/api';
-import { problemMessage } from '@/api/messages';
-import { AuthCard } from '@/components/auth/AuthCard';
+import { useEffect,useState,type FormEvent } from 'react';
+import { completePasswordReset } from '@/features/admin/api/admin-api';
+import { problemMessage } from '@/lib/api-problem';
+import { AuthCard } from '@/features/auth/components/AuthCard';
 import { Button } from '@/components/ui';
-import { AuthFormError, AuthInput as Input, PasswordInput } from '@/components/auth/AuthFields';
+import { AuthFormError,AuthInput as Input,PasswordInput } from '@/features/auth/components/AuthFields';
 import { LockIcon } from '@/components/icons';
 
 type State = { readonly kind: 'reading' } | { readonly kind: 'missing' } | { readonly kind: 'form'; readonly token: string } | { readonly kind: 'done' };

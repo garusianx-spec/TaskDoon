@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState,type FormEvent } from 'react';
 import type { PlatformUserSummary } from '@taskin/contracts';
-import { adminApi } from '@/admin/api';
-import { phoneLabel } from '@/admin/format';
-import { useAdminLoad } from '@/admin/use-admin-load';
-import { Loaded, PageHeader, Panel } from '@/components/admin/AdminUi';
-import { ConversationList } from '@/components/admin/ConversationList';
-import { Button, Input } from '@/components/ui';
+import { adminApi } from '@/features/admin/api/admin-api';
+import { phoneLabel } from '@/features/admin/lib/format';
+import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
+import { Loaded,PageHeader,Panel } from '@/features/admin/components/AdminUi';
+import { ConversationList } from '@/features/admin/components/ConversationList';
+import { Button,Input } from '@/components/ui';
 import { SearchIcon } from '@/components/icons';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/utils';
 
 /** «رصد پیام‌ها و گروه‌ها»: find the person, then open any conversation they are or were in. */
 export default function AdminConversationsPage() {

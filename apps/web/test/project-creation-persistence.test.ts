@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ConversationView, DepartmentView, ProjectView, TaskStatus, WorkflowView } from '@taskin/contracts';
-import { api } from '../src/api/endpoints';
-import { ApiProblem } from '../src/api/http';
-import { projectFromView } from '../src/api/mappers';
-import { LIVE_EMPTY_STATE } from '../src/store/initial-state';
-import { LiveStore } from '../src/store/live/live-store';
-import { workspaceReducer, type ProjectDraft, type WorkspaceState } from '../src/store/workspace-reducer';
+import { afterEach,describe,expect,it,vi } from 'vitest';
+import type { ConversationView,DepartmentView,ProjectView,TaskStatus,WorkflowView } from '@taskin/contracts';
+import { api } from '@/api/endpoints';
+import { ApiProblem } from '@/lib/api-client';
+import { projectFromView } from '@/api/mappers';
+import { LIVE_EMPTY_STATE } from '@/store/initial-state';
+import { LiveStore } from '@/store/live/live-store';
+import { workspaceReducer,type ProjectDraft,type WorkspaceState } from '@/store/workspace-reducer';
 
 const workspaceId = '01900000-0000-7000-8000-000000000010';
 const projectId = '01900000-0000-7000-8000-000000000011';

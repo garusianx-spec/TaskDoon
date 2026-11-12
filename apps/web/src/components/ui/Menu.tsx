@@ -1,7 +1,7 @@
 'use client';
 
-import { forwardRef, type ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { forwardRef,type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 export interface MenuItemProps {
   readonly children: ReactNode;

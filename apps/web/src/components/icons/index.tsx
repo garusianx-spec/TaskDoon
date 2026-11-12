@@ -6,10 +6,10 @@
  * tree-shakeable and removes a runtime dependency from the critical path.
  */
 import type { AttachmentKind } from '@taskin/contracts';
-import { createIcon, type IconProps } from './createIcon';
-import { cn } from '@/lib/cn';
+import { createIcon,type IconProps } from '@/components/icons/createIcon';
+import { cn } from '@/lib/utils';
 
-export type { IconProps, IconVariant } from './createIcon';
+export type { IconProps, IconVariant } from '@/components/icons/createIcon';
 
 /* ------------------------------- Navigation ------------------------------- */
 
