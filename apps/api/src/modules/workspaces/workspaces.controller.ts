@@ -280,6 +280,19 @@ export class WorkspaceController {
     return this.invitations.revoke(member, id);
   }
 
+  @Post('invitations/:id/retry-sms')
+  @HttpCode(HttpStatus.OK)
+  @Idempotent()
+  @CheckPolicies(can('create', 'Invitation'))
+  @ApiOperation({ summary: 'Retry a confirmed retryable SMS failure on the same pending invitation' })
+  @ApiOkResponse({ type: InvitationViewDto })
+  retryInvitationSms(
+    @CurrentMember() member: MembershipContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<InvitationView> {
+    return this.invitations.retrySms(member, id);
+  }
+
   /* ----------------------------------------------------------- roles */
 
   @Get('roles')

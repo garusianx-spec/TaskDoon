@@ -561,19 +561,17 @@ export function activityFromView(view: ActivityView): ActivityItem {
 
 /* ============================================================ account */
 
-export function invitationFromView(
-  view: InvitationView,
-  departmentName: (id: string | null) => string | undefined,
-): Invitation {
+export function invitationFromView(view: InvitationView): Invitation {
   return {
     id: view.id,
     address: view.address,
     channel: view.channel,
     role: view.role,
-    department: departmentIdFor(departmentName(view.departmentId)),
+    department: view.departmentId ?? '',
     message: view.message,
     invitedAt: view.createdAt,
     invitedById: view.invitedById,
+    smsDelivery: view.smsDelivery ?? null,
   };
 }
 

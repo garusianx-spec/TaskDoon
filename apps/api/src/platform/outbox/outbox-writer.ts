@@ -14,7 +14,9 @@ export interface OutboxEventMap {
     /** Template tokens; values marked sealed are SecretBox-encrypted until the worker sends. */
     readonly tokens: Readonly<Record<string, string>>;
     readonly sealed?: readonly string[];
+    readonly invitation?: { readonly workspaceId: string; readonly id: string; readonly attempt: number };
   };
+  'notification.sms.report': { readonly workspaceId: string; readonly id: string; readonly attempt: number };
   /** An email the worker must send. */
   'notification.email': {
     readonly to: string;

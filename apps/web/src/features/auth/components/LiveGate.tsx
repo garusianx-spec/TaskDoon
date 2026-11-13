@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { LiveStatus, LiveStore } from '@/store/live/live-store';
-import { IconButton } from '@/components/ui';
+import { Button, IconButton } from '@/components/ui';
 import { CloseIcon, WarningIcon } from '@/components/icons';
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 import { AuthCard } from '@/features/auth/components/AuthCard';
@@ -45,6 +45,16 @@ export function LiveGate({
 
   let body: ReactNode;
   if (phase === 'signed-out') body = <SignInScreen store={store} />;
+  else if (phase === 'restore-error')
+    body = (
+      <AuthCard
+        labelledBy="restore-error-title"
+        title="وضعیت ورود بررسی نشد."
+        description="دوباره تلاش کنید."
+      >
+        <Button onClick={() => void store.retryRestore()}>تلاش دوباره</Button>
+      </AuthCard>
+    );
   else if (phase === 'no-workspace')
     body = (
       <>

@@ -92,7 +92,8 @@ export class RealtimeClient {
       if (code === 'AUTH_EXPIRED') {
         void this.hooks
           .refreshToken()
-          .then((ok) => (ok ? this.scheduleRetry(0) : this.hooks.onRejected(code)));
+          .then((ok) => (ok ? this.scheduleRetry(0) : this.hooks.onRejected(code)))
+          .catch(() => this.scheduleRetry());
         return;
       }
       // Refused by middleware (e.g. SERVICE_UNAVAILABLE): Socket.IO does not retry these.

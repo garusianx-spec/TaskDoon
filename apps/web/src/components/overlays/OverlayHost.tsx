@@ -20,6 +20,7 @@ import { CreateWorkspaceModal } from '@/features/workspace/components/CreateWork
 import { WorkspaceSettingsModal } from '@/features/workspace/components/WorkspaceSettingsModal';
 import { DeleteWorkspaceModal } from '@/features/workspace/components/DeleteWorkspaceModal';
 import { nextLocalId } from '@/store/ids';
+import { useInvitationRefresh } from '@/features/workspace/hooks/useInvitationRefresh';
 import { userById } from '@/store/selectors';
 import { useOverlays } from '@/components/overlays/context';
 import { IconButton } from '@/components/ui';
@@ -52,6 +53,7 @@ export function OverlayHost() {
   const { active, open, close } = useOverlays();
   const live = useLive();
   const hasPassword = live?.status.user?.hasPassword ?? false;
+  useInvitationRefresh(active?.kind === 'invite-member', activeWorkspace.id);
 
   const goTo = (href: string) => {
     if (!pathname.startsWith(href)) router.push(href);
@@ -179,9 +181,18 @@ export function OverlayHost() {
       <InviteMemberModal
         open={active?.kind === 'invite-member'}
         invitations={state.invitations}
+        departments={state.departments}
+        {...(live && (isWorkspaceOwner || state.permissions[currentUser.role].members.create)
+          ? { onRetrySms: (id: string, key: string) => live.store.retryInvitationSms(id, key) }
+          : {})}
         onClose={close}
         onRevoke={(invitationId) => dispatch({ type: 'revoke-invitation', invitationId })}
-        onSubmit={(draft) => {
+        onSubmit={async (draft, commandId) => {
+          if (live) {
+            const result = await live.store.inviteMembers(draft, commandId);
+            if (result.rejected.length === 0) close();
+            return result;
+          }
           dispatch({ type: 'invite-members', draft, invitedById: currentUser.id });
           close();
         }}

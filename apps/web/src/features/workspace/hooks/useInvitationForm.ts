@@ -6,6 +6,9 @@ import { looksLikePhone, normaliseIranMobile, parseRecipient, splitRecipients } 
 import { useNamespacedId } from '@/hooks/useId';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { directory } from '@/store/directory';
+import { isProblem, newIdempotencyKey } from '@/lib/api-client';
+import { problemMessage } from '@/lib/api-problem';
+import { DEPARTMENTS } from '@/data/reference';
 import type { InviteMemberModalProps } from '@/features/workspace/components/directory/InviteMemberModal';
 
 /** Separator keys that commit what has been typed so far. */
@@ -30,15 +33,20 @@ interface Problem {
 export function useInvitationForm({
   open,
   invitations,
+  departments,
   onSubmit,
-}: Pick<InviteMemberModalProps, 'open' | 'invitations' | 'onSubmit'>) {
+}: Pick<InviteMemberModalProps, 'open' | 'invitations' | 'departments' | 'onSubmit'>) {
   const [recipients, setRecipients] = useState<readonly InvitationRecipient[]>([]);
   const [pendingText, setPendingText] = useState('');
   const [problems, setProblems] = useState<readonly Problem[]>([]);
   const [role, setRole] = useState<RoleId>('member');
-  const [department, setDepartment] = useState<DepartmentId>('engineering');
+  const [department, setDepartment] = useState<DepartmentId>('');
   const [message, setMessage] = useState('');
   const [touched, setTouched] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const flight = useRef(false);
+  const command = useRef<{ signature: string; id: string } | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const id = useNamespacedId('invite-');
 
@@ -47,9 +55,12 @@ export function useInvitationForm({
     setPendingText('');
     setProblems([]);
     setRole('member');
-    setDepartment('engineering');
+    const defaultName = DEPARTMENTS.find((entry) => entry.id === 'engineering')?.name;
+    setDepartment(departments.find((entry) => entry.name === defaultName)?.id ?? departments[0]?.id ?? '');
     setMessage('');
     setTouched(false);
+    setSubmitError(null);
+    command.current = null;
   });
 
   /** Validates raw tokens and adds the good ones. Returns the list as it will be after commit. */
@@ -104,11 +115,44 @@ export function useInvitationForm({
     commit(`${pendingText} ${text}`);
   };
 
-  const submit = () => {
+  const submit = async () => {
+    if (flight.current) return;
     setTouched(true);
     const finalList = pendingText.trim() ? commit(pendingText) : recipients;
     if (finalList.length === 0) return;
-    onSubmit({ recipients: finalList, role, department, message: message.trim() });
+    const draft = { recipients: finalList, role, department, message: message.trim() };
+    const signature = JSON.stringify(draft);
+    if (command.current?.signature !== signature) command.current = { signature, id: newIdempotencyKey() };
+    flight.current = true;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const result = await onSubmit(draft, command.current.id);
+      if (result?.rejected.length) {
+        const labels = {
+          invalid_address: 'نشانی نامعتبر است.',
+          already_member: 'از قبل عضو سازمان است.',
+          already_invited: 'دعوت‌نامه در انتظار دارد.',
+          domain_not_allowed: 'دامنه ایمیل مجاز نیست.',
+        };
+        setProblems(
+          result.rejected.map(({ address, reason }) => ({ token: address, reason: labels[reason] })),
+        );
+        setRecipients(
+          finalList.filter((entry) => result.rejected.some(({ address }) => address === entry.address)),
+        );
+      }
+    } catch (error) {
+      setSubmitError(
+        isProblem(error, 'VALIDATION_FAILED') &&
+          error.body?.errors?.some((entry) => entry.field === 'departmentId')
+          ? 'دپارتمان انتخاب‌شده معتبر نیست. دپارتمان دیگری انتخاب کنید و دوباره تلاش کنید.'
+          : problemMessage(error, 'دعوت‌نامه ثبت نشد. انتخاب‌ها را بررسی و دوباره تلاش کنید.'),
+      );
+    } finally {
+      flight.current = false;
+      setSubmitting(false);
+    }
   };
 
   const emptyError = touched && recipients.length === 0 && problems.length === 0;
@@ -136,5 +180,7 @@ export function useInvitationForm({
     emptyError,
     byEmail,
     bySms,
+    submitting,
+    submitError,
   };
 }

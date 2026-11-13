@@ -1,4 +1,11 @@
-import type { AvatarTone, InvitationChannel, PresenceState, RoleId, RolePermissions } from '../domain.js';
+import type {
+  AvatarTone,
+  InvitationChannel,
+  InvitationSmsDelivery,
+  PresenceState,
+  RoleId,
+  RolePermissions,
+} from '../domain.js';
 import type { MeUser } from './auth.js';
 
 /* ============================== Me ============================== */
@@ -189,6 +196,7 @@ export interface InvitationView {
   readonly invitedById: string;
   readonly createdAt: string;
   readonly expiresAt: string;
+  readonly smsDelivery?: InvitationSmsDelivery | null;
 }
 
 export type InvitationRejection =

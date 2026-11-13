@@ -1678,6 +1678,59 @@
         ]
       }
     },
+    "/api/v1/workspaces/{workspaceId}/invitations/{id}/retry-sms": {
+      "post": {
+        "operationId": "Workspace_retryInvitationSms",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "8–64 characters of [A-Za-z0-9_-], unique per intended operation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationViewDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retry a confirmed retryable SMS failure on the same pending invitation",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/roles": {
       "get": {
         "operationId": "Workspace_listRoles",
@@ -16664,6 +16717,59 @@
           }
         }
       },
+      "InvitationSmsDeliveryDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "queued",
+              "sending",
+              "sent",
+              "delivered",
+              "failed"
+            ]
+          },
+          "attemptCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "failureCode": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "provider_rejected",
+              "provider_unavailable",
+              "provider_rate_limited",
+              "provider_configuration",
+              "template_rejected",
+              "invalid_recipient",
+              "recipient_blocked",
+              "operator_rejected",
+              "delivery_failed",
+              "acceptance_unknown",
+              "test_transport"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "nextRetryAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "attemptCount",
+          "failureCode",
+          "retryable",
+          "nextRetryAt"
+        ]
+      },
       "InvitationViewDto": {
         "type": "object",
         "properties": {
@@ -16719,6 +16825,15 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "smsDelivery": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InvitationSmsDeliveryDto"
+              }
+            ]
           }
         },
         "required": [

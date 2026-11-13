@@ -20,6 +20,7 @@ import {
   type WorkJobs,
 } from '../platform/queue/queues.js';
 import { SmsService } from '../platform/sms/sms.js';
+import { InvitationSmsProcessor } from '../platform/sms/invitation-sms-processor.js';
 import { ScheduledMessagesService } from '../modules/chat/scheduled-messages.service.js';
 import { CalendarService } from '../modules/content/calendar.service.js';
 import { FeedService } from '../modules/content/feed.service.js';
@@ -90,12 +91,17 @@ export class NotificationsProcessor {
     private readonly sms: SmsService,
     private readonly mail: MailService,
     private readonly box: SecretBox,
+    private readonly invitationSms: InvitationSmsProcessor,
   ) {}
 
   async handle<N extends keyof NotificationJobs>(name: N, data: NotificationJobData<N>): Promise<void> {
     switch (name) {
       case 'sms.send': {
         const payload = data.payload as NotificationJobs['sms.send'];
+        if (payload.template === 'invite' && payload.invitation) {
+          await this.invitationSms.send(payload);
+          return;
+        }
         await this.sms.send({
           to: payload.to,
           template: payload.template,
@@ -103,6 +109,9 @@ export class NotificationsProcessor {
         });
         return;
       }
+      case 'sms.report':
+        await this.invitationSms.report(data.payload as NotificationJobs['sms.report']);
+        return;
       case 'mail.send': {
         const payload = data.payload as NotificationJobs['mail.send'];
         const params = unseal(payload.params, payload.sealed, this.box);

@@ -30,10 +30,12 @@ let inFlight: Promise<boolean> | null = null;
 let endReason: 'suspended' | null = null;
 /** This device is signing out: the server's own `session:revoked` for it needs no refresh. */
 let signingOut = false;
+let sessionGeneration = 0;
 const listeners = new Set<Listener>();
 
 /** Refresh this long before the access token expires. */
 const REFRESH_AHEAD_MS = 60_000;
+const SIGNED_OUT_KEY = 'taskin.signed-out';
 
 export const session = {
   get current(): LiveSession | null {
@@ -47,6 +49,12 @@ export const session = {
 
   /** After a reload: trade the refresh cookie for a session, or `null` when there is none. */
   async restore(): Promise<LiveSession | null> {
+    // A failed logout request must not silently restore this browser on the next page load.
+    try {
+      if (!current && localStorage.getItem(SIGNED_OUT_KEY) === '1') return null;
+    } catch {
+      // Storage may be unavailable; the server's revocation remains authoritative.
+    }
     // The readable CSRF cookie is set and cleared with the (unreadable) refresh cookie: without
     // it there is no session to restore, and asking would only be refused.
     if (!current && !('x-csrf-token' in csrfHeader())) return null;
@@ -181,6 +189,13 @@ export const session = {
   /** Signs this device out. The local session ends even if the server cannot be reached. */
   async signOut(): Promise<void> {
     signingOut = true;
+    sessionGeneration += 1;
+    clearTimeout(refreshTimer);
+    try {
+      localStorage.setItem(SIGNED_OUT_KEY, '1');
+    } catch {
+      // Still revoke the server session when storage is unavailable.
+    }
     try {
       await http.post<void>('/auth/logout', undefined, { headers: csrfHeader(), authenticated: true });
     } catch {
@@ -198,7 +213,7 @@ export const session = {
    * can say so on the sign-in screen; the session ends either way.
    */
   async revoked(): Promise<void> {
-    if (current && !signingOut) await refresh();
+    if (current && !signingOut) await refresh().catch(() => false);
     end();
   },
 
@@ -215,12 +230,20 @@ function set(next: LiveSession | null): void {
   clearTimeout(refreshTimer);
   if (next) {
     const delay = Math.max(5_000, next.expiresAt - Date.now() - REFRESH_AHEAD_MS);
-    refreshTimer = setTimeout(() => void refresh(), delay);
+    refreshTimer = setTimeout(() => void refresh().catch(() => undefined), delay);
   }
   for (const listener of listeners) listener(next);
 }
 
-function adopt(body: AuthSession): LiveSession {
+function adopt(body: AuthSession, fromRefresh = false): LiveSession {
+  if (!fromRefresh) {
+    sessionGeneration += 1;
+    try {
+      localStorage.removeItem(SIGNED_OUT_KEY);
+    } catch {
+      // A successful sign-in still works without browser storage.
+    }
+  }
   const next: LiveSession = {
     accessToken: body.accessToken,
     sessionId: body.sessionId,
@@ -233,26 +256,37 @@ function adopt(body: AuthSession): LiveSession {
 }
 
 function end(): void {
+  sessionGeneration += 1;
   if (current !== null) set(null);
 }
 
 /** One refresh at a time: concurrent 401s share it. Resolves false when the session is over. */
 function refresh(): Promise<boolean> {
+  if (signingOut) return Promise.resolve(false);
+  const generation = sessionGeneration;
   inFlight ??= (async () => {
     try {
-      adopt(
-        await http.post<AuthSession>('/auth/refresh', undefined, {
-          headers: csrfHeader(),
-          authenticated: false,
-        }),
-      );
+      const body = await http.post<AuthSession>('/auth/refresh', undefined, {
+        headers: csrfHeader(),
+        authenticated: false,
+      });
+      if (generation !== sessionGeneration || signingOut) return false;
+      adopt(body, true);
       return true;
     } catch (error) {
-      // A network failure keeps the session (the next call retries); a refusal ends it.
-      if (error instanceof ApiProblem && error.code === 'NETWORK') return current !== null;
-      if (error instanceof ApiProblem && error.code === 'ACCOUNT_SUSPENDED') endReason = 'suspended';
-      end();
-      return false;
+      // Only a confirmed invalid credential ends the session. An outage is not a sign-out.
+      if (
+        error instanceof ApiProblem &&
+        (error.code === 'UNAUTHENTICATED' ||
+          error.code === 'REFRESH_INVALID' ||
+          error.code === 'SESSION_REVOKED' ||
+          error.code === 'ACCOUNT_SUSPENDED')
+      ) {
+        if (error.code === 'ACCOUNT_SUSPENDED') endReason = 'suspended';
+        end();
+        return false;
+      }
+      throw error;
     } finally {
       inFlight = null;
     }

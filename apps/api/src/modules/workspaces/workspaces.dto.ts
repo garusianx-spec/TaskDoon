@@ -30,6 +30,8 @@ import {
   type InvitationChannel,
   type InvitationRejection,
   type InvitationStatus,
+  type InvitationSmsStatus,
+  type InvitationSmsFailure,
   type InvitationView,
   type ManualPresence,
   type MemberStatus,
@@ -299,6 +301,32 @@ export class CreateInvitationsDto implements CreateInvitationsBody {
   readonly message?: string;
 }
 
+export class InvitationSmsDeliveryDto {
+  @ApiProperty({ enum: ['unknown', 'queued', 'sending', 'sent', 'delivered', 'failed'] })
+  readonly status!: InvitationSmsStatus;
+  @ApiProperty({ type: 'integer', minimum: 0, maximum: 5 }) readonly attemptCount!: number;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    enum: [
+      'provider_rejected',
+      'provider_unavailable',
+      'provider_rate_limited',
+      'provider_configuration',
+      'template_rejected',
+      'invalid_recipient',
+      'recipient_blocked',
+      'operator_rejected',
+      'delivery_failed',
+      'acceptance_unknown',
+      'test_transport',
+    ],
+  })
+  readonly failureCode!: InvitationSmsFailure | null;
+  @ApiProperty() readonly retryable!: boolean;
+  @ApiProperty({ type: String, nullable: true, format: 'date-time' }) readonly nextRetryAt!: string | null;
+}
+
 export class InvitationViewDto implements InvitationView {
   @ApiProperty({ format: 'uuid' }) readonly id!: string;
   @ApiProperty() readonly address!: string;
@@ -310,6 +338,8 @@ export class InvitationViewDto implements InvitationView {
   @ApiProperty({ format: 'uuid' }) readonly invitedById!: string;
   @ApiProperty({ format: 'date-time' }) readonly createdAt!: string;
   @ApiProperty({ format: 'date-time' }) readonly expiresAt!: string;
+  @ApiPropertyOptional({ type: InvitationSmsDeliveryDto, nullable: true })
+  readonly smsDelivery?: InvitationSmsDeliveryDto | null;
 }
 
 export class RejectedRecipientDto {

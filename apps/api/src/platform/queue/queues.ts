@@ -6,6 +6,7 @@ import type { OutboxEventMap } from '../outbox/outbox-writer.js';
 /** Job names and payloads, per queue. */
 export interface NotificationJobs {
   'sms.send': OutboxEventMap['notification.sms'];
+  'sms.report': OutboxEventMap['notification.sms.report'];
   'mail.send': OutboxEventMap['notification.email'];
 }
 
