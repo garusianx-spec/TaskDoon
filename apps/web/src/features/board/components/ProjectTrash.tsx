@@ -33,7 +33,7 @@ export function ProjectDeleteDialog({
         if (!submission.isPending()) onClose();
       }}
       title={project ? `حذف پروژه «${project.name}»` : 'حذف پروژه'}
-      description={`پروژه، وظایف و کانال گفتگوی آن از همه‌جا پنهان می‌شوند و ${formatCount(PROJECT_TRASH_DAYS)} روز در «آرشیو / سطل زباله» می‌مانند.`}
+      description={`پروژه و وظایف آن تا ${formatCount(PROJECT_TRASH_DAYS)} روز در «آرشیو / سطل زباله» بازیابی‌پذیرند و سپس پاک می‌شوند.`}
       icon={<TrashIcon size={20} />}
       confirmLabel="انتقال به سطل زباله"
       onConfirm={() =>
@@ -44,7 +44,11 @@ export function ProjectDeleteDialog({
       error={submission.error}
     >
       <p className="text-body-sm text-fg-secondary">
-        {`تا ${formatCount(PROJECT_TRASH_DAYS)} روز می‌توانید آن را با همه وظایفش بازیابی کنید؛ پس از آن برای همیشه پاک می‌شود. پیام‌های کانالش پاک نمی‌شوند.`}
+        گفتگوی پروژه برای همیشه در بخش «بایگانی» به‌صورت فقط‌خواندنی نگهداری می‌شود.
+      </p>
+      <p className="text-body-sm text-fg-secondary">
+        بازیابی پروژه، گفتگوی بایگانی‌شده را فعال نمی‌کند. حذف دائمی گفتگو فقط از بخش «بایگانی» و با تأیید عضو
+        دارای مجوز انجام می‌شود.
       </p>
     </ConfirmDialog>
   );
@@ -54,7 +58,7 @@ const DAY = 86_400_000;
 
 /**
  * «آرشیو / سطل زباله» (workspace owner): deleted projects, each with the days it has left and a
- * one-click «بازیابی» that brings it back with its tasks, board and channel.
+ * one-click «بازیابی» for its tasks and board. The companion chat stays archived.
  */
 export function ProjectTrashModal({
   open,
@@ -110,7 +114,7 @@ export function ProjectTrashModal({
       }}
       size="md"
       title="آرشیو / سطل زباله"
-      description={`پروژه‌های حذف‌شده تا ${formatCount(PROJECT_TRASH_DAYS)} روز بازیابی‌پذیرند و پس از آن برای همیشه پاک می‌شوند.`}
+      description={`پروژه‌های حذف‌شده تا ${formatCount(PROJECT_TRASH_DAYS)} روز بازیابی‌پذیرند و پس از آن برای همیشه پاک می‌شوند. گفتگوهای آن‌ها در بخش «بایگانی» به‌صورت فقط‌خواندنی باقی می‌مانند.`}
       icon={<ArchiveIcon size={20} />}
     >
       {loading ? (
@@ -166,6 +170,7 @@ export function ProjectTrashModal({
                 </span>
                 <Button
                   size="sm"
+                  className="max-sm:min-h-11"
                   variant="secondary"
                   iconStart={<RefreshIcon size={16} />}
                   aria-label={`بازیابی ${entry.project.name}`}

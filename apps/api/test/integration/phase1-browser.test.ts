@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core';
+import { chromium, type Browser, type BrowserContext, type Locator, type Page } from 'playwright-core';
 import { SmsService, SmsUnavailableError } from '../../src/platform/sms/sms.js';
 import { InvitationSmsProcessor } from '../../src/platform/sms/invitation-sms-processor.js';
 import {
@@ -20,6 +20,7 @@ import {
   type TestApp,
 } from './harness.js';
 import { createProject, createTask, expectStatus, wsPath } from './work-helpers.js';
+import { sendRest } from './chat-helpers.js';
 
 // Opt-in: uses only the disposable integration database, an isolated Next process, and Chromium.
 describe.skipIf(process.env.PHASE1_BROWSER !== '1')('Phase 1 browser / real local API', () => {
@@ -427,6 +428,166 @@ describe.skipIf(process.env.PHASE1_BROWSER !== '1')('Phase 1 browser / real loca
       expect(await main.getByText('۲ وظیفهٔ ارجاع‌شده به من در نتایج', { exact: true }).count()).toBe(1);
       expect(await personal.getAttribute('aria-current')).toBe('page');
     }
+    expect(pageErrors).toEqual([]);
+  }, 120_000);
+
+  it('prelaunch remaining: Projects and More navigation stay direct on mobile', async () => {
+    const project = await createProject(t, owner, workspaceId, { name: 'ممیزی دسترسی پروژه' });
+    for (const width of [360, 390]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(`${base}/projects`);
+      const main = page.getByRole('main');
+      await main.getByRole('link', { name: project.name, exact: true }).waitFor();
+      expect(await main.getByRole('button', { name: 'پروژه جدید', exact: true }).isVisible()).toBe(true);
+      await main.getByRole('button', { name: 'آرشیو / سطل زباله', exact: true }).click();
+      await page.getByRole('dialog', { name: 'آرشیو / سطل زباله', exact: true }).waitFor();
+      await page.keyboard.press('Escape');
+      await page
+        .getByRole('navigation', { name: 'ناوبری پایین' })
+        .getByRole('link', { name: 'بیشتر', exact: true })
+        .click();
+      const more = main.getByRole('navigation', { name: 'تنظیمات بیشتر', exact: true });
+      await more.waitFor();
+      expect(await more.getByRole('link').allTextContents()).toEqual([
+        'تقویم',
+        'یادداشت‌ها',
+        'اعضا',
+        'حساب من',
+        'تنظیمات فضای کاری',
+      ]);
+      const bottom = (await page.getByRole('navigation', { name: 'ناوبری پایین' }).boundingBox())!.y;
+      for (const row of await more.getByRole('link').all()) {
+        const box = (await row.boundingBox())!;
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.y + box.height).toBeLessThanOrEqual(bottom);
+      }
+      expect(await main.getByRole('radiogroup').count()).toBe(0);
+      await page.screenshot({ path: `${screenshots}/remaining-more-${width}.png`, animations: 'disabled' });
+      await more.getByRole('link', { name: 'حساب من', exact: true }).click();
+      await main.getByRole('link', { name: 'ظاهر شخصی', exact: true }).click();
+      await main.getByRole('radio', { name: 'تیره', exact: true }).click();
+      expect(await page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await main.getByRole('radio', { name: 'روشن', exact: true }).click();
+      expect(await page.evaluate('document.documentElement.scrollWidth <= innerWidth')).toBe(true);
+    }
+    expect(pageErrors).toEqual([]);
+  }, 120_000);
+
+  it('prelaunch remaining: calendar and task-detail touch targets meet 44px', async () => {
+    const project = await createProject(t, owner, workspaceId, { name: 'ممیزی کنترل لمسی' });
+    const task = await createTask(t, owner, workspaceId, {
+      projectId: project.id,
+      title: 'رویداد ممیزی لمس',
+    });
+    const dated = await t
+      .http()
+      .patch(`${wsPath(workspaceId)}/tasks/${task.id}`)
+      .set(bearer(owner))
+      .set('If-Match', `"${task.version}"`)
+      .send({ dueDate: task.startDate });
+    expectStatus(dated, 200);
+    const target = async (control: Locator) => {
+      await control.scrollIntoViewIfNeeded();
+      const box = (await control.boundingBox())!;
+      expect
+        .soft(box.width, (await control.getAttribute('aria-label')) ?? (await control.innerText()))
+        .toBeGreaterThanOrEqual(44);
+      expect
+        .soft(box.height, (await control.getAttribute('aria-label')) ?? (await control.innerText()))
+        .toBeGreaterThanOrEqual(44);
+    };
+    for (const width of [360, 390]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(`${base}/calendar`);
+      const main = page.getByRole('main');
+      for (const name of ['ماه قبل', 'ماه بعد', 'امروز', 'رویداد جدید'])
+        await target(main.getByRole('button', { name, exact: true }));
+      const events = main.getByRole('button', { name: /۱ مورد در/ });
+      await target(events);
+      await events.click();
+      const summary = page.getByRole('dialog', { name: /^برنامه / });
+      await target(summary.getByRole('button', { name: 'وظیفه جدید', exact: true }));
+      await target(summary.getByRole('button', { name: 'رویداد جدید', exact: true }));
+      await summary.getByRole('button', { name: new RegExp(task.title) }).click();
+      const details = page.getByRole('dialog', { name: 'جزئیات وظیفه', exact: true });
+      for (const name of [
+        'بستن پنل جزئیات',
+        'افزودن به ستاره‌دارها',
+        'انصراف',
+        'ذخیره تغییرات',
+        'افزودن مسئول',
+        'انتخاب مهلت انجام',
+      ])
+        await target(details.getByRole('button', { name, exact: true }));
+      await target(details.getByRole('combobox', { name: 'وضعیت وظیفه', exact: true }));
+      expect(await page.evaluate('document.documentElement.scrollWidth <= innerWidth')).toBe(true);
+      await details.getByRole('button', { name: 'انصراف', exact: true }).click();
+    }
+    expect(pageErrors).toEqual([]);
+  }, 120_000);
+
+  it('prelaunch remaining: project deletion and restoration keep a permanent read-only chat', async () => {
+    const project = await createProject(t, owner, workspaceId, { name: 'ممیزی حافظه پروژه' });
+    const conversations = await t
+      .http()
+      .get(`${wsPath(workspaceId)}/conversations`)
+      .set(bearer(owner));
+    const channel = conversations.body.find((entry: { projectId: string }) => entry.projectId === project.id);
+    await sendRest(t, owner, workspaceId, channel.id, { text: 'تاریخچه برای حفظ پس از بازیابی' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${base}/projects`);
+    await page.getByRole('button', { name: `حذف پروژه ${project.name}`, exact: true }).click();
+    const confirmation = page.getByRole('dialog', { name: `حذف پروژه «${project.name}»`, exact: true });
+    await confirmation
+      .getByText('گفتگوی پروژه برای همیشه در بخش «بایگانی» به‌صورت فقط‌خواندنی نگهداری می‌شود.', {
+        exact: true,
+      })
+      .waitFor();
+    await confirmation.getByRole('button', { name: 'انتقال به سطل زباله', exact: true }).click();
+    await confirmation.waitFor({ state: 'hidden' });
+    await page.getByRole('button', { name: 'آرشیو / سطل زباله', exact: true }).click();
+    const trash = page.getByRole('dialog', { name: 'آرشیو / سطل زباله', exact: true });
+    await trash.getByRole('button', { name: `بازیابی ${project.name}`, exact: true }).click();
+    await vi.waitFor(async () =>
+      expect(await trash.getByRole('button', { name: `بازیابی ${project.name}`, exact: true }).count()).toBe(
+        0,
+      ),
+    );
+    await page.keyboard.press('Escape');
+    await page
+      .getByRole('navigation', { name: 'ناوبری پایین' })
+      .getByRole('link', { name: 'گفت‌وگوها', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'بایگانی', exact: true }).click();
+    await page
+      .getByRole('button', { name: new RegExp(`^${project.name}`) })
+      .first()
+      .click();
+    await page.getByText('تاریخچه برای حفظ پس از بازیابی', { exact: true }).waitFor();
+    expect(
+      await page.getByRole('textbox', { name: `نوشتن پیام در ${project.name}`, exact: true }).count(),
+    ).toBe(0);
+    const read = await t
+      .http()
+      .get(`${wsPath(workspaceId)}/conversations/${channel.id}`)
+      .set(bearer(owner));
+    expectStatus(read, 200);
+    expect(read.body.archived).toBe(true);
+    await page.getByRole('button', { name: 'بازگشت به فهرست گفتگوها', exact: true }).click();
+    await page.getByRole('button', { name: 'حذف دائمی گفتگوی بایگانی‌شده', exact: true }).click();
+    const manualDelete = page.getByRole('dialog', { name: 'حذف دائمی گفتگوی بایگانی‌شده', exact: true });
+    await manualDelete.getByRole('button', { name: 'حذف دائمی', exact: true }).click();
+    await manualDelete.getByText('نام گفتگو را دقیق وارد کنید.', { exact: true }).waitFor();
+    await manualDelete.getByRole('textbox', { name: 'نام گفتگو برای تأیید', exact: true }).fill(project.name);
+    await manualDelete.getByRole('button', { name: 'حذف دائمی', exact: true }).click();
+    await manualDelete.waitFor({ state: 'hidden' });
+    expectStatus(
+      await t
+        .http()
+        .get(`${wsPath(workspaceId)}/conversations/${channel.id}`)
+        .set(bearer(owner)),
+      404,
+    );
     expect(pageErrors).toEqual([]);
   }, 120_000);
 

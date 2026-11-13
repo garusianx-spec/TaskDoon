@@ -160,7 +160,7 @@ export function DayCell({
             <button
               type="button"
               aria-label={`${formatCount(items.length)} مورد در ${formatJalali(cell.iso, 'long')}`}
-              className="relative z-10 flex items-center gap-0.5 rounded-full px-1 py-0.5"
+              className="relative z-10 flex size-11 items-center justify-center gap-0.5 rounded-lg"
             >
               {visible.map((item) => (
                 <span

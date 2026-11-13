@@ -299,3 +299,76 @@ and `npm.cmd run test:int --workspace @taskin/api -- test/integration/phase1-bro
 Its log is kept under `.local/prelaunch-audit/browser.log`.
 
 The pre-existing generated `apps/web/AGENTS.md` stays untracked and outside review commits.
+
+### Remaining mobile and archive findings: follow-up from 4a1f2a9
+
+The preceding audit and regressions are committed as
+`4a1f2a94fa2512b18aa005cd32f2bbefa5e93ae0`. The follow-up stays on
+`fix/prelaunch-critical-audit`; it does not repeat the completed integration or import
+the excluded Phase 3 commit `29b83df`.
+
+- Projects navigation and the More hierarchy were already corrected by the included Phase 3
+  implementation. Real-local-API browser checks at 360px and 390px confirm direct project
+  creation/trash access, five grouped More destinations visible above the bottom navigation,
+  and personal appearance controls inside Account. Theme switching works. No navigation
+  implementation or appearance-setting behavior needed changing.
+- Touch-target failures reproduced in Chromium: calendar controls measured 36px, task-detail
+  close/star measured 32px, and several detail actions measured 40px. The calendar event-dot
+  trigger was smaller still. Existing Untitled UI components now use a mobile 44px minimum
+  for the affected controls, Select trigger/options, modal close, and confirmation actions.
+  Calendar summary actions and project restoration use the same minimum. Desktop compact
+  sizes and existing component tokens, focus behavior, and RTL layout are retained.
+- The delete confirmation incorrectly grouped the project chat into the 40-day trash lifecycle.
+  Its copy now distinguishes restorable projects/tasks from permanently archived, read-only
+  conversations. It explicitly says restoring a project does not reactivate its conversation,
+  and permanent conversation deletion requires an authorized manual action from the archive.
+  The trash explanation and restoration comment now describe that same existing behavior.
+  Backend retention, authorization and deletion logic are unchanged.
+
+The initial focused browser run reproduced the target-size and copy failures. After these
+fixes, the three added `prelaunch remaining:` cases pass against the disposable local API:
+
+1. Direct Projects/More navigation, visible destination rows and personal theme switching at
+   360px and 390px.
+2. Measured calendar and task-detail controls at least 44 by 44 CSS pixels at both widths,
+   with no horizontal page overflow.
+3. Project deletion through the UI, restoration from trash, retained archived message history,
+   no message composer, and API confirmation that the conversation remains archived. Manual
+   archive deletion rejects a missing conversation name and succeeds after the exact name is
+   supplied; a subsequent conversation request returns 404.
+
+Verification uses only the disposable services documented above:
+
+- Five relevant web unit/component files pass, **31 tests**: `chat-archive.test.ts`,
+  `ui-classes.test.ts`, `profile-notes-components.test.ts`, `task-form-persistence.test.ts`,
+  and `mobile-navigation.test.ts`.
+- API `chat-archive.test.ts` and `retention.test.ts` pass, **11 real-database tests**, including
+  companion uniqueness, read-only archive enforcement, authorization/tenant isolation, manual
+  deletion and preservation of archived history/files when old projects are purged.
+- The focused browser selection passes **3 cases**; the other 8 cases in that file are skipped
+  by `--testNamePattern=prelaunch remaining:`. The fixture uses synthetic local users and data.
+- API and web typechecks pass. Targeted API lint passes without warnings; web lint reports
+  zero errors and two existing warnings on unchanged code (`Date.now()` during trash rendering
+  and calendar focus `setState` inside an effect). Formatting and `git diff --check` pass.
+  The complete suite is not repeated for this scope.
+
+Runtime changes are confined to `ConfirmDialog.tsx`, `Modal.tsx`, `Select.tsx`,
+`ProjectTrash.tsx`, `CalendarScreen.tsx`, `DayCell.tsx`, `DaySummary.tsx`, `TaskInspector.tsx`
+and `TaskPeoplePicker.tsx`. Browser coverage is added in the existing
+`apps/api/test/integration/phase1-browser.test.ts`; this report is the only documentation change.
+No schema, dependency, provider, permission or production configuration changes are included.
+
+Logs are under `.local/prelaunch-remaining/`: `before.log`, `after.log` and `retention.log`.
+Actual mobile More screenshots are `screenshots/remaining-more-360.png` and
+`screenshots/remaining-more-390.png`. These checks cover the named flows and measured controls,
+not an exhaustive measurement of every interactive element in the application.
+The generated `apps/web/AGENTS.md` remains untracked and excluded. No push, merge,
+production operation or live SMS send is part of this follow-up.
+
+Commit preparation: the managed Git staging attempt failed creating this worktree's
+`index.lock` with `Permission denied`; HEAD is still `4a1f2a9`. The ignored local helper
+`.local/commit-prelaunch-mobile-archive.ps1` is prepared for normal PowerShell. It verifies
+the branch, exact base, preserved phase ancestry, excluded `29b83df`, empty staging area
+and the eleven reviewed tracked files before committing. It preserves the untracked
+`apps/web/AGENTS.md` and performs no remote operations. Its PowerShell syntax was checked;
+the helper has not been executed by the managed session.

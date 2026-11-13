@@ -12,6 +12,7 @@ import { TaskInspectorFields, TaskInspectorMetadata } from '@/features/tasks/com
 import { TaskSourceMessage } from '@/features/tasks/components/TaskSourceMessage';
 import { TaskInspectorFiles } from '@/features/tasks/components/TaskInspectorFiles';
 import { TaskDiscussion } from '@/features/tasks/components/TaskDiscussion';
+import { cn } from '@/lib/utils';
 
 /**
  * Full task inspector: status, people, Jalali dates, checklist, file repository and an
@@ -155,11 +156,12 @@ export function TaskInspector({
               icon={task.starred ? <StarFilledIcon size={18} /> : <StarIcon size={18} />}
               size="sm"
               onClick={onToggleStar}
-              className={task.starred ? 'text-status-progress' : undefined}
+              className={cn('max-sm:size-11', task.starred && 'text-status-progress')}
             />
           </Tooltip>
           <IconButton
             label="بستن پنل جزئیات"
+            className="max-sm:size-11"
             icon={<CloseIcon size={20} />}
             size="sm"
             onClick={onClose}
@@ -242,10 +244,15 @@ export function TaskInspector({
             {error}
           </p>
         )}
-        <Button variant="secondary" onClick={onClose} disabled={saving || fileBusy}>
+        <Button
+          className="max-sm:min-h-11"
+          variant="secondary"
+          onClick={onClose}
+          disabled={saving || fileBusy}
+        >
           انصراف
         </Button>
-        <Button type="submit" loading={saving} aria-disabled={fileBusy}>
+        <Button className="max-sm:min-h-11" type="submit" loading={saving} aria-disabled={fileBusy}>
           ذخیره تغییرات
         </Button>
       </footer>

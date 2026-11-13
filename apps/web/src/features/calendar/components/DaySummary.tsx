@@ -92,7 +92,7 @@ export function DaySummary({
                   <button
                     type="button"
                     onClick={() => onOpenTask(item.task.id)}
-                    className="flex min-w-0 flex-1 items-start gap-2.5 rounded-lg p-2 text-start"
+                    className="flex min-w-0 flex-1 items-start gap-2.5 rounded-lg p-2 text-start max-sm:min-h-11"
                   >
                     {body}
                   </button>
@@ -108,6 +108,7 @@ export function DaySummary({
       <div className="flex gap-1.5 border-t border-secondary px-1 pt-2">
         <Button
           size="xs"
+          className="max-sm:min-h-11"
           variant="secondary"
           fullWidth
           iconStart={<AddIcon size={14} />}
@@ -117,6 +118,7 @@ export function DaySummary({
         </Button>
         <Button
           size="xs"
+          className="max-sm:min-h-11"
           variant="secondary"
           fullWidth
           iconStart={<CalendarIcon size={14} />}

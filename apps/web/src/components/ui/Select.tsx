@@ -176,7 +176,7 @@ export function Select<TValue extends string>({
         onClick={() => setOpen((current) => !current)}
         onKeyDown={onTriggerKeyDown}
         className={cn(
-          'flex w-full items-center justify-between gap-2 rounded-lg border border-primary bg-surface text-start shadow-xs transition-colors',
+          'flex w-full items-center justify-between gap-2 rounded-lg border border-primary bg-surface text-start shadow-xs transition-colors max-sm:min-h-11',
           'hover:bg-hover focus-visible:border-brand disabled:cursor-not-allowed disabled:bg-muted disabled:text-fg-disabled',
           size === 'sm' ? 'h-9 px-3 text-body-sm' : 'h-10 px-3.5 text-body',
         )}
@@ -215,7 +215,7 @@ export function Select<TValue extends string>({
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => commit(index)}
                 className={cn(
-                  'flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-body-sm',
+                  'flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-body-sm max-sm:min-h-11',
                   isActive ? 'bg-hover' : 'bg-transparent',
                   option.disabled && 'cursor-not-allowed text-fg-disabled',
                 )}

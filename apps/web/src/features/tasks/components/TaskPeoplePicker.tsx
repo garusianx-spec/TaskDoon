@@ -33,7 +33,7 @@ export function PeoplePicker({
       trigger={
         <button
           type="button"
-          className="flex min-h-10 w-full items-center gap-2 rounded-lg border border-primary bg-surface px-2.5 py-1.5 text-start shadow-xs transition-colors hover:bg-hover"
+          className="flex min-h-10 w-full items-center gap-2 rounded-lg border border-primary bg-surface px-2.5 py-1.5 text-start shadow-xs transition-colors hover:bg-hover max-sm:min-h-11"
         >
           {selected.length === 0 ? (
             <span className="flex items-center gap-2 text-body-sm text-fg-placeholder">

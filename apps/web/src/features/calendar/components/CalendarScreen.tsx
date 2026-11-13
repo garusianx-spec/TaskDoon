@@ -110,21 +110,37 @@ function CalendarContent() {
               <Legend />
             </div>
             <div role="group" aria-label="پیمایش ماه" className="flex items-center gap-1.5">
-              <IconButton label="ماه قبل" icon={<ChevronBackwardIcon size={18} />} onClick={() => step(-1)} />
+              <IconButton
+                className="max-sm:size-11"
+                label="ماه قبل"
+                icon={<ChevronBackwardIcon size={18} />}
+                onClick={() => step(-1)}
+              />
               <span
                 className="min-w-24 text-center text-title-sm font-bold text-fg-primary numeric"
                 aria-live="polite"
               >
                 {formatJalali(monthIso, 'month-year')}
               </span>
-              <IconButton label="ماه بعد" icon={<ChevronForwardIcon size={18} />} onClick={() => step(1)} />
-              <Button size="sm" variant="secondary" onClick={() => focusDate(todayIso)} className="ms-1">
+              <IconButton
+                className="max-sm:size-11"
+                label="ماه بعد"
+                icon={<ChevronForwardIcon size={18} />}
+                onClick={() => step(1)}
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => focusDate(todayIso)}
+                className="ms-1 max-sm:min-h-11"
+              >
                 امروز
               </Button>
             </div>
             <div className="flex sm:flex-1 sm:justify-end">
               <Button
                 size="sm"
+                className="max-sm:min-h-11"
                 iconStart={<AddIcon size={16} />}
                 aria-haspopup="dialog"
                 onClick={() => createEvent(focusedIso)}

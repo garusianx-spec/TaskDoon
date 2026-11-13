@@ -30,10 +30,16 @@ export function ConfirmDialog({
       footer={
         <>
           <FormError message={error} className="basis-full" />
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button className="max-sm:min-h-11" variant="secondary" disabled={busy} onClick={onClose}>
             انصراف
           </Button>
-          <Button variant="destructive" disabled={confirmDisabled} loading={busy} onClick={onConfirm}>
+          <Button
+            className="max-sm:min-h-11"
+            variant="destructive"
+            disabled={confirmDisabled}
+            loading={busy}
+            onClick={onConfirm}
+          >
             {busy ? busyLabel : confirmLabel}
           </Button>
         </>
