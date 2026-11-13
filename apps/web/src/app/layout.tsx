@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import type { ReactNode } from 'react';
 import './globals.css';
 import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme';
@@ -6,6 +7,7 @@ import { DATA_SOURCE } from '@/lib/data-source';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 
 const BRAND_TITLE = 'تسک‌دون | TaskDoon';
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 const DESCRIPTION =
   'تسک‌دون (TaskDoon)، پلتفرم یکپارچه گفتگو، مدیریت پروژه و وظایف سازمانی با تقویم هجری شمسی، طراحی راست‌به‌چپ و موتور چندپوسته‌ای.';
 
@@ -55,6 +57,17 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
       </head>
       <body>
+        {GA_ID ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || []; function gtag(){window.dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', ${JSON.stringify(GA_ID)});`}
+            </Script>
+          </>
+        ) : null}
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

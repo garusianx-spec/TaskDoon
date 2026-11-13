@@ -51,10 +51,12 @@ COPY apps/web/public apps/web/public
 # Browser-visible values are compiled into the JS bundles, never runtime secrets.
 ARG NEXT_PUBLIC_DATA_SOURCE=api
 ARG NEXT_PUBLIC_RT_URL=
+ARG NEXT_PUBLIC_GA_ID=
 # Next rewrites are serialized during build; this is a nonsecret network address.
 ARG TASKIN_API_ORIGIN=http://api:4000
 ENV NEXT_PUBLIC_DATA_SOURCE=${NEXT_PUBLIC_DATA_SOURCE} \
     NEXT_PUBLIC_RT_URL=${NEXT_PUBLIC_RT_URL} \
+    NEXT_PUBLIC_GA_ID=${NEXT_PUBLIC_GA_ID} \
     TASKIN_API_ORIGIN=${TASKIN_API_ORIGIN} \
     NODE_ENV=production
 RUN npm run build --workspace=@taskin/web
