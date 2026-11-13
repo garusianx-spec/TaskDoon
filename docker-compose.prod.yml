@@ -271,6 +271,7 @@ services:
       NODE_ENV: production
       PORT: '3000'
       HOSTNAME: 0.0.0.0
+      TASKIN_API_ORIGIN: http://api:4000
       NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-G-YYNSPSFVCJ}
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m,uid=1000,gid=1000
