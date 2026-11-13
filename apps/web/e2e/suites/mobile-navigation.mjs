@@ -55,6 +55,16 @@ try {
       at('five tabs are in the requested visual RTL order'),
     );
     check((await currentTab(page).getAttribute('href')) === '/feed', at('Today is current'));
+    const chatsTab = workspaceNav(page).getByRole('link', { name: 'گفت‌وگوها', exact: true });
+    check(
+      await chatsTab.evaluate((link) => {
+        const description = link.getAttribute('aria-describedby');
+        return description
+          ? /^[۰-۹]+ پیام خوانده‌نشده$/.test(document.getElementById(description)?.textContent ?? '')
+          : false;
+      }),
+      at('Chats keeps its navigation label and announces its unread count'),
+    );
     const action = main(page).getByRole('region', { name: 'وظایف نیازمند اقدام' });
     const progress = main(page).getByRole('region', { name: 'پیشرفت کلی' });
     check(
@@ -184,9 +194,16 @@ try {
     await capture(page, 'more', width);
     const calendar = more.getByRole('link', { name: 'تقویم', exact: true });
     await calendar.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
     check(
-      await calendar.evaluate((element) => element === document.activeElement),
-      at('More rows accept keyboard focus'),
+      await calendar.evaluate(
+        (element) =>
+          element === document.activeElement &&
+          element.matches(':focus-visible') &&
+          getComputedStyle(element).boxShadow.includes('inset'),
+      ),
+      at('More rows show a keyboard focus ring inside the list boundary'),
     );
     await page.keyboard.press('Enter');
     await page.waitForURL('**/calendar');

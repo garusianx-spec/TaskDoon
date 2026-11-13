@@ -2,6 +2,7 @@
 
 import { AppShell } from '@/components/layout/AppShell';
 import { NavigationList, NavigationRow, SectionBackLink } from '@/components/layout/NavigationList';
+import { WorkspacePageHeader } from '@/components/layout/WorkspacePageHeader';
 import { ThemePicker } from '@/components/layout/ThemePicker';
 import { Avatar } from '@/components/ui';
 import { ClockIcon, LogoutIcon, MonitorIcon, ShieldIcon, UserIcon } from '@/components/icons';
@@ -16,11 +17,11 @@ export function AccountSettingsScreen() {
   return (
     <AppShell>
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
-        <div className="mx-auto flex max-w-2xl flex-col gap-5 px-4 pb-6 pt-2 sm:px-6">
-          <header className="flex flex-col gap-2">
-            <SectionBackLink href={workspaceRoutes.more}>بیشتر</SectionBackLink>
-            <h1 className="text-heading font-bold text-fg-primary">حساب من</h1>
-          </header>
+        <WorkspacePageHeader
+          title="حساب من"
+          backLink={<SectionBackLink href={workspaceRoutes.more}>بیشتر</SectionBackLink>}
+        />
+        <div className="mx-auto flex max-w-2xl flex-col gap-5 p-4 sm:p-6">
           <div className="flex items-center gap-3 rounded-xl border border-secondary bg-surface p-4">
             <Avatar
               name={currentUser.fullName}
@@ -75,11 +76,11 @@ export function PersonalAppearanceScreen() {
   return (
     <AppShell>
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
-        <div className="mx-auto flex max-w-2xl flex-col gap-5 px-4 pb-6 pt-2 sm:px-6">
-          <header className="flex flex-col gap-2">
-            <SectionBackLink href={workspaceRoutes.account}>حساب من</SectionBackLink>
-            <h1 className="text-heading font-bold text-fg-primary">ظاهر شخصی</h1>
-          </header>
+        <WorkspacePageHeader
+          title="ظاهر شخصی"
+          backLink={<SectionBackLink href={workspaceRoutes.account}>حساب من</SectionBackLink>}
+        />
+        <div className="mx-auto max-w-2xl p-4 sm:p-6">
           <div className="rounded-xl border border-secondary bg-surface p-4">
             <ThemePicker section="mode" className="w-full p-0" />
           </div>

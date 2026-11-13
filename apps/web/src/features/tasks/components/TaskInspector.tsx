@@ -12,6 +12,7 @@ import { TaskInspectorFields, TaskInspectorMetadata } from '@/features/tasks/com
 import { TaskSourceMessage } from '@/features/tasks/components/TaskSourceMessage';
 import { TaskInspectorFiles } from '@/features/tasks/components/TaskInspectorFiles';
 import { TaskDiscussion } from '@/features/tasks/components/TaskDiscussion';
+import { cn } from '@/lib/utils';
 
 /**
  * Full task inspector: status, people, Jalali dates, checklist, file repository and an
@@ -155,13 +156,14 @@ export function TaskInspector({
               icon={task.starred ? <StarFilledIcon size={18} /> : <StarIcon size={18} />}
               size="sm"
               onClick={onToggleStar}
-              className={task.starred ? 'text-status-progress' : undefined}
+              className={cn('max-sm:size-11', task.starred && 'text-status-progress')}
             />
           </Tooltip>
           <IconButton
             label="بستن پنل جزئیات"
             icon={<CloseIcon size={20} />}
             size="sm"
+            className="max-sm:size-11"
             onClick={onClose}
             disabled={saving || fileBusy}
           />
@@ -220,9 +222,9 @@ export function TaskInspector({
             <DependencyManager task={task} />
 
             <details ref={metadataRef} className="group rounded-xl border border-secondary bg-surface">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 text-body-sm font-semibold text-fg-primary hover:bg-hover [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-4 text-body font-medium text-fg-secondary transition-colors duration-150 hover:bg-hover hover:text-fg-primary active:bg-active group-open:rounded-b-none [&::-webkit-details-marker]:hidden">
                 جزئیات بیشتر
-                <ChevronDownIcon size={16} className="shrink-0 text-fg-secondary group-open:rotate-180" />
+                <ChevronDownIcon size={16} className="shrink-0 text-fg-tertiary group-open:rotate-180" />
               </summary>
               <div className="border-t border-secondary p-3">
                 <TaskInspectorMetadata task={task} reviewer={reviewer} onPatch={onPatch} />
@@ -242,10 +244,15 @@ export function TaskInspector({
             {error}
           </p>
         )}
-        <Button variant="secondary" onClick={onClose} disabled={saving || fileBusy}>
+        <Button
+          variant="secondary"
+          className="max-sm:min-h-11"
+          onClick={onClose}
+          disabled={saving || fileBusy}
+        >
           انصراف
         </Button>
-        <Button type="submit" loading={saving} aria-disabled={fileBusy}>
+        <Button type="submit" className="max-sm:min-h-11" loading={saving} aria-disabled={fileBusy}>
           ذخیره تغییرات
         </Button>
       </footer>

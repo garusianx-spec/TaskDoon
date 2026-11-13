@@ -22,7 +22,7 @@ export function TopAppBar({ pageTitle }: { readonly pageTitle?: string }) {
   const title = pageTitle ?? mobilePageTitle(pathname);
 
   return (
-    <header className="sticky top-0 z-sticky flex h-14 shrink-0 items-center gap-2 border-b border-secondary bg-surface/95 px-3 backdrop-blur lg:hidden">
+    <header className="sticky top-0 z-sticky flex min-h-14 shrink-0 items-center gap-2 border-b border-secondary bg-surface px-3 py-1 lg:hidden">
       <Dropdown
         label="تعویض فضای کاری"
         align="start"
@@ -32,7 +32,7 @@ export function TopAppBar({ pageTitle }: { readonly pageTitle?: string }) {
           <button
             type="button"
             aria-label={`تعویض فضای کاری: ${activeWorkspace.name}`}
-            className="flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-lg px-1.5 py-1 text-start transition-colors hover:bg-hover"
+            className="flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-lg px-1.5 py-1 text-start transition-colors duration-150 hover:bg-hover active:bg-active"
           >
             <WorkspaceAvatar workspace={activeWorkspace} size="sm" className="size-8 shrink-0" />
             <span className="flex min-w-0 flex-col">

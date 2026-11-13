@@ -105,9 +105,9 @@ function FeedContent() {
 
   return (
     <div className="h-full overflow-y-auto scrollbar-thin">
-      <header className="border-b border-secondary bg-surface px-4 py-3 sm:px-6 sm:py-5">
+      <header className="border-b border-secondary bg-surface px-4 py-3 sm:px-6 sm:py-4">
         <div className="mx-auto flex max-w-5xl flex-col gap-1">
-          <h1 className="text-heading font-extrabold text-fg-primary">امروز</h1>
+          <h1 className="text-heading-sm font-bold text-fg-primary">امروز</h1>
           <h2 className="text-title-sm font-semibold text-fg-secondary">
             {`سلام ${currentUser.fullName.split(' ')[0]}، روز خوبی داشته باشی`}
           </h2>

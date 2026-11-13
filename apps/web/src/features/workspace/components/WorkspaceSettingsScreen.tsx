@@ -2,6 +2,7 @@
 
 import { AppShell } from '@/components/layout/AppShell';
 import { NavigationList, NavigationRow, SectionBackLink } from '@/components/layout/NavigationList';
+import { WorkspacePageHeader } from '@/components/layout/WorkspacePageHeader';
 import { ThemePicker } from '@/components/layout/ThemePicker';
 import { useOverlays } from '@/components/overlays/context';
 import { GridIcon, ShieldIcon } from '@/components/icons';
@@ -20,11 +21,11 @@ export function WorkspaceSettingsScreen() {
   return (
     <AppShell>
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
-        <div className="mx-auto flex max-w-2xl flex-col gap-5 px-4 pb-6 pt-2 sm:px-6">
-          <header className="flex flex-col gap-2">
-            <SectionBackLink href={workspaceRoutes.more}>بیشتر</SectionBackLink>
-            <h1 className="text-heading font-bold text-fg-primary">تنظیمات فضای کاری</h1>
-          </header>
+        <WorkspacePageHeader
+          title="تنظیمات فضای کاری"
+          backLink={<SectionBackLink href={workspaceRoutes.more}>بیشتر</SectionBackLink>}
+        />
+        <div className="mx-auto flex max-w-2xl flex-col gap-5 p-4 sm:p-6">
           <section
             aria-label="طرح و مالک فضای کاری"
             className="flex items-center gap-3 rounded-xl border border-secondary bg-surface p-4"

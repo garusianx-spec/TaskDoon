@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useId } from 'react';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
@@ -31,11 +32,12 @@ export function BottomNav() {
   const pathname = usePathname();
   const currentTab = mobileTabFor(pathname);
   const { totalUnread } = useWorkspace();
+  const unreadId = useId();
 
   return (
     <nav
       aria-label="ناوبری پایین"
-      className="sticky bottom-0 z-sticky flex shrink-0 items-stretch border-t border-secondary bg-surface/95 backdrop-blur lg:hidden"
+      className="sticky bottom-0 z-sticky flex shrink-0 items-stretch border-t border-secondary bg-surface lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {TABS.map(({ href, label, Icon }) => {
@@ -48,35 +50,30 @@ export function BottomNav() {
             href={href}
             aria-label={label}
             aria-current={active ? 'page' : undefined}
-            className={cn(
-              'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-center transition-colors',
-              'focus-visible:z-10 focus-visible:ring-inset',
-              active ? 'text-fg-brand' : 'text-fg-tertiary hover:text-fg-primary',
-            )}
+            aria-describedby={badge ? unreadId : undefined}
+            className="group relative flex min-h-14 min-w-0 flex-1 p-1 focus-visible:z-10 focus-visible:ring-inset focus-visible:ring-offset-0"
           >
             <span
               className={cn(
-                'relative flex h-6 w-9 items-center justify-center rounded-full',
-                active && 'bg-brand-subtle',
+                'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1 text-center text-caption font-semibold transition-colors duration-150',
+                active
+                  ? 'bg-brand-subtle text-fg-brand group-active:bg-brand-subtle-hover'
+                  : 'text-fg-tertiary group-hover:bg-hover group-hover:text-fg-primary group-active:bg-active',
               )}
             >
-              <Icon size={20} variant={active ? 'bold' : 'linear'} />
-              {badge && (
-                <CountPill
-                  value={badge}
-                  tone="error"
-                  className="absolute -end-2.5 -top-1 ring-2 ring-surface"
-                />
-              )}
+              <span className="relative inline-flex" aria-hidden="true">
+                <Icon size={20} />
+                {badge && (
+                  <CountPill
+                    value={badge}
+                    tone="error"
+                    className="absolute -end-4 -top-1.5 ring-2 ring-surface"
+                  />
+                )}
+              </span>
+              <span className="max-w-full break-words">{label}</span>
             </span>
-            <span
-              className={cn(
-                'max-w-full break-words text-caption leading-tight',
-                active ? 'font-bold' : 'font-medium',
-              )}
-            >
-              {label}
-            </span>
+            {badge && <span id={unreadId} className="sr-only">{`${badge} پیام خوانده‌نشده`}</span>}
           </Link>
         );
       })}

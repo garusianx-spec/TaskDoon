@@ -6,6 +6,8 @@ import type { DepartmentId, Project } from '@taskin/contracts';
 import { normaliseForSearch } from '@taskin/text';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { AppShell } from '@/components/layout/AppShell';
+import { NavigationList, NavigationRow } from '@/components/layout/NavigationList';
+import { WorkspacePageHeader } from '@/components/layout/WorkspacePageHeader';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { Button, IconButton, Input, Select } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -19,7 +21,6 @@ import {
   TrashIcon,
 } from '@/components/icons';
 import { projectHref } from '@/lib/workspace-navigation';
-import { cn } from '@/lib/utils';
 import { TONE_CLASSES } from '@/features/workspace/components/WorkspaceAvatar';
 
 export function ProjectsPage() {
@@ -54,10 +55,11 @@ function ProjectDirectory() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
-      <div className="mx-auto flex max-w-3xl flex-col gap-4 p-4 sm:p-6">
-        <header className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-heading font-bold text-fg-primary">پروژه‌ها</h1>
-          {canCreate && (
+      <WorkspacePageHeader
+        title="پروژه‌ها"
+        contentClassName="max-w-3xl"
+        actions={
+          canCreate && (
             <Button
               size="lg"
               aria-haspopup="dialog"
@@ -66,8 +68,10 @@ function ProjectDirectory() {
             >
               پروژه جدید
             </Button>
-          )}
-        </header>
+          )
+        }
+      />
+      <div className="mx-auto flex max-w-3xl flex-col gap-4 p-4 sm:p-6">
         <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
           <Input
             type="search"
@@ -125,6 +129,7 @@ function ProjectDirectory() {
           <>
             {starred.length > 0 && (
               <ProjectList
+                id="projects-starred"
                 title="پروژه‌های ستاره‌دار"
                 projects={starred}
                 {...(onDelete ? { onDelete } : {})}
@@ -132,6 +137,7 @@ function ProjectDirectory() {
             )}
             {other.length > 0 && (
               <ProjectList
+                id="projects-other"
                 title={starred.length ? 'سایر پروژه‌ها' : 'همهٔ پروژه‌ها'}
                 projects={other}
                 {...(onDelete ? { onDelete } : {})}
@@ -145,47 +151,38 @@ function ProjectDirectory() {
 }
 
 function ProjectList({
+  id,
   title,
   projects,
   onDelete,
 }: {
+  readonly id: string;
   readonly title: string;
   readonly projects: readonly Project[];
   readonly onDelete?: (projectId: string) => void;
 }) {
   return (
-    <section aria-label={title} className="flex flex-col gap-2">
-      <h2 className="text-caption font-semibold text-fg-secondary">{title}</h2>
-      <ul className="divide-y divide-secondary overflow-hidden rounded-xl border border-secondary bg-surface">
-        {projects.map((project) => (
-          <li key={project.id} className="flex items-center gap-1 pe-1">
-            <Link
-              href={projectHref(project.id)}
-              className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-3 py-2 text-start font-semibold text-fg-primary hover:bg-hover focus-visible:ring-inset"
-            >
-              <span
-                className={cn(
-                  'flex size-9 shrink-0 items-center justify-center rounded-lg',
-                  TONE_CLASSES[project.color],
-                )}
-              >
-                <FolderIcon size={19} />
-              </span>
-              <span className="min-w-0 flex-1 break-words">{project.name}</span>
-              {project.starred && <StarIcon size={15} className="shrink-0 text-status-progress" />}
-              <ChevronForwardIcon size={17} className="shrink-0 text-fg-tertiary" />
-            </Link>
-            {onDelete && (
+    <NavigationList id={id} title={title}>
+      {projects.map((project) => (
+        <NavigationRow
+          key={project.id}
+          href={projectHref(project.id)}
+          label={project.name}
+          Icon={FolderIcon}
+          iconTone={TONE_CLASSES[project.color]}
+          badge={project.starred && <StarIcon size={16} className="shrink-0 text-status-progress" />}
+          action={
+            onDelete && (
               <IconButton
                 label={`حذف پروژه ${project.name}`}
-                icon={<TrashIcon size={17} />}
+                icon={<TrashIcon size={18} />}
                 className="size-11 shrink-0"
                 onClick={() => onDelete(project.id)}
               />
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+            )
+          }
+        />
+      ))}
+    </NavigationList>
   );
 }
