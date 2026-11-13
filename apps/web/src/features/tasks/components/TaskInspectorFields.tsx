@@ -14,21 +14,19 @@ export function TaskInspectorFields({
   task,
   column,
   columns,
-  reviewer,
   onColumn,
   onPatch,
 }: {
   readonly task: Task;
   readonly column: BoardColumn | undefined;
   readonly columns: readonly BoardColumn[];
-  readonly reviewer: User | undefined;
   readonly onColumn: (id: string) => void;
   readonly onPatch: (patch: TaskPatch) => void;
 }) {
   return (
     <section
-      className="flex flex-col gap-3 md:col-start-2 md:row-start-1 md:rounded-xl md:border md:border-secondary md:bg-sunken/40 md:p-4"
-      aria-label="ویژگی‌های وظیفه"
+      className="grid gap-3 rounded-xl border border-secondary bg-sunken/40 p-3 sm:grid-cols-3 sm:p-4"
+      aria-label="وضعیت، مسئولان و مهلت انجام"
     >
       <Field label="وضعیت">
         <Select
@@ -45,22 +43,6 @@ export function TaskInspectorFields({
         />
       </Field>
 
-      <Field label="اولویت">
-        <Select
-          label="اولویت وظیفه"
-          size="sm"
-          value={task.priority}
-          onValueChange={(priority: TaskPriority) => onPatch({ priority })}
-          options={TASK_PRIORITIES.map((entry) => ({
-            value: entry.id,
-            label: entry.label,
-            icon: <FlagIcon size={15} />,
-          }))}
-        />
-      </Field>
-
-      <IssueFields task={task} onPatch={onPatch} />
-
       <Field label="مسئولان">
         <PeoplePicker
           selectedIds={task.assigneeIds}
@@ -76,6 +58,44 @@ export function TaskInspectorFields({
         />
       </Field>
 
+      <Field label="مهلت انجام (اختیاری)">
+        <JalaliDatePicker
+          label="انتخاب مهلت انجام"
+          emptyLabel="بدون مهلت"
+          value={task.dueDate}
+          onChange={(dueDate) => onPatch({ dueDate })}
+          onClear={() => onPatch({ dueDate: null })}
+        />
+      </Field>
+    </section>
+  );
+}
+
+export function TaskInspectorMetadata({
+  task,
+  reviewer,
+  onPatch,
+}: {
+  readonly task: Task;
+  readonly reviewer: User | undefined;
+  readonly onPatch: (patch: TaskPatch) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="اولویت">
+        <Select
+          label="اولویت وظیفه"
+          size="sm"
+          value={task.priority}
+          onValueChange={(priority: TaskPriority) => onPatch({ priority })}
+          options={TASK_PRIORITIES.map((entry) => ({
+            value: entry.id,
+            label: entry.label,
+            icon: <FlagIcon size={15} />,
+          }))}
+        />
+      </Field>
+
       <Field label="تاییدکننده">
         <PeoplePicker
           selectedIds={reviewer ? [reviewer.id] : []}
@@ -86,25 +106,16 @@ export function TaskInspectorFields({
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-1">
-        <Field label="تاریخ شروع">
-          <JalaliDatePicker
-            label="انتخاب تاریخ شروع"
-            value={task.startDate}
-            onChange={(startDate) => onPatch({ startDate })}
-          />
-        </Field>
-        <Field label="مهلت انجام (اختیاری)">
-          <JalaliDatePicker
-            label="انتخاب مهلت انجام"
-            emptyLabel="بدون مهلت"
-            value={task.dueDate}
-            onChange={(dueDate) => onPatch({ dueDate })}
-            onClear={() => onPatch({ dueDate: null })}
-          />
-        </Field>
-      </div>
-    </section>
+      <Field label="تاریخ شروع">
+        <JalaliDatePicker
+          label="انتخاب تاریخ شروع"
+          value={task.startDate}
+          onChange={(startDate) => onPatch({ startDate })}
+        />
+      </Field>
+
+      <IssueFields task={task} onPatch={onPatch} />
+    </div>
   );
 }
 

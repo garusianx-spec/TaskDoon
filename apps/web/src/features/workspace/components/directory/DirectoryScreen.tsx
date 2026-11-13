@@ -7,6 +7,8 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { AppShell } from '@/components/layout/AppShell';
+import { SectionBackLink } from '@/components/layout/NavigationList';
+import { workspaceRoutes } from '@/lib/workspace-navigation';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { PendingInvitationRow } from '@/features/workspace/components/directory/PendingInvitationRow';
 import { RemoveMemberDialog } from '@/features/workspace/components/directory/RemoveMemberDialog';
@@ -36,7 +38,10 @@ function DirectoryContent() {
   const rankOf = (roleId: RoleId) =>
     ROLES.find((entry) => entry.id === roleId)?.rank ?? Number.MAX_SAFE_INTEGER;
   const myRank = isWorkspaceOwner ? 0 : rankOf(currentUser.role);
-  const canRemoveMembers = isWorkspaceOwner || state.permissions[currentUser.role].members.delete;
+  const permissions = state.permissions[currentUser.role].members;
+  const canInvite = isWorkspaceOwner || permissions.create;
+  const canViewInvitations = isWorkspaceOwner || permissions.view;
+  const canRemoveMembers = isWorkspaceOwner || permissions.delete;
   const canRemove = (user: User) =>
     canRemoveMembers &&
     user.id !== currentUser.id &&
@@ -61,21 +66,30 @@ function DirectoryContent() {
   return (
     <div className="h-full overflow-y-auto scrollbar-thin">
       <header className="border-b border-secondary bg-surface px-4 py-4 sm:px-6">
+        <div className="mx-auto mb-1 max-w-5xl lg:hidden">
+          <SectionBackLink href={workspaceRoutes.more}>بیشتر</SectionBackLink>
+        </div>
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
           <div className="flex flex-col">
-            <h1 className="text-heading-sm font-bold text-fg-primary">اعضای سازمان</h1>
+            <h1 className="text-heading-sm font-bold text-fg-primary">
+              <span className="lg:hidden">اعضا</span>
+              <span className="hidden lg:inline">اعضای سازمان</span>
+            </h1>
             <span className="text-caption text-fg-tertiary numeric">
               {`${formatCount(state.users.length)} نفر در ${formatCount(DEPARTMENTS.length)} دپارتمان`}
             </span>
           </div>
-          <Button
-            className="ms-auto"
-            iconStart={<UserAddIcon size={18} />}
-            aria-haspopup="dialog"
-            onClick={() => open({ kind: 'invite-member' })}
-          >
-            دعوت همکار
-          </Button>
+          {canInvite && (
+            <Button
+              className="ms-auto"
+              size="lg"
+              iconStart={<UserAddIcon size={18} />}
+              aria-haspopup="dialog"
+              onClick={() => open({ kind: 'invite-member' })}
+            >
+              دعوت همکار
+            </Button>
+          )}
         </div>
       </header>
 
@@ -110,7 +124,7 @@ function DirectoryContent() {
           />
         </div>
 
-        {state.invitations.length > 0 && (
+        {canViewInvitations && state.invitations.length > 0 && (
           <section aria-labelledby="pending-invitations" className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <h2 id="pending-invitations" className="text-title-sm font-semibold text-fg-primary">
@@ -125,7 +139,12 @@ function DirectoryContent() {
                 <PendingInvitationRow
                   key={invitation.id}
                   invitation={invitation}
-                  onRevoke={(invitationId) => dispatch({ type: 'revoke-invitation', invitationId })}
+                  {...(canRemoveMembers
+                    ? {
+                        onRevoke: (invitationId: string) =>
+                          dispatch({ type: 'revoke-invitation', invitationId }),
+                      }
+                    : {})}
                 />
               ))}
             </ul>

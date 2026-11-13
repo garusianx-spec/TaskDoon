@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { directory } from '@/store/directory';
 import { DepartmentIcon } from '@/features/board/components/DepartmentIcon';
-import { projectList } from '@/store/selectors';
+import { filterTasks, projectList } from '@/store/selectors';
 import { IconButton, Tooltip } from '@/components/ui';
 import {
   AddIcon,
@@ -25,6 +25,7 @@ export interface TaskSidebarProps {
   readonly smartView: SmartViewId;
   readonly projectFilterId: string | null;
   readonly currentUserId: string;
+  readonly today?: string;
   readonly onSmartViewChange: (view: SmartViewId) => void;
   readonly onProjectChange: (projectId: string | null) => void;
   readonly onCreateProject?: () => void;
@@ -34,7 +35,7 @@ export interface TaskSidebarProps {
   readonly onOpenTrash?: () => void;
 }
 
-const SMART_VIEWS: ReadonlyArray<{
+export const SMART_VIEWS: ReadonlyArray<{
   readonly id: SmartViewId;
   readonly label: string;
   readonly Icon: typeof UserIcon;
@@ -54,6 +55,7 @@ export function TaskSidebar({
   smartView,
   projectFilterId,
   currentUserId,
+  today,
   onSmartViewChange,
   onProjectChange,
   onCreateProject,
@@ -64,23 +66,14 @@ export function TaskSidebar({
   const projects = projectList();
   const [departmentFilter, setDepartmentFilter] = useState<DepartmentId | null>(null);
 
-  const countFor = (view: SmartViewId): number => {
-    switch (view) {
-      case 'my-tasks':
-        return tasks.filter((task) => task.assigneeIds.includes(currentUserId) && task.status !== 'done')
-          .length;
-      case 'starred':
-        return tasks.filter((task) => task.starred).length;
-      case 'due-soon':
-        return tasks.filter((task) => task.status !== 'done').length;
-      case 'all':
-        return tasks.length;
-      default: {
-        const exhaustive: never = view;
-        return exhaustive;
-      }
-    }
-  };
+  const countFor = (view: SmartViewId): number =>
+    filterTasks(tasks, {
+      smartView: view,
+      projectId: null,
+      search: '',
+      currentUserId,
+      ...(today ? { today } : {}),
+    }).length;
 
   const projectCount = (projectId: string): number =>
     tasks.filter((task) => task.projectId === projectId).length;

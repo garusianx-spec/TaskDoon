@@ -22,6 +22,7 @@ import { DeleteWorkspaceModal } from '@/features/workspace/components/DeleteWork
 import { nextLocalId } from '@/store/ids';
 import { userById } from '@/store/selectors';
 import { useOverlays } from '@/components/overlays/context';
+import { isRoute, projectHref, workspaceRoutes } from '@/lib/workspace-navigation';
 
 /**
  * Renders every app-level dialog exactly once, at the root, bound to the global overlay
@@ -49,6 +50,7 @@ export function OverlayHost() {
     await liveStore?.loadProjectTrash();
   }, [liveStore]);
   const hasPassword = live?.status.user?.hasPassword ?? false;
+  const memberPermissions = state.permissions[currentUser.role].members;
 
   const goTo = (href: string) => {
     if (!pathname.startsWith(href)) router.push(href);
@@ -63,6 +65,9 @@ export function OverlayHost() {
   // here: at the plan's limit the member is told so, and the form never opens.
   const projectLimit = activeWorkspace.projectLimit ?? null;
   const atProjectLimit = projectLimit !== null && state.projects.length >= projectLimit;
+  const fixedProjectId = isRoute(pathname, '/tasks')
+    ? state.projectFilterId
+    : state.projects.find((project) => projectHref(project.id) === pathname)?.id;
 
   const deletingProject =
     active?.kind === 'project-delete'
@@ -81,9 +86,7 @@ export function OverlayHost() {
         draft={active?.kind === 'task-composer' ? active.draft : null}
         columns={state.boardColumns}
         timeZone={activeWorkspace.timeZone}
-        {...(pathname.startsWith('/tasks') && state.projectFilterId
-          ? { fixedProjectId: state.projectFilterId }
-          : {})}
+        {...(fixedProjectId ? { fixedProjectId } : {})}
         onCreateProject={() => open({ kind: 'project-composer' })}
         onClose={close}
         onSubmit={async (draft, files, commandId) => {
@@ -108,9 +111,9 @@ export function OverlayHost() {
         canCreateDepartment={isWorkspaceOwner || state.permissions[currentUser.role].members.create}
         onClose={close}
         onSubmit={async (draft, commandId) => {
-          await createProject(draft, commandId);
+          const id = await createProject(draft, commandId);
           close();
-          goTo('/tasks');
+          goTo(isRoute(pathname, workspaceRoutes.projects) ? projectHref(id) : '/tasks');
         }}
       />
 
@@ -157,10 +160,12 @@ export function OverlayHost() {
       />
 
       <InviteMemberModal
-        open={active?.kind === 'invite-member'}
-        invitations={state.invitations}
+        open={active?.kind === 'invite-member' && (isWorkspaceOwner || memberPermissions.create)}
+        invitations={isWorkspaceOwner || memberPermissions.view ? state.invitations : []}
         onClose={close}
-        onRevoke={(invitationId) => dispatch({ type: 'revoke-invitation', invitationId })}
+        {...(isWorkspaceOwner || memberPermissions.delete
+          ? { onRevoke: (invitationId: string) => dispatch({ type: 'revoke-invitation', invitationId }) }
+          : {})}
         onSubmit={(draft) => {
           dispatch({ type: 'invite-members', draft, invitedById: currentUser.id });
           close();

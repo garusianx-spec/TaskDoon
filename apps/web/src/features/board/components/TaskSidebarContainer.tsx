@@ -8,12 +8,11 @@ import { TaskSidebar } from '@/features/board/components/TaskSidebar';
 export function TaskSidebarContainer({
   tasks,
   currentUserId,
-  onNavigate,
+  today,
 }: {
   readonly tasks: readonly Task[];
   readonly currentUserId: string;
-  /** Closes the mobile filter panel once a selection is made. */
-  readonly onNavigate: () => void;
+  readonly today?: string;
 }) {
   const { state, dispatch, isWorkspaceOwner } = useWorkspace();
   const { open } = useOverlays();
@@ -24,14 +23,9 @@ export function TaskSidebarContainer({
       smartView={state.smartView}
       projectFilterId={state.projectFilterId}
       currentUserId={currentUserId}
-      onSmartViewChange={(view) => {
-        dispatch({ type: 'set-smart-view', view });
-        onNavigate();
-      }}
-      onProjectChange={(projectId) => {
-        dispatch({ type: 'set-project-filter', projectId });
-        onNavigate();
-      }}
+      {...(today ? { today } : {})}
+      onSmartViewChange={(view) => dispatch({ type: 'set-smart-view', view })}
+      onProjectChange={(projectId) => dispatch({ type: 'set-project-filter', projectId })}
       onCreateProject={() => open({ kind: 'project-composer' })}
       // Deleting (to the trash) and restoring projects are the workspace owner's alone.
       {...(isWorkspaceOwner

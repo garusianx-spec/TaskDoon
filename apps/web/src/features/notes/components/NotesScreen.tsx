@@ -5,6 +5,8 @@ import { nextLocalId } from '@/store/ids';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
+import { SectionBackLink } from '@/components/layout/NavigationList';
+import { workspaceRoutes } from '@/lib/workspace-navigation';
 import { NotesSidebar } from '@/features/notes/components/NotesSidebar';
 import { NoteEditor } from '@/features/notes/components/NoteEditor';
 import { Button, ExpandableSearch, IconButton } from '@/components/ui';
@@ -88,7 +90,10 @@ export function NotesPage() {
             mobileEditorOpen ? 'hidden' : 'flex',
           )}
         >
-          <header className="flex flex-col gap-3 border-b border-secondary px-4 pb-3 pt-3">
+          <header className="flex flex-col gap-2 border-b border-secondary px-4 py-3">
+            <div className="lg:hidden">
+              <SectionBackLink href={workspaceRoutes.more}>بیشتر</SectionBackLink>
+            </div>
             <div className="flex h-10 items-center gap-2">
               {/* The title yields its room to the search field while a search is open. */}
               <div className={cn('min-w-0 flex-1 flex-col', searchOpen ? 'hidden' : 'flex')}>

@@ -8,6 +8,8 @@ import { taskDraft } from '@/store/drafts';
 import { buildMonthGrid, formatJalali, shiftJalaliMonth, toISODate } from '@taskin/jalali';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
+import { SectionBackLink } from '@/components/layout/NavigationList';
+import { workspaceRoutes } from '@/lib/workspace-navigation';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { MonthGrid } from '@/features/calendar/components/MonthGrid';
 import { Button, IconButton } from '@/components/ui';
@@ -87,6 +89,9 @@ function CalendarContent() {
   return (
     <div className="h-full overflow-y-auto scrollbar-thin">
       <header className="border-b border-secondary bg-surface px-4 py-3 sm:px-6">
+        <div className="lg:hidden">
+          <SectionBackLink href={workspaceRoutes.more}>بیشتر</SectionBackLink>
+        </div>
         <h1 className="text-heading-sm font-bold text-fg-primary">تقویم</h1>
         <span className="text-caption text-fg-tertiary numeric">
           {`${formatCount(monthItemCount)} مهلت، جلسه و نقطه عطف در ${formatJalali(monthIso, 'month-year')}`}

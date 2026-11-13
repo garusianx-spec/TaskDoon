@@ -18,7 +18,7 @@ import type {
 } from '@taskin/contracts';
 import { BUILT_IN_COLUMNS } from '@/data/reference';
 import { directory } from '@/store/directory';
-import { daysBetween, parseISODate, toISODate } from '@taskin/jalali';
+import { addDays, daysBetween, parseISODate, toISODate } from '@taskin/jalali';
 
 /* ------------------------------ People & projects ------------------------------ */
 
@@ -44,20 +44,23 @@ export function projectList(): readonly Project[] {
 
 /* ------------------------------ Tasks ------------------------------ */
 
+export type TaskScopeFilter = SmartViewId | 'overdue';
+
 export interface TaskFilter {
-  readonly smartView: SmartViewId;
+  readonly smartView: TaskScopeFilter;
   readonly projectId: string | null;
   readonly search: string;
   readonly currentUserId: string;
+  readonly today?: string;
 }
 
 export function filterTasks(tasks: readonly Task[], filter: TaskFilter): readonly Task[] {
   const query = filter.search.trim().toLowerCase();
-  const scope = filter.projectId ? [filter.projectId] : null;
-  const today = new Date();
+  const today = filter.today ?? toISODate(new Date());
+  const nearDeadline = filter.smartView === 'due-soon' ? addDays(today, 3) : null;
 
   return tasks.filter((task) => {
-    if (scope && !scope.includes(task.projectId)) return false;
+    if (filter.projectId && filter.projectId !== task.projectId) return false;
 
     switch (filter.smartView) {
       case 'my-tasks':
@@ -66,10 +69,12 @@ export function filterTasks(tasks: readonly Task[], filter: TaskFilter): readonl
       case 'starred':
         if (!task.starred) return false;
         break;
+      case 'overdue':
+        if (task.status === 'done' || deadlinePeriod(task.dueDate, today) !== 'overdue') return false;
+        break;
       case 'due-soon': {
         if (task.status === 'done' || task.dueDate === null) return false;
-        const delta = daysBetween(today, parseISODate(task.dueDate));
-        if (delta > 3) return false;
+        if (task.dueDate < today || (nearDeadline && task.dueDate > nearDeadline)) return false;
         break;
       }
       case 'all':
@@ -84,6 +89,18 @@ export function filterTasks(tasks: readonly Task[], filter: TaskFilter): readonl
     const haystack = `${task.title} ${task.code} ${task.description} ${task.labels.join(' ')}`.toLowerCase();
     return haystack.includes(query);
   });
+}
+
+export function tasksAssignedTo(tasks: readonly Task[], userId: string): readonly Task[] {
+  return tasks.filter((task) => task.assigneeIds.includes(userId));
+}
+
+export type DeadlinePeriod = 'overdue' | 'today' | 'upcoming' | 'undated';
+
+export function deadlinePeriod(dueDate: Task['dueDate'], today: string): DeadlinePeriod {
+  if (dueDate === null) return 'undated';
+  if (dueDate < today) return 'overdue';
+  return dueDate === today ? 'today' : 'upcoming';
 }
 
 export const tasksByStatus = (tasks: readonly Task[], status: TaskStatus): readonly Task[] =>

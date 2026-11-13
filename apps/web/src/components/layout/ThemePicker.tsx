@@ -15,14 +15,19 @@ const MODE_ICONS: Readonly<Record<ThemeMode, typeof SunIcon>> = {
 };
 
 /**
- * Theme picker body. Rendered inside the rail popover on desktop and inside the "بیشتر" tab
- * on mobile, so it is a plain block with no positioning of its own.
+ * Theme controls shared by the desktop popover and the two settings screens.
  *
  * Six brand palettes × light / OLED-dark. The preview row at the bottom is painted with the
  * live semantic tokens, so it shows the accessible text/fill steps the palette actually
  * resolves to — not just its swatch.
  */
-export function ThemePicker({ className }: { readonly className?: string }) {
+export function ThemePicker({
+  className,
+  section = 'all',
+}: {
+  readonly className?: string;
+  readonly section?: 'all' | 'mode' | 'accent';
+}) {
   const { theme, resolvedMode, setMode, setAccent } = useTheme();
   const modes = useRovingFocus(THEME_MODES.length, 'horizontal', {
     onActivate: (index) => {
@@ -39,64 +44,68 @@ export function ThemePicker({ className }: { readonly className?: string }) {
 
   return (
     <div className={cn('flex w-80 flex-col gap-4 p-1', className)}>
-      <section className="flex flex-col gap-2">
-        <h3 className="px-1 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
-          حالت نمایش
-        </h3>
-        <div
-          role="radiogroup"
-          aria-label="حالت نمایش"
-          onKeyDown={modes.onKeyDown}
-          className="grid grid-cols-3 gap-1.5"
-        >
-          {THEME_MODES.map(({ id, label }, index) => {
-            const Icon = MODE_ICONS[id];
-            const selected = theme.mode === id;
-            return (
-              <button
-                key={id}
-                ref={modes.registerItem(index)}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                tabIndex={selected ? 0 : -1}
-                onClick={() => setMode(id)}
-                className={cn(
-                  'flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 text-caption font-medium transition-colors',
-                  selected
-                    ? 'border-brand bg-brand-subtle text-fg-brand'
-                    : 'border-secondary bg-surface text-fg-tertiary hover:bg-hover hover:text-fg-secondary',
-                )}
-              >
-                <Icon size={18} variant={selected ? 'twotone' : 'linear'} />
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      {section !== 'accent' && (
+        <section className="flex flex-col gap-2">
+          <h3 className="px-1 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
+            حالت نمایش
+          </h3>
+          <div
+            role="radiogroup"
+            aria-label="حالت نمایش"
+            onKeyDown={modes.onKeyDown}
+            className="grid grid-cols-3 gap-1.5"
+          >
+            {THEME_MODES.map(({ id, label }, index) => {
+              const Icon = MODE_ICONS[id];
+              const selected = theme.mode === id;
+              return (
+                <button
+                  key={id}
+                  ref={modes.registerItem(index)}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => setMode(id)}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 text-caption font-medium transition-colors',
+                    selected
+                      ? 'border-brand bg-brand-subtle text-fg-brand'
+                      : 'border-secondary bg-surface text-fg-tertiary hover:bg-hover hover:text-fg-secondary',
+                  )}
+                >
+                  <Icon size={18} variant={selected ? 'twotone' : 'linear'} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
-      <section className="flex flex-col gap-2">
-        <h3 className="px-1 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
-          پالت برند سازمان
-        </h3>
-        <div
-          role="radiogroup"
-          aria-label="پالت برند سازمان"
-          onKeyDown={accents.onKeyDown}
-          className="grid grid-cols-2 gap-1.5"
-        >
-          {ACCENTS.map((accent, index) => (
-            <AccentCard
-              key={accent.id}
-              accent={accent}
-              selected={theme.accent === accent.id}
-              registerRef={accents.registerItem(index)}
-              onSelect={setAccent}
-            />
-          ))}
-        </div>
-      </section>
+      {section !== 'mode' && (
+        <section className="flex flex-col gap-2">
+          <h3 className="px-1 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
+            پالت برند سازمان
+          </h3>
+          <div
+            role="radiogroup"
+            aria-label="پالت برند سازمان"
+            onKeyDown={accents.onKeyDown}
+            className="grid grid-cols-2 gap-1.5"
+          >
+            {ACCENTS.map((accent, index) => (
+              <AccentCard
+                key={accent.id}
+                accent={accent}
+                selected={theme.accent === accent.id}
+                registerRef={accents.registerItem(index)}
+                onSelect={setAccent}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section aria-label="پیش‌نمایش پوسته" className="flex flex-col gap-2">
         <h3 className="px-1 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">

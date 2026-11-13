@@ -18,7 +18,7 @@ export function PendingInvitationRow({
   onRevoke,
 }: {
   readonly invitation: Invitation;
-  readonly onRevoke: (invitationId: string) => void;
+  readonly onRevoke?: (invitationId: string) => void;
 }) {
   const departmentName = DEPARTMENTS.find((entry) => entry.id === invitation.department)?.name ?? '';
   const Icon = CHANNEL_ICONS[invitation.channel];
@@ -48,13 +48,15 @@ export function PendingInvitationRow({
           <RelativeTime iso={invitation.invitedAt} />
         </span>
       </span>
-      <IconButton
-        label={`لغو دعوت ${display}`}
-        icon={<TrashIcon size={16} />}
-        size="sm"
-        className="hover:text-status-blocked"
-        onClick={() => onRevoke(invitation.id)}
-      />
+      {onRevoke && (
+        <IconButton
+          label={`لغو دعوت ${display}`}
+          icon={<TrashIcon size={16} />}
+          size="sm"
+          className="size-11 hover:text-status-blocked"
+          onClick={() => onRevoke(invitation.id)}
+        />
+      )}
     </li>
   );
 }

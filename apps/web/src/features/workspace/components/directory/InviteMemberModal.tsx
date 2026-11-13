@@ -19,7 +19,7 @@ export interface InviteMemberModalProps {
   readonly invitations: readonly Invitation[];
   readonly onClose: () => void;
   readonly onSubmit: (draft: InvitationDraft) => void;
-  readonly onRevoke: (invitationId: string) => void;
+  readonly onRevoke?: (invitationId: string) => void;
 }
 const INVITABLE_ROLES = ROLES.filter((role) => !role.locked);
 
@@ -223,7 +223,11 @@ export function InviteMemberModal({
             </div>
             <ul className="flex flex-col gap-1.5">
               {invitations.map((invitation) => (
-                <PendingInvitationRow key={invitation.id} invitation={invitation} onRevoke={onRevoke} />
+                <PendingInvitationRow
+                  key={invitation.id}
+                  invitation={invitation}
+                  {...(onRevoke ? { onRevoke } : {})}
+                />
               ))}
             </ul>
           </section>

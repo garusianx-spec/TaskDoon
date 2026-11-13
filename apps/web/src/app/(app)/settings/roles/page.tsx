@@ -6,6 +6,8 @@ import { DEFAULT_PERMISSION_MATRIX, PERMISSION_ACTIONS, PERMISSION_MODULES, ROLE
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
+import { SectionBackLink } from '@/components/layout/NavigationList';
+import { workspaceRoutes } from '@/lib/workspace-navigation';
 import { PermissionMatrixTable } from '@/features/workspace/components/roles/PermissionMatrixTable';
 import { RoleList } from '@/features/workspace/components/roles/RoleList';
 import { RolePermissionsModal } from '@/features/workspace/components/roles/RolePermissionsModal';
@@ -13,12 +15,14 @@ import { Badge, Button } from '@/components/ui';
 import { InfoCircleIcon, KeyIcon, RefreshIcon, ShieldIcon } from '@/components/icons';
 
 export default function RolesSettingsPage() {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, currentUser, isWorkspaceOwner } = useWorkspace();
   const [activeRole, setActiveRole] = useState<RoleId>('admin');
   const [modalOpen, setModalOpen] = useState(false);
 
   const role = ROLES.find((entry) => entry.id === activeRole) ?? ROLES[0];
   const totalCells = PERMISSION_MODULES.length * PERMISSION_ACTIONS.length;
+  const canEditRoles = isWorkspaceOwner || state.permissions[currentUser.role].members.edit;
+  const currentRank = ROLES.find(({ id }) => id === currentUser.role)?.rank ?? Number.MAX_SAFE_INTEGER;
 
   if (!role) return null;
 
@@ -26,6 +30,9 @@ export default function RolesSettingsPage() {
     <AppShell>
       <div className="h-full overflow-y-auto scrollbar-thin">
         <header className="border-b border-secondary bg-surface px-4 py-4 sm:px-6">
+          <div className="mx-auto mb-1 max-w-6xl lg:hidden">
+            <SectionBackLink href={workspaceRoutes.workspaceSettings}>تنظیمات فضای کاری</SectionBackLink>
+          </div>
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-lg bg-brand-subtle text-fg-brand">
               <ShieldIcon size={22} variant="twotone" />
@@ -37,20 +44,22 @@ export default function RolesSettingsPage() {
               </span>
             </div>
 
-            <div className="ms-auto flex items-center gap-2">
-              <Button
-                variant="secondary"
-                iconStart={<RefreshIcon size={16} />}
-                onClick={() =>
-                  dispatch({ type: 'replace-permissions', permissions: DEFAULT_PERMISSION_MATRIX })
-                }
-              >
-                بازگردانی پیش‌فرض
-              </Button>
-              <Button iconStart={<KeyIcon size={16} />} onClick={() => setModalOpen(true)}>
-                ویرایش پیشرفته
-              </Button>
-            </div>
+            {canEditRoles && (
+              <div className="ms-auto flex flex-wrap items-center gap-2">
+                <Button
+                  variant="secondary"
+                  iconStart={<RefreshIcon size={16} />}
+                  onClick={() =>
+                    dispatch({ type: 'replace-permissions', permissions: DEFAULT_PERMISSION_MATRIX })
+                  }
+                >
+                  بازگردانی پیش‌فرض
+                </Button>
+                <Button iconStart={<KeyIcon size={16} />} onClick={() => setModalOpen(true)}>
+                  ویرایش پیشرفته
+                </Button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -64,13 +73,15 @@ export default function RolesSettingsPage() {
               permissions={state.permissions}
             />
 
-            <div className="flex items-start gap-2 rounded-xl border border-secondary bg-surface p-3">
-              <InfoCircleIcon size={18} variant="twotone" className="mt-0.5 shrink-0 text-fg-brand" />
-              <p className="text-micro leading-5 text-fg-tertiary">
-                تغییرات این صفحه بلافاصله ذخیره می‌شود. برای ویرایش گروهی چند نقش و اعمال بر دپارتمان‌ها از
-                «ویرایش پیشرفته» استفاده کنید.
-              </p>
-            </div>
+            {canEditRoles && (
+              <div className="flex items-start gap-2 rounded-xl border border-secondary bg-surface p-3">
+                <InfoCircleIcon size={18} variant="twotone" className="mt-0.5 shrink-0 text-fg-brand" />
+                <p className="text-micro leading-5 text-fg-tertiary">
+                  تغییرات این صفحه بلافاصله ذخیره می‌شود. برای ویرایش گروهی چند نقش و اعمال بر دپارتمان‌ها از
+                  «ویرایش پیشرفته» استفاده کنید.
+                </p>
+              </div>
+            )}
           </aside>
 
           <div className="min-w-0">
@@ -83,6 +94,7 @@ export default function RolesSettingsPage() {
             <PermissionMatrixTable
               role={role}
               permissions={state.permissions}
+              readOnly={!canEditRoles || (!isWorkspaceOwner && role.rank <= currentRank)}
               onToggle={(module, action, value) =>
                 dispatch({ type: 'set-permission', role: role.id, module, action, value })
               }
@@ -99,7 +111,7 @@ export default function RolesSettingsPage() {
       </div>
 
       <RolePermissionsModal
-        open={modalOpen}
+        open={canEditRoles && modalOpen}
         onClose={() => setModalOpen(false)}
         permissions={state.permissions}
         onChange={(permissions) => dispatch({ type: 'replace-permissions', permissions })}

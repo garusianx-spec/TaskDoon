@@ -1,16 +1,14 @@
 'use client';
 
-import { useNow } from '@/hooks/useNow';
 import { formatJalali } from '@taskin/jalali';
 import { cn } from '@/lib/utils';
 import type { TaskSquareIcon } from '@/components/icons';
 
 /** The visitor's current Jalali date — resolved after mount, since this route is static. */
-export function TodayLabel() {
-  const now = useNow();
+export function TodayLabel({ date }: { readonly date: string | null }) {
   return (
     <p className="text-body text-fg-tertiary numeric" suppressHydrationWarning>
-      {now ? formatJalali(now, 'long') : '\u00A0'}
+      {date ? formatJalali(date, 'long') : '\u00A0'}
     </p>
   );
 }
