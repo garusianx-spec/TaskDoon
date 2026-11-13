@@ -18,5 +18,5 @@ docker compose -f docker-compose.prod.yml restart edge
 
 echo "4/4 Verifying live health..."
 sleep 3
-curl -fsSk https://127.0.0.1/api/v1/public/site/settings > /dev/null
+curl -fsS https://taskdoone.ir/api/v1/public/site/settings > /dev/null
 echo "Deploy and health check completed successfully!"
