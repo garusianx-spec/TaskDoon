@@ -83,6 +83,34 @@ describe('task composer start dates across conversion routes', () => {
     );
   });
 
+  it('keeps an omitted deadline null after create replay, title edit and a fresh read', async () => {
+    const path = `${wsPath(workspace.id)}/tasks`;
+    const key = idempotencyKey();
+    const body = { projectId: project.id, title: 'Audit an unspecified deadline' };
+    const submit = () => t.http().post(path).set(bearer(owner)).set('Idempotency-Key', key).send(body);
+    const first = await submit();
+    expectStatus(first, 201);
+    expect(first.body.dueDate).toBeNull();
+    const replay = await submit();
+    expectStatus(replay, 201);
+    expect(replay.body).toMatchObject({ id: first.body.id, dueDate: null });
+    const edited = await t
+      .http()
+      .patch(`${path}/${first.body.id}`)
+      .set(bearer(owner))
+      .set('If-Match', `"${first.body.version}"`)
+      .send({ title: 'Edited without choosing a deadline' });
+    expectStatus(edited, 200);
+    const read = await t.http().get(`${path}/${first.body.id}`).set(bearer(owner));
+    expectStatus(read, 200);
+    expect(read.body).toMatchObject({ title: 'Edited without choosing a deadline', dueDate: null });
+    const stored = await t.admin.query(
+      'select count(*)::int as count from tasks where id = $1 and due_date is null',
+      [first.body.id],
+    );
+    expect(stored.rows[0]?.count).toBe(1);
+  });
+
   it('creates and replays a message conversion with its chosen historical start and due dates', async () => {
     const group = await createConversation(t, owner, workspace.id, {
       kind: 'group',

@@ -6,6 +6,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { SmsService, SmsUnavailableError } from '../../src/platform/sms/sms.js';
 import { InvitationSmsProcessor } from '../../src/platform/sms/invitation-sms-processor.js';
 import {
+  addMember,
   bearer,
   createTestApp,
   idempotencyKey,
@@ -18,6 +19,7 @@ import {
   type Session,
   type TestApp,
 } from './harness.js';
+import { createProject, createTask, expectStatus, wsPath } from './work-helpers.js';
 
 // Opt-in: uses only the disposable integration database, an isolated Next process, and Chromium.
 describe.skipIf(process.env.PHASE1_BROWSER !== '1')('Phase 1 browser / real local API', () => {
@@ -319,6 +321,114 @@ describe.skipIf(process.env.PHASE1_BROWSER !== '1')('Phase 1 browser / real loca
     }
     expect(pageErrors).toEqual([]);
   }, 180_000);
+
+  it('prelaunch: an ordinary task keeps no deadline after editing and browser reload', async () => {
+    const project = await createProject(t, owner, workspaceId, { name: 'ممیزی مهلت وظیفه' });
+    await page.goto(`${base}/projects/${project.id}`);
+    await page.getByRole('heading', { name: project.name, exact: true }).waitFor();
+    await page.getByRole('button', { name: 'ایجاد سریع', exact: true }).click();
+    await page.getByRole('menuitem', { name: /^وظیفه جدید/ }).click();
+    const composer = page.getByRole('dialog', { name: 'تعریف وظیفه جدید', exact: true });
+    expect(
+      await composer.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true }).innerText(),
+    ).toContain('بدون مهلت');
+    await composer.getByRole('textbox', { name: 'عنوان وظیفه', exact: true }).fill('ممیزی بدون انتخاب مهلت');
+    const confirmed = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname === `${wsPath(workspaceId)}/tasks` &&
+        response.ok(),
+    );
+    await composer.getByRole('button', { name: 'ایجاد وظیفه', exact: true }).click();
+    const created = await (await confirmed).json();
+    expect(created.dueDate).toBeNull();
+    await composer.waitFor({ state: 'hidden' });
+    const details = page.getByRole('dialog', { name: 'جزئیات وظیفه', exact: true });
+    expect(
+      await details.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true }).innerText(),
+    ).toContain('بدون مهلت');
+    await details.getByRole('textbox', { name: 'عنوان وظیفه', exact: true }).fill('ممیزی مهلت پس از ویرایش');
+    await details.getByRole('button', { name: 'ذخیره تغییرات', exact: true }).click();
+    await details.waitFor({ state: 'hidden' });
+    const edited = await t
+      .http()
+      .get(`${wsPath(workspaceId)}/tasks/${created.id}`)
+      .set(bearer(owner));
+    expectStatus(edited, 200);
+    expect(edited.body).toMatchObject({ title: 'ممیزی مهلت پس از ویرایش', dueDate: null });
+    await page.reload();
+    await page.getByRole('main').getByText('ممیزی مهلت پس از ویرایش', { exact: true }).click();
+    expect(
+      await details.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true }).innerText(),
+    ).toContain('بدون مهلت');
+    const read = await t
+      .http()
+      .get(`${wsPath(workspaceId)}/tasks/${created.id}`)
+      .set(bearer(owner));
+    expectStatus(read, 200);
+    expect(read.body.dueDate).toBeNull();
+    const calendar = await t
+      .http()
+      .get(`${wsPath(workspaceId)}/calendar?from=${created.startDate}&to=${created.startDate}`)
+      .set(bearer(owner));
+    expectStatus(calendar, 200);
+    expect(calendar.body.deadlines.some((entry: { taskId: string }) => entry.taskId === created.id)).toBe(
+      false,
+    );
+    await details.getByRole('button', { name: 'انصراف', exact: true }).click();
+    expect(pageErrors).toEqual([]);
+  }, 120_000);
+
+  it('prelaunch: My Tasks excludes unassigned and other members across project navigation and reload', async () => {
+    const member = await addMember(t, owner, workspaceId, 'member');
+    const first = await createProject(t, owner, workspaceId, {
+      name: 'ممیزی دامنه اول',
+      memberIds: [member.userId],
+    });
+    const second = await createProject(t, owner, workspaceId, {
+      name: 'ممیزی دامنه دوم',
+      memberIds: [member.userId],
+    });
+    const mine = await createTask(t, owner, workspaceId, {
+      projectId: first.id,
+      title: 'ممیزی کار شخصی اول',
+      assigneeIds: [owner.userId],
+    });
+    const across = await createTask(t, owner, workspaceId, {
+      projectId: second.id,
+      title: 'ممیزی کار شخصی دوم',
+      assigneeIds: [owner.userId],
+    });
+    const other = await createTask(t, owner, workspaceId, {
+      projectId: first.id,
+      title: 'ممیزی کار عضو دیگر',
+      assigneeIds: [member.userId],
+    });
+    const unassigned = await createTask(t, owner, workspaceId, {
+      projectId: first.id,
+      title: 'ممیزی کار بدون مسئول',
+      assigneeIds: [],
+    });
+    await page.goto(`${base}/projects/${first.id}`);
+    const main = page.getByRole('main');
+    await main.getByRole('heading', { name: unassigned.title, exact: true }).waitFor();
+    await main.getByRole('heading', { name: other.title, exact: true }).waitFor();
+    const personal = page
+      .getByRole('navigation', { name: 'ناوبری پایین' })
+      .getByRole('link', { name: 'کارهای من', exact: true });
+    await personal.click();
+    await page.waitForURL('**/tasks/mine');
+    for (const reload of [false, true]) {
+      if (reload) await page.reload();
+      await main.getByText(mine.title, { exact: true }).waitFor();
+      await main.getByText(across.title, { exact: true }).waitFor();
+      expect(await main.getByText(other.title, { exact: true }).count()).toBe(0);
+      expect(await main.getByText(unassigned.title, { exact: true }).count()).toBe(0);
+      expect(await main.getByText('۲ وظیفهٔ ارجاع‌شده به من در نتایج', { exact: true }).count()).toBe(1);
+      expect(await personal.getAttribute('aria-current')).toBe('page');
+    }
+    expect(pageErrors).toEqual([]);
+  }, 120_000);
 
   it('uses the existing sign-in flow after the real server confirms session expiry', async () => {
     const expired = await signIn(t);

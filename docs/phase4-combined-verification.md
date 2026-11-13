@@ -248,3 +248,54 @@ The full baseline integration and demo suites were not repeated for this scoped 
 Real SMS.ir acceptance and handset delivery remain unverified. All actual invitation sends
 in these checks use local console transport or mocked HTTP. Provider settings and production
 were not modified.
+
+## Prelaunch critical audit
+
+Invitation fixes are committed as `fc3d87cbf73cf2f704a98f9fd46acdd970a333d8`.
+The audit branch `fix/prelaunch-critical-audit` starts at that commit. Ancestry checks confirm
+that pinned Phase 1 `236d884`, Phase 3 `f4bf926`, Phase 4 `44117fc`, and the combined
+verification baseline `0b9bc7a` are all ancestors.
+
+The deliberately excluded `29b83df` was reviewed through its diff. It contains shared section
+headers, navigation-row styling, unread-count descriptions, keyboard focus checks and larger
+task-detail mobile controls. Those changes are relevant to the remaining touch-target and
+Untitled UI consistency work. It contains no deadline default or personal-task scoping change
+and remains outside this audit branch's ancestry.
+
+### Production findings versus the current local implementation
+
+| Production P1 finding                                    | Current integration state       | Evidence / follow-up                                                                                                                                                                                        |
+| -------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A regular task silently receives today's deadline        | Already corrected locally       | `taskDraft()` starts with `dueDate: null`; the ordinary composer preserves null; API create defaults an omitted deadline to null. Existing persistence and date integration cases pass.                     |
+| My Tasks includes unassigned/other-member tasks          | Already corrected locally       | The mobile destination is `/tasks/mine`. `ScopedTasks` applies `tasksAssignedTo(..., currentUser.id)` before search/filtering and the count uses the resulting list.                                        |
+| Projects hidden behind Filters                           | Already corrected locally       | Independent `/projects` destination, project routes, and permission-gated project trash.                                                                                                                    |
+| More hides useful destinations below appearance controls | Already corrected locally       | Five grouped destination rows; appearance and workspace controls have separate screens.                                                                                                                     |
+| Mobile touch targets below 44px                          | Partially corrected; remains P1 | Shared header actions are 44px. Calendar month controls use the default 36px icon buttons, the event-dot strip has no minimum target, and task-detail close/star controls remain 32px.                      |
+| Project deletion misstates companion chat retention      | Remains P1                      | `ProjectTrash.tsx` still groups the channel into the 40-day trash explanation. The project service permanently archives the companion channel. The confirmation should explain those lifecycles accurately. |
+
+The original two production defects did not reproduce on the integration baseline. This audit
+adds regression coverage around the existing corrections instead of changing their runtime logic.
+The new date regression covers an omitted deadline, replay of the same creation command, title-only
+editing, a fresh API read, and one stored undated task. The personal-scope fixture now includes an
+unassigned task as well as another member's task and checks search results within that scope.
+
+Targeted checks use only the disposable services above:
+
+- Web `task-form-persistence.test.ts` and `mobile-navigation.test.ts`: 19 tests passed.
+- API `task-form-dates.test.ts`: 5 real-database tests passed.
+- The two added real-local-API browser regressions passed (`--testNamePattern=prelaunch:`).
+  The six existing browser cases were skipped by that focused selection. The deadline case creates
+  through the ordinary UI, verifies the POST response, edits only the title, reloads, reopens the
+  task, and confirms that the calendar excludes it. The personal-scope case seeds two projects,
+  another member and an unassigned task, then checks the personal list and its exact count after
+  project navigation and reload.
+- API typechecking passes. Targeted ESLint checks report no errors. Web test files are outside
+  the repository's ESLint include patterns and are exercised by Vitest instead.
+- Formatting and `git diff --check` pass. Production application code, dependency files and
+  migrations are unchanged in this audit. The complete test suite was not repeated.
+
+The focused browser command uses `PHASE1_BROWSER=1`, the disposable environment documented above,
+and `npm.cmd run test:int --workspace @taskin/api -- test/integration/phase1-browser.test.ts --maxWorkers=1 --testNamePattern=prelaunch:`.
+Its log is kept under `.local/prelaunch-audit/browser.log`.
+
+The pre-existing generated `apps/web/AGENTS.md` stays untracked and outside review commits.

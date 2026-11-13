@@ -27,6 +27,7 @@ describe('personal task scope and deadline filters', () => {
     { ...task, id: 'today', assigneeIds: ['me'], dueDate: today, status: 'todo' },
     { ...task, id: 'undated', assigneeIds: ['me'], projectId: 'another-project', dueDate: null },
     { ...task, id: 'other-assignee', assigneeIds: ['someone-else'], dueDate: today },
+    { ...task, id: 'unassigned', assigneeIds: [], dueDate: today },
   ];
   const personal = tasksAssignedTo(tasks, 'me');
   const scope = { projectId: null, search: '', currentUserId: 'me', today };
@@ -46,5 +47,19 @@ describe('personal task scope and deadline filters', () => {
     expect(filterTasks(personal, { ...scope, smartView: 'due-soon' }).map(({ id }) => id)).toEqual(['today']);
     expect(deadlinePeriod('2026-11-14', today)).toBe('upcoming');
     expect(deadlinePeriod(null, today)).toBe('undated');
+  });
+
+  it('keeps the personal scope when searching for an unassigned or another member’s task', () => {
+    for (const excludedId of ['unassigned', 'other-assignee']) {
+      const excluded = tasks.find(({ id }) => id === excludedId)!;
+      const named = tasks.map((task) => ({ ...task, title: task.id }));
+      expect(
+        filterTasks(tasksAssignedTo(named, 'me'), {
+          ...scope,
+          smartView: 'all',
+          search: excluded.id,
+        }),
+      ).toEqual([]);
+    }
   });
 });
