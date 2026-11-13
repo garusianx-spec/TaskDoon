@@ -563,14 +563,14 @@ export function activityFromView(view: ActivityView): ActivityItem {
 
 export function invitationFromView(
   view: InvitationView,
-  departmentName: (id: string | null) => string | undefined,
+  _departmentName: (id: string | null) => string | undefined,
 ): Invitation {
   return {
     id: view.id,
     address: view.address,
     channel: view.channel,
     role: view.role,
-    department: departmentIdFor(departmentName(view.departmentId)),
+    department: view.departmentId ?? '',
     message: view.message,
     invitedAt: view.createdAt,
     invitedById: view.invitedById,

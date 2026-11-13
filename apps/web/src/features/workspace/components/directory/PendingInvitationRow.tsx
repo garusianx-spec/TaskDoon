@@ -1,6 +1,6 @@
 'use client';
 
-import type { Invitation, InvitationChannel } from '@taskin/contracts';
+import type { Department, Invitation, InvitationChannel } from '@taskin/contracts';
 import { DEPARTMENTS, roleLabel } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { CHANNEL_LABELS, formatRecipient } from '@taskin/text';
@@ -15,12 +15,17 @@ export const CHANNEL_ICONS: Readonly<Record<InvitationChannel, typeof SmsIcon>> 
 
 export function PendingInvitationRow({
   invitation,
+  departments,
   onRevoke,
 }: {
   readonly invitation: Invitation;
+  readonly departments: readonly Department[];
   readonly onRevoke: (invitationId: string) => void;
 }) {
-  const departmentName = DEPARTMENTS.find((entry) => entry.id === invitation.department)?.name ?? '';
+  const departmentName =
+    departments.find((entry) => entry.id === invitation.department)?.name ??
+    DEPARTMENTS.find((entry) => entry.id === invitation.department)?.name ??
+    '';
   const Icon = CHANNEL_ICONS[invitation.channel];
   const display = formatRecipient(invitation);
   return (
@@ -47,6 +52,7 @@ export function PendingInvitationRow({
           {`${CHANNEL_LABELS[invitation.channel]}، ${roleLabel(invitation.role)}، ${departmentName}، `}
           <RelativeTime iso={invitation.invitedAt} />
         </span>
+        <span className="text-micro text-fg-tertiary">دعوت‌نامه ثبت شد.</span>
       </span>
       <IconButton
         label={`لغو دعوت ${display}`}

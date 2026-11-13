@@ -69,6 +69,7 @@ import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 import { broadcastJitter, broadcastTimerDelay } from '@/lib/broadcasts';
 import type {
   ConversationDraft,
+  InvitationDraft,
   PickedFile,
   ProjectDraft,
   TaskPatch,
@@ -77,7 +78,7 @@ import type {
   WorkspaceState,
 } from '@/store/workspace-reducer';
 
-export type LivePhase = 'restoring' | 'signed-out' | 'loading' | 'no-workspace' | 'ready';
+export type LivePhase = 'restoring' | 'restore-error' | 'signed-out' | 'loading' | 'no-workspace' | 'ready';
 
 export interface LiveToast {
   readonly id: number;
@@ -337,12 +338,28 @@ export class LiveStore {
     if (this.started) return;
     this.started = true;
     captureInvite();
-    const restored = await session.restore();
+    let restored;
+    try {
+      restored = await session.restore();
+    } catch {
+      this.patch({ phase: 'restore-error' });
+      return;
+    }
     if (!restored) {
       this.patch({ phase: 'signed-out', user: null });
       return;
     }
     await this.load();
+  }
+
+  async retryRestore(): Promise<void> {
+    if (this.status.phase !== 'restore-error') return;
+    this.patch({ phase: 'restoring' });
+    if (session.current) await this.load();
+    else {
+      this.started = false;
+      await this.start();
+    }
   }
 
   /** An invitation link is waiting for the account to sign in. */
@@ -353,6 +370,33 @@ export class LiveStore {
   /** After the sign-in screen: the session exists, load the account's workspace. */
   async signedIn(): Promise<void> {
     await this.load();
+  }
+
+  /** A form command is confirmed by the server before the pending list is updated. */
+  async inviteMembers(draft: InvitationDraft, commandId: string) {
+    const workspaceId = this.workspaceId;
+    const result = await api.workspaces.invite(
+      workspaceId,
+      {
+        recipients: draft.recipients,
+        role: draft.role,
+        departmentId: draft.department || null,
+        message: draft.message,
+      },
+      commandId,
+    );
+    if (workspaceId !== this.workspaceId) return result;
+    const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
+    const added = result.created.map((entry) => invitationFromView(entry, departmentName));
+    const current = this.getState().invitations;
+    this.apply({
+      type: 'sync/merge',
+      patch: {
+        invitations: [...added.filter((entry) => !current.some((item) => item.id === entry.id)), ...current],
+      },
+    });
+    if (added.length) this.notify('دعوت‌نامه ثبت شد.');
+    return result;
   }
 
   /** The first workspace of a new account. Owners need an admin password first. */
@@ -602,7 +646,7 @@ export class LiveStore {
       }
       this.buffered = null;
       this.notify(problemMessage(error, 'بارگذاری فضای کاری ممکن نشد.'));
-      if (!quiet) this.patch({ phase: this.getState().workspaces.length > 0 ? 'ready' : 'signed-out' });
+      if (!quiet) this.patch({ phase: this.getState().workspaces.length > 0 ? 'ready' : 'restore-error' });
     }
   }
 
@@ -1178,6 +1222,7 @@ export class LiveStore {
             const result = await api.workspaces.invite(this.workspaceId, {
               recipients: created.map(({ address, channel }) => ({ address, channel })),
               role: action.draft.role,
+              departmentId: action.draft.department || null,
               message: action.draft.message,
             });
             if (result.rejected.length > 0)

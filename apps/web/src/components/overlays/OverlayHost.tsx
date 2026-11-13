@@ -179,9 +179,15 @@ export function OverlayHost() {
       <InviteMemberModal
         open={active?.kind === 'invite-member'}
         invitations={state.invitations}
+        departments={state.departments}
         onClose={close}
         onRevoke={(invitationId) => dispatch({ type: 'revoke-invitation', invitationId })}
-        onSubmit={(draft) => {
+        onSubmit={async (draft, commandId) => {
+          if (live) {
+            const result = await live.store.inviteMembers(draft, commandId);
+            if (result.rejected.length === 0) close();
+            return result;
+          }
           dispatch({ type: 'invite-members', draft, invitedById: currentUser.id });
           close();
         }}

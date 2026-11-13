@@ -125,6 +125,7 @@ function DirectoryContent() {
                 <PendingInvitationRow
                   key={invitation.id}
                   invitation={invitation}
+                  departments={state.departments}
                   onRevoke={(invitationId) => dispatch({ type: 'revoke-invitation', invitationId })}
                 />
               ))}

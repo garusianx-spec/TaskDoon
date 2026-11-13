@@ -1560,7 +1560,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         invitations: [...created, ...state.invitations],
-        announcement: `${toPersianDigits(created.length)} دعوت‌نامه ارسال شد.`,
+        announcement: `${toPersianDigits(created.length)} دعوت‌نامه ثبت شد.`,
       };
     }
 

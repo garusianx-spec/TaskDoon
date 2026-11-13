@@ -1,8 +1,8 @@
 'use client';
 
-import type { Invitation } from '@taskin/contracts';
+import type { CreateInvitationsResult, Department, Invitation } from '@taskin/contracts';
 import type { InvitationDraft } from '@/store/workspace-reducer';
-import { DEPARTMENTS, ROLES } from '@/data/reference';
+import { ROLES } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { CHANNEL_LABELS, formatRecipient } from '@taskin/text';
@@ -17,8 +17,9 @@ import { useInvitationForm } from '@/features/workspace/hooks/useInvitationForm'
 export interface InviteMemberModalProps {
   readonly open: boolean;
   readonly invitations: readonly Invitation[];
+  readonly departments: readonly Department[];
   readonly onClose: () => void;
-  readonly onSubmit: (draft: InvitationDraft) => void;
+  readonly onSubmit: (draft: InvitationDraft, commandId: string) => Promise<CreateInvitationsResult | void>;
   readonly onRevoke: (invitationId: string) => void;
 }
 const INVITABLE_ROLES = ROLES.filter((role) => !role.locked);
@@ -33,6 +34,7 @@ const INVITABLE_ROLES = ROLES.filter((role) => !role.locked);
 export function InviteMemberModal({
   open,
   invitations,
+  departments,
   onClose,
   onSubmit,
   onRevoke,
@@ -58,22 +60,26 @@ export function InviteMemberModal({
     emptyError,
     byEmail,
     bySms,
-  } = useInvitationForm({ open, invitations, onSubmit });
+    submitting,
+    submitError,
+  } = useInvitationForm({ open, invitations, departments, onSubmit });
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        if (!submitting) onClose();
+      }}
       size="md"
       title="دعوت همکار"
       description="همکاران را با ایمیل یا شماره موبایل دعوت کنید و نقش و دپارتمان آن‌ها را از همین ابتدا تعیین کنید."
       icon={<UserAddIcon size={20} />}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>
             انصراف
           </Button>
-          <Button onClick={submit} iconStart={<SendIcon size={18} />}>
+          <Button onClick={() => void submit()} disabled={submitting} iconStart={<SendIcon size={18} />}>
             {recipients.length > 1 ? `ارسال ${formatCount(recipients.length)} دعوت‌نامه` : 'ارسال دعوت‌نامه'}
           </Button>
         </>
@@ -195,7 +201,10 @@ export function InviteMemberModal({
             hideLabel={false}
             value={department}
             onValueChange={setDepartment}
-            options={DEPARTMENTS.map((entry) => ({ value: entry.id, label: entry.name }))}
+            options={[
+              { value: '', label: 'بدون دپارتمان' },
+              ...departments.map((entry) => ({ value: entry.id, label: entry.name })),
+            ]}
           />
         </div>
 
@@ -207,6 +216,12 @@ export function InviteMemberModal({
           maxLength={280}
           className="min-h-20"
         />
+
+        {submitError && (
+          <p role="alert" className="text-caption text-status-blocked">
+            {submitError}
+          </p>
+        )}
 
         {invitations.length > 0 && (
           <section
@@ -223,7 +238,12 @@ export function InviteMemberModal({
             </div>
             <ul className="flex flex-col gap-1.5">
               {invitations.map((invitation) => (
-                <PendingInvitationRow key={invitation.id} invitation={invitation} onRevoke={onRevoke} />
+                <PendingInvitationRow
+                  key={invitation.id}
+                  invitation={invitation}
+                  departments={departments}
+                  onRevoke={onRevoke}
+                />
               ))}
             </ul>
           </section>
