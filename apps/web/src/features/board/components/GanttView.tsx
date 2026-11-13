@@ -194,7 +194,7 @@ export function GanttView({ tasks, onOpenTask, selectedTaskId }: GanttViewProps)
                     onFocus={(event) => showTooltip(task, event.currentTarget)}
                     onBlur={() => setHovered(null)}
                     aria-describedby={hovered?.task.id === task.id ? tooltipId : undefined}
-                    aria-label={`${task.title} — از ${formatJalali(task.startDate, 'medium')} تا ${formatJalali(task.dueDate, 'medium')}`}
+                    aria-label={`${task.title} — از ${formatJalali(task.startDate, 'medium')}، ${task.dueDate ? `تا ${formatJalali(task.dueDate, 'medium')}` : 'بدون مهلت'}`}
                     style={{ gridRow: 1, gridColumnStart: column + 1, gridColumnEnd: `span ${span}` }}
                     className={cn(
                       // Dark mode lifts status fills to light tints, so the label flips to ink

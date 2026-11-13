@@ -6,6 +6,7 @@ import { directory } from '@/store/directory';
 import { formatJalali } from '@taskin/jalali';
 import { Avatar, Button, Checkbox, Input, Modal, SegmentedControl, Select, Textarea } from '@/components/ui';
 import { JalaliDatePicker } from '@/components/shared/JalaliDatePicker';
+import { FormError } from '@/components/shared/FormError';
 import { CalendarIcon, ClockIcon, MilestoneIcon, NotificationIcon } from '@/components/icons';
 import { NO_PROJECT, TIME_SLOTS, useCalendarEventForm } from '@/features/calendar/hooks/useCalendarEventForm';
 
@@ -15,7 +16,7 @@ export interface CalendarEventModalProps {
   readonly initialDate: string | null;
   readonly currentUserId: string;
   readonly onClose: () => void;
-  readonly onSubmit: (draft: CalendarEventDraft) => void;
+  readonly onSubmit: (draft: CalendarEventDraft, commandId: string) => Promise<void>;
 }
 
 const KIND_ICONS: Readonly<Record<CalendarEventKind, typeof CalendarIcon>> = {
@@ -36,27 +37,54 @@ export function CalendarEventModal({
   onClose,
   onSubmit,
 }: CalendarEventModalProps) {
-  const { form, setForm, setTouched, set, endSlots, titleError, projectError, submit, slotOptions } =
-    useCalendarEventForm({ open, initialDate, currentUserId, onSubmit });
+  const {
+    form,
+    setForm,
+    setTitleTouched,
+    titleRef,
+    set,
+    endSlots,
+    titleError,
+    projectError,
+    timeError,
+    submit,
+    slotOptions,
+    submission,
+  } = useCalendarEventForm({ open, initialDate, currentUserId, onSubmit });
+  const close = () => {
+    if (!submission.isPending()) onClose();
+  };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       size="md"
       title="رویداد تقویم"
       description={`برای ${formatJalali(form.date, 'long')} یک جلسه، یادآور یا نقطه عطف ثبت کنید.`}
       icon={<CalendarIcon size={20} />}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <FormError message={submission.error} className="basis-full" />
+          <Button
+            variant="secondary"
+            className="max-sm:min-h-11"
+            onClick={close}
+            disabled={submission.saving}
+          >
             انصراف
           </Button>
-          <Button onClick={submit}>ثبت در تقویم</Button>
+          <Button className="max-sm:min-h-11" onClick={() => void submit()} loading={submission.saving}>
+            {submission.saving ? 'در حال ثبت…' : 'ثبت در تقویم'}
+          </Button>
         </>
       }
     >
-      <div className="flex flex-col gap-4">
+      <fieldset
+        className="flex min-w-0 flex-col gap-4"
+        disabled={submission.saving}
+        aria-busy={submission.saving || undefined}
+      >
         <SegmentedControl
           ariaLabel="نوع رویداد"
           size="md"
@@ -81,10 +109,13 @@ export function CalendarEventModal({
         />
 
         <Input
+          ref={titleRef}
           label="عنوان"
+          required
           value={form.title}
           onChange={(event) => set('title', event.target.value)}
-          onBlur={() => setTouched(true)}
+          onBlur={() => setTitleTouched(true)}
+          onFocus={() => setTitleTouched(false)}
           placeholder={
             form.kind === 'meeting'
               ? 'مثلاً: بازبینی اسپرینت'
@@ -121,7 +152,7 @@ export function CalendarEventModal({
                 })),
               ]}
             />
-            {projectError && <p className="text-caption text-status-blocked">{projectError}</p>}
+            <FormError message={projectError ?? null} className="text-caption" />
           </div>
 
           {form.kind !== 'milestone' && (
@@ -198,12 +229,14 @@ export function CalendarEventModal({
 
         <Textarea
           label="توضیحات (اختیاری)"
+          maxLength={2000}
           value={form.description}
           onChange={(event) => set('description', event.target.value)}
           placeholder={form.kind === 'meeting' ? 'دستور جلسه یا لینک تماس…' : 'جزئیات بیشتر…'}
           className="min-h-20"
         />
-      </div>
+        <FormError message={timeError ?? null} className="text-caption" />
+      </fieldset>
     </Modal>
   );
 }

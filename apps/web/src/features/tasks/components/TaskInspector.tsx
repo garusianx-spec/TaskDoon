@@ -1,15 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { statusTone } from '@/data/reference';
 import { columnForTask, projectById, userById } from '@/store/selectors';
-import { Badge, Button, IconButton, Input, Textarea, Tooltip } from '@/components/ui';
+import { Button, IconButton, Input, Textarea, Tooltip } from '@/components/ui';
 import { SubtaskList } from '@/features/tasks/components/SubtaskList';
 import { DependencyManager } from '@/features/agile/components/DependencyManager';
 import type { TaskPatch } from '@/store/workspace-reducer';
-import { CloseIcon, StarFilledIcon, StarIcon } from '@/components/icons';
+import { ChevronDownIcon, CloseIcon, StarFilledIcon, StarIcon } from '@/components/icons';
 import { type TaskInspectorProps } from '@/features/tasks/types/inspector';
-import { TaskInspectorFields } from '@/features/tasks/components/TaskInspectorFields';
+import { TaskInspectorFields, TaskInspectorMetadata } from '@/features/tasks/components/TaskInspectorFields';
 import { TaskSourceMessage } from '@/features/tasks/components/TaskSourceMessage';
 import { TaskInspectorFiles } from '@/features/tasks/components/TaskInspectorFiles';
 import { TaskDiscussion } from '@/features/tasks/components/TaskDiscussion';
@@ -37,6 +36,7 @@ export function TaskInspector({
   onOpenSource,
 }: TaskInspectorProps) {
   const formRef = useRef<HTMLFormElement | null>(null);
+  const metadataRef = useRef<HTMLDetailsElement | null>(null);
   const savingRef = useRef(false);
   const [draft, setDraft] = useState<TaskPatch>({});
   const [columnId, setColumnId] = useState<string | undefined>();
@@ -73,11 +73,13 @@ export function TaskInspector({
       return;
     }
     if (task.dueDate && task.startDate > task.dueDate) {
+      if (metadataRef.current) metadataRef.current.open = true;
       setError('مهلت انجام را در تاریخ شروع یا پس از آن انتخاب کنید.');
       return;
     }
     const invalid = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
     if (invalid) {
+      if (metadataRef.current?.contains(invalid)) metadataRef.current.open = true;
       invalid.focus();
       return;
     }
@@ -125,17 +127,8 @@ export function TaskInspector({
       aria-busy={saving || fileBusy}
     >
       <fieldset disabled={saving || fileBusy} className="min-w-0 border-0 p-0">
-        {/* Stays in view while the dialog scrolls, so closing is always one click away. */}
-        <header className="sticky top-0 z-10 flex shrink-0 items-start gap-2 border-b border-secondary bg-surface p-4 sm:px-6">
+        <header className="flex shrink-0 items-start gap-2 border-b border-secondary bg-surface p-4 sm:px-6">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              <Badge tone={statusTone(task.status)} size="sm" dot>
-                {column?.title ?? task.status}
-              </Badge>
-              <span className="text-micro font-medium text-fg-quaternary numeric latin-inline">
-                {task.code}
-              </span>
-            </div>
             <Input
               label="عنوان وظیفه"
               hint="عنوان وظیفه را ویرایش کنید."
@@ -150,7 +143,10 @@ export function TaskInspector({
               maxLength={200}
               className="font-semibold"
             />
-            {project && <p className="truncate text-caption text-fg-tertiary">{project.name}</p>}
+            <p className="flex flex-wrap items-center gap-x-2 text-caption text-fg-tertiary">
+              {project && <span className="break-words">{project.name}</span>}
+              <span className="font-medium numeric latin-inline">{task.code}</span>
+            </p>
           </div>
 
           <Tooltip content={task.starred ? 'حذف از ستاره‌دارها' : 'افزودن به ستاره‌دارها'}>
@@ -171,16 +167,11 @@ export function TaskInspector({
           />
         </header>
 
-        {/*
-        From `md` the dialog is wide enough for two columns: the work itself (description,
-        checklist, source, files, discussion) at the start, the properties beside it.
-      */}
-        <div className="grid gap-6 p-4 sm:p-6 md:grid-cols-[minmax(0,1fr)_17rem] md:items-start">
+        <div className="flex min-w-0 flex-col gap-5 p-4 sm:p-6">
           <TaskInspectorFields
             task={task}
             column={column}
             columns={columns}
-            reviewer={reviewer}
             onColumn={(nextColumnId) => {
               setColumnId(nextColumnId);
               setError(null);
@@ -188,7 +179,7 @@ export function TaskInspector({
             onPatch={onPatch}
           />
 
-          <div className="flex min-w-0 flex-col gap-6 md:col-start-1 md:row-start-1">
+          <div className="flex min-w-0 flex-col gap-5">
             <section aria-label="توضیحات وظیفه">
               <h3 className="mb-2 text-title-sm font-semibold text-fg-primary">توضیحات</h3>
               <Textarea
@@ -212,7 +203,7 @@ export function TaskInspector({
               />
             </section>
 
-            <DependencyManager task={task} />
+            <TaskDiscussion currentUser={currentUser} comments={task.comments} onAddComment={onAddComment} />
 
             {source && <TaskSourceMessage source={source} onOpenSource={onOpenSource} />}
 
@@ -226,7 +217,17 @@ export function TaskInspector({
               setError={setError}
             />
 
-            <TaskDiscussion currentUser={currentUser} comments={task.comments} onAddComment={onAddComment} />
+            <DependencyManager task={task} />
+
+            <details ref={metadataRef} className="group rounded-xl border border-secondary bg-surface">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 text-body-sm font-semibold text-fg-primary hover:bg-hover [&::-webkit-details-marker]:hidden">
+                جزئیات بیشتر
+                <ChevronDownIcon size={16} className="shrink-0 text-fg-secondary group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-secondary p-3">
+                <TaskInspectorMetadata task={task} reviewer={reviewer} onPatch={onPatch} />
+              </div>
+            </details>
           </div>
         </div>
       </fieldset>

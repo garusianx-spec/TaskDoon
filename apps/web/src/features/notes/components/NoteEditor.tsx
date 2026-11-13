@@ -10,6 +10,8 @@ import { formatFraction } from '@/lib/format';
 import { TAG_DOT } from '@/lib/tag-tone';
 import { checklistProgress, toggleChecklistLine } from '@taskin/text';
 import { useNamespacedId } from '@/hooks/useId';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { FormError } from '@/components/shared/FormError';
 import {
   Button,
   IconButton,
@@ -48,7 +50,7 @@ export interface NoteEditorProps {
   readonly linkedTask: Task | undefined;
   readonly onPatch: (patch: NotePatch) => void;
   readonly onSave: () => Promise<void>;
-  readonly onDelete: () => void;
+  readonly onDelete: () => Promise<void>;
   readonly onConvertToTask: () => void;
   readonly onOpenTask: (taskId: string) => void;
   /** Phone width only: back to the list. */
@@ -76,6 +78,7 @@ export function NoteEditor({
   const [mode, setMode] = useState<Mode>(() => (note.body.trim() ? 'preview' : 'edit'));
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>();
+  const removal = useFormSubmission();
   const busy = useRef(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const blocksRef = useRef<NoteBlockEditorHandle | null>(null);
@@ -83,7 +86,7 @@ export function NoteEditor({
   const progress = checklistProgress(note.body);
   const isBlank = !note.title && !note.body;
   const save = async () => {
-    if (busy.current) return;
+    if (busy.current || removal.isPending()) return;
     if (!note.title.trim() && !note.body.trim()) {
       titleRef.current?.focus();
       setSaveError('برای ذخیره، عنوان یا متن یادداشت را بنویسید.');
@@ -101,14 +104,18 @@ export function NoteEditor({
       setSaving(false);
     }
   };
+  const remove = async (close: () => void) => {
+    if (busy.current) return;
+    if (await removal.submit(note.id, onDelete, 'یادداشت حذف نشد. دوباره تلاش کنید.')) close();
+  };
 
   return (
     <article
       aria-labelledby={`${id}-title-label`}
-      aria-busy={saving}
+      aria-busy={saving || removal.saving}
       className="flex h-full min-h-0 flex-col bg-surface"
     >
-      <fieldset disabled={saving} className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <fieldset disabled={saving || removal.saving} className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-2 border-b border-secondary px-3 py-2.5 sm:px-4">
           <IconButton
             label="بازگشت به فهرست یادداشت‌ها"
@@ -194,14 +201,12 @@ export function NoteEditor({
                       size="sm"
                       variant="destructive"
                       fullWidth
-                      onClick={() => {
-                        close();
-                        onDelete();
-                      }}
+                      loading={removal.saving}
+                      onClick={() => void remove(close)}
                     >
-                      حذف
+                      {removal.saving ? 'در حال حذف…' : 'حذف'}
                     </Button>
-                    <Button size="sm" variant="secondary" fullWidth onClick={close}>
+                    <Button size="sm" variant="secondary" fullWidth disabled={removal.saving} onClick={close}>
                       انصراف
                     </Button>
                   </div>
@@ -240,6 +245,7 @@ export function NoteEditor({
 
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-5 sm:px-8">
+            <FormError message={removal.error} />
             <label id={`${id}-title-label`} htmlFor={`${id}-title`} className="sr-only">
               عنوان یادداشت
             </label>

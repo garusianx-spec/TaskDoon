@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import type { Project } from '@taskin/contracts';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -7,6 +8,9 @@ import { PROJECT_TRASH_DAYS, type TrashedProject } from '@/store/workspace-reduc
 import { Button, Modal, RelativeTime } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { FormError } from '@/components/shared/FormError';
+import { useResetOnOpen } from '@/hooks/useResetOnOpen';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { ArchiveIcon, FolderIcon, RefreshIcon, TrashIcon } from '@/components/icons';
 import { TONE_CLASSES } from '@/features/workspace/components/WorkspaceAvatar';
 
@@ -18,17 +22,26 @@ export function ProjectDeleteDialog({
 }: {
   readonly project: Project | null;
   readonly onClose: () => void;
-  readonly onConfirm: () => void;
+  readonly onConfirm: () => Promise<void>;
 }) {
+  const submission = useFormSubmission();
+  useResetOnOpen(project !== null, submission.reset, project?.id);
   return (
     <ConfirmDialog
       open={project !== null}
-      onClose={onClose}
+      onClose={() => {
+        if (!submission.isPending()) onClose();
+      }}
       title={project ? `حذف پروژه «${project.name}»` : 'حذف پروژه'}
       description={`پروژه، وظایف و کانال گفتگوی آن از همه‌جا پنهان می‌شوند و ${formatCount(PROJECT_TRASH_DAYS)} روز در «آرشیو / سطل زباله» می‌مانند.`}
       icon={<TrashIcon size={20} />}
       confirmLabel="انتقال به سطل زباله"
-      onConfirm={onConfirm}
+      onConfirm={() =>
+        void submission.submit(project?.id, onConfirm, 'پروژه به سطل زباله منتقل نشد. دوباره تلاش کنید.')
+      }
+      busy={submission.saving}
+      busyLabel="در حال انتقال…"
+      error={submission.error}
     >
       <p className="text-body-sm text-fg-secondary">
         {`تا ${formatCount(PROJECT_TRASH_DAYS)} روز می‌توانید آن را با همه وظایفش بازیابی کنید؛ پس از آن برای همیشه پاک می‌شود. پیام‌های کانالش پاک نمی‌شوند.`}
@@ -47,23 +60,71 @@ export function ProjectTrashModal({
   open,
   entries,
   onClose,
+  onLoad,
   onRestore,
 }: {
   readonly open: boolean;
   readonly entries: readonly TrashedProject[];
   readonly onClose: () => void;
-  readonly onRestore: (projectId: string) => void;
+  readonly onLoad?: () => Promise<void>;
+  readonly onRestore: (projectId: string) => Promise<void>;
 }) {
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadResult, setLoadResult] = useState<{ attempt: number; ok: boolean } | null>(null);
+  const [target, setTarget] = useState<string | null>(null);
+  const submission = useFormSubmission();
+  useResetOnOpen(open, () => {
+    setLoadResult(null);
+    setTarget(null);
+    submission.reset();
+  });
+
+  useEffect(() => {
+    if (!open || !onLoad) return;
+    let active = true;
+    const settle = (ok: boolean) => {
+      if (active) setLoadResult({ attempt: loadAttempt, ok });
+    };
+    void onLoad().then(
+      () => settle(true),
+      () => settle(false),
+    );
+    return () => {
+      active = false;
+    };
+  }, [open, onLoad, loadAttempt]);
+
+  const loading = onLoad !== undefined && loadResult?.attempt !== loadAttempt;
+  const failed = !loading && loadResult?.ok === false;
+  const restore = async (projectId: string) => {
+    if (submission.isPending()) return;
+    setTarget(projectId);
+    await submission.submit(projectId, () => onRestore(projectId), 'پروژه بازیابی نشد. دوباره تلاش کنید.');
+  };
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        if (!submission.isPending()) onClose();
+      }}
       size="md"
       title="آرشیو / سطل زباله"
       description={`پروژه‌های حذف‌شده تا ${formatCount(PROJECT_TRASH_DAYS)} روز بازیابی‌پذیرند و پس از آن برای همیشه پاک می‌شوند.`}
       icon={<ArchiveIcon size={20} />}
     >
-      {entries.length === 0 ? (
+      {loading ? (
+        <p role="status" className="py-3 text-body-sm text-fg-secondary">
+          در حال بارگذاری سطل زباله…
+        </p>
+      ) : failed ? (
+        <div className="flex flex-col items-start gap-3">
+          <FormError message="سطل زباله بارگذاری نشد. دوباره تلاش کنید." />
+          <Button variant="secondary" onClick={() => setLoadAttempt((value) => value + 1)}>
+            تلاش دوباره
+          </Button>
+        </div>
+      ) : entries.length === 0 ? (
         <EmptyState
           compact
           icon={<ArchiveIcon size={20} />}
@@ -77,7 +138,7 @@ export function ProjectTrashModal({
             return (
               <li
                 key={entry.project.id}
-                className="flex items-center gap-3 rounded-xl border border-secondary bg-sunken p-3"
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-secondary bg-sunken p-3"
               >
                 <span
                   className={cn(
@@ -108,10 +169,15 @@ export function ProjectTrashModal({
                   variant="secondary"
                   iconStart={<RefreshIcon size={16} />}
                   aria-label={`بازیابی ${entry.project.name}`}
-                  onClick={() => onRestore(entry.project.id)}
+                  loading={submission.saving && target === entry.project.id}
+                  disabled={submission.saving}
+                  onClick={() => void restore(entry.project.id)}
                 >
-                  بازیابی
+                  {submission.saving && target === entry.project.id ? 'در حال بازیابی…' : 'بازیابی'}
                 </Button>
+                {target === entry.project.id && (
+                  <FormError message={submission.error} className="basis-full" />
+                )}
               </li>
             );
           })}

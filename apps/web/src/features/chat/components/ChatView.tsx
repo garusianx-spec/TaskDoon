@@ -149,7 +149,7 @@ export function ChatView({
       )}
       {!conversation.archived && onSendScheduledNow && onCancelScheduled && (
         <ScheduledMessagesModal
-          open={scheduledOpen && scheduled.length > 0}
+          open={scheduledOpen}
           entries={scheduled}
           onClose={() => setScheduledOpen(false)}
           onSendNow={onSendScheduledNow}
@@ -177,8 +177,8 @@ export function ChatView({
           }}
           {...(onSchedule
             ? {
-                onSchedule: (text: string, at: Date) => {
-                  onSchedule(text, replyToId, at);
+                onSchedule: async (text: string, at: Date, commandId: string) => {
+                  await onSchedule(text, replyToId, at, commandId);
                   setReplyToId(null);
                 },
               }

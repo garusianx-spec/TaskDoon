@@ -13,6 +13,7 @@ import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { ProfileMenu } from '@/components/layout/ProfileMenu';
 import { QuickCreateMenu } from '@/components/layout/QuickCreateMenu';
+import { isRoute, workspaceRoutes } from '@/lib/workspace-navigation';
 import {
   AddIcon,
   CalendarIcon,
@@ -58,7 +59,10 @@ export function NavRail() {
       <ul aria-labelledby="desktop-navigation-title" className="flex flex-1 flex-col items-center gap-1">
         {MODULES.map((module) => {
           const Icon = MODULE_ICONS[module.id];
-          const active = pathname.startsWith(module.href);
+          const active =
+            isRoute(pathname, module.href) ||
+            (module.id === 'tasks' &&
+              [workspaceRoutes.projects, workspaceRoutes.myTasks].some((href) => isRoute(pathname, href)));
           const badge = module.id === 'chats' && totalUnread > 0 ? formatCount(totalUnread) : null;
 
           return (
@@ -96,10 +100,14 @@ export function NavRail() {
         <Tooltip content="نقش‌ها و تنظیمات" placement="start">
           <Link
             href="/settings/roles"
-            aria-current={pathname.startsWith('/settings') ? 'page' : undefined}
+            aria-current={
+              isRoute(pathname, '/settings') || isRoute(pathname, workspaceRoutes.workspaceSettings)
+                ? 'page'
+                : undefined
+            }
             className={cn(
               'flex size-10 items-center justify-center rounded-xl transition-colors',
-              pathname.startsWith('/settings')
+              isRoute(pathname, '/settings') || isRoute(pathname, workspaceRoutes.workspaceSettings)
                 ? 'bg-brand-subtle text-fg-brand'
                 : 'text-fg-tertiary hover:bg-hover hover:text-fg-primary',
             )}

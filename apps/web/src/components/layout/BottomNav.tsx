@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { CountPill } from '@/components/ui';
-import { CalendarIcon, GridIcon, HomeIcon, MessagesIcon, TaskSquareIcon } from '@/components/icons';
+import { FolderIcon, GridIcon, HomeIcon, MessagesIcon, TaskSquareIcon } from '@/components/icons';
+import { mobileTabFor, workspaceRoutes } from '@/lib/workspace-navigation';
 
 interface MobileTab {
   readonly href: string;
@@ -15,11 +16,11 @@ interface MobileTab {
 }
 
 const TABS: readonly MobileTab[] = [
-  { href: '/feed', label: 'میز کار', Icon: HomeIcon },
-  { href: '/tasks', label: 'وظایف من', Icon: TaskSquareIcon },
-  { href: '/chats', label: 'گفتگوها', Icon: MessagesIcon },
-  { href: '/calendar', label: 'تقویم', Icon: CalendarIcon },
-  { href: '/more', label: 'بیشتر', Icon: GridIcon },
+  { href: workspaceRoutes.today, label: 'امروز', Icon: HomeIcon },
+  { href: workspaceRoutes.myTasks, label: 'کارهای من', Icon: TaskSquareIcon },
+  { href: workspaceRoutes.projects, label: 'پروژه‌ها', Icon: FolderIcon },
+  { href: workspaceRoutes.chats, label: 'گفت‌وگوها', Icon: MessagesIcon },
+  { href: workspaceRoutes.more, label: 'بیشتر', Icon: GridIcon },
 ];
 
 /**
@@ -28,6 +29,7 @@ const TABS: readonly MobileTab[] = [
  */
 export function BottomNav() {
   const pathname = usePathname();
+  const currentTab = mobileTabFor(pathname);
   const { totalUnread } = useWorkspace();
 
   return (
@@ -37,21 +39,28 @@ export function BottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {TABS.map(({ href, label, Icon }) => {
-        const active = pathname.startsWith(href);
-        const badge = href === '/chats' && totalUnread > 0 ? formatCount(totalUnread) : null;
+        const active = currentTab === href;
+        const badge = href === workspaceRoutes.chats && totalUnread > 0 ? formatCount(totalUnread) : null;
 
         return (
           <Link
             key={href}
             href={href}
+            aria-label={label}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'relative flex flex-1 flex-col items-center gap-0.5 py-2 transition-colors',
-              active ? 'text-fg-brand' : 'text-fg-tertiary',
+              'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-center transition-colors',
+              'focus-visible:z-10 focus-visible:ring-inset',
+              active ? 'text-fg-brand' : 'text-fg-tertiary hover:text-fg-primary',
             )}
           >
-            <span className="relative">
-              <Icon size={22} variant={active ? 'bold' : 'linear'} />
+            <span
+              className={cn(
+                'relative flex h-6 w-9 items-center justify-center rounded-full',
+                active && 'bg-brand-subtle',
+              )}
+            >
+              <Icon size={20} variant={active ? 'bold' : 'linear'} />
               {badge && (
                 <CountPill
                   value={badge}
@@ -60,7 +69,14 @@ export function BottomNav() {
                 />
               )}
             </span>
-            <span className={cn('text-micro', active ? 'font-semibold' : 'font-medium')}>{label}</span>
+            <span
+              className={cn(
+                'max-w-full break-words text-caption leading-tight',
+                active ? 'font-bold' : 'font-medium',
+              )}
+            >
+              {label}
+            </span>
           </Link>
         );
       })}

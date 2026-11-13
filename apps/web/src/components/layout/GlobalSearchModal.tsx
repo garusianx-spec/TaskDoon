@@ -120,7 +120,7 @@ export function GlobalSearchModal({
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-body-sm font-medium text-fg-primary">{task.title}</span>
                       <span className="truncate text-micro text-fg-tertiary numeric">
-                        {`${task.code}، ${formatJalali(task.dueDate, 'medium')}`}
+                        {`${task.code}، ${task.dueDate ? formatJalali(task.dueDate, 'medium') : 'بدون مهلت'}`}
                       </span>
                     </span>
                     <Badge tone={statusTone(task.status)} size="sm" dot>

@@ -9,6 +9,7 @@ import { NavRail } from '@/components/layout/NavRail';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { OperationSuccessToast } from '@/components/layout/OperationSuccessToast';
 import { Drawer } from '@/components/ui';
 import { TaskInspector } from '@/features/tasks/components/TaskInspector';
 import type { TaskSourceView } from '@/features/tasks/types/inspector';
@@ -20,6 +21,7 @@ export interface AppShellProps {
   /** Contextual sidebar for the active module; `null` on modules that have none. */
   readonly sidebar?: ReactNode;
   readonly children: ReactNode;
+  readonly pageTitle?: string | undefined;
   /**
    * Mobile only. While false the sidebar fills the screen (list view); while true the main
    * area takes over (detail view). Desktop always shows both columns.
@@ -36,7 +38,7 @@ export interface AppShellProps {
  * modal dialog — composers, search, notifications, account — lives in the global
  * `OverlayProvider` instead, so it can be opened from anywhere via `useOverlays()`.
  */
-export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppShellProps) {
+export function AppShell({ sidebar, children, pageTitle, mobileShowsDetail = false }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { state, dispatch, saveTask, currentUser, isPinned, isMuted } = useWorkspace();
@@ -99,7 +101,7 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
       <div className="flex min-w-0 flex-1 lg:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <SystemBroadcastBanner />
-          <TopAppBar />
+          <TopAppBar {...(pageTitle ? { pageTitle } : {})} />
 
           <div className="flex min-h-0 flex-1">
             {sidebar ? (
@@ -220,7 +222,9 @@ export function AppShell({ sidebar, children, mobileShowsDetail = false }: AppSh
       {/* Agile tracking: a task reached Done while still blocked (a warning; the move stands). */}
       <BlockedDoneNotice />
 
-      {/* Single live region for non-visual state changes (board moves, task creation). */}
+      <OperationSuccessToast />
+
+      {/* Non-visual state changes such as board moves. Operation toasts announce themselves. */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {state.announcement}
       </div>

@@ -67,7 +67,7 @@ describe('profile and note forms', () => {
         linkedTask: undefined,
         onPatch: () => undefined,
         onSave: async () => undefined,
-        onDelete: () => undefined,
+        onDelete: async () => undefined,
         onConvertToTask: () => undefined,
         onOpenTask: () => undefined,
         onBack: () => undefined,

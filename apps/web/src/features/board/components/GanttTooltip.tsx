@@ -38,9 +38,12 @@ export function GanttTooltip({
           <span className="text-white/60 numeric latin-inline">{hovered.task.code}</span>
         </span>
         <span className="text-micro text-white/80 numeric">
-          {`${formatJalali(hovered.task.startDate, 'medium')} تا ${formatJalali(hovered.task.dueDate, 'medium')}، ${formatCount(
-            daysBetween(parseISODate(hovered.task.startDate), parseISODate(hovered.task.dueDate)) + 1,
-          )} روز`}
+          {formatJalali(hovered.task.startDate, 'medium')}
+          {hovered.task.dueDate
+            ? ` تا ${formatJalali(hovered.task.dueDate, 'medium')}، ${formatCount(
+                daysBetween(parseISODate(hovered.task.startDate), parseISODate(hovered.task.dueDate)) + 1,
+              )} روز`
+            : '، بدون مهلت'}
         </span>
       </div>,
       document.body,

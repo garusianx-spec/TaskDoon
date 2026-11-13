@@ -1,7 +1,7 @@
 'use client';
 
 import type { Task } from '@taskin/contracts';
-import { addDays, formatJalali } from '@taskin/jalali';
+import { addDays, formatJalali, toISODate } from '@taskin/jalali';
 import { directory } from '@/store/directory';
 import { Avatar, BottomSheet } from '@/components/ui';
 import { MenuItem, MenuList } from '@/components/ui/Menu';
@@ -18,6 +18,9 @@ export interface PostponeSheetProps {
 export function PostponeSheet({ task, onClose, onPostpone, onReassign }: PostponeSheetProps) {
   if (!task) return null;
 
+  const today = toISODate(new Date());
+  const from = task.dueDate ?? (task.startDate > today ? task.startDate : today);
+
   const presets = [
     { label: 'فردا', days: 1 },
     { label: 'سه روز دیگر', days: 3 },
@@ -28,10 +31,10 @@ export function PostponeSheet({ task, onClose, onPostpone, onReassign }: Postpon
     <BottomSheet open onClose={onClose} title="تعویق یا ارجاع وظیفه" description={task.title}>
       <MenuList>
         <p className="px-2.5 pb-1 pt-2 text-micro font-semibold uppercase tracking-wide text-fg-quaternary">
-          تعویق مهلت
+          {task.dueDate ? 'تعویق مهلت' : 'تعیین مهلت'}
         </p>
         {presets.map((preset) => {
-          const nextDate = addDays(task.dueDate, preset.days);
+          const nextDate = addDays(from, preset.days);
           return (
             <MenuItem
               key={preset.label}

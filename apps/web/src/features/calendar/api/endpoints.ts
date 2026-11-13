@@ -6,9 +6,10 @@ export const calendarEndpoints = {
   calendar: {
     range: (workspaceId: string, from: string, to: string) =>
       http.get<CalendarView>(`${workspacePath(workspaceId)}/calendar${query({ from, to })}`),
-    create: (workspaceId: string, body: CreateCalendarEventBody) =>
+    create: (workspaceId: string, body: CreateCalendarEventBody, idempotencyKey?: string) =>
       http.post<CalendarEventView>(`${workspacePath(workspaceId)}/calendar/events`, body, {
         idempotent: true,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       }),
   },
 };

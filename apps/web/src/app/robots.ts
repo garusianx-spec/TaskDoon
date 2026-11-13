@@ -14,6 +14,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
           '/api/',
           '/feed',
           '/tasks',
+          '/projects',
           '/chats',
           '/notes',
           '/calendar',

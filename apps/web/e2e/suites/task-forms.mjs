@@ -84,6 +84,7 @@ check(
   (await details.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0,
   'the time-tracking section is removed',
 );
+await details.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 check(await visible(details.getByLabel('برآورد زمان وظیفه')), 'estimated time is retained');
 check(
   await visible(details.getByRole('button', { name: 'انتخاب مهلت انجام', exact: true })),
@@ -112,6 +113,7 @@ check(
     'توضیحات ذخیره‌شده',
   'saved description remains after reopening',
 );
+await details.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 check(
   (await details.getByLabel('برآورد زمان وظیفه').inputValue()) === '۲ ساعت',
   'saved estimated time remains after reopening',

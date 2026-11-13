@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import type { TaskPriority } from '@taskin/contracts';
 import { TASK_PRIORITIES } from '@/data/reference';
 import { projectColumns } from '@/store/selectors';
@@ -11,44 +12,77 @@ import { FlagIcon } from '@/components/icons';
 import { type CreateTaskModalProps } from '@/features/tasks/types/create-task';
 import { type CreateTaskForm } from '@/features/tasks/hooks/useCreateTaskForm';
 
-export function TaskPlanningFields({
+export function TaskProjectField({
   model,
   fixedProjectId,
   columns,
+}: { readonly model: CreateTaskForm } & Pick<CreateTaskModalProps, 'fixedProjectId' | 'columns'>) {
+  const { form, setForm, setSubmitError, projects } = model;
+  if (fixedProjectId !== undefined) return null;
+  return (
+    <Select
+      label="پروژه"
+      hideLabel={false}
+      value={form.projectId}
+      onValueChange={(projectId) => {
+        setSubmitError(null);
+        setForm((current) => ({
+          ...current,
+          projectId,
+          // A custom column belongs to one board. Keep the status when switching projects.
+          boardColumnId: projectColumns(columns, projectId).some(
+            (column) => column.id === current.boardColumnId,
+          )
+            ? current.boardColumnId
+            : null,
+        }));
+      }}
+      options={projects.map((project) => ({ value: project.id, label: project.name }))}
+    />
+  );
+}
+
+export function TaskDeadlineField({
+  model,
   timeZone,
-}: { readonly model: CreateTaskForm } & Pick<
-  CreateTaskModalProps,
-  'fixedProjectId' | 'columns' | 'timeZone'
->) {
-  const { form, setForm, setSubmitError, today, boardColumns, columnValue, projects } = model;
+}: { readonly model: CreateTaskForm } & Pick<CreateTaskModalProps, 'timeZone'>) {
+  const { form, setForm, deadlineError, setDeadlineError } = model;
+  const errorId = useId();
+  const changeDeadline = (dueDate: string | null) => {
+    setDeadlineError(null);
+    setForm((current) => ({ ...current, dueDate }));
+  };
+
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-body-sm font-medium text-fg-secondary">مهلت انجام (اختیاری)</span>
+      <JalaliDatePicker
+        label="انتخاب مهلت انجام"
+        emptyLabel="بدون مهلت"
+        value={form.dueDate}
+        timeZone={timeZone}
+        onChange={changeDeadline}
+        onClear={() => changeDeadline(null)}
+        invalid={Boolean(deadlineError)}
+        describedBy={deadlineError ? errorId : undefined}
+      />
+      {deadlineError && (
+        <p id={errorId} role="alert" className="text-caption text-status-blocked">
+          {deadlineError}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function TaskPlanningFields({
+  model,
+  timeZone,
+}: { readonly model: CreateTaskForm } & Pick<CreateTaskModalProps, 'timeZone'>) {
+  const { form, setForm, setDeadlineError, today, boardColumns, columnValue } = model;
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {fixedProjectId === undefined && (
-          <Select
-            label="پروژه"
-            hideLabel={false}
-            value={form.projectId}
-            onValueChange={(projectId) => {
-              setSubmitError(null);
-              setForm((current) => ({
-                ...current,
-                projectId,
-                // Another project's custom column is not on this board; its status still holds.
-                boardColumnId: projectColumns(columns, projectId).some(
-                  (column) => column.id === current.boardColumnId,
-                )
-                  ? current.boardColumnId
-                  : null,
-              }));
-            }}
-            options={projects.map((project) => ({
-              value: project.id,
-              label: project.name,
-            }))}
-          />
-        )}
-
         <Select
           label="ستون بورد"
           hideLabel={false}
@@ -82,31 +116,17 @@ export function TaskPlanningFields({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-body-sm font-medium text-fg-secondary">تاریخ شروع</span>
-          <JalaliDatePicker
-            label="انتخاب تاریخ شروع"
-            value={form.startDate ?? today()}
-            timeZone={timeZone}
-            onChange={(startDate) => {
-              setSubmitError(null);
-              setForm((current) => ({ ...current, startDate }));
-            }}
-          />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-body-sm font-medium text-fg-secondary">مهلت انجام</span>
-          <JalaliDatePicker
-            label="انتخاب مهلت انجام"
-            value={form.dueDate ?? today()}
-            timeZone={timeZone}
-            onChange={(dueDate) => {
-              setSubmitError(null);
-              setForm((current) => ({ ...current, dueDate }));
-            }}
-          />
-        </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <span className="text-body-sm font-medium text-fg-secondary">تاریخ شروع</span>
+        <JalaliDatePicker
+          label="انتخاب تاریخ شروع"
+          value={form.startDate ?? today()}
+          timeZone={timeZone}
+          onChange={(startDate) => {
+            setDeadlineError(null);
+            setForm((current) => ({ ...current, startDate }));
+          }}
+        />
       </div>
 
       {/* Agile tracking: a plain task on the board unless chosen otherwise. */}

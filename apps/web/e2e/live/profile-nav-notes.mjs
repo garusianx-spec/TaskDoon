@@ -213,5 +213,28 @@ export async function verifyProfileNavNotes(page, { runId }) {
     'Save resets the editor while retaining its canonical custom notebook',
   );
   await page.screenshot({ path: `${out}/phase3_live_notes.png` });
+  const customRow = page
+    .getByRole('region', { name: `فهرست ${customLabel}` })
+    .getByRole('button')
+    .filter({ hasText: `متن ${customLabel}` });
+  await customRow.click();
+  await editor.getByRole('button', { name: 'حذف یادداشت', exact: true }).click();
+  const deleted = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'DELETE' &&
+      new URL(response.url()).pathname.endsWith(`/notes/${customNote.id}`),
+  );
+  await page
+    .getByRole('dialog', { name: 'تایید حذف یادداشت' })
+    .getByRole('button', { name: 'حذف', exact: true })
+    .click();
+  check(
+    (await deleted).ok() && (await eventually(async () => (await customRow.count()) === 0)),
+    'note deletion removes the saved row after the server responds',
+  );
+  check(
+    await visible(page.getByRole('status').filter({ hasText: 'یادداشت حذف شد.' })),
+    'note deletion shows its confirmed success message',
+  );
   return { note: persisted[0], fullName: originalName };
 }

@@ -22,9 +22,10 @@ export const chatEndpoints = {
       http.delete<void>(`${workspacePath(workspaceId)}/conversations/${id}`, { confirmTitle }),
     get: (workspaceId: string, conversationId: string) =>
       http.get<ConversationDetail>(`${workspacePath(workspaceId)}/conversations/${conversationId}`),
-    create: (workspaceId: string, body: CreateConversationBody) =>
+    create: (workspaceId: string, body: CreateConversationBody, idempotencyKey?: string) =>
       http.post<ConversationDetail>(`${workspacePath(workspaceId)}/conversations`, body, {
         idempotent: true,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       }),
     updateMine: (workspaceId: string, conversationId: string, body: UpdateMyConversationBody) =>
       http.put<ConversationView>(`${workspacePath(workspaceId)}/conversations/${conversationId}/me`, body),

@@ -5,6 +5,7 @@ import { ApiProblem } from '@/lib/api-client';
 import { taskDraft } from '@/store/drafts';
 import { LIVE_EMPTY_STATE } from '@/store/initial-state';
 import { LiveStore } from '@/store/live/live-store';
+import { calendarItemsByDate, filterTasks, isOverdue } from '@/store/selectors';
 import { workspaceReducer, type WorkspaceAction, type WorkspaceState } from '@/store/workspace-reducer';
 
 const taskId = '01900000-0000-7000-8000-000000000021';
@@ -167,6 +168,25 @@ describe('task form request persistence', () => {
       { type: 'create-task', draft, authorId: 'owner' },
     );
     expect(state.tasks[0]?.startDate).toBe(draft.startDate);
+  });
+
+  it('keeps an undated task on the board and out of deadline views before and after confirmation', async () => {
+    const create = vi.spyOn(api.tasks, 'create').mockResolvedValue({ ...detail, dueDate: null });
+    const test = stateStore();
+    const saved = test.createAwaited({ ...draft, dueDate: null });
+    const optimistic = test.state().tasks[0];
+    await saved;
+
+    expect(create).toHaveBeenCalledWith('workspace-id', expect.objectContaining({ dueDate: null }));
+    expect(optimistic?.dueDate).toBeNull();
+    const tasks = test.state().tasks;
+    const task = tasks[0]!;
+    expect(task.dueDate).toBeNull();
+    expect(isOverdue(task, new Date('2026-11-01T12:00:00Z'))).toBe(false);
+    expect(calendarItemsByDate(tasks, []).size).toBe(0);
+    const filter = { projectId: draft.projectId, currentUserId: 'owner', search: '' };
+    expect(filterTasks(tasks, { ...filter, smartView: 'all' })).toEqual(tasks);
+    expect(filterTasks(tasks, { ...filter, smartView: 'due-soon' })).toEqual([]);
   });
 
   it('sends the chosen start date and completed attachments with an ordinary task create', async () => {

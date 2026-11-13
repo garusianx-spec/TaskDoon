@@ -5,6 +5,7 @@ import type { ConversationDraft } from '@/store/workspace-reducer';
 import { formatCount } from '@/lib/format';
 import { Badge, Button, Checkbox, Input, Modal, SegmentedControl } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { FormError } from '@/components/shared/FormError';
 import { MessagesIcon, PeopleIcon, SearchIcon, UserIcon } from '@/components/icons';
 import { DirectPicker, PersonSummary } from '@/features/chat/components/ConversationPersonPicker';
 import { useNewConversationForm } from '@/features/chat/hooks/useNewConversationForm';
@@ -14,7 +15,7 @@ export interface NewConversationModalProps {
   readonly currentUserId: string;
   readonly conversations: readonly Conversation[];
   readonly onClose: () => void;
-  readonly onSubmit: (draft: ConversationDraft) => void;
+  readonly onSubmit: (draft: ConversationDraft, commandId: string) => Promise<void>;
 }
 
 /**
@@ -42,39 +43,52 @@ export function NewConversationModal({
     topic,
     setTopic,
     setTouched,
+    setNameTouched,
     colleagues,
+    hasColleagues,
     existingDirect,
     directError,
     nameError,
     membersError,
     submit,
     selectedDirect,
+    submission,
   } = useNewConversationForm({ open, currentUserId, conversations, onSubmit });
+  const close = () => {
+    if (!submission.isPending()) onClose();
+  };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       size="md"
       title="گفتگوی جدید"
       description="با یک همکار گفتگوی شخصی شروع کنید یا برای تیم خود گروه بسازید."
       icon={<MessagesIcon size={20} />}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <FormError message={submission.error} className="basis-full" />
+          <Button variant="secondary" onClick={close} disabled={submission.saving}>
             انصراف
           </Button>
-          <Button onClick={submit}>
-            {mode === 'direct'
-              ? selectedDirect && existingDirect(selectedDirect.id)
-                ? 'باز کردن گفتگو'
-                : 'شروع گفتگو'
-              : 'ایجاد گروه'}
+          <Button onClick={() => void submit()} loading={submission.saving}>
+            {submission.saving
+              ? 'در حال ثبت…'
+              : mode === 'direct'
+                ? selectedDirect && existingDirect(selectedDirect.id)
+                  ? 'باز کردن گفتگو'
+                  : 'شروع گفتگو'
+                : 'ایجاد گروه'}
           </Button>
         </>
       }
     >
-      <div className="flex flex-col gap-4">
+      <fieldset
+        className="flex min-w-0 flex-col gap-4"
+        disabled={submission.saving}
+        aria-busy={submission.saving || undefined}
+      >
         <SegmentedControl
           ariaLabel="نوع گفتگو"
           size="md"
@@ -83,6 +97,8 @@ export function NewConversationModal({
           onValueChange={(next) => {
             setMode(next);
             setTouched(false);
+            setNameTouched(false);
+            submission.clearError();
           }}
           options={[
             { value: 'direct', label: 'گفتگوی شخصی', icon: <UserIcon size={16} /> },
@@ -94,8 +110,11 @@ export function NewConversationModal({
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="نام گروه"
+              required
               value={groupName}
               onChange={(event) => setGroupName(event.target.value)}
+              onFocus={() => setNameTouched(false)}
+              onBlur={() => setNameTouched(true)}
               placeholder="مثلاً: تیم انتشار نسخه ۳"
               error={nameError}
               maxLength={60}
@@ -138,8 +157,10 @@ export function NewConversationModal({
             <EmptyState
               compact
               icon={<SearchIcon size={18} />}
-              title="همکاری پیدا نشد"
-              description="عبارت جستجو را تغییر دهید."
+              title={hasColleagues ? 'همکاری پیدا نشد' : 'هنوز همکار دیگری در این فضای کاری نیست'}
+              description={
+                hasColleagues ? 'عبارت جستجو را تغییر دهید.' : 'از بخش همکاران، یک نفر را دعوت کنید.'
+              }
             />
           ) : mode === 'direct' ? (
             <DirectPicker
@@ -182,7 +203,7 @@ export function NewConversationModal({
             </p>
           )}
         </div>
-      </div>
+      </fieldset>
     </Modal>
   );
 }

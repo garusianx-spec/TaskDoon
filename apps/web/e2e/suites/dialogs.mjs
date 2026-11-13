@@ -29,13 +29,17 @@ for (const [item, title] of items) {
 }
 
 // Shortcuts
-await page.locator('body').click({ position: { x: 700, y: 400 } });
+await rail.getByRole('link', { name: 'میز کار', exact: true }).focus();
 await page.keyboard.press('n');
-check(await visible(page.getByRole('dialog', { name: 'تعریف وظیفه جدید' })), 'N opens task composer');
-await page.keyboard.press('Escape');
+const taskComposer = page.getByRole('dialog', { name: 'تعریف وظیفه جدید' });
+check(await visible(taskComposer), 'N opens task composer');
+await taskComposer.getByRole('button', { name: 'انصراف', exact: true }).click();
+await taskComposer.waitFor({ state: 'hidden' });
 await page.keyboard.press('m');
-check(await visible(page.getByRole('dialog', { name: 'گفتگوی جدید' })), 'M opens new chat');
-await page.keyboard.press('Escape');
+const newChat = page.getByRole('dialog', { name: 'گفتگوی جدید' });
+check(await visible(newChat), 'M opens new chat');
+await newChat.getByRole('button', { name: 'انصراف', exact: true }).click();
+await newChat.waitFor({ state: 'hidden' });
 
 // Create a group conversation → navigates to /chats with it active
 await page.keyboard.press('m');

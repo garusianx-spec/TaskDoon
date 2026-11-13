@@ -282,7 +282,12 @@ export interface DeadlineLabel {
   readonly tone: 'done' | 'progress' | 'blocked' | 'todo';
 }
 
-export function describeDeadline(iso: string, now: Date = new Date(), completed = false): DeadlineLabel {
+export function describeDeadline(
+  iso: string | null,
+  now: Date = new Date(),
+  completed = false,
+): DeadlineLabel {
+  if (iso === null) return { text: 'بدون مهلت', tone: 'todo' };
   const date = parseISODate(iso);
   const delta = daysBetween(now, date);
 

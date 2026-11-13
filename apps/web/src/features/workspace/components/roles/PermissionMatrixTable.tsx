@@ -14,6 +14,7 @@ import { CheckIcon, CloseIcon, LockIcon } from '@/components/icons';
 export interface PermissionMatrixTableProps {
   readonly role: RoleDescriptor;
   readonly permissions: PermissionMatrix;
+  readonly readOnly?: boolean;
   readonly onToggle: (module: PermissionModuleId, action: PermissionActionId, value: boolean) => void;
   readonly onToggleModule: (module: PermissionModuleId, value: boolean) => void;
   readonly onToggleAction: (action: PermissionActionId, value: boolean) => void;
@@ -31,12 +32,14 @@ export interface PermissionMatrixTableProps {
 export function PermissionMatrixTable({
   role,
   permissions,
+  readOnly = false,
   onToggle,
   onToggleModule,
   onToggleAction,
   onToggleRole,
 }: PermissionMatrixTableProps) {
   const rolePermissions = permissions[role.id];
+  const disabled = role.locked || readOnly;
 
   const moduleState = (module: PermissionModuleId) => {
     const values = PERMISSION_ACTIONS.map((action) => rolePermissions[module][action.id]);
@@ -75,7 +78,7 @@ export function PermissionMatrixTable({
             size="xs"
             variant="secondary"
             iconStart={<CheckIcon size={14} />}
-            disabled={role.locked}
+            disabled={disabled}
             onClick={() => onToggleRole(true)}
           >
             فعال‌سازی همه
@@ -84,7 +87,7 @@ export function PermissionMatrixTable({
             size="xs"
             variant="secondary"
             iconStart={<CloseIcon size={14} />}
-            disabled={role.locked}
+            disabled={disabled}
             onClick={() => onToggleRole(false)}
           >
             غیرفعال‌سازی همه
@@ -118,7 +121,7 @@ export function PermissionMatrixTable({
                           size="sm"
                           checked={state.all}
                           indeterminate={!state.all && state.some}
-                          disabled={role.locked}
+                          disabled={disabled}
                           locked={role.locked}
                           label={`اعمال ${action.name} برای همه ماژول‌های نقش ${role.name}`}
                           onCheckedChange={(value) => onToggleAction(action.id, value)}
@@ -147,7 +150,7 @@ export function PermissionMatrixTable({
                         size="sm"
                         checked={state.all}
                         indeterminate={!state.all && state.some}
-                        disabled={role.locked}
+                        disabled={disabled}
                         locked={role.locked}
                         label={`اعمال همه اقدام‌ها روی ${module.name} برای نقش ${role.name}`}
                         onCheckedChange={(value) => onToggleModule(module.id, value)}
@@ -166,7 +169,7 @@ export function PermissionMatrixTable({
                         <div className="flex justify-center">
                           <Switch
                             checked={granted}
-                            disabled={role.locked}
+                            disabled={disabled}
                             locked={role.locked}
                             label={`${module.name} — ${action.name} برای نقش ${role.name}`}
                             onCheckedChange={(value) => onToggle(module.id, action.id, value)}

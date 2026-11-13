@@ -58,6 +58,8 @@ export function TaskListView({
     return tasks.slice().sort((a, b) => {
       switch (sortKey) {
         case 'due':
+          if (a.dueDate === null || b.dueDate === null)
+            return Number(a.dueDate === null) - Number(b.dueDate === null);
           return direction * a.dueDate.localeCompare(b.dueDate);
         case 'priority':
           return direction * (PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);

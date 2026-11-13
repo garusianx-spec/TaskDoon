@@ -21,7 +21,11 @@ await page.waitForTimeout(200);
 await page.screenshot({ path: `${out}/g1_scrolled.png` });
 // Probe: every point over a sticky name cell must hit the name cell, never a bar.
 const result = await page.evaluate(() => {
-  const cells = [...document.querySelectorAll('li > div.sticky')];
+  const corner = document.querySelector('[data-gantt-corner]');
+  const header = corner.parentElement;
+  const viewport = header.parentElement.parentElement;
+  const bounds = viewport.getBoundingClientRect();
+  const cells = [...viewport.querySelectorAll('li > div.sticky')];
   let probes = 0,
     leaks = [];
   for (const cell of cells) {
@@ -29,23 +33,23 @@ const result = await page.evaluate(() => {
     for (const fx of [0.1, 0.5, 0.9]) {
       const x = r.left + r.width * fx,
         y = r.top + r.height / 2;
+      // The center of a clipped row can lie over the toolbar or another sibling.
+      if (x < bounds.left || x >= bounds.right || y < bounds.top || y >= bounds.bottom) continue;
       const hit = document.elementFromPoint(x, y);
       if (!hit) continue;
       probes++;
       if (!cell.contains(hit)) {
-        const header = document.querySelector('div.sticky.top-0');
-        if (header && header.contains(hit)) continue; // row scrolled under the header: correct
+        if (header.contains(hit)) continue; // row scrolled under the header: correct
         leaks.push(hit.outerHTML.slice(0, 90));
       }
     }
   }
-  const header = document.querySelector('div.sticky.top-0');
   const cs = (el) => {
     const s = getComputedStyle(el);
     return `${s.position}/z${s.zIndex}/${s.backgroundColor}`;
   };
-  const bar = document.querySelector('li > button');
-  const line = document.querySelector('li > div[aria-hidden="true"]');
+  const bar = viewport.querySelector('li > button');
+  const line = viewport.querySelector('li > div[aria-hidden="true"]');
   return { probes, leaks, header: cs(header), name: cs(cells[0]), bar: cs(bar), line: cs(line) };
 });
 console.log(JSON.stringify(result, null, 1));

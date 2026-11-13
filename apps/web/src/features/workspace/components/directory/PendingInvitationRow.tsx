@@ -24,7 +24,7 @@ export function PendingInvitationRow({
 }: {
   readonly invitation: Invitation;
   readonly departments: readonly Department[];
-  readonly onRevoke: (invitationId: string) => void;
+  readonly onRevoke?: (invitationId: string) => void;
   readonly onRetrySms?: (invitationId: string, commandId: string) => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
@@ -133,13 +133,15 @@ export function PendingInvitationRow({
           </>
         )}
       </span>
-      <IconButton
-        label={`لغو دعوت ${display}`}
-        icon={<TrashIcon size={16} />}
-        size="sm"
-        className="hover:text-status-blocked"
-        onClick={() => onRevoke(invitation.id)}
-      />
+      {onRevoke && (
+        <IconButton
+          label={`لغو دعوت ${display}`}
+          icon={<TrashIcon size={16} />}
+          size="sm"
+          className="size-11 hover:text-status-blocked"
+          onClick={() => onRevoke(invitation.id)}
+        />
+      )}
     </li>
   );
 }

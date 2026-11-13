@@ -20,7 +20,7 @@ export interface InviteMemberModalProps {
   readonly departments: readonly Department[];
   readonly onClose: () => void;
   readonly onSubmit: (draft: InvitationDraft, commandId: string) => Promise<CreateInvitationsResult | void>;
-  readonly onRevoke: (invitationId: string) => void;
+  readonly onRevoke?: (invitationId: string) => void;
   readonly onRetrySms?: (invitationId: string, commandId: string) => Promise<void>;
 }
 const INVITABLE_ROLES = ROLES.filter((role) => !role.locked);
@@ -244,8 +244,8 @@ export function InviteMemberModal({
                   key={invitation.id}
                   invitation={invitation}
                   departments={departments}
-                  onRevoke={onRevoke}
                   {...(onRetrySms ? { onRetrySms } : {})}
+                  {...(onRevoke ? { onRevoke } : {})}
                 />
               ))}
             </ul>

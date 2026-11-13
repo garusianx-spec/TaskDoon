@@ -55,6 +55,7 @@ await pick(composer, 'نوع', 'باگ');
 await pick(composer, 'شدت', 'بحرانی');
 await composer.getByRole('button', { name: 'ایجاد وظیفه' }).click();
 await visible(dialog);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 check(
   await eventually(async () =>
     (await dialog.getByRole('combobox', { name: 'نوع وظیفه', exact: true }).textContent()).includes('باگ'),
@@ -90,6 +91,7 @@ check(
 
 // 3. Type change in the dialog: a feature, and the bug's severity goes.
 await openCard(/خطای ورود با رمز عبور/);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 await pick(dialog, 'نوع وظیفه', 'ویژگی');
 check(
   await eventually(
@@ -110,6 +112,7 @@ check(
 
 // 4. Estimates remain editable; time tracking has intentionally left task details.
 await openCard(/تهیه سند معماری/);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 const estimate = dialog.getByLabel('برآورد زمان وظیفه');
 check(
   (await dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0,
@@ -148,6 +151,7 @@ check(
 );
 await saveDialog();
 await openCard(/تهیه سند معماری/);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 check(
   await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'),
   'the corrected original estimate saves and persists on reopening',
@@ -160,6 +164,7 @@ check(
 );
 await saveDialog();
 await openCard(/تهیه سند معماری/);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 check(
   await eventually(async () => (await estimate.inputValue()) === '۱ ساعت و ۳۰ دقیقه'),
   'the estimate persists after Save Changes and reopening',
@@ -257,6 +262,7 @@ await closeDialog();
 
 // 6. Backlog: out of the board, listed, and back.
 await openCard(/رفع ناسازگاری چیدمان/);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 await dialog.getByRole('button', { name: 'انتقال به بک‌لاگ' }).click();
 check(
   await eventually(async () => (await dialog.getByRole('button', { name: 'انتقال به بورد' }).count()) === 1),
