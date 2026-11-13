@@ -80,6 +80,15 @@ export function randomPhone(): string {
 /** `+98912…` as a person would type it. */
 export const localForm = (e164: string) => `0${e164.slice(3)}`;
 
+/** Supports canonical and previously issued invitation links. */
+export function invitationToken(link: string | undefined): string {
+  if (!link) throw new Error('no invitation link');
+  const url = new URL(link);
+  const token = /^\/invite\/([A-Za-z0-9_-]+)$/.exec(url.pathname)?.[1] ?? url.searchParams.get('token');
+  if (!token) throw new Error('no invitation token');
+  return token;
+}
+
 /**
  * Boots the full app (`APP_ROLE=all`, relay and workers off so tests drive them) against a fresh
  * clone of the migrated template database and a private Redis prefix.
@@ -395,7 +404,7 @@ export async function addMember(
   if (invite.status !== 201) throw new Error(`invite ${invite.status}: ${JSON.stringify(invite.body)}`);
   await t.flushNotifications();
   const link = t.sms.lastTo(phone)?.tokens.link;
-  const token = link ? new URL(link).searchParams.get('token') : null;
+  const token = invitationToken(link);
   if (!token) throw new Error('no invitation link was sent');
   const accept = await t.http().post('/api/v1/invitations/accept').set(bearer(member)).send({ token });
   if (accept.status !== 200) throw new Error(`accept ${accept.status}: ${JSON.stringify(accept.body)}`);

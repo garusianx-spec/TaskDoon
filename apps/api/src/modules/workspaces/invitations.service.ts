@@ -40,6 +40,7 @@ interface Candidate {
   readonly channel: InvitationChannel;
   /** E.164 for SMS, lower-cased for email. */
   readonly address: string;
+  readonly name?: string;
 }
 
 /**
@@ -70,7 +71,7 @@ export class InvitationsService {
       const candidate = this.classify(recipient.address, recipient.channel);
       if (!candidate) rejected.push({ address: recipient.address, reason: 'invalid_address' });
       else if (!candidates.some((c) => c.channel === candidate.channel && c.address === candidate.address))
-        candidates.push(candidate);
+        candidates.push({ ...candidate, ...(recipient.name?.trim() ? { name: recipient.name.trim() } : {}) });
     }
 
     return this.uow.run({ workspaceId: actor.workspaceId, userId: actor.userId }, async (unit) => {
@@ -138,11 +139,14 @@ export class InvitationsService {
       const created: InvitationView[] = [];
       for (const candidate of accepted) {
         const token = randomToken(32);
-        const link = this.box.seal(
-          `${new URL('/invite', this.config.env.PUBLIC_WEB_ORIGIN).toString()}?token=${token}`,
-        );
+        const link = this.box.seal(new URL(`/invite/${token}`, this.config.env.PUBLIC_WEB_ORIGIN).toString());
         const smsAttempts: InvitationSmsAttempt[] = [
-          { number: 1, status: 'queued', queuedAt: new Date().toISOString() },
+          {
+            number: 1,
+            status: 'queued',
+            queuedAt: new Date().toISOString(),
+            ...(candidate.name ? { recipientName: candidate.name } : {}),
+          },
         ];
         const [row] = await tx
           .insert(invitations)
@@ -178,7 +182,11 @@ export class InvitationsService {
                 payload: {
                   to: candidate.address,
                   template: 'invite',
-                  tokens: { workspace: workspace.name, link },
+                  tokens: {
+                    ...(candidate.name ? { name: candidate.name } : {}),
+                    workspace: workspace.name,
+                    link,
+                  },
                   sealed: ['link'],
                   invitation: { workspaceId: actor.workspaceId, id: row.id, attempt: 1 },
                 },
@@ -264,6 +272,7 @@ export class InvitationsService {
         .where(eq(workspaces.id, actor.workspaceId));
       if (!workspace) throw ApiError.notFound('The workspace');
       const attempt = delivery.attemptCount + 1;
+      const name = invitation.smsAttempts?.[0]?.recipientName;
       const attempts: InvitationSmsAttempt[] = [
         ...(invitation.smsAttempts ?? []),
         { number: attempt, status: 'queued', queuedAt: new Date().toISOString() },
@@ -282,7 +291,11 @@ export class InvitationsService {
         payload: {
           to: invitation.address,
           template: 'invite',
-          tokens: { workspace: workspace.name, link: invitation.smsLinkSealed },
+          tokens: {
+            ...(name ? { name } : {}),
+            workspace: workspace.name,
+            link: invitation.smsLinkSealed,
+          },
           sealed: ['link'],
           invitation: { workspaceId: actor.workspaceId, id: invitationId, attempt },
         },

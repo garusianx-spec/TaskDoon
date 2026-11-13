@@ -17,7 +17,7 @@ export type SmsTemplate = 'otp' | 'otp_reset' | 'invite' | 'alert' | 'password_r
 export interface SmsMessage {
   readonly to: string;
   readonly template: SmsTemplate;
-  /** Ordered template tokens, e.g. `{ code }` or `{ workspace, link }`. */
+  /** Ordered template tokens, e.g. `{ code }` or `{ name, workspace, link }`. */
   readonly tokens: Readonly<Record<string, string>>;
 }
 
@@ -51,7 +51,7 @@ export function renderSms(message: SmsMessage): string {
     case 'otp_reset':
       return `کد بازنشانی رمز عبور تسک‌دون: ${message.tokens.code}`;
     case 'invite':
-      return `شما به فضای کاری «${message.tokens.workspace}» در تسک‌دون دعوت شده‌اید: ${message.tokens.link}`;
+      return `${message.tokens.name?.trim() ? `${message.tokens.name.trim()} عزیز، ` : ''}شما به فضای کاری «${message.tokens.workspace}» در تسک‌دون دعوت شده‌اید: ${message.tokens.link}`;
     case 'alert':
       return `هشدار امنیتی تسک‌دون: ${message.tokens.event}`;
     case 'password_reset':

@@ -17,6 +17,7 @@ import {
   createTestApp,
   idempotencyKey,
   invite,
+  invitationToken,
   localForm,
   ownerWithWorkspace,
   randomIp,
@@ -52,7 +53,7 @@ interface AuditRow {
 function smsToken(t: TestApp, phone: string): string {
   const link = [...t.sms.sent].reverse().find((sms) => sms.to === phone && sms.template === 'invite')
     ?.tokens.link;
-  const token = link ? new URL(link).searchParams.get('token') : null;
+  const token = invitationToken(link);
   if (!token) throw new Error('no invitation token');
   return token;
 }

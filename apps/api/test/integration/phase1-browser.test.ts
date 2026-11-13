@@ -9,6 +9,8 @@ import {
   bearer,
   createTestApp,
   idempotencyKey,
+  invitationToken,
+  lastCode,
   localForm,
   ownerWithWorkspace,
   randomPhone,
@@ -258,6 +260,63 @@ describe.skipIf(process.env.PHASE1_BROWSER !== '1')('Phase 1 browser / real loca
     await page.unroute('**/api/v1/workspaces/*/invitations');
     await dialog.getByRole('button', { name: 'ارسال دعوت‌نامه', exact: true }).click();
     await dialog.waitFor({ state: 'hidden' });
+    expect(pageErrors).toEqual([]);
+  }, 180_000);
+
+  it('personalizes an invitation from the form and accepts path and legacy links through sign-in', async () => {
+    vi.restoreAllMocks();
+    for (const legacy of [false, true]) {
+      const phone = randomPhone();
+      await page.goto(`${base}/directory`);
+      await page.getByRole('button', { name: 'دعوت همکار', exact: true }).first().click();
+      const dialog = page.getByRole('dialog', { name: 'دعوت همکار', exact: true });
+      await dialog.getByRole('textbox', { name: 'ایمیل یا شماره موبایل همکاران' }).fill(localForm(phone));
+      await dialog.getByRole('textbox', { name: 'ایمیل یا شماره موبایل همکاران' }).press('Enter');
+      await dialog.getByRole('textbox', { name: /نام دعوت‌شونده برای/ }).fill('همکار نمونه');
+      await dialog.getByRole('button', { name: 'ارسال دعوت‌نامه', exact: true }).click();
+      await dialog.waitFor({ state: 'hidden' });
+      await t.flushNotifications();
+      const message = [...t.sms.sent].reverse().find((sms) => sms.to === phone && sms.template === 'invite')!;
+      expect(message.tokens.name).toBe('همکار نمونه');
+      expect(message.text).toContain('همکار نمونه عزیز،');
+      const canonical = new URL(message.tokens.link!);
+      expect(canonical.pathname).toMatch(/^\/invite\/[A-Za-z0-9_-]+$/);
+      const destination = legacy
+        ? `/invite?token=${invitationToken(canonical.toString())}`
+        : canonical.pathname;
+      const guestContext = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        locale: 'fa-IR',
+      });
+      try {
+        const guest = await guestContext.newPage();
+        guest.on('pageerror', (error) => pageErrors.push(error.name));
+        const response = await guest.goto(`${base}${destination}`);
+        expect(response?.status()).toBe(200);
+        expect(response?.headers()['referrer-policy']).toBe('no-referrer');
+        await guest.getByRole('heading', { name: 'پیوستن به فضای کاری', exact: true }).waitFor();
+        await guest.reload();
+        await guest.getByRole('heading', { name: 'پیوستن به فضای کاری', exact: true }).waitFor();
+        await guest.getByRole('textbox', { name: 'شماره موبایل', exact: true }).fill(localForm(phone));
+        await guest.getByRole('button', { name: 'دریافت کد ورود', exact: true }).click();
+        await guest.getByRole('textbox', { name: 'کد ورود', exact: true }).waitFor();
+        await t.flushNotifications();
+        await guest.getByRole('textbox', { name: 'کد ورود', exact: true }).fill(lastCode(t, phone));
+        await guest.getByRole('button', { name: 'ورود', exact: true }).click();
+        await guest.getByRole('textbox', { name: 'نام و نام خانوادگی', exact: true }).fill('همکار نمونه');
+        await guest.getByRole('button', { name: 'ساخت حساب و ورود', exact: true }).click();
+        await guest.waitForURL('**/feed');
+        await guest.getByRole('heading', { name: 'امروز', exact: true }).waitFor();
+        expect(await guest.evaluate('localStorage.getItem("taskin.workspace")')).toBe(workspaceId);
+        const membership = await t.admin.query(
+          'select m.status from workspace_members m join users u on u.id = m.user_id where m.workspace_id = $1 and u.phone = $2',
+          [workspaceId, phone],
+        );
+        expect(membership.rows[0]?.status).toBe('active');
+      } finally {
+        await guestContext.close();
+      }
+    }
     expect(pageErrors).toEqual([]);
   }, 180_000);
 

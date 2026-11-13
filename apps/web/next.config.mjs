@@ -36,6 +36,10 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=()' },
         ],
       },
+      {
+        source: '/invite/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
     ];
   },
   async rewrites() {

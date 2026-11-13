@@ -16,6 +16,7 @@ import {
   bearer,
   createTestApp,
   idempotencyKey,
+  invitationToken,
   localForm,
   ownerWithWorkspace,
   type Session,
@@ -89,7 +90,7 @@ describe('Phase 3.1: project channels, the project trash and departed members', 
     expectStatus(sent, 201);
     await t.flushNotifications();
     const link = t.sms.lastTo(session.phone)?.tokens.link;
-    const token = link ? new URL(link).searchParams.get('token') : null;
+    const token = invitationToken(link);
     expectStatus(await t.http().post('/api/v1/invitations/accept').set(bearer(session)).send({ token }), 200);
   };
 

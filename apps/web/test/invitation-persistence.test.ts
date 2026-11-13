@@ -72,4 +72,36 @@ describe('invitation persistence', () => {
     ).rejects.toThrow();
     expect(state.invitations).toHaveLength(0);
   });
+
+  it('forwards explicit recipient names through the real invitation command', async () => {
+    const store = new LiveStore();
+    Object.assign(store, { workspaceId: 'workspace' });
+    let state: WorkspaceState = LIVE_EMPTY_STATE;
+    store.attach(
+      () => state,
+      (action) => {
+        state = workspaceReducer(state, action);
+      },
+    );
+    const invite = vi.spyOn(api.workspaces, 'invite').mockResolvedValue({ created: [], rejected: [] });
+    await store.inviteMembers(
+      {
+        recipients: [{ address: '09120000000', channel: 'sms', name: 'همکار نمونه' }],
+        role: 'member',
+        department: '',
+        message: '',
+      },
+      'named-command',
+    );
+    expect(invite).toHaveBeenCalledWith(
+      'workspace',
+      {
+        recipients: [{ address: '09120000000', channel: 'sms', name: 'همکار نمونه' }],
+        role: 'member',
+        departmentId: null,
+        message: '',
+      },
+      'named-command',
+    );
+  });
 });

@@ -6,6 +6,7 @@ import {
   createTestApp,
   idempotencyKey,
   invite,
+  invitationToken,
   localForm,
   ownerWithWorkspace,
   randomPhone,
@@ -24,7 +25,7 @@ function smsToken(t: TestApp, phone: string): string {
 }
 
 function tokenFrom(link: string | undefined): string {
-  const token = link ? new URL(link).searchParams.get('token') : null;
+  const token = invitationToken(link);
   if (!token) throw new Error('no invitation token');
   return token;
 }
@@ -84,11 +85,11 @@ describe('invitations', () => {
     await t.flushNotifications();
     const sms = t.sms.lastTo(phone);
     expect(sms?.template).toBe('invite');
-    expect(sms?.tokens.link).toMatch(/^https:\/\/app\.taskin\.test\/invite\?token=/);
+    expect(sms?.tokens.link).toMatch(/^https:\/\/app\.taskin\.test\/invite\/[A-Za-z0-9_-]+$/);
     expect(sms?.text).toContain(workspace.name);
     const mail = t.mail.find((message) => message.to === email);
     expect(mail?.subject).toContain(workspace.name);
-    expect(mail?.text).toMatch(/https:\/\/app\.taskin\.test\/invite\?token=/);
+    expect(mail?.text).toMatch(/https:\/\/app\.taskin\.test\/invite\/[A-Za-z0-9_-]+/);
   });
 
   it('SMS invitations only work for the number they were sent to', async () => {

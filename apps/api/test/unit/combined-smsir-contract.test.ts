@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SmsIrProvider, renderSms } from '../../src/platform/sms/sms.js';
 
-// Adapter contract only: this does not claim the invitation form currently supplies NAME
-// or generates path-token URLs. The creation-flow audit records those gaps separately.
+// Synthetic provider transport only. No request reaches SMS.ir.
 const message = {
   to: '+989120000000',
   template: 'invite' as const,
@@ -40,10 +39,16 @@ describe('combined SMS.ir parameter and renderer audit', () => {
     });
   });
 
-  it('records the exact local renderer text, which does not currently personalize the invitee name', () => {
+  it('personalizes the local invitation text with the supplied recipient name', () => {
     expect(renderSms(message)).toBe(
+      'همکار نمونه عزیز، شما به فضای کاری «فضای آزمایشی» در تسک‌دون دعوت شده‌اید: https://taskdoone.ir/invite/phase4-synthetic-token',
+    );
+    expect(renderSms(message).includes(message.tokens.name)).toBe(true);
+  });
+
+  it('keeps unnamed invitations generic without inventing a recipient name', () => {
+    expect(renderSms({ ...message, tokens: { workspace: 'فضای آزمایشی', link: message.tokens.link } })).toBe(
       'شما به فضای کاری «فضای آزمایشی» در تسک‌دون دعوت شده‌اید: https://taskdoone.ir/invite/phase4-synthetic-token',
     );
-    expect(renderSms(message).includes(message.tokens.name)).toBe(false);
   });
 });

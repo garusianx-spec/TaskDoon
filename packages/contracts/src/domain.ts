@@ -515,6 +515,8 @@ export interface InvitationRecipient {
   /** A lower-cased email address, or a mobile number normalised to `09xxxxxxxxx`. */
   readonly address: string;
   readonly channel: InvitationChannel;
+  /** Explicitly supplied invitee name. Omitted for an unnamed invitation. */
+  readonly name?: string;
 }
 
 export interface Invitation extends InvitationRecipient {

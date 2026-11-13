@@ -1538,10 +1538,11 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       }
       if (fresh.length === 0) return state;
       const invitedAt = nowIso();
-      const created: Invitation[] = fresh.map(({ address, channel }) => ({
+      const created: Invitation[] = fresh.map(({ address, channel, name }) => ({
         id: nextId('inv'),
         address,
         channel,
+        ...(name ? { name } : {}),
         role: draft.role,
         department: draft.department,
         message: draft.message,

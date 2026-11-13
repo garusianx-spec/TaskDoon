@@ -10,6 +10,7 @@ import {
   bearer,
   createTestApp,
   idempotencyKey,
+  invitationToken,
   localForm,
   ownerWithWorkspace,
   randomPhone,
@@ -110,6 +111,35 @@ describe('invitation-only SMS.ir attempt lifecycle', () => {
       [id],
     );
 
+  it('keeps NAME, WORKSPACE and LINK intact through a named invitation retry', async () => {
+    const phone = randomPhone();
+    const mobile = localForm(phone);
+    refused.add(mobile);
+    const created = await t
+      .http()
+      .post(base())
+      .set(bearer(owner))
+      .set('Idempotency-Key', idempotencyKey())
+      .send({ recipients: [{ address: mobile, name: 'همکار نمونه' }], role: 'member' });
+    expect(created.status).toBe(201);
+    const id = created.body.created[0].id as string;
+    await flushSends();
+    const first = sent.find((entry) => entry.mobile === mobile)!;
+    expect(first.parameters).toHaveLength(3);
+    expect(Object.fromEntries(first.parameters.map(({ name, value }) => [name, value]))).toEqual({
+      NAME: 'همکار نمونه',
+      WORKSPACE: workspace.name,
+      LINK: expect.stringMatching(/^https:\/\/app\.taskin\.test\/invite\/[A-Za-z0-9_-]+$/),
+    });
+    await coolDownElapsed(id);
+    refused.delete(mobile);
+    expect((await retry(id)).status).toBe(200);
+    await flushSends();
+    const attempts = sent.filter((entry) => entry.mobile === mobile);
+    expect(attempts).toHaveLength(2);
+    expect(attempts[1]?.parameters).toEqual(first.parameters);
+  });
+
   it('persists queued status and serialises concurrent creates on the normalized recipient', async () => {
     const phone = randomPhone();
     const results = await Promise.all([create([localForm(phone)]), create([phone])]);
@@ -204,13 +234,13 @@ describe('invitation-only SMS.ir attempt lifecycle', () => {
     const link = sent
       .find((entry) => entry.mobile === localForm(phone))
       ?.parameters.find((entry) => entry.name === 'LINK')?.value;
-    expect(new URL(link!).pathname).toBe('/invite');
+    expect(new URL(link!).pathname).toMatch(/^\/invite\/[A-Za-z0-9_-]+$/);
     const invitee = await signIn(t, phone);
     const accepted = await t
       .http()
       .post('/api/v1/invitations/accept')
       .set(bearer(invitee))
-      .send({ token: new URL(link!).searchParams.get('token') });
+      .send({ token: invitationToken(link) });
     expect(accepted.status).toBe(200);
     const membership = await t.admin.query(
       `select department_id from workspace_members where workspace_id = $1 and user_id = $2`,

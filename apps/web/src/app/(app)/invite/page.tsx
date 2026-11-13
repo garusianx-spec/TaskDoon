@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AuthCard } from '@/features/auth/components/AuthCard';
 
 /**
- * The link in an invitation SMS or email (`/invite?token=…`). The live store keeps the token
+ * Invitation links (`/invite/<token>` and legacy `/invite?token=…`). The live store keeps the token
  * through the sign-in screen and accepts it before loading, so by the time this page renders the
  * account has joined — and the invited workspace is the one open. All that is left is the desk.
  */

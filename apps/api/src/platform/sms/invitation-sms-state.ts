@@ -5,6 +5,8 @@ export interface InvitationSmsAttempt {
   readonly number: number;
   readonly status: InvitationSmsStatus;
   readonly queuedAt: string;
+  /** Explicit name retained on the first attempt for retries, absent on older invitations. */
+  readonly recipientName?: string;
   readonly startedAt?: string;
   readonly completedAt?: string;
   readonly provider?: string;

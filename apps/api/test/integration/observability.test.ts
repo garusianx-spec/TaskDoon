@@ -18,6 +18,7 @@ import {
   createTestApp,
   idempotencyKey,
   invite,
+  invitationToken,
   lastCode,
   localForm,
   ownerWithWorkspace,
@@ -223,7 +224,7 @@ describe('M1 checklist: audit trail and correlation', () => {
     const inviteSms = [...t.sms.sent]
       .reverse()
       .find((sms) => sms.to === joinerPhone && sms.template === 'invite');
-    const token = new URL(inviteSms?.tokens.link ?? '').searchParams.get('token');
+    const token = invitationToken(inviteSms?.tokens.link);
     const joiner = await withAdminPassword(t, await signIn(t, joinerPhone));
     await traced('post', '/api/v1/invitations/accept', '/api/v1/invitations/accept', (r) =>
       r.set(bearer(joiner)).send({ token }),
@@ -995,7 +996,7 @@ describe('M1 checklist: query budgets (no N+1)', () => {
         .http()
         .post('/api/v1/invitations/accept')
         .set(bearer(member))
-        .send({ token: new URL(link).searchParams.get('token') });
+        .send({ token: invitationToken(link) });
     }
     const budget = async (path: string, max: number) => {
       await t.http().get(path).set(bearer(owner)); // warm the permission caches

@@ -278,6 +278,15 @@ export class DepartmentViewDto implements DepartmentView {
 export class RecipientDto {
   @ApiProperty({ example: '0912 111 2233' }) @IsString() @Length(3, 254) readonly address!: string;
   @ApiPropertyOptional({ enum: CHANNELS }) @IsOptional() @IsIn(CHANNELS) readonly channel?: InvitationChannel;
+  @ApiPropertyOptional({ maxLength: 120, description: 'Explicit invitee name for SMS personalization' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() || undefined : value,
+  )
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  @Matches(/^[^\u0000-\u001f\u007f]+$/)
+  readonly name?: string;
 }
 
 export class CreateInvitationsDto implements CreateInvitationsBody {

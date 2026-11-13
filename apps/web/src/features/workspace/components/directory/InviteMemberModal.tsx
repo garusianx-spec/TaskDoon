@@ -6,7 +6,7 @@ import { ROLES } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { CHANNEL_LABELS, formatRecipient } from '@taskin/text';
-import { Badge, Button, IconButton, Modal, Select, Textarea } from '@/components/ui';
+import { Badge, Button, IconButton, Input, Modal, Select, Textarea } from '@/components/ui';
 import { CloseIcon, MobileIcon, SendIcon, SmsIcon, UserAddIcon } from '@/components/icons';
 import {
   CHANNEL_ICONS,
@@ -185,6 +185,25 @@ export function InviteMemberModal({
             </ul>
           )}
         </div>
+
+        {recipients
+          .filter((recipient) => recipient.channel === 'sms')
+          .map((recipient) => (
+            <Input
+              key={recipient.address}
+              label={`نام دعوت‌شونده برای ${formatRecipient(recipient)} (اختیاری)`}
+              hint="با وارد کردن نام، پیامک دعوت شخصی‌سازی می‌شود. بدون نام، متن عمومی ارسال می‌شود."
+              value={recipient.name ?? ''}
+              maxLength={120}
+              disabled={submitting}
+              onChange={(event) => {
+                const name = event.target.value;
+                setRecipients((current) =>
+                  current.map((entry) => (entry.address === recipient.address ? { ...entry, name } : entry)),
+                );
+              }}
+            />
+          ))}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Select

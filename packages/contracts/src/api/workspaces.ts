@@ -178,7 +178,12 @@ export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
 
 export interface CreateInvitationsBody {
   /** Raw entries as typed; each is normalised and classified server-side. */
-  readonly recipients: readonly { readonly address: string; readonly channel?: InvitationChannel }[];
+  readonly recipients: readonly {
+    readonly address: string;
+    readonly channel?: InvitationChannel;
+    /** Optional personalization, never inferred from the address or inviter. */
+    readonly name?: string;
+  }[];
   readonly role: RoleId;
   readonly departmentId?: string | null;
   readonly message?: string;

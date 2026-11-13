@@ -40,7 +40,7 @@ if (!apiLog) {
 }
 
 const OTP = /"text":"کد ورود شما به تسک‌دون: (\d{6})"/g;
-const INVITE = /"text":"[^"]*?(https?:\/\/[^"\s]+\/invite\?token=[^"\s]+)"/g;
+const INVITE = /"text":"[^"]*?(https?:\/\/[^"\s]+\/invite(?:\/|\?token=)[^"\s]+)"/g;
 const runId = String(Date.now()).slice(-4);
 const phoneOf = () => `0912${String(Math.floor(Math.random() * 9_000_000) + 1_000_000)}`;
 const ownerPhone = phoneOf();
@@ -172,7 +172,10 @@ try {
   const beforeInvite = logSize();
   await dialog.getByRole('button', { name: 'ارسال دعوت‌نامه' }).click();
   const link = await smsAfter(beforeInvite, INVITE, 'invitation link');
-  check(link.includes('/invite?token='), 'the invitation SMS carries a join link');
+  check(
+    /^\/invite\/[A-Za-z0-9_-]+$/.test(new URL(link).pathname),
+    'the invitation SMS carries a canonical join link',
+  );
 
   /* ------------------------------------------------ guest: joins through the link */
 

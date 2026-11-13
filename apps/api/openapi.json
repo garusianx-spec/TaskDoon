@@ -16862,6 +16862,11 @@
               "email",
               "sms"
             ]
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Explicit invitee name for SMS personalization"
           }
         },
         "required": [

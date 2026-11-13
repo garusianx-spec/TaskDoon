@@ -1220,7 +1220,11 @@ export class LiveStore {
         this.run(
           async () => {
             const result = await api.workspaces.invite(this.workspaceId, {
-              recipients: created.map(({ address, channel }) => ({ address, channel })),
+              recipients: created.map(({ address, channel, name }) => ({
+                address,
+                channel,
+                ...(name ? { name } : {}),
+              })),
               role: action.draft.role,
               departmentId: action.draft.department || null,
               message: action.draft.message,
@@ -2925,10 +2929,12 @@ function previewMessage(view: ConversationView, nameOf: (userId: string) => stri
 /** Where the invitation token waits when session storage is refused. */
 let pendingInvite: string | null = null;
 
-/** `/invite?token=…` (the link in an invitation SMS or email): remember the token for after sign-in. */
+/** Canonical path links and existing query links survive the sign-in screen. */
 function captureInvite(): void {
-  if (typeof window === 'undefined' || !window.location.pathname.startsWith('/invite')) return;
-  const token = new URLSearchParams(window.location.search).get('token');
+  if (typeof window === 'undefined') return;
+  const { pathname, search } = window.location;
+  const pathToken = /^\/invite\/([A-Za-z0-9_-]+)\/?$/.exec(pathname)?.[1];
+  const token = pathToken ?? (pathname === '/invite' ? new URLSearchParams(search).get('token') : null);
   if (token) keepInvite(token);
 }
 

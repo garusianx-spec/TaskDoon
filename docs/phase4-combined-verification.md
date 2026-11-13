@@ -128,7 +128,7 @@ uncontended targeted rerun and final full API run passed without increasing the 
 An over-adjusted archive desktop selector was restored to the existing `/tasks` project-tree
 navigation. The subsequent full 20-suite run passed all 587 checks.
 
-## SMS.ir: exact synthetic adapter parameters and local renderer
+## Baseline SMS.ir audit before the invitation contract fix
 
 The adapter-only fixture uses a fake template ID `30303` and a **synthetic, non-credential** token.
 It verifies `POST https://api.sms.ir/v1/send/verify` with this exact parameter array:
@@ -147,11 +147,11 @@ The exact text returned by the existing local `renderSms()` for that fixture is:
 شما به فضای کاری «فضای آزمایشی» در تسک‌دون دعوت شده‌اید: https://taskdoone.ir/invite/phase4-synthetic-token
 ```
 
-This renderer currently ignores `NAME`. SMS.ir itself receives a template ID and parameters,
+At the baseline SHA, this renderer ignored `NAME`. SMS.ir itself receives a template ID and parameters,
 not this free-text rendering; no claim is made about the content of a real approved gateway
 template. Separate SMS.ir login and password-reset OTP configuration/parameter tests pass.
 
-## Release-contract findings — requested name and link format are not met
+## Baseline release-contract findings
 
 The actual creation-flow audit sets only a **local test** `PUBLIC_WEB_ORIGIN=https://taskdoone.ir`
 and verifies the existing outbox contract:
@@ -161,9 +161,9 @@ and verifies the existing outbox contract:
 - Actual generated link shape: `https://taskdoone.ir/invite?token=<generated-token>`.
 - The generated token is sealed in the queue/database and is not reproduced in this report.
 
-Thus the adapter can forward the synthetic `NAME` and path-form link above, but **the application
-does not currently supply that name or generate `https://taskdoone.ir/invite/<token>`**. The local
-renderer also does not personalize the invitee. These are remaining functional contract blockers
+At the baseline SHA, the adapter could forward the synthetic `NAME` and path-form link above, but **the application
+did not supply that name or generate `https://taskdoone.ir/invite/<token>`**. The local
+renderer also did not personalize the invitee. These were the remaining functional contract blockers
 for the requested SMS format, not passing assertions of that format. The audit tests deliberately
 record the existing behavior so a green infrastructure/test run cannot be mistaken for fixing
 these gaps. No unapproved template parameters, provider routing changes, inferred recipient names,
@@ -183,3 +183,68 @@ real handset receipt. This branch is a local review candidate, not a release/dep
 
 Review the combined ancestry and local changes with `git log --graph --oneline` and
 `git diff feat/chats-archive-phase4..HEAD`. No remote integration branch was pushed.
+
+## Invitation contract follow-up from baseline 0b9bc7a
+
+The two baseline findings above have been addressed in this worktree.
+
+- The invitation form accepts an optional explicit name per SMS recipient. The request DTO trims
+  it, limits it to 120 characters and rejects control characters. The existing address-only
+  contract remains supported. Missing or whitespace-only names are omitted, and the local
+  renderer uses the existing generic text. No name is inferred from a phone number, account
+  directory, inviter, or workspace.
+- The supplied name reaches the outbox and existing SMS.ir adapter. Named invitations carry exactly
+  `NAME`, `WORKSPACE`, and `LINK` at the provider boundary. JSONB does not preserve token key
+  order, so the integration assertion checks exact names and values independently of ordering.
+- The first SMS attempt's existing JSON stores the explicit name for manual retries. Older rows
+  without this optional property continue to work. The invitation view exposes the existing
+  delivery summary, without exposing attempt metadata. No migration is needed.
+- Newly generated SMS and email links use `/invite/<token>`. Both that route and previously
+  issued `/invite?token=<token>` links use the same existing sign-in and acceptance flow.
+  The path token takes precedence when both forms are present. Invitation pages return
+  `Referrer-Policy: no-referrer`. Sealed outbox links and hashed acceptance tokens are retained.
+- Permission gating, SMS provider routing, template IDs, credentials, and acceptance authorization
+  use their existing implementations. OpenAPI was regenerated for the optional recipient field.
+
+The named local-renderer fixture now produces:
+
+```text
+همکار نمونه عزیز، شما به فضای کاری «فضای آزمایشی» در تسک‌دون دعوت شده‌اید: https://taskdoone.ir/invite/phase4-synthetic-token
+```
+
+Verification for this follow-up uses the disposable services documented above and Node 22.23.3.
+Initial regression runs reproduced the missing personalization, rejection of the name field,
+and failure to capture the path token before the implementation changed.
+
+- All workspace unit/component suites passed, 474 tests in total (API 281, web 174, Jalali 12,
+  text 7).
+- All workspace typechecks passed.
+- All workspace lint passed with zero errors and the same 20 existing web warnings.
+- Seven relevant real-database integration files passed, 58 tests. These cover invitation
+  creation/acceptance, named and unnamed SMS, malformed names, manual retries, worker replay,
+  idempotency, number mismatch, consumed/revoked/expired tokens, observability/OpenAPI, retention,
+  and workspace moderation. Provider HTTP responses are synthetic.
+- The opt-in real-local-API browser file passed all six cases. The added case creates a
+  named invitation through the actual form, opens both canonical and legacy links, reloads
+  before sign-in, completes OTP and signup through the UI, and verifies the accepted membership
+  in the database. Both invitation responses return `Referrer-Policy: no-referrer`.
+  The original five Phase 1 session/invitation browser regressions also pass. An initial test
+  fixture requested two OTPs for the same synthetic user inside the resend cooldown; using the
+  actual first-time signup journey corrected that fixture without changing OTP policy.
+- The API build passes as part of the integration command. The API-mode web production build
+  (`npm.cmd run build --workspace @taskin/web`, Next.js 16.4.6/Turbopack) passes, including
+  TypeScript, prerendering, and standalone output. Its route table includes both `/invite`
+  and the dynamic `/invite/[token]`.
+- Formatting checks on all changed and added source/test files pass, as does `git diff --check`.
+
+The seven integration files are `combined-invitation-contract.test.ts`, `invitations.test.ts`,
+`invitation-sms.test.ts`, `invitation-sms-worker.test.ts`, `observability.test.ts`,
+`retention.test.ts`, and `platform-workspace-moderation.integration.spec.ts`. Run them with
+the disposable environment above and `npm.cmd run test:int --workspace @taskin/api -- <files> --maxWorkers=2`.
+The browser command above runs `phase1-browser.test.ts` with `PHASE1_BROWSER=1`; screenshots for
+this follow-up are isolated under `.local/phase4-sms/screenshots`.
+
+The full baseline integration and demo suites were not repeated for this scoped fix.
+Real SMS.ir acceptance and handset delivery remain unverified. All actual invitation sends
+in these checks use local console transport or mocked HTTP. Provider settings and production
+were not modified.

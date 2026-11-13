@@ -120,7 +120,15 @@ export function useInvitationForm({
     setTouched(true);
     const finalList = pendingText.trim() ? commit(pendingText) : recipients;
     if (finalList.length === 0) return;
-    const draft = { recipients: finalList, role, department, message: message.trim() };
+    const draft = {
+      recipients: finalList.map(({ name, ...recipient }) => ({
+        ...recipient,
+        ...(name?.trim() ? { name: name.trim() } : {}),
+      })),
+      role,
+      department,
+      message: message.trim(),
+    };
     const signature = JSON.stringify(draft);
     if (command.current?.signature !== signature) command.current = { signature, id: newIdempotencyKey() };
     flight.current = true;
