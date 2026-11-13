@@ -27,6 +27,7 @@ import { verifyProjectCreation } from './project-creation.mjs';
 import { verifyProfileNavNotes } from './profile-nav-notes.mjs';
 import { verifySettings } from './settings.mjs';
 import { verifyFormFeedback } from './forms-feedback.mjs';
+import { verifyMobileNavigation } from './mobile-navigation.mjs';
 
 /** The API accepts its cookie routes (refresh, sign-out) only from its web origin: PUBLIC_WEB_ORIGIN or CORS_ORIGINS. */
 const base = process.env.BASE_URL ?? 'http://localhost:3000';
@@ -276,6 +277,31 @@ try {
   );
   await ownerTaskDetails.getByRole('button', { name: 'بستن پنل جزئیات', exact: true }).click();
   await ownerTaskDetails.waitFor({ state: 'hidden' });
+
+  const managerContext = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'fa-IR' });
+  try {
+    const manager = await managerContext.newPage();
+    watchConsole(manager);
+    const numbers = new Set([ownerPhone, guestPhone]);
+    while (numbers.size < 4) numbers.add(phoneOf());
+    const [managerPhone, pendingPhone] = [...numbers].slice(2);
+    await verifyMobileNavigation(owner, guest, {
+      base,
+      projectName,
+      taskTitle,
+      manager,
+      managerPhone,
+      pendingPhone,
+      signInManager: (page) => signIn(page, managerPhone, `مدیر آزمون ${runId}`),
+      readInvitation: async (send) => {
+        const from = logSize();
+        await send();
+        return smsAfter(from, INVITE, 'mobile invitation link');
+      },
+    });
+  } finally {
+    await managerContext.close();
+  }
 
   /* ------------------------------------------------ chat: live delivery, typing, receipts, reactions */
 
@@ -568,9 +594,18 @@ try {
   /* ------------------------------------------------ M4: subtask order and task files, stored */
 
   const subtaskBox = owner.getByRole('textbox', { name: 'افزودن زیروظیفه' });
+  const subtaskWrite = (suffix) =>
+    owner.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname.includes('/subtasks') &&
+        new URL(response.url()).pathname.endsWith(suffix),
+    );
   for (const title of ['اول', 'دوم', 'سوم']) {
     await subtaskBox.fill(title);
+    const added = subtaskWrite('/subtasks');
     await subtaskBox.press('Enter');
+    if (!(await added).ok()) throw new Error('The subtask was not saved.');
   }
   const handles = (page) => page.getByRole('button', { name: /^جابه‌جایی «/ });
   const order = async (page) =>
@@ -586,11 +621,18 @@ try {
     ),
     'three subtasks added',
   );
-  // Wait for the server's ids (the rows are re-read after each add), then move «سوم» to the top.
-  await owner.waitForTimeout(1_000);
-  await owner.getByRole('button', { name: 'انتقال «سوم» به بالا' }).click();
-  await owner.waitForTimeout(400);
-  await owner.getByRole('button', { name: 'انتقال «سوم» به بالا' }).click();
+  // Wait for each move before activating the button in its new row.
+  const moveUp = owner.getByRole('button', { name: 'انتقال «سوم» به بالا' });
+  for (const expected of [
+    ['اول', 'سوم', 'دوم'],
+    ['سوم', 'اول', 'دوم'],
+  ]) {
+    const moved = subtaskWrite('/move');
+    await moveUp.press('Enter');
+    if (!(await moved).ok()) throw new Error('The subtask move was not saved.');
+    if (!(await eventually(async () => (await order(owner)).join('|') === expected.join('|'))))
+      throw new Error('The subtask did not reach its expected position.');
+  }
   check(
     await eventually(
       async () => JSON.stringify(await order(owner)) === JSON.stringify(['سوم', 'اول', 'دوم']),

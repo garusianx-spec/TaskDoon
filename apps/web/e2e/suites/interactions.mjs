@@ -713,8 +713,8 @@ const tabsOrder = await mobile
   .locator('a')
   .evaluateAll((a) => a.map((x) => x.getAttribute('href')));
 check(
-  JSON.stringify(tabsOrder.slice(0, 3)) === JSON.stringify(['/feed', '/tasks', '/chats']),
-  `mobile tabs follow the rail order (${tabsOrder.join(' ')})`,
+  JSON.stringify(tabsOrder) === JSON.stringify(['/feed', '/tasks/mine', '/projects', '/chats', '/more']),
+  `mobile tabs provide dedicated personal and project destinations (${tabsOrder.join(' ')})`,
 );
 await mobile
   .getByRole('button', { name: /تعویض فضای کاری|راهنما/ })

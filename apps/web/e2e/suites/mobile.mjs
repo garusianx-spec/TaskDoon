@@ -82,6 +82,10 @@ await page.getByRole('button', { name: 'دسته‌ها و فیلترها' }).ta
 check(await visible(page.getByRole('navigation', { name: 'دسته‌ها' })), 'mobile: categories panel opens');
 // more page account actions
 await page.goto(base + '/more', { waitUntil: 'networkidle' });
+await page.getByRole('link', { name: 'حساب من', exact: true }).tap();
 await page.getByRole('button', { name: /امنیت و ورود/ }).tap();
-check(await visible(page.getByRole('dialog', { name: 'امنیت و ورود' })), 'mobile: More → security dialog');
+check(
+  await visible(page.getByRole('dialog', { name: 'امنیت و ورود' })),
+  'mobile: More → Account → security dialog',
+);
 await finish(browser);

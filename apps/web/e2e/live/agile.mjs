@@ -164,6 +164,7 @@ check(
 /* ---------- Estimate retained; time tracking removed from task details ---------- */
 
 await openCard(/پیاده‌سازی سرویس گزارش/);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 const estimate = dialog.getByLabel('برآورد زمان وظیفه');
 check(
   (await dialog.getByRole('region', { name: 'زمان‌سنجی وظیفه' }).count()) === 0,
@@ -202,6 +203,7 @@ check(
   'the corrected original estimate is saved',
 );
 await openCard(/پیاده‌سازی سرویس گزارش/);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 check(
   await eventually(async () => (await estimate.inputValue()) === '۲ ساعت'),
   'the corrected estimate persists on reopening',
@@ -284,6 +286,7 @@ await notice.getByRole('button', { name: 'بستن هشدار' }).click();
 /* ---------- Backlog ---------- */
 
 await openCard(/طراحی پایگاه داده/);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 await dialog.getByRole('button', { name: 'انتقال به بک‌لاگ' }).click();
 check((await task(database.id)).isBacklog === false, 'the backlog move waits for Save Changes');
 await saveDialog();
@@ -329,6 +332,7 @@ check(
 );
 await page.screenshot({ path: `${out}/live_agile_board.png` });
 await openCard(/پیاده‌سازی سرویس گزارش/);
+await dialog.locator('summary').filter({ hasText: 'جزئیات بیشتر' }).click();
 check(
   await eventually(async () => (await estimate.inputValue()) === '۱ ساعت'),
   'the saved estimate survives a reload',
