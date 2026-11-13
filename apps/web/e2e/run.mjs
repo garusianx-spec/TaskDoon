@@ -34,7 +34,10 @@ const suites = requested.length > 0 ? requested : available;
 
 let server = null;
 const stopServer = () => {
-  if (server?.exitCode === null) process.kill(-server.pid, 'SIGTERM');
+  if (server?.exitCode === null) {
+    if (process.platform === 'win32') server.kill('SIGTERM');
+    else process.kill(-server.pid, 'SIGTERM');
+  }
 };
 process.on('SIGINT', () => {
   stopServer();

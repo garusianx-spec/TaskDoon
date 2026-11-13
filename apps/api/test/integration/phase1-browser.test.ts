@@ -27,7 +27,9 @@ describe.skipIf(process.env.PHASE1_BROWSER !== '1')('Phase 1 browser / real loca
   let page: Page;
   let web: ChildProcess;
   const base = 'http://127.0.0.1:3139';
-  const screenshots = fileURLToPath(new URL('../../../../docs/phase1/screenshots/', import.meta.url));
+  const screenshots =
+    process.env.PHASE1_SCREENSHOT_DIR ??
+    fileURLToPath(new URL('../../../../docs/phase1/screenshots/', import.meta.url));
   const pageErrors: string[] = [];
 
   beforeAll(async () => {
@@ -114,7 +116,7 @@ describe.skipIf(process.env.PHASE1_BROWSER !== '1')('Phase 1 browser / real loca
   });
 
   const ready = async () => {
-    await page.getByRole('button', { name: 'خروج از حساب کاربری', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'بیشتر', exact: true }).waitFor();
   };
   const capture = async (name: string) => {
     for (const width of [360, 390]) {
@@ -153,7 +155,7 @@ describe.skipIf(process.env.PHASE1_BROWSER !== '1')('Phase 1 browser / real loca
     expect(await page.evaluate('window.__phase1SignInFlashed')).toBe(false);
     expect(await page.evaluate('localStorage.getItem("taskin.workspace")')).toBe(workspaceId);
     await page.goto(`${base}/tasks`);
-    await page.getByRole('heading', { name: 'پروژه‌ها و وظایف', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'همه وظایف', exact: true }).waitFor();
     expect(new URL(page.url()).pathname).toBe('/tasks');
     expect(await page.evaluate('window.__phase1SignInFlashed')).toBe(false);
     expect(await page.getByRole('textbox', { name: 'شماره موبایل' }).count()).toBe(0);
@@ -304,6 +306,7 @@ describe.skipIf(process.env.PHASE1_BROWSER !== '1')('Phase 1 browser / real loca
   it('explicit sign-out and confirmed revoked session stay in the existing sign-in flow after refresh', async () => {
     await page.goto(`${base}/more`);
     await ready();
+    await page.getByRole('link', { name: 'حساب من', exact: true }).click();
     await page.getByRole('button', { name: 'خروج از حساب کاربری', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'خروج از حساب', exact: true }).click();
     await page.getByRole('textbox', { name: 'شماره موبایل' }).waitFor();

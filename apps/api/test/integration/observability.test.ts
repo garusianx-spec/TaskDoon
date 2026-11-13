@@ -191,6 +191,32 @@ describe('M1 checklist: audit trail and correlation', () => {
       `${ws}/invitations/${revocable.body.created[0].id}`,
       (r) => r.set(bearer(user)),
     );
+    const smsRetry = await t
+      .http()
+      .post(`${ws}/invitations`)
+      .set(bearer(user))
+      .set('Idempotency-Key', idempotencyKey())
+      .send({ recipients: [{ address: localForm(randomPhone()) }], role: 'member' });
+    expect(smsRetry.status).toBe(201);
+    const smsRetryId = smsRetry.body.created[0].id as string;
+    await t.admin.query(`update invitations set sms_attempts = $2::jsonb where id = $1`, [
+      smsRetryId,
+      JSON.stringify([
+        {
+          number: 1,
+          status: 'failed',
+          retryable: true,
+          failureCode: 'provider_unavailable',
+          queuedAt: '2020-01-01T00:00:00Z',
+        },
+      ]),
+    ]);
+    await traced(
+      'post',
+      '/api/v1/workspaces/{workspaceId}/invitations/{id}/retry-sms',
+      `${ws}/invitations/${smsRetryId}/retry-sms`,
+      (r) => r.set(bearer(user)).set('Idempotency-Key', idempotencyKey()),
+    );
     const joinerPhone = randomPhone();
     await invite(t, user, created.body.id, [localForm(joinerPhone)]);
     await t.flushNotifications();
