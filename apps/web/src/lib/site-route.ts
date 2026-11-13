@@ -8,7 +8,7 @@ export async function resolveSiteDocument(kind: SiteDocumentKind, slug: string) 
   // The generic CMS route cannot claim any part of the private application's namespace.
   if (
     kind === 'page' &&
-    /^(admin|api|feed|tasks|chats|notes|calendar|directory|settings|more|invite|signed-out|reset-password)(\/|$)/.test(
+    /^(admin|api|feed|tasks|projects|chats|notes|calendar|directory|settings|more|invite|signed-out|reset-password)(\/|$)/.test(
       slug,
     )
   )

@@ -65,9 +65,10 @@ export function OverlayHost() {
   // here: at the plan's limit the member is told so, and the form never opens.
   const projectLimit = activeWorkspace.projectLimit ?? null;
   const atProjectLimit = projectLimit !== null && state.projects.length >= projectLimit;
-  const fixedProjectId = isRoute(pathname, '/tasks')
-    ? state.projectFilterId
-    : state.projects.find((project) => projectHref(project.id) === pathname)?.id;
+  const fixedProjectId =
+    pathname === '/tasks'
+      ? state.projectFilterId
+      : state.projects.find((project) => projectHref(project.id) === pathname)?.id;
 
   const deletingProject =
     active?.kind === 'project-delete'
@@ -113,7 +114,9 @@ export function OverlayHost() {
         onSubmit={async (draft, commandId) => {
           const id = await createProject(draft, commandId);
           close();
-          goTo(isRoute(pathname, workspaceRoutes.projects) ? projectHref(id) : '/tasks');
+          if (isRoute(pathname, workspaceRoutes.projects)) goTo(projectHref(id));
+          else if (isRoute(pathname, workspaceRoutes.myTasks)) router.push('/tasks');
+          else goTo('/tasks');
         }}
       />
 

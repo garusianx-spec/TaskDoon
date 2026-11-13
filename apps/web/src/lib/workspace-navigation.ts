@@ -1,6 +1,6 @@
 const ROUTES = {
   today: '/feed',
-  myTasks: '/my-tasks',
+  myTasks: '/tasks/mine',
   projects: '/projects',
   chats: '/chats',
   more: '/more',

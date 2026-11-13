@@ -14,7 +14,7 @@ describe('workspace route context', () => {
     }
     expect(mobilePageTitle('/more/account/appearance')).toBe('ظاهر شخصی');
     expect(mobilePageTitle('/more/workspace')).toBe('تنظیمات فضای کاری');
-    expect(mobileTabFor('/my-tasks')).toBe('/my-tasks');
+    expect(mobileTabFor('/tasks/mine')).toBe('/tasks/mine');
     expect(mobileTabFor('/taskshare')).toBeUndefined();
   });
 });
