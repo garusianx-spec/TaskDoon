@@ -75,17 +75,21 @@ export function LinkFields({
 export function MediaFields({
   value,
   onChange,
+  title = 'رسانه',
+  imageOnly = false,
 }: {
+  title?: string;
+  imageOnly?: boolean;
   value?: SiteMediaRef;
   onChange: (value: SiteMediaRef | undefined) => void;
 }) {
   const [picker, setPicker] = useState(false);
   return (
     <fieldset className="rounded-lg border border-secondary p-3">
-      <legend className="px-1 text-caption text-fg-tertiary">رسانه</legend>
+      <legend className="px-1 text-caption text-fg-tertiary">{title}</legend>
       <div className="grid gap-3 sm:grid-cols-2">
         <Input
-          label="نشانی تصویر یا ویدئو"
+          label={imageOnly ? 'نشانی تصویر' : 'نشانی تصویر یا ویدئو'}
           dir="ltr"
           value={value?.src ?? ''}
           onChange={(event) => onChange({ ...value, src: event.target.value, alt: value?.alt ?? '' })}

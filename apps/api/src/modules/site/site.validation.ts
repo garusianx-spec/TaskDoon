@@ -66,6 +66,12 @@ const media = z
     height: z.number().int().min(1).max(12000).optional(),
   })
   .strict();
+const articleData = z
+  .object({
+    publicationDate: z.iso.date().optional(),
+    cover: media.optional(),
+  })
+  .passthrough();
 const item = z
   .object({
     id: text(100).optional(),
@@ -236,6 +242,8 @@ export function validateSiteDocument(value: unknown): SiteDocumentInput {
       { field: 'slug', message: 'site settings use global and navigation uses main as a singleton key' },
     ]);
   const data = input.draft.data;
+  if (input.kind === 'article')
+    input.draft.data = parse(z.object({ draft: z.object({ data: articleData }) }), input).draft.data;
   if (input.kind === 'pricing') {
     parse(
       z
@@ -314,7 +322,14 @@ export function validateSiteDocument(value: unknown): SiteDocumentInput {
 }
 
 export function validateSitePublish(kind: SiteDocumentKind, slug: string, draft: SiteContent): void {
-  validateSiteDocument({ kind, slug, draft });
+  const document = validateSiteDocument({ kind, slug, draft });
+  if (kind === 'article') {
+    const { cover } = articleData.parse(document.draft.data);
+    if (cover && !cover.alt)
+      throw ApiError.validation([
+        { field: 'draft.data.cover.alt', message: 'the cover image requires descriptive alternative text' },
+      ]);
+  }
   if (kind === 'page' && ['terms', 'privacy'].includes(slug) && draft.data.legalApproved !== true)
     throw ApiError.validation([
       {

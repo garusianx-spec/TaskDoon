@@ -383,11 +383,11 @@ function Editor({ original, onSaved }: { original: SiteDocument; onSaved: () => 
             لغو انتشار
           </Button>
           <Button
-            variant="ghost"
+            variant={document.kind === 'article' ? 'destructive' : 'ghost'}
             disabled={document.status === 'archived' || busy}
             onClick={() => setPending({ type: 'archive' })}
           >
-            بایگانی محتوا
+            {document.kind === 'article' ? 'حذف مقاله (انتقال به بایگانی)' : 'بایگانی محتوا'}
           </Button>
         </div>
         <p className="mt-3 text-caption text-fg-tertiary">
@@ -406,7 +406,9 @@ function Editor({ original, onSaved }: { original: SiteDocument; onSaved: () => 
             : pending?.type === 'publish'
               ? 'انتشار نسخه ذخیره‌شده؟'
               : pending?.type === 'archive'
-                ? 'بایگانی محتوا؟'
+                ? document.kind === 'article'
+                  ? 'انتقال مقاله به بایگانی؟'
+                  : 'بایگانی محتوا؟'
                 : 'لغو انتشار محتوا؟'
         }
         size="sm"
@@ -432,7 +434,9 @@ function Editor({ original, onSaved }: { original: SiteDocument; onSaved: () => 
             ? 'نسخه انتخاب‌شده جایگزین پیش‌نویس فعلی می‌شود. تغییرات ذخیره‌نشده از بین می‌روند؛ نسخه عمومی تا انتشار بعدی ثابت می‌ماند.'
             : pending?.type === 'publish'
               ? 'این نسخه برای همه بازدیدکنندگان عمومی خواهد شد. متن، قیمت‌ها و ادعاهای این محتوا را بررسی کرده‌اید؟'
-              : 'این محتوا از دسترس عمومی وب‌سایت خارج می‌شود. نسخه‌های پیشین در تاریخچه باقی می‌مانند.'}
+              : pending?.type === 'archive' && document.kind === 'article'
+                ? 'مقاله از وبلاگ حذف می‌شود. برای بازگرداندن آن می‌توانید مقاله را از بایگانی پیدا و دوباره منتشر کنید.'
+                : 'این محتوا از دسترس عمومی وب‌سایت خارج می‌شود. نسخه‌های پیشین در تاریخچه باقی می‌مانند.'}
         </p>
       </Modal>
       <Modal

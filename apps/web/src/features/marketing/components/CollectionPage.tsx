@@ -1,4 +1,5 @@
 import type { PublishedSiteDocument } from '@taskin/contracts';
+import { sortSiteArticles } from '@/lib/site-utils';
 import { getSiteDocuments, getSitePage } from '@/lib/site-public';
 import { DocumentPage } from '@/features/marketing/components/DocumentPage';
 import { DocumentCards } from '@/features/marketing/components/Sections';
@@ -24,7 +25,7 @@ export async function CollectionPage({
       <section className="marketing-section">
         <div className="marketing-container">
           {entries.length ? (
-            <DocumentCards documents={entries} />
+            <DocumentCards documents={kind === 'article' ? sortSiteArticles(entries) : entries} />
           ) : (
             <p className="marketing-empty">هنوز محتوایی در این بخش منتشر نشده است.</p>
           )}

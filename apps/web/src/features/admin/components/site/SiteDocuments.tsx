@@ -20,7 +20,7 @@ export function SiteDocuments({ kind, title }: { kind?: SiteDocumentKind; title:
   const { call } = useAdmin();
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('all');
+  const [status, setStatus] = useState(kind === 'article' ? 'active' : 'all');
   const [creating, setCreating] = useState(false);
   const [newKind, setNewKind] = useState<SiteDocumentKind>(kind ?? 'page');
   const [slug, setSlug] = useState('');
@@ -86,6 +86,7 @@ export function SiteDocuments({ kind, title }: { kind?: SiteDocumentKind; title:
             value={status}
             onValueChange={setStatus}
             options={[
+              ...(kind === 'article' ? [{ value: 'active', label: 'مقاله‌های فعال' }] : []),
               { value: 'all', label: 'همه وضعیت‌ها' },
               { value: 'published', label: 'منتشرشده' },
               { value: 'draft', label: 'پیش‌نویس' },
@@ -100,7 +101,11 @@ export function SiteDocuments({ kind, title }: { kind?: SiteDocumentKind; title:
       <Panel title="محتوا">
         <Loaded load={page}>
           {(documents) => {
-            const shown = documents.filter((document) => status === 'all' || document.status === status);
+            const shown = documents.filter((document) => {
+              if (status === 'all') return true;
+              if (status === 'active') return document.status !== 'archived';
+              return document.status === status;
+            });
             return shown.length ? (
               <TableFrame label={title}>
                 <DataTable>

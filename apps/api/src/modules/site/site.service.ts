@@ -575,6 +575,22 @@ export class SiteService {
   }
 
   private async validateReferences(tx: Tx, document: DocumentRow): Promise<void> {
+    const validateMediaReference = async (src: unknown, field: string): Promise<void> => {
+      const id =
+        typeof src === 'string'
+          ? /\/api\/v1\/public\/site\/media\/([0-9a-f-]{36})(?:[?#].*)?$/i.exec(src)?.[1]
+          : undefined;
+      if (!id) return;
+      const [active] = await tx
+        .select({ id: siteMedia.id })
+        .from(siteMedia)
+        .where(and(eq(siteMedia.id, id), isNotNull(siteMedia.completedAt), isNull(siteMedia.archivedAt)));
+      if (!active)
+        throw ApiError.validation([{ field, message: 'only completed, active media may be published' }]);
+    };
+    const cover = document.draft.data.cover;
+    if (document.kind === 'article' && cover && typeof cover === 'object' && 'src' in cover)
+      await validateMediaReference(cover.src, 'draft.data.cover');
     const seen = new Set([document.id]);
     const walk = async (content: SiteContent, depth: number): Promise<void> => {
       if (depth > 8)
@@ -582,25 +598,8 @@ export class SiteService {
           { field: 'draft.sections', message: 'reusable block nesting exceeds 8 levels' },
         ]);
       for (const block of content.sections.filter((block) => block.visible)) {
-        for (const image of [block.media, ...(block.items ?? []).map((item) => item.media)]) {
-          const match = image?.src.match(/\/api\/v1\/public\/site\/media\/([0-9a-f-]{36})$/i);
-          if (match?.[1]) {
-            const [media] = await tx
-              .select({ id: siteMedia.id })
-              .from(siteMedia)
-              .where(
-                and(
-                  eq(siteMedia.id, match[1]),
-                  isNotNull(siteMedia.completedAt),
-                  isNull(siteMedia.archivedAt),
-                ),
-              );
-            if (!media)
-              throw ApiError.validation([
-                { field: 'draft.sections.media', message: 'only completed, active media may be published' },
-              ]);
-          }
-        }
+        for (const image of [block.media, ...(block.items ?? []).map((item) => item.media)])
+          await validateMediaReference(image?.src, 'draft.sections.media');
         if (block.type === 'reusable') {
           if (!block.referenceId || seen.has(block.referenceId))
             throw ApiError.validation([

@@ -1,7 +1,16 @@
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 import type { PublishedSiteDocument, SiteMediaRef, SiteSection } from '@taskin/contracts';
-import { asText, shouldOptimizeSiteImage, siteDate, siteMediaHref, sitePath } from '@/lib/site-utils';
+import {
+  articleCover,
+  asText,
+  shouldOptimizeSiteImage,
+  siteDate,
+  siteMediaHref,
+  sitePath,
+  sitePublicationDate,
+  sortSiteArticles,
+} from '@/lib/site-utils';
 import { ArrowLeftIcon, ShieldIcon, PeopleIcon, CalendarIcon } from '@/components/icons';
 import { SiteLink } from '@/features/marketing/components/SiteLink';
 import { FaqList } from '@/features/marketing/components/FaqList';
@@ -299,9 +308,11 @@ export function HomeSection({
     );
   if (section.type === 'content-grid') {
     const source = asText(section.data?.source, 'article');
-    const articles = documents
-      .filter((document) => document.kind === source)
-      .slice(0, typeof section.data?.limit === 'number' ? section.data.limit : 3);
+    const entries = documents.filter((document) => document.kind === source);
+    const articles = (source === 'article' ? sortSiteArticles(entries) : entries).slice(
+      0,
+      typeof section.data?.limit === 'number' ? section.data.limit : 3,
+    );
     return wrap(
       <>
         <div className="home-section-title-row">
@@ -309,23 +320,27 @@ export function HomeSection({
           <Actions section={section} />
         </div>
         <div className="home-articles">
-          {articles.map((article) => (
-            <article key={article.id}>
-              {Boolean(article.data.cover) && typeof article.data.cover === 'object' && (
-                <div className="home-article-cover">
-                  <Media media={article.data.cover as SiteMediaRef} />
-                </div>
-              )}
-              <time dateTime={article.publishedAt}>{siteDate(article.publishedAt)}</time>
-              <h3>
-                <SiteLink href={sitePath(article)}>
-                  {article.title}
-                  <ArrowLeftIcon size={18} />
-                </SiteLink>
-              </h3>
-              <p>{article.description}</p>
-            </article>
-          ))}
+          {articles.map((article) => {
+            const cover = articleCover(article.data);
+            const publicationDate = sitePublicationDate(article);
+            return (
+              <article key={article.id}>
+                {cover && (
+                  <div className="home-article-cover">
+                    <Media media={cover} />
+                  </div>
+                )}
+                <time dateTime={publicationDate}>{siteDate(publicationDate)}</time>
+                <h3>
+                  <SiteLink href={sitePath(article)}>
+                    {article.title}
+                    <ArrowLeftIcon size={18} />
+                  </SiteLink>
+                </h3>
+                <p>{article.description}</p>
+              </article>
+            );
+          })}
         </div>
         {!articles.length && (
           <div className="home-editorial-empty">

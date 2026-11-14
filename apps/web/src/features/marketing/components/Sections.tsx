@@ -1,6 +1,15 @@
 import Image from 'next/image';
 import type { PublishedSiteDocument, SiteSection, SiteMediaRef, SiteItem } from '@taskin/contracts';
-import { asText, shouldOptimizeSiteImage, siteDate, siteMediaHref, sitePath } from '@/lib/site-utils';
+import {
+  articleCover,
+  asText,
+  shouldOptimizeSiteImage,
+  siteDate,
+  siteMediaHref,
+  sitePath,
+  sitePublicationDate,
+  sortSiteArticles,
+} from '@/lib/site-utils';
 import { Arrow, SiteLink } from '@/features/marketing/components/SiteLink';
 import { ProductPreview } from '@/features/marketing/components/ProductPreview';
 import { FaqList } from '@/features/marketing/components/FaqList';
@@ -149,11 +158,10 @@ export function DocumentCards({ documents }: { documents: PublishedSiteDocument[
     <div className="marketing-card-grid">
       {documents.map((document) => {
         const path = sitePath(document);
-        const media = document.data.cover as SiteMediaRef | undefined;
         const image =
-          media && typeof media.src === 'string'
-            ? media
-            : document.sections.find((section) => section.visible && section.media)?.media;
+          articleCover(document.data) ??
+          document.sections.find((section) => section.visible && section.media)?.media;
+        const publicationDate = sitePublicationDate(document);
         return (
           <article className="marketing-card marketing-document-card" key={document.id}>
             {image && (
@@ -172,7 +180,7 @@ export function DocumentCards({ documents }: { documents: PublishedSiteDocument[
             </h3>
             <p>{document.description}</p>
             {document.kind === 'article' && (
-              <time dateTime={document.publishedAt}>{siteDate(document.publishedAt)}</time>
+              <time dateTime={publicationDate}>{siteDate(publicationDate)}</time>
             )}
             {document.kind === 'job' && (
               <p className="marketing-job-tags">
@@ -344,7 +352,7 @@ export function SectionRenderer({
         {section.type === 'content-grid' &&
           (source ? (
             relevant.length ? (
-              <DocumentCards documents={relevant} />
+              <DocumentCards documents={source === 'article' ? sortSiteArticles(relevant) : relevant} />
             ) : (
               <p className="marketing-empty">محتوایی در این بخش منتشر نشده است.</p>
             )

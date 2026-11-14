@@ -4,6 +4,7 @@ import type { SiteDocumentKind, SiteLink, SiteMediaRef } from '@taskin/contracts
 import { useState } from 'react';
 import { Button, Checkbox, Input, Select, Textarea } from '@/components/ui';
 import { LinkFields, MediaFields } from '@/features/admin/components/site/SiteFields';
+import { articleCover } from '@/lib/site-utils';
 
 const text = (data: Record<string, unknown>, key: string) =>
   typeof data[key] === 'string' ? (data[key] as string) : '';
@@ -209,10 +210,22 @@ export function SiteDataEditor({
         <div className="grid gap-3 sm:grid-cols-2">
           {input('category', 'دسته‌بندی')}
           {kind === 'article' && input('author', 'نام نویسنده تأییدشده')}
+          {kind === 'article' && (
+            <Input
+              type="date"
+              dir="ltr"
+              label="تاریخ نمایش انتشار (میلادی، اختیاری)"
+              hint="با خالی گذاشتن این فیلد، تاریخ نخستین انتشار نمایش داده می‌شود. این فیلد انتشار را زمان‌بندی نمی‌کند."
+              value={text(data, 'publicationDate')}
+              onChange={(event) => patch('publicationDate', event.target.value || undefined)}
+            />
+          )}
         </div>
         {kind === 'article' && (
           <MediaFields
-            value={data.cover as SiteMediaRef | undefined}
+            title="تصویر روی جلد مقاله"
+            imageOnly
+            value={articleCover(data, true)}
             onChange={(value) => patch('cover', value)}
           />
         )}

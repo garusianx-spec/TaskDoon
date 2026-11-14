@@ -1,7 +1,20 @@
 import type { PublishedSiteDocument } from '@taskin/contracts';
-import { asText, siteDate, siteHref, sitePath } from '@/lib/site-utils';
+import {
+  articleCover,
+  asText,
+  siteDate,
+  siteHref,
+  sitePath,
+  sitePublicationDate,
+  sortSiteArticles,
+} from '@/lib/site-utils';
 import { getSiteSettings, safeCanonical, siteOrigin } from '@/lib/site-public';
-import { SectionRenderer, DocumentCards, RichText } from '@/features/marketing/components/Sections';
+import {
+  SectionRenderer,
+  DocumentCards,
+  MarketingMedia,
+  RichText,
+} from '@/features/marketing/components/Sections';
 import { SiteLink } from '@/features/marketing/components/SiteLink';
 import { PricingPlans } from '@/features/marketing/components/PricingPlans';
 import { FaqList } from '@/features/marketing/components/FaqList';
@@ -32,6 +45,9 @@ export async function DocumentPage({
           { label: name, href: '/' },
           { label: document.title, href: path },
         ];
+  const publicationDate = sitePublicationDate(document);
+  const cover = document.kind === 'article' ? articleCover(document.data) : undefined;
+  const articleImage = document.seo.ogImage ?? cover?.src;
   const structured: Record<string, unknown>[] = [];
   if (document.kind === 'page' && document.slug === 'home')
     structured.push(
@@ -72,13 +88,13 @@ export async function DocumentPage({
       headline: document.title,
       description: document.description,
       mainEntityOfPage: canonical,
-      datePublished: document.publishedAt,
+      datePublished: publicationDate,
       dateModified: document.updatedAt,
       inLanguage: 'fa-IR',
       ...(asText(document.data.author)
         ? { author: { '@type': 'Person', name: asText(document.data.author) } }
         : {}),
-      ...(document.seo.ogImage ? { image: new URL(document.seo.ogImage, origin).href } : {}),
+      ...(articleImage ? { image: new URL(articleImage, origin).href } : {}),
     });
   const sourceKind =
     document.slug === 'blog'
@@ -130,12 +146,17 @@ export async function DocumentPage({
       )}
       {(legal || document.kind === 'article' || document.kind === 'help') && (
         <div className="marketing-container marketing-publication-meta">
-          <time dateTime={document.publishedAt}>
+          <time dateTime={publicationDate}>
             {legal ? 'آخرین انتشار: ' : 'منتشرشده در '}
-            {siteDate(document.publishedAt)}
+            {siteDate(publicationDate)}
           </time>
           {legal && <span>نسخه {new Intl.NumberFormat('fa-IR').format(document.version)}</span>}
           {asText(document.data.author) && <span>{asText(document.data.author)}</span>}
+        </div>
+      )}
+      {cover && (
+        <div className="marketing-container pb-8">
+          <MarketingMedia media={cover} framed />
         </div>
       )}
       {legal && sections.some((section) => section.title && section.type !== 'hero') && (
@@ -173,7 +194,9 @@ export async function DocumentPage({
           <section className="marketing-section">
             <div className="marketing-container">
               {sourceDocuments.length ? (
-                <DocumentCards documents={sourceDocuments} />
+                <DocumentCards
+                  documents={sourceKind === 'article' ? sortSiteArticles(sourceDocuments) : sourceDocuments}
+                />
               ) : (
                 <p className="marketing-empty">
                   در حال حاضر {sourceKind === 'job' ? 'فرصت شغلی فعالی' : 'محتوایی'} منتشر نشده است.
@@ -241,9 +264,9 @@ export async function DocumentPage({
                 <h2>بیشتر بخوانید</h2>
               </div>
               <DocumentCards
-                documents={documents
-                  .filter((item) => item.kind === 'article' && item.id !== document.id)
-                  .slice(0, 3)}
+                documents={sortSiteArticles(
+                  documents.filter((item) => item.kind === 'article' && item.id !== document.id),
+                ).slice(0, 3)}
               />
             </div>
           </section>
