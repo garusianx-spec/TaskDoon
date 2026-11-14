@@ -9,6 +9,7 @@ export interface TaskCompleteCheckboxProps {
   readonly task: Task;
   readonly onToggle: (completed: boolean) => void;
   readonly className?: string;
+  readonly touchTarget?: boolean;
 }
 
 const stop = (event: SyntheticEvent) => event.stopPropagation();
@@ -19,7 +20,12 @@ const stop = (event: SyntheticEvent) => event.stopPropagation();
  * key-up; a table row that opens on Enter/Space), so it stops the click and every key event
  * at its own boundary — toggling it never also opens, grabs or drags the task.
  */
-export function TaskCompleteCheckbox({ task, onToggle, className }: TaskCompleteCheckboxProps) {
+export function TaskCompleteCheckbox({
+  task,
+  onToggle,
+  className,
+  touchTarget = false,
+}: TaskCompleteCheckboxProps) {
   const done = task.status === 'done';
   return (
     <span
@@ -30,6 +36,11 @@ export function TaskCompleteCheckbox({ task, onToggle, className }: TaskComplete
       onDoubleClick={stop}
     >
       <Checkbox
+        className={
+          touchTarget
+            ? 'max-sm:relative max-sm:m-3.5 max-sm:after:absolute max-sm:after:-inset-3.5'
+            : undefined
+        }
         checked={done}
         onCheckedChange={onToggle}
         ariaLabel={`انجام شد: ${task.title}`}

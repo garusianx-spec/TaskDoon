@@ -38,16 +38,19 @@ const blankForm = (date: string, currentUserId: string): FormState => ({
 export function useCalendarEventForm({
   open,
   initialDate,
+  timeZone,
   currentUserId,
   onSubmit,
-}: Pick<CalendarEventModalProps, 'open' | 'initialDate' | 'currentUserId' | 'onSubmit'>) {
-  const [form, setForm] = useState<FormState>(() => blankForm(toISODate(new Date()), currentUserId));
+}: Pick<CalendarEventModalProps, 'open' | 'initialDate' | 'timeZone' | 'currentUserId' | 'onSubmit'>) {
+  const [form, setForm] = useState<FormState>(() =>
+    blankForm(toISODate(new Date(), timeZone), currentUserId),
+  );
   const [touched, setTouched] = useState(false);
 
   useResetOnOpen(
     open,
     () => {
-      setForm(blankForm(initialDate ?? toISODate(new Date()), currentUserId));
+      setForm(blankForm(initialDate ?? toISODate(new Date(), timeZone), currentUserId));
       setTouched(false);
     },
     initialDate,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { TEHRAN_TIME_ZONE } from '@taskin/jalali';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { CreateTaskModal } from '@/features/tasks/components/CreateTaskModal';
 import { CreateProjectModal } from '@/features/board/components/CreateProjectModal';
@@ -51,6 +52,7 @@ export function OverlayHost() {
   }, [taskNotice]);
   const { active, open, close } = useOverlays();
   const live = useLive();
+  const timeZone = activeWorkspace.timeZone ?? TEHRAN_TIME_ZONE;
   const hasPassword = live?.status.user?.hasPassword ?? false;
 
   const goTo = (href: string) => {
@@ -83,7 +85,7 @@ export function OverlayHost() {
         open={active?.kind === 'task-composer'}
         draft={active?.kind === 'task-composer' ? active.draft : null}
         columns={state.boardColumns}
-        timeZone={activeWorkspace.timeZone}
+        timeZone={timeZone}
         {...(pathname.startsWith('/tasks') && state.projectFilterId
           ? { fixedProjectId: state.projectFilterId }
           : {})}
@@ -167,6 +169,7 @@ export function OverlayHost() {
       <CalendarEventModal
         open={active?.kind === 'event-composer'}
         initialDate={active?.kind === 'event-composer' ? active.date : null}
+        timeZone={timeZone}
         currentUserId={currentUser.id}
         onClose={close}
         onSubmit={(draft) => {

@@ -1,26 +1,29 @@
 'use client';
 
-import { jalaliFromIsoDate } from '@/lib/jalali';
+import { useHydrated } from '@/hooks/useHydrated';
+import { useNow } from '@/hooks/useNow';
 import { useEffect, useMemo, useState } from 'react';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { calendarItemsByDate } from '@/store/selectors';
 import { taskDraft } from '@/store/drafts';
-import { buildMonthGrid, formatJalali, shiftJalaliMonth, toISODate } from '@taskin/jalali';
+import { fromISODate, shiftCalendarMonth, TEHRAN_TIME_ZONE, toISODate } from '@taskin/jalali';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { MonthGrid } from '@/features/calendar/components/MonthGrid';
-import { Button, IconButton } from '@/components/ui';
-import { AddIcon, ChevronBackwardIcon, ChevronForwardIcon } from '@/components/icons';
+import { Button, Skeleton } from '@/components/ui';
+import { AddIcon } from '@/components/icons';
+import { CalendarDateText } from './CalendarDateText';
+import { CalendarMonthNavigation } from './CalendarMonthNavigation';
+import { CalendarSystemToggle } from './CalendarSystemToggle';
+import { useCalendarGrid } from '../hooks/useCalendarGrid';
+import { useCalendarPreference } from '../hooks/useCalendarPreference';
 import { Legend } from '@/features/calendar/components/CalendarLegend';
 import { UpcomingPanel } from '@/features/calendar/components/UpcomingCalendar';
 
 export function CalendarPage() {
-  return (
-    <AppShell>
-      <CalendarContent />
-    </AppShell>
-  );
+  const hydrated = useHydrated();
+  return <AppShell>{hydrated ? <CalendarContent /> : <Skeleton className="m-4 h-96" />}</AppShell>;
 }
 
 /**
@@ -29,30 +32,23 @@ export function CalendarPage() {
  * day starts a task due that day.
  */
 function CalendarContent() {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, activeWorkspace } = useWorkspace();
   const { open, openTaskComposer } = useOverlays();
-  const today = useMemo(() => new Date(), []);
-  const todayIso = useMemo(() => toISODate(today), [today]);
-  const [focusedIso, setFocusedIso] = useState(todayIso);
-  const [cursor, setCursor] = useState(() => {
-    const jalali = jalaliFromIsoDate(todayIso);
-    return { year: jalali.year, month: jalali.month };
-  });
+  const { system, setCalendarSystem } = useCalendarPreference();
+  const timeZone = activeWorkspace.timeZone ?? TEHRAN_TIME_ZONE;
+  const todayIso = toISODate(useNow() ?? new Date(), timeZone);
+  const today = useMemo(() => fromISODate(todayIso), [todayIso]);
+  const [selectedIso, setFocusedIso] = useState<string | null>(null);
+  const focusedIso = selectedIso ?? todayIso;
+  const grid = useCalendarGrid(system, focusedIso, todayIso);
 
-  // An event created elsewhere (quick-create, day summary) lands the calendar on its day.
+  // An event created elsewhere lands the calendar on its own civil day.
   const { calendarFocusDate } = state;
   useEffect(() => {
     if (!calendarFocusDate) return;
-    const jalali = jalaliFromIsoDate(calendarFocusDate);
-    setCursor({ year: jalali.year, month: jalali.month });
     setFocusedIso(calendarFocusDate);
     dispatch({ type: 'clear-calendar-focus' });
   }, [calendarFocusDate, dispatch]);
-
-  const cells = useMemo(
-    () => buildMonthGrid(cursor.year, cursor.month, today),
-    [cursor.year, cursor.month, today],
-  );
 
   // Completed work drops off the calendar: it is a planning surface, not a history.
   const openTasks = useMemo(() => state.tasks.filter((task) => task.status !== 'done'), [state.tasks]);
@@ -61,80 +57,56 @@ function CalendarContent() {
     [openTasks, state.calendarEvents],
   );
 
-  const monthIso = cells.find((cell) => cell.inCurrentMonth)?.iso ?? todayIso;
-  const monthItemCount = cells
-    .filter((cell) => cell.inCurrentMonth)
-    .reduce((sum, cell) => sum + (itemsByDate.get(cell.iso)?.length ?? 0), 0);
+  const monthItemCount = grid.weeks
+    .flat()
+    .reduce((sum, cell) => sum + (cell.inCurrentMonth ? (itemsByDate.get(cell.iso)?.length ?? 0) : 0), 0);
 
-  const focusDate = (iso: string) => {
-    setFocusedIso(iso);
-    const jalali = jalaliFromIsoDate(iso);
-    if (jalali.year !== cursor.year || jalali.month !== cursor.month) {
-      setCursor({ year: jalali.year, month: jalali.month });
-    }
-  };
-
-  const step = (delta: number) => {
-    const next = shiftJalaliMonth(cursor.year, cursor.month, delta);
-    setCursor({ year: next.year, month: next.month });
-  };
-
-  const createTask = (iso: string) => openTaskComposer(taskDraft({ dueDate: iso }));
+  const createTask = (iso: string) =>
+    openTaskComposer(taskDraft({ dueDate: iso, startDate: iso < todayIso ? iso : todayIso }));
   const createEvent = (iso: string) => open({ kind: 'event-composer', date: iso });
   const toggleComplete = (taskId: string, completed: boolean) =>
     dispatch({ type: 'set-task-completed', taskId, completed });
 
   return (
     <div className="h-full overflow-y-auto scrollbar-thin">
-      <header className="border-b border-secondary bg-surface px-4 py-3 sm:px-6">
-        <h1 className="text-heading-sm font-bold text-fg-primary">تقویم</h1>
-        <span className="text-caption text-fg-tertiary numeric">
-          {`${formatCount(monthItemCount)} مهلت، جلسه و نقطه عطف در ${formatJalali(monthIso, 'month-year')}`}
-        </span>
+      <header className="border-b border-secondary bg-surface px-3 py-3 sm:px-6">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-heading-sm font-bold text-fg-primary">تقویم</h1>
+          <CalendarSystemToggle system={system} onChange={setCalendarSystem} />
+        </div>
+        <p className="truncate text-caption text-fg-tertiary">
+          <span className="numeric">{formatCount(monthItemCount)}</span> مهلت، جلسه و نقطه عطف در{' '}
+          <CalendarDateText system={system}>{grid.monthLabel}</CalendarDateText>
+        </p>
       </header>
 
-      <div className="grid gap-5 p-4 sm:p-6 xl:grid-cols-[1fr_20rem]">
+      <div className="grid gap-5 p-3 sm:p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <section aria-label="نمای ماهانه" className="flex min-w-0 flex-col gap-3">
-          {/*
-            One baseline for the whole bar. The two outer groups share the leftover width
-            equally (`flex-1`), so the date controls sit exactly over the grid's centre
-            whatever the legend or the button measure.
-          */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="order-last w-full sm:order-none sm:w-auto sm:flex-1">
-              <Legend />
-            </div>
-            <div role="group" aria-label="پیمایش ماه" className="flex items-center gap-1.5">
-              <IconButton label="ماه قبل" icon={<ChevronBackwardIcon size={18} />} onClick={() => step(-1)} />
-              <span
-                className="min-w-24 text-center text-title-sm font-bold text-fg-primary numeric"
-                aria-live="polite"
-              >
-                {formatJalali(monthIso, 'month-year')}
-              </span>
-              <IconButton label="ماه بعد" icon={<ChevronForwardIcon size={18} />} onClick={() => step(1)} />
-              <Button size="sm" variant="secondary" onClick={() => focusDate(todayIso)} className="ms-1">
-                امروز
-              </Button>
-            </div>
-            <div className="flex sm:flex-1 sm:justify-end">
-              <Button
-                size="sm"
-                iconStart={<AddIcon size={16} />}
-                aria-haspopup="dialog"
-                onClick={() => createEvent(focusedIso)}
-              >
-                رویداد جدید
-              </Button>
-            </div>
+            <CalendarMonthNavigation
+              system={system}
+              monthLabel={grid.monthLabel}
+              onStep={(delta) => setFocusedIso((iso) => shiftCalendarMonth(system, iso ?? todayIso, delta))}
+              onToday={() => setFocusedIso(toISODate(new Date(), timeZone))}
+            />
+            <Legend />
+            <Button
+              size="lg"
+              iconStart={<AddIcon size={16} />}
+              aria-haspopup="dialog"
+              onClick={() => createEvent(focusedIso)}
+            >
+              رویداد جدید
+            </Button>
           </div>
           <div className="overflow-visible rounded-xl border border-secondary bg-surface shadow-xs">
             <MonthGrid
-              cells={cells}
+              grid={grid}
+              system={system}
               itemsByDate={itemsByDate}
               today={today}
               focusedIso={focusedIso}
-              onFocusDate={focusDate}
+              onFocusDate={setFocusedIso}
               onCreateTask={createTask}
               onCreateEvent={createEvent}
               onOpenTask={(taskId) => dispatch({ type: 'open-task', taskId })}
@@ -147,6 +119,7 @@ function CalendarContent() {
         </section>
 
         <UpcomingPanel
+          system={system}
           itemsByDate={itemsByDate}
           today={today}
           onOpenTask={(taskId) => dispatch({ type: 'open-task', taskId })}

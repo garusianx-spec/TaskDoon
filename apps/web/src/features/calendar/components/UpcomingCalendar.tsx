@@ -2,7 +2,14 @@
 
 import { useMemo } from 'react';
 import { type CalendarItem } from '@/store/selectors';
-import { addDays, daysBetween, formatJalali, fromISODate, toISODate } from '@taskin/jalali';
+import {
+  addDays,
+  daysBetween,
+  formatCalendarDate,
+  fromISODate,
+  toISODate,
+  type CalendarSystem,
+} from '@taskin/jalali';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import {
@@ -15,6 +22,7 @@ import {
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CalendarIcon } from '@/components/icons';
+import { CalendarDateText } from './CalendarDateText';
 
 /** How far ahead the side panel looks. */
 const UPCOMING_DAYS = 14;
@@ -22,11 +30,12 @@ const UPCOMING_DAYS = 14;
 interface UpcomingPanelProps {
   readonly itemsByDate: ReadonlyMap<string, readonly CalendarItem[]>;
   readonly today: Date;
+  readonly system: CalendarSystem;
   readonly onOpenTask: (taskId: string) => void;
 }
 
 /** Overdue deadlines, then the next two weeks day by day. */
-export function UpcomingPanel({ itemsByDate, today, onOpenTask }: UpcomingPanelProps) {
+export function UpcomingPanel({ itemsByDate, today, system, onOpenTask }: UpcomingPanelProps) {
   const todayIso = toISODate(today);
 
   const overdue = useMemo(() => {
@@ -50,7 +59,7 @@ export function UpcomingPanel({ itemsByDate, today, onOpenTask }: UpcomingPanelP
     const delta = daysBetween(today, fromISODate(date));
     if (delta === 0) return 'امروز';
     if (delta === 1) return 'فردا';
-    return formatJalali(date, 'long');
+    return formatCalendarDate(system, date, 'long');
   };
 
   return (
@@ -69,7 +78,14 @@ export function UpcomingPanel({ itemsByDate, today, onOpenTask }: UpcomingPanelP
           </h3>
           <ul className="flex flex-col gap-1.5">
             {overdue.map((item) => (
-              <UpcomingRow key={item.id} item={item} today={today} onOpenTask={onOpenTask} showDate />
+              <UpcomingRow
+                key={item.id}
+                item={item}
+                today={today}
+                system={system}
+                onOpenTask={onOpenTask}
+                showDate
+              />
             ))}
           </ul>
         </section>
@@ -85,10 +101,20 @@ export function UpcomingPanel({ itemsByDate, today, onOpenTask }: UpcomingPanelP
       ) : (
         days.map((day) => (
           <section key={day.date} aria-label={relativeDay(day.date)} className="flex flex-col gap-2">
-            <h3 className="text-caption font-semibold text-fg-secondary numeric">{relativeDay(day.date)}</h3>
+            <h3 className="truncate text-caption font-semibold text-fg-secondary">
+              <CalendarDateText system={daysBetween(today, fromISODate(day.date)) <= 1 ? 'jalali' : system}>
+                {relativeDay(day.date)}
+              </CalendarDateText>
+            </h3>
             <ul className="flex flex-col gap-1.5">
               {day.items.map((item) => (
-                <UpcomingRow key={item.id} item={item} today={today} onOpenTask={onOpenTask} />
+                <UpcomingRow
+                  key={item.id}
+                  item={item}
+                  today={today}
+                  system={system}
+                  onOpenTask={onOpenTask}
+                />
               ))}
             </ul>
           </section>
@@ -101,18 +127,13 @@ export function UpcomingPanel({ itemsByDate, today, onOpenTask }: UpcomingPanelP
 interface UpcomingRowProps {
   readonly item: CalendarItem;
   readonly today: Date;
+  readonly system: CalendarSystem;
   readonly onOpenTask: (taskId: string) => void;
   readonly showDate?: boolean;
 }
 
-function UpcomingRow({ item, today, onOpenTask, showDate = false }: UpcomingRowProps) {
-  const meta = [
-    itemKindLabel(item),
-    itemTimeLabel(item),
-    showDate ? formatJalali(item.date, 'day-month') : null,
-  ]
-    .filter(Boolean)
-    .join('، ');
+function UpcomingRow({ item, today, system, onOpenTask, showDate = false }: UpcomingRowProps) {
+  const meta = [itemKindLabel(item), itemTimeLabel(item)].filter(Boolean).join('، ');
   const content = (
     <>
       <span
@@ -122,7 +143,17 @@ function UpcomingRow({ item, today, onOpenTask, showDate = false }: UpcomingRowP
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-body-sm font-semibold text-fg-primary">{itemTitle(item)}</span>
-        <span className="truncate text-micro text-fg-tertiary numeric">{meta}</span>
+        <span className="truncate text-micro text-fg-tertiary">
+          <span className="numeric">{meta}</span>
+          {showDate && (
+            <>
+              {'، '}
+              <CalendarDateText system={system}>
+                {formatCalendarDate(system, item.date, 'day-month')}
+              </CalendarDateText>
+            </>
+          )}
+        </span>
       </span>
     </>
   );
@@ -135,6 +166,7 @@ function UpcomingRow({ item, today, onOpenTask, showDate = false }: UpcomingRowP
       {item.kind === 'deadline' ? (
         <button
           type="button"
+          aria-label={itemTitle(item)}
           onClick={() => onOpenTask(item.task.id)}
           className={cn(className, 'hover:border-brand')}
         >

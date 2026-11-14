@@ -3,7 +3,8 @@
 import type { CalendarEventDraft, CalendarEventKind } from '@taskin/contracts';
 import { CALENDAR_EVENT_KINDS } from '@/data/reference';
 import { directory } from '@/store/directory';
-import { formatJalali } from '@taskin/jalali';
+import { formatCalendarDate } from '@taskin/jalali';
+import { useCalendarPreference } from '@/features/calendar/hooks/useCalendarPreference';
 import { Avatar, Button, Checkbox, Input, Modal, SegmentedControl, Select, Textarea } from '@/components/ui';
 import { JalaliDatePicker } from '@/components/shared/JalaliDatePicker';
 import { CalendarIcon, ClockIcon, MilestoneIcon, NotificationIcon } from '@/components/icons';
@@ -13,6 +14,7 @@ export interface CalendarEventModalProps {
   readonly open: boolean;
   /** Pre-selected day (`YYYY-MM-DD`); today when `null`. */
   readonly initialDate: string | null;
+  readonly timeZone: string;
   readonly currentUserId: string;
   readonly onClose: () => void;
   readonly onSubmit: (draft: CalendarEventDraft) => void;
@@ -25,19 +27,21 @@ const KIND_ICONS: Readonly<Record<CalendarEventKind, typeof CalendarIcon>> = {
 };
 
 /**
- * Schedules a meeting, a personal reminder or a project milestone on the Jalali calendar.
+ * Schedules a meeting, a personal reminder or a project milestone on the workspace calendar.
  * Only the fields that apply to the chosen kind are shown: milestones are all-day and must
  * belong to a project; reminders have a time but no attendees.
  */
 export function CalendarEventModal({
   open,
   initialDate,
+  timeZone,
   currentUserId,
   onClose,
   onSubmit,
 }: CalendarEventModalProps) {
+  const { system } = useCalendarPreference();
   const { form, setForm, setTouched, set, endSlots, titleError, projectError, submit, slotOptions } =
-    useCalendarEventForm({ open, initialDate, currentUserId, onSubmit });
+    useCalendarEventForm({ open, initialDate, timeZone, currentUserId, onSubmit });
 
   return (
     <Modal
@@ -45,7 +49,7 @@ export function CalendarEventModal({
       onClose={onClose}
       size="md"
       title="رویداد تقویم"
-      description={`برای ${formatJalali(form.date, 'long')} یک جلسه، یادآور یا نقطه عطف ثبت کنید.`}
+      description={`برای ${formatCalendarDate(system, form.date, 'long')} یک جلسه، یادآور یا نقطه عطف ثبت کنید.`}
       icon={<CalendarIcon size={20} />}
       footer={
         <>
@@ -101,6 +105,7 @@ export function CalendarEventModal({
           <div className="flex flex-col gap-1.5">
             <span className="text-body-sm font-medium text-fg-secondary">تاریخ</span>
             <JalaliDatePicker
+              timeZone={timeZone}
               label="انتخاب تاریخ رویداد"
               value={form.date}
               onChange={(date) => set('date', date)}

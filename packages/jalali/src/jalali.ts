@@ -5,9 +5,8 @@
  * leap cycle / Birashk-corrected algorithm popularised by `jalaali-js`). Accurate for the
  * full 1178–1633 Jalali range, which covers every date this product can produce.
  *
- * Nothing here touches `Intl` for conversion — `Intl.DateTimeFormat('fa-IR')` is only used
- * as a cross-check in tests, never at runtime, so output is identical on every platform and
- * in every Node/browser ICU build.
+ * Calendar conversion uses integer arithmetic. Intl handles Gregorian display and
+ * projecting a clock instant into a named time zone.
  */
 
 export interface JalaliDate {
@@ -127,9 +126,10 @@ export function jalaliMonthLength(jy: number, jm: number): number {
 }
 
 export function gregorianToJalali(date: Date): JalaliDate {
-  const gy = date.getFullYear();
-  const gm = date.getMonth() + 1;
-  const gd = date.getDate();
+  return gregorianPartsToJalali(date.getFullYear(), date.getMonth() + 1, date.getDate());
+}
+
+function gregorianPartsToJalali(gy: number, gm: number, gd: number): JalaliDate {
   const { gy: cy, march, leap } = jalCal(gy - 621);
   const jdn1f = gregorianToJdn(cy, 3, march);
   const jdn = gregorianToJdn(gy, gm, gd);
@@ -152,11 +152,14 @@ export function gregorianToJalali(date: Date): JalaliDate {
 }
 
 export function jalaliToGregorian(jy: number, jm: number, jd: number): Date {
+  const { gy, gm, gd } = jdnToGregorian(jalaliToJdn(jy, jm, jd));
+  return new Date(gy, gm - 1, gd);
+}
+
+function jalaliToJdn(jy: number, jm: number, jd: number): number {
   const { gy: cy, march } = jalCal(jy);
   const offset = jm <= 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186;
-  const jdn = gregorianToJdn(cy, 3, march) + offset + jd - 1;
-  const { gy, gm, gd } = jdnToGregorian(jdn);
-  return new Date(gy, gm - 1, gd);
+  return gregorianToJdn(cy, 3, march) + offset + jd - 1;
 }
 
 /* ============================== Formatting ============================== */
@@ -189,9 +192,19 @@ export type JalaliFormat = 'short' | 'medium' | 'long' | 'full' | 'day-month' | 
  */
 export function formatJalali(iso: string | Date, format: JalaliFormat = 'medium'): string {
   const date = iso instanceof Date ? iso : parseISODate(iso);
-  const { year, month, day } = gregorianToJalali(date);
+  const parts = gregorianToJalali(date);
+  const weekday = jalaliWeekdayIndex(date);
+  if (format === 'full') return `${formatJalaliParts(parts, weekday, 'long')} ساعت ${formatTime(date)}`;
+  return formatJalaliParts(parts, weekday, format);
+}
+
+function formatJalaliParts(
+  { year, month, day }: JalaliDate,
+  weekdayIndex: number,
+  format: Exclude<JalaliFormat, 'full'>,
+): string {
   const monthName = JALALI_MONTHS[month - 1] ?? '';
-  const weekday = JALALI_WEEKDAYS[jalaliWeekdayIndex(date)] ?? '';
+  const weekday = JALALI_WEEKDAYS[weekdayIndex] ?? '';
 
   switch (format) {
     case 'short':
@@ -202,8 +215,6 @@ export function formatJalali(iso: string | Date, format: JalaliFormat = 'medium'
       return `${toPersianDigits(day)} ${monthName} ${toPersianDigits(year)}`;
     case 'long':
       return `${weekday}، ${toPersianDigits(day)} ${monthName} ${toPersianDigits(year)}`;
-    case 'full':
-      return `${weekday}، ${toPersianDigits(day)} ${monthName} ${toPersianDigits(year)} ساعت ${formatTime(date)}`;
     case 'month-year':
       return `${monthName} ${toPersianDigits(year)}`;
     default: {
@@ -309,24 +320,119 @@ export interface CalendarCell {
  * the grid is always rectangular.
  */
 export function buildMonthGrid(jy: number, jm: number, today: Date = new Date()): CalendarCell[] {
-  const firstOfMonth = jalaliToGregorian(jy, jm, 1);
-  const leadingBlanks = jalaliWeekdayIndex(firstOfMonth);
-  const cells: CalendarCell[] = [];
-  const total = 42;
+  return buildCalendarGrid('jalali', isoFromParts(jdnParts(jalaliToJdn(jy, jm, 1))), toISODate(today)).map(
+    ({ day, ...cell }) => ({ ...cell, jalali: day }),
+  );
+}
 
-  for (let i = 0; i < total; i += 1) {
-    const cursor = new Date(firstOfMonth);
-    cursor.setDate(cursor.getDate() + (i - leadingBlanks));
-    const jalali = gregorianToJalali(cursor);
-    cells.push({
-      iso: toISODate(cursor),
-      jalali,
-      inCurrentMonth: jalali.month === jm && jalali.year === jy,
-      isToday: isSameJalaliDay(cursor, today),
-      weekdayIndex: jalaliWeekdayIndex(cursor),
-    });
+export type CalendarSystem = 'jalali' | 'gregorian';
+
+export interface CalendarGridCell extends Omit<CalendarCell, 'jalali'> {
+  /** Date displayed in the chosen calendar system. */
+  readonly day: JalaliDate;
+}
+
+export const TEHRAN_TIME_ZONE = 'Asia/Tehran';
+
+function jdnParts(jdn: number): JalaliDate {
+  const { gy, gm, gd } = jdnToGregorian(jdn);
+  return { year: gy, month: gm, day: gd };
+}
+
+function isoFromParts({ year, month, day }: JalaliDate): string {
+  return [String(year).padStart(4, '0'), String(month).padStart(2, '0'), String(day).padStart(2, '0')].join(
+    '-',
+  );
+}
+
+function dayInSystem(system: CalendarSystem, date: JalaliDate): JalaliDate {
+  return system === 'jalali' ? gregorianPartsToJalali(date.year, date.month, date.day) : date;
+}
+
+function calendarJdn(system: CalendarSystem, year: number, month: number, day: number): number {
+  return system === 'jalali' ? jalaliToJdn(year, month, day) : gregorianToJdn(year, month, day);
+}
+
+/** Builds six Saturday-first weeks around the month containing the civil ISO date. */
+export function buildCalendarGrid(
+  system: CalendarSystem,
+  anchorIso: string,
+  todayIso: string,
+): CalendarGridCell[] {
+  const { year, month } = dayInSystem(system, isoParts(anchorIso));
+  const first = calendarJdn(system, year, month, 1);
+  const weekday = (first + 2) % 7;
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const gregorian = jdnParts(first - weekday + index);
+    const iso = isoFromParts(gregorian);
+    const day = dayInSystem(system, gregorian);
+    return {
+      iso,
+      day,
+      inCurrentMonth: day.year === year && day.month === month,
+      isToday: iso === todayIso,
+      weekdayIndex: index % 7,
+    };
+  });
+}
+
+/** Steps in the displayed calendar and clamps the original day in shorter months. */
+export function shiftCalendarMonth(system: CalendarSystem, iso: string, delta: number): string {
+  const { year, month, day } = dayInSystem(system, isoParts(iso));
+  const target = shiftJalaliMonth(year, month, delta);
+  const following = shiftJalaliMonth(target.year, target.month, 1);
+  const start = calendarJdn(system, target.year, target.month, 1);
+  const end = calendarJdn(system, following.year, following.month, 1);
+  return isoFromParts(jdnParts(Math.min(start + day - 1, end - 1)));
+}
+
+export const GREGORIAN_WEEKDAYS = [
+  'Saturday',
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+] as const;
+export const GREGORIAN_WEEKDAYS_SHORT = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'] as const;
+
+type CalendarDateFormat = 'medium' | 'long' | 'day-month' | 'month-year';
+
+const gregorianFormats: Record<CalendarDateFormat, Intl.DateTimeFormat> = {
+  medium: new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }),
+  long: new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+    timeZone: 'UTC',
+  }),
+  'day-month': new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+  'month-year': new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', timeZone: 'UTC' }),
+};
+
+/** Formats the same civil date in either display calendar. */
+export function formatCalendarDate(system: CalendarSystem, iso: string, format: CalendarDateFormat): string {
+  const { year, month, day } = isoParts(iso);
+  if (system === 'jalali') {
+    return formatJalaliParts(
+      gregorianPartsToJalali(year, month, day),
+      (gregorianToJdn(year, month, day) + 2) % 7,
+      format,
+    );
   }
-  return cells;
+
+  // UTC is only the formatter's representation of these civil fields.
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  return gregorianFormats[format].format(date);
 }
 
 /** `YYYY-MM-DD` on the given zone's calendar, or the device's calendar when omitted. */
@@ -355,17 +461,21 @@ export function toISODate(date: Date, timeZone?: string): string {
  * which is still the previous day anywhere west of Greenwich.
  */
 export function fromISODate(iso: string): Date {
+  const { year, month, day } = isoParts(iso);
+  return new Date(year, month - 1, day);
+}
+
+function isoParts(iso: string): JalaliDate {
   const [year, month, day] = iso.slice(0, 10).split('-').map(Number);
   if (year === undefined || month === undefined || day === undefined) {
     throw new RangeError(`Invalid ISO date: ${iso}`);
   }
-  return new Date(year, month - 1, day);
+  return { year, month, day };
 }
 
 export function addDays(iso: string, days: number): string {
-  const date = fromISODate(iso);
-  date.setDate(date.getDate() + days);
-  return toISODate(date);
+  const { year, month, day } = isoParts(iso);
+  return isoFromParts(jdnParts(gregorianToJdn(year, month, day) + days));
 }
 
 /** Step a Jalali year/month pair, rolling the year over at the boundaries. */

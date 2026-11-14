@@ -1,6 +1,8 @@
 'use client';
 
 import type { BoardColumn, Task, TaskPriority, User } from '@taskin/contracts';
+import { TEHRAN_TIME_ZONE } from '@taskin/jalali';
+import { useWorkspace } from '@/store/WorkspaceProvider';
 import { TASK_PRIORITIES } from '@/data/reference';
 import { Select } from '@/components/ui';
 import { JalaliDatePicker } from '@/components/shared/JalaliDatePicker';
@@ -25,6 +27,8 @@ export function TaskInspectorFields({
   readonly onColumn: (id: string) => void;
   readonly onPatch: (patch: TaskPatch) => void;
 }) {
+  const { activeWorkspace } = useWorkspace();
+  const timeZone = activeWorkspace.timeZone ?? TEHRAN_TIME_ZONE;
   return (
     <section
       className="flex flex-col gap-3 md:col-start-2 md:row-start-1 md:rounded-xl md:border md:border-secondary md:bg-sunken/40 md:p-4"
@@ -89,6 +93,7 @@ export function TaskInspectorFields({
       <div className="grid grid-cols-2 gap-3 md:grid-cols-1">
         <Field label="تاریخ شروع">
           <JalaliDatePicker
+            timeZone={timeZone}
             label="انتخاب تاریخ شروع"
             value={task.startDate}
             onChange={(startDate) => onPatch({ startDate })}
@@ -96,6 +101,7 @@ export function TaskInspectorFields({
         </Field>
         <Field label="مهلت انجام">
           <JalaliDatePicker
+            timeZone={timeZone}
             label="انتخاب مهلت انجام"
             value={task.dueDate}
             onChange={(dueDate) => onPatch({ dueDate })}

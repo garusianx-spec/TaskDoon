@@ -1,11 +1,12 @@
 'use client';
 
 import { type KeyboardEvent } from 'react';
-import type { CalendarCell } from '@taskin/jalali';
+import type { CalendarGridCell, CalendarSystem } from '@taskin/jalali';
 import type { CalendarItem } from '@/store/selectors';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
-import { formatJalali, toPersianDigits } from '@taskin/jalali';
+import { formatCalendarDate, toPersianDigits } from '@taskin/jalali';
+import { CalendarDateText } from './CalendarDateText';
 import { Popover, type PopoverProps } from '@/components/ui';
 import { AddIcon } from '@/components/icons';
 import { CalendarBadge, itemDotClass } from '@/features/calendar/components/calendar-item';
@@ -15,15 +16,16 @@ import { DaySummary } from '@/features/calendar/components/DaySummary';
 const MAX_VISIBLE = 2;
 
 interface DayCellProps {
-  readonly cell: CalendarCell;
+  readonly cell: CalendarGridCell;
+  readonly system: CalendarSystem;
   readonly items: readonly CalendarItem[];
   readonly today: Date;
   readonly focusable: boolean;
   readonly placement: NonNullable<PopoverProps['placement']>;
   readonly align: NonNullable<PopoverProps['align']>;
+  readonly onSelect: (iso: string) => void;
   readonly registerButton: (node: HTMLButtonElement | null) => void;
   readonly onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
-  readonly onFocus: () => void;
   readonly onCreateTask: (iso: string) => void;
   readonly onCreateEvent: (iso: string) => void;
   readonly onOpenTask: (taskId: string) => void;
@@ -32,14 +34,15 @@ interface DayCellProps {
 
 export function DayCell({
   cell,
+  system,
   items,
   today,
   focusable,
   placement,
   align,
+  onSelect,
   registerButton,
   onKeyDown,
-  onFocus,
   onCreateTask,
   onCreateEvent,
   onOpenTask,
@@ -48,10 +51,12 @@ export function DayCell({
   const visible = items.slice(0, MAX_VISIBLE);
   const hidden = items.length - visible.length;
   const isFriday = cell.weekdayIndex === 6;
+  const dateLabel = formatCalendarDate(system, cell.iso, 'long');
 
   const summary = (close: () => void) => (
     <DaySummary
       date={cell.iso}
+      system={system}
       items={items}
       today={today}
       onOpenTask={(taskId) => {
@@ -73,17 +78,19 @@ export function DayCell({
   // Uncontrolled on purpose: each trigger (event badge, overflow chip, phone dots) owns its
   // own open state, so opening one never opens the others.
   const popoverProps = {
-    label: `برنامه ${formatJalali(cell.iso, 'long')}`,
+    label: `برنامه ${dateLabel}`,
     placement,
     align,
-    panelClassName: 'min-w-0 p-2',
+    panelClassName: 'min-w-0 w-80 p-2',
+    constrainToViewport: true,
   } as const;
 
   return (
     <div
       role="gridcell"
+      aria-selected={focusable}
       className={cn(
-        'group/cell relative flex min-h-16 min-w-0 flex-col gap-1 border-b border-e border-tertiary p-1 sm:min-h-28 sm:p-1.5',
+        'group/cell relative flex h-24 min-w-0 flex-col gap-1 border-b border-e border-tertiary p-1 sm:h-32 sm:p-1.5',
         !cell.inCurrentMonth && 'bg-sunken/50',
       )}
     >
@@ -93,24 +100,29 @@ export function DayCell({
         type="button"
         tabIndex={focusable ? 0 : -1}
         aria-current={cell.isToday ? 'date' : undefined}
-        aria-label={`${formatJalali(cell.iso, 'long')}${items.length ? `، ${formatCount(items.length)} مورد` : ''} — ایجاد وظیفه با این مهلت`}
-        onClick={() => onCreateTask(cell.iso)}
+        aria-label={`${dateLabel}${items.length ? `، ${formatCount(items.length)} مورد` : ''} — ایجاد وظیفه با این مهلت`}
+        onClick={() => {
+          onSelect(cell.iso);
+          onCreateTask(cell.iso);
+        }}
         onKeyDown={onKeyDown}
-        onFocus={onFocus}
         className="absolute inset-0 rounded-md transition-colors hover:bg-hover focus-visible:ring-inset focus-visible:ring-offset-0"
       />
 
       <span className="pointer-events-none relative flex items-center justify-between">
         <span
           className={cn(
-            'flex size-7 items-center justify-center rounded-full text-body-sm font-semibold numeric',
+            'flex size-7 items-center justify-center rounded-full text-body-sm font-semibold',
             cell.isToday && 'bg-brand-solid text-fg-on-brand',
-            !cell.isToday && !cell.inCurrentMonth && 'text-fg-disabled',
-            !cell.isToday && cell.inCurrentMonth && isFriday && 'text-status-blocked',
-            !cell.isToday && cell.inCurrentMonth && !isFriday && 'text-fg-primary',
+            focusable && !cell.isToday && 'bg-brand-subtle text-fg-brand ring-1 ring-brand',
+            !focusable && !cell.isToday && !cell.inCurrentMonth && 'text-fg-disabled',
+            !focusable && !cell.isToday && cell.inCurrentMonth && isFriday && 'text-status-blocked',
+            !focusable && !cell.isToday && cell.inCurrentMonth && !isFriday && 'text-fg-primary',
           )}
         >
-          {toPersianDigits(cell.jalali.day)}
+          <CalendarDateText system={system}>
+            {system === 'jalali' ? toPersianDigits(cell.day.day) : cell.day.day}
+          </CalendarDateText>
         </span>
         <AddIcon
           size={14}
@@ -140,6 +152,7 @@ export function DayCell({
             trigger={
               <button
                 type="button"
+                aria-label={`${formatCount(hidden)} مورد دیگر در ${dateLabel}`}
                 className="relative z-10 flex h-5 items-center rounded-md px-1.5 text-micro font-semibold text-fg-tertiary transition-colors hover:bg-active hover:text-fg-primary"
               >
                 <span className="numeric">{`+${toPersianDigits(hidden)} مورد دیگر`}</span>
@@ -159,8 +172,8 @@ export function DayCell({
           trigger={
             <button
               type="button"
-              aria-label={`${formatCount(items.length)} مورد در ${formatJalali(cell.iso, 'long')}`}
-              className="relative z-10 flex items-center gap-0.5 rounded-full px-1 py-0.5"
+              aria-label={`${formatCount(items.length)} مورد در ${dateLabel}`}
+              className="relative z-10 flex size-11 items-center justify-center gap-0.5 rounded-lg"
             >
               {visible.map((item) => (
                 <span
@@ -171,7 +184,7 @@ export function DayCell({
               ))}
               {hidden > 0 && (
                 <span
-                  className="text-[0.625rem] font-semibold leading-none text-fg-tertiary numeric"
+                  className="text-micro font-semibold leading-none text-fg-tertiary numeric"
                   aria-hidden="true"
                 >
                   {`+${toPersianDigits(hidden)}`}

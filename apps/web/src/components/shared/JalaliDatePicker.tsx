@@ -1,228 +1,184 @@
 'use client';
 
-import { jalaliFromIsoDate } from '@/lib/jalali';
-import { useMemo, useRef, useState } from 'react';
+import { useState } from 'react';
+import { formatCalendarDate, shiftCalendarMonth, toISODate, type CalendarSystem } from '@taskin/jalali';
 import { cn } from '@/lib/utils';
-import {
-  JALALI_WEEKDAYS,
-  JALALI_WEEKDAYS_SHORT,
-  buildMonthGrid,
-  formatJalali,
-  gregorianToJalali,
-  fromISODate,
-  shiftJalaliMonth,
-  toISODate,
-  toPersianDigits,
-} from '@taskin/jalali';
 import { Button, Popover } from '@/components/ui';
-import { CalendarIcon, ChevronBackwardIcon, ChevronForwardIcon } from '@/components/icons';
+import { CalendarIcon } from '@/components/icons';
+import { CalendarDateText } from '@/features/calendar/components/CalendarDateText';
+import { CalendarMonthNavigation } from '@/features/calendar/components/CalendarMonthNavigation';
+import { CalendarPickerGrid } from '@/features/calendar/components/CalendarPickerGrid';
+import { CalendarSystemToggle } from '@/features/calendar/components/CalendarSystemToggle';
+import { useCalendarGrid } from '@/features/calendar/hooks/useCalendarGrid';
+import { useCalendarPreference } from '@/features/calendar/hooks/useCalendarPreference';
 
 export interface JalaliDatePickerProps {
   readonly value: string | null;
   readonly onChange: (iso: string) => void;
+  readonly onClear?: () => void;
   readonly label: string;
+  readonly emptyLabel?: string;
+  readonly describedBy?: string;
+  readonly invalid?: boolean;
   readonly timeZone?: string;
   readonly disabled?: boolean;
 }
 
-/**
- * Jalali month picker.
- *
- * The grid is a `role="grid"` of `gridcell` buttons, Saturday-first. Arrow keys move by one
- * day / one week, PageUp/PageDown by one month, and the month header announces the change.
- * "هفته قبل" navigation in RTL means ArrowRight moves to the previous day.
- */
+/** Date-only field with a shared calendar preference and a Gregorian ISO value. */
 export function JalaliDatePicker({
   value,
   onChange,
+  onClear,
   label,
+  emptyLabel = 'انتخاب تاریخ',
+  describedBy,
+  invalid,
   timeZone,
   disabled = false,
 }: JalaliDatePickerProps) {
-  const todayIso = toISODate(new Date(), timeZone);
-  const selected = useMemo(() => jalaliFromIsoDate(value ?? todayIso), [value, todayIso]);
-  const [cursor, setCursor] = useState({ year: selected.year, month: selected.month });
-  const [focusedDate, setFocusedDate] = useState(value ?? todayIso);
-  const gridRef = useRef<HTMLDivElement | null>(null);
-
-  const cells = useMemo(
-    () => buildMonthGrid(cursor.year, cursor.month, fromISODate(todayIso)),
-    [cursor.year, cursor.month, todayIso],
-  );
-
-  const monthLabel = useMemo(() => {
-    const first = cells.find((cell) => cell.inCurrentMonth);
-    return first ? formatJalali(fromISODate(first.iso), 'month-year') : '';
-  }, [cells]);
-
-  const focusDay = (iso: string) => {
-    setFocusedDate(iso);
-    requestAnimationFrame(() =>
-      gridRef.current?.querySelector<HTMLButtonElement>(`[data-date="${iso}"]`)?.focus(),
-    );
-  };
-
-  const step = (delta: number, moveFocus = false) => {
-    const next = shiftJalaliMonth(cursor.year, cursor.month, delta);
-    setCursor({ year: next.year, month: next.month });
-    const day = jalaliFromIsoDate(focusedDate).day;
-    const currentMonth = buildMonthGrid(next.year, next.month).filter((cell) => cell.inCurrentMonth);
-    const target =
-      currentMonth.find((cell) => cell.jalali.day === day) ?? currentMonth[currentMonth.length - 1];
-    if (target) {
-      if (moveFocus) focusDay(target.iso);
-      else setFocusedDate(target.iso);
-    }
-  };
+  const { system, setCalendarSystem } = useCalendarPreference();
+  const [anchorIso, setAnchorIso] = useState<string | null>(null);
+  const valueIso = value?.slice(0, 10) ?? null;
+  const today = () => toISODate(new Date(), timeZone);
 
   return (
     <Popover
       label={label}
       align="start"
       className="w-full min-w-0"
-      panelClassName="w-[22rem] min-w-0 p-3"
+      panelClassName="w-96 min-w-0 px-1 py-3 scrollbar-thin sm:px-1.5"
       constrainToViewport
       onOpenChange={(open) => {
-        if (!open) return;
-        setCursor({ year: selected.year, month: selected.month });
-        setFocusedDate(value ?? todayIso);
+        if (open) setAnchorIso(valueIso ?? today());
       }}
       trigger={
-        <button
-          type="button"
+        <Button
           aria-label={label}
+          aria-describedby={describedBy}
           disabled={disabled}
+          size="lg"
+          variant="secondary"
+          fullWidth
           className={cn(
-            'flex h-10 w-full items-center gap-2 rounded-lg border border-primary bg-surface px-3 text-start text-body-sm shadow-xs transition-colors',
-            'hover:bg-hover disabled:cursor-not-allowed disabled:bg-muted disabled:text-fg-disabled',
+            'justify-start gap-2 px-3 text-start text-body-sm sm:h-10',
+            invalid && 'border-error-300',
           )}
+          iconStart={<CalendarIcon size={18} className="shrink-0 text-fg-quaternary" />}
         >
-          <CalendarIcon size={18} className="shrink-0 text-fg-quaternary" />
-          <span className="flex-1 truncate font-medium text-fg-primary numeric">
-            {value ? formatJalali(fromISODate(value), 'medium') : 'انتخاب تاریخ'}
+          <span className="min-w-0 flex-1 truncate font-medium text-fg-primary">
+            {valueIso ? (
+              <CalendarDateText system={system}>
+                {formatCalendarDate(system, valueIso, 'medium')}
+              </CalendarDateText>
+            ) : (
+              emptyLabel
+            )}
           </span>
-        </button>
+        </Button>
       }
     >
-      {(close) => (
-        <div className="w-full min-w-0">
-          <div className="mb-2 flex items-center justify-between gap-1">
-            <button
-              type="button"
-              onClick={() => step(-1)}
-              aria-label="ماه قبل"
-              className="flex size-11 items-center justify-center rounded-lg text-fg-tertiary transition-colors hover:bg-hover"
-            >
-              <ChevronBackwardIcon size={18} />
-            </button>
-            <span aria-live="polite" className="text-title-sm font-semibold text-fg-primary numeric">
-              {monthLabel}
-            </span>
-            <button
-              type="button"
-              onClick={() => step(1)}
-              aria-label="ماه بعد"
-              className="flex size-11 items-center justify-center rounded-lg text-fg-tertiary transition-colors hover:bg-hover"
-            >
-              <ChevronForwardIcon size={18} />
-            </button>
-          </div>
-
-          <div ref={gridRef} role="grid" aria-label={label} className="grid grid-cols-7 gap-0.5">
-            {JALALI_WEEKDAYS_SHORT.map((day, index) => (
-              <div
-                key={day}
-                role="columnheader"
-                aria-label={JALALI_WEEKDAYS[index]}
-                className="flex h-8 items-center justify-center text-micro font-semibold text-fg-quaternary"
-              >
-                {day}
-              </div>
-            ))}
-
-            {cells.map((cell) => {
-              const isSelected = cell.iso === value;
-              const isWeekend = cell.weekdayIndex === 6;
-
-              return (
-                <button
-                  key={cell.iso}
-                  type="button"
-                  role="gridcell"
-                  aria-selected={isSelected}
-                  aria-current={cell.isToday ? 'date' : undefined}
-                  aria-label={formatJalali(fromISODate(cell.iso), 'long')}
-                  data-date={cell.iso}
-                  tabIndex={cell.iso === focusedDate ? 0 : -1}
-                  onFocus={() => setFocusedDate(cell.iso)}
-                  onKeyDown={(event) => {
-                    const deltas: Readonly<Record<string, number>> = {
-                      ArrowLeft: 1,
-                      ArrowRight: -1,
-                      ArrowDown: 7,
-                      ArrowUp: -7,
-                    };
-                    const delta = deltas[event.key];
-                    if (delta !== undefined) {
-                      event.preventDefault();
-                      const date = fromISODate(cell.iso);
-                      date.setDate(date.getDate() + delta);
-                      const iso = toISODate(date);
-                      onChange(iso);
-                      const next = gregorianToJalali(date);
-                      if (next.year !== cursor.year || next.month !== cursor.month) {
-                        setCursor({ year: next.year, month: next.month });
-                      }
-                      focusDay(iso);
-                      return;
-                    }
-                    if (event.key === 'PageDown') {
-                      event.preventDefault();
-                      step(1, true);
-                    } else if (event.key === 'PageUp') {
-                      event.preventDefault();
-                      step(-1, true);
-                    }
-                  }}
-                  onClick={() => {
-                    onChange(cell.iso);
+      {(close) => {
+        const select = (iso: string) => {
+          onChange(iso);
+          close();
+        };
+        const todayIso = today();
+        return (
+          <DatePickerCalendar
+            label={label}
+            system={system}
+            setCalendarSystem={setCalendarSystem}
+            value={valueIso}
+            anchorIso={anchorIso ?? valueIso ?? todayIso}
+            todayIso={todayIso}
+            onNavigate={setAnchorIso}
+            onChange={onChange}
+            onSelect={select}
+            onClear={
+              onClear && valueIso
+                ? () => {
+                    onClear();
                     close();
-                  }}
-                  className={cn(
-                    'flex h-11 min-w-0 items-center justify-center rounded-lg text-body-sm font-medium transition-colors numeric',
-                    !cell.inCurrentMonth && 'text-fg-disabled',
-                    cell.inCurrentMonth && !isSelected && 'text-fg-primary hover:bg-hover',
-                    isWeekend && cell.inCurrentMonth && !isSelected && 'text-status-blocked',
-                    cell.isToday && !isSelected && 'ring-1 ring-brand',
-                    isSelected && 'bg-brand-solid text-fg-on-brand',
-                  )}
-                >
-                  {toPersianDigits(cell.jalali.day)}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-3 flex gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              fullWidth
-              onClick={() => {
-                onChange(todayIso);
-                const jalali = jalaliFromIsoDate(todayIso);
-                setCursor({ year: jalali.year, month: jalali.month });
-                close();
-              }}
-            >
-              امروز
-            </Button>
-            <Button size="sm" variant="tertiary" fullWidth onClick={close}>
-              تایید
-            </Button>
-          </div>
-        </div>
-      )}
+                  }
+                : undefined
+            }
+            onClose={close}
+          />
+        );
+      }}
     </Popover>
+  );
+}
+
+interface DatePickerCalendarProps {
+  readonly label: string;
+  readonly system: CalendarSystem;
+  readonly setCalendarSystem: (system: CalendarSystem) => void;
+  readonly value: string | null;
+  readonly anchorIso: string;
+  readonly todayIso: string;
+  readonly onNavigate: (iso: string) => void;
+  readonly onChange: (iso: string) => void;
+  readonly onSelect: (iso: string) => void;
+  readonly onClear?: () => void;
+  readonly onClose: () => void;
+}
+
+function DatePickerCalendar({
+  label,
+  system,
+  setCalendarSystem,
+  value,
+  anchorIso,
+  todayIso,
+  onNavigate,
+  onChange,
+  onSelect,
+  onClear,
+  onClose,
+}: DatePickerCalendarProps) {
+  const grid = useCalendarGrid(system, anchorIso, todayIso);
+  return (
+    <div className="flex w-full min-w-0 flex-col gap-2">
+      <div className="flex justify-center">
+        <CalendarSystemToggle system={system} onChange={setCalendarSystem} />
+      </div>
+      <CalendarMonthNavigation
+        system={system}
+        monthLabel={grid.monthLabel}
+        onStep={(delta) => onNavigate(shiftCalendarMonth(system, anchorIso, delta))}
+      />
+      <CalendarPickerGrid
+        system={system}
+        grid={grid}
+        label={label}
+        focusedIso={anchorIso}
+        value={value}
+        onNavigate={(iso, select) => {
+          onNavigate(iso);
+          if (select) onChange(iso);
+        }}
+        onSelect={onSelect}
+      />
+      <div className="flex gap-1">
+        <Button
+          size="lg"
+          variant="secondary"
+          fullWidth
+          className="min-w-0 px-2"
+          onClick={() => onSelect(todayIso)}
+        >
+          امروز
+        </Button>
+        {onClear && (
+          <Button size="lg" variant="tertiary" fullWidth className="min-w-0 px-2" onClick={onClear}>
+            حذف مهلت
+          </Button>
+        )}
+        <Button size="lg" variant="tertiary" fullWidth className="min-w-0 px-2" onClick={onClose}>
+          تایید
+        </Button>
+      </div>
+    </div>
   );
 }

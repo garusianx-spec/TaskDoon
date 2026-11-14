@@ -3,7 +3,8 @@
 import type { CalendarItem } from '@/store/selectors';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
-import { formatJalali } from '@taskin/jalali';
+import { formatCalendarDate, type CalendarSystem } from '@taskin/jalali';
+import { CalendarDateText } from './CalendarDateText';
 import { projectById, usersByIds } from '@/store/selectors';
 import { AvatarStack, Badge, Button } from '@/components/ui';
 import { TaskCompleteCheckbox } from '@/features/tasks/components/TaskCompleteCheckbox';
@@ -18,6 +19,7 @@ import {
 
 export interface DaySummaryProps {
   readonly date: string;
+  readonly system: CalendarSystem;
   readonly items: readonly CalendarItem[];
   readonly today: Date;
   readonly onOpenTask: (taskId: string) => void;
@@ -29,6 +31,7 @@ export interface DaySummaryProps {
 /** Everything scheduled on one day — the body of the "+X مورد دیگر" popover. */
 export function DaySummary({
   date,
+  system,
   items,
   today,
   onOpenTask,
@@ -37,10 +40,12 @@ export function DaySummary({
   onCreateEvent,
 }: DaySummaryProps) {
   return (
-    <div className="flex w-72 flex-col gap-2 p-1">
+    <div className="flex min-w-0 flex-col gap-2 p-1">
       <div className="flex items-baseline gap-2 px-1.5 pt-1">
-        <h3 className="text-body-sm font-bold text-fg-primary">{formatJalali(date, 'long')}</h3>
-        <Badge tone="neutral" size="sm" numeric className="ms-auto">
+        <h3 className="min-w-0 truncate text-body-sm font-bold text-fg-primary">
+          <CalendarDateText system={system}>{formatCalendarDate(system, date, 'long')}</CalendarDateText>
+        </h3>
+        <Badge tone="neutral" size="sm" numeric className="ms-auto shrink-0">
           {`${formatCount(items.length)} مورد`}
         </Badge>
       </div>
@@ -87,12 +92,14 @@ export function DaySummary({
                   <TaskCompleteCheckbox
                     task={item.task}
                     onToggle={(completed) => onToggleComplete(item.task.id, completed)}
-                    className="ms-2 mt-3"
+                    className="sm:ms-2 sm:mt-3"
+                    touchTarget
                   />
                   <button
                     type="button"
+                    aria-label={itemTitle(item)}
                     onClick={() => onOpenTask(item.task.id)}
-                    className="flex min-w-0 flex-1 items-start gap-2.5 rounded-lg p-2 text-start"
+                    className="flex min-w-0 flex-1 items-start gap-2.5 rounded-lg p-2 text-start max-sm:min-h-11"
                   >
                     {body}
                   </button>
@@ -108,6 +115,7 @@ export function DaySummary({
       <div className="flex gap-1.5 border-t border-secondary px-1 pt-2">
         <Button
           size="xs"
+          className="max-sm:min-h-11"
           variant="secondary"
           fullWidth
           iconStart={<AddIcon size={14} />}
@@ -117,6 +125,7 @@ export function DaySummary({
         </Button>
         <Button
           size="xs"
+          className="max-sm:min-h-11"
           variant="secondary"
           fullWidth
           iconStart={<CalendarIcon size={14} />}
