@@ -45,7 +45,7 @@
     "test:e2e:a11y": "npm run test:e2e:a11y -w @taskin/web"
   },
   "devDependencies": {
-    "drizzle-orm": "0.45.3",
+    "drizzle-orm": "0.45.4",
     "husky": "9.1.7",
     "lint-staged": "16.4.0",
     "prettier": "3.10.1",
