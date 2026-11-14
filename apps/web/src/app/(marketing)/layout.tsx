@@ -23,6 +23,16 @@ export default async function MarketingLayout({ children }: { children: ReactNod
       (link) =>
         !['/terms', '/privacy'].includes(link.href) || pages.some((page) => `/${page.slug}` === link.href),
     );
+  const footer = available(data.footer);
+  for (const [slug, label] of [
+    ['terms', 'شرایط استفاده'],
+    ['privacy', 'حریم خصوصی'],
+  ] as const) {
+    const href = '/' + slug;
+    if (pages.some((page) => page.slug === slug) && !footer.some((link) => link.href === href)) {
+      footer.push({ href, label });
+    }
+  }
   return (
     <PublicSurface className="marketing-site">
       <a href="#marketing-main" className="focusable-sr-only">
@@ -35,7 +45,7 @@ export default async function MarketingLayout({ children }: { children: ReactNod
         logo={settings.logo}
       />
       <main id="marketing-main">{children}</main>
-      <MarketingFooter settings={settings} links={available(data.footer)} social={siteLinks(data.social)} />
+      <MarketingFooter settings={settings} links={footer} social={siteLinks(data.social)} />
     </PublicSurface>
   );
 }

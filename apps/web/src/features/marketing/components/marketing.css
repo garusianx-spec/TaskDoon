@@ -755,137 +755,6 @@
   font-size: 14px;
   line-height: 2;
 }
-.home-footer {
-  padding-block: 64px 24px;
-  background: rgb(var(--brand-900));
-  color: rgb(var(--fg-on-brand));
-  --logo-front: rgb(var(--fg-on-brand));
-  --logo-back: rgb(var(--brand-200));
-  --logo-ink: rgb(var(--fg-on-brand));
-  --logo-accent: rgb(var(--fg-on-brand));
-}
-.home-footer-top {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 80px;
-}
-.marketing-footer-brand > a {
-  display: inline-flex;
-}
-.marketing-footer-brand svg {
-  height: 32px;
-  width: auto;
-}
-.marketing-footer-brand p {
-  font-size: 14px;
-  line-height: 2.1;
-  color: rgb(var(--brand-100));
-  margin-top: 18px;
-  max-width: 340px;
-}
-.marketing-social {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  margin-top: 22px;
-  font-size: 13px;
-}
-.home-footer-columns {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 32px;
-}
-.home-footer-columns h2 {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 18px;
-}
-.home-footer-columns a {
-  display: block;
-  color: rgb(var(--brand-100));
-  font-size: 13px;
-  min-height: 40px;
-  padding-block: 8px;
-  overflow-wrap: anywhere;
-}
-.home-footer-columns p {
-  color: rgb(var(--brand-100));
-  font-size: 12px;
-  line-height: 2;
-  margin-top: 8px;
-}
-.home-footer a:hover {
-  text-decoration: underline;
-}
-.home-footer :focus-visible {
-  outline-color: rgb(var(--brand-100));
-}
-.home-footer-cta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 40px;
-  margin-top: 40px;
-  padding-block: 32px;
-  border-block: 1px solid rgb(var(--brand-700));
-}
-.home-footer-cta h2 {
-  font-size: 20px;
-  line-height: 1.8;
-  font-weight: 700;
-}
-.home-footer-cta p {
-  font-size: 13px;
-  line-height: 2;
-  color: rgb(var(--brand-100));
-  max-width: 600px;
-  margin-top: 10px;
-}
-.home-footer-cta .marketing-button {
-  flex-shrink: 0;
-  background: rgb(var(--bg-surface));
-  color: rgb(var(--brand-700));
-}
-.home-footer-cta .marketing-button:hover {
-  background: rgb(var(--brand-50));
-  text-decoration: none;
-}
-.home-footer-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding-top: 24px;
-  font-size: 11px;
-  color: rgb(var(--brand-100));
-}
-.home-footer-bottom nav {
-  display: flex;
-  gap: 24px;
-}
-.home-footer-bottom a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-}
-.marketing-trust-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 24px;
-  min-height: 48px;
-  color: rgb(var(--fg-on-brand));
-}
-.marketing-trust-link strong {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-}
-.marketing-trust-link small {
-  display: block;
-  font-size: 10px;
-  color: rgb(var(--brand-100));
-}
 .marketing-error {
   padding-block: 80px;
   text-align: center;
@@ -908,9 +777,6 @@
   }
   .marketing-header-actions {
     gap: 12px;
-  }
-  .home-footer-top {
-    gap: 40px;
   }
   .marketing-image-text {
     gap: 36px;
@@ -944,9 +810,6 @@
   }
   .marketing-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .home-footer-top {
-    grid-template-columns: 1fr;
   }
   .marketing-image-text,
   .marketing-job-detail {
@@ -1026,28 +889,5 @@
   }
   .marketing-plan {
     padding: 26px;
-  }
-  .home-footer {
-    padding-top: 44px;
-  }
-  .home-footer-columns {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 18px;
-  }
-  .home-footer-columns nav:first-child {
-    grid-column: span 2;
-  }
-  .home-footer-columns a {
-    min-height: 44px;
-  }
-  .home-footer-cta {
-    flex-direction: column;
-    align-items: start;
-    gap: 22px;
-  }
-  .home-footer-bottom {
-    flex-direction: column;
-    align-items: start;
-    gap: 12px;
   }
 }
