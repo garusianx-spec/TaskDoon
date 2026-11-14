@@ -106,6 +106,26 @@ describe('workspace state transitions', () => {
 });
 
 describe('workspace selectors', () => {
+  it('shows open deadlines from today through the next three civil days', () => {
+    const tasks: Task[] = [
+      { ...firstTask, id: 'past', status: 'todo', dueDate: '2025-03-20' },
+      { ...firstTask, id: 'today', status: 'todo', dueDate: '2025-03-21' },
+      { ...firstTask, id: 'edge', status: 'todo', dueDate: '2025-03-24' },
+      { ...firstTask, id: 'later', status: 'todo', dueDate: '2025-03-25' },
+      { ...firstTask, id: 'completed', status: 'done', dueDate: '2025-03-22' },
+      { ...firstTask, id: 'undated', status: 'todo', dueDate: '' },
+    ];
+    expect(
+      filterTasks(tasks, {
+        smartView: 'due-soon',
+        today: '2025-03-21',
+        projectId: null,
+        search: '',
+        currentUserId: fixture.meId,
+      }).map((task) => task.id),
+    ).toEqual(['today', 'edge']);
+  });
+
   it('combines project scope, assignee, and case-insensitive search without reordering input', () => {
     const assigned: Task = {
       ...firstTask,

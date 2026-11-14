@@ -8,10 +8,12 @@ import { TaskSidebar } from '@/features/board/components/TaskSidebar';
 export function TaskSidebarContainer({
   tasks,
   currentUserId,
+  today,
   onNavigate,
 }: {
   readonly tasks: readonly Task[];
   readonly currentUserId: string;
+  readonly today?: string;
   /** Closes the mobile filter panel once a selection is made. */
   readonly onNavigate: () => void;
 }) {
@@ -24,6 +26,7 @@ export function TaskSidebarContainer({
       smartView={state.smartView}
       projectFilterId={state.projectFilterId}
       currentUserId={currentUserId}
+      today={today}
       onSmartViewChange={(view) => {
         dispatch({ type: 'set-smart-view', view });
         onNavigate();

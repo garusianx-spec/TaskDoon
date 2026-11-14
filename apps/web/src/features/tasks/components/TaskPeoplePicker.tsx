@@ -29,11 +29,14 @@ export function PeoplePicker({
       label={label}
       haspopup="menu"
       align="start"
-      panelClassName="min-w-64 max-h-72 overflow-y-auto scrollbar-thin"
+      className="w-full min-w-0"
+      panelClassName="w-64 min-w-0 scrollbar-thin"
+      constrainToViewport
       trigger={
         <button
           type="button"
-          className="flex min-h-10 w-full items-center gap-2 rounded-lg border border-primary bg-surface px-2.5 py-1.5 text-start shadow-xs transition-colors hover:bg-hover"
+          aria-label={label}
+          className="flex min-h-11 w-full items-center gap-2 rounded-lg border border-primary bg-surface px-2.5 py-1.5 text-start shadow-xs transition-colors hover:bg-hover"
         >
           {selected.length === 0 ? (
             <span className="flex items-center gap-2 text-body-sm text-fg-placeholder">

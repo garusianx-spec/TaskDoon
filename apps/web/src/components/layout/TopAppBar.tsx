@@ -19,10 +19,12 @@ export function TopAppBar() {
   const pathname = usePathname();
   const { unreadNotifications, activeWorkspace } = useWorkspace();
   const { active, open } = useOverlays();
-  const activeModule = MODULES.find((module) => pathname.startsWith(module.href));
+  const activeModule = MODULES.find(
+    (module) => pathname === module.href || pathname.startsWith(`${module.href}/`),
+  );
 
   return (
-    <header className="sticky top-0 z-sticky flex h-14 shrink-0 items-center gap-2 border-b border-secondary bg-surface/95 px-3 backdrop-blur lg:hidden">
+    <header className="sticky top-0 z-sticky flex min-h-14 shrink-0 items-center gap-2 border-b border-secondary bg-surface px-3 py-1 lg:hidden">
       <Dropdown
         label="تعویض فضای کاری"
         align="start"
@@ -30,9 +32,10 @@ export function TopAppBar() {
         trigger={
           <button
             type="button"
-            className="flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-start transition-colors hover:bg-hover"
+            aria-label={`تعویض فضای کاری: ${activeWorkspace.name}`}
+            className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-start transition-colors hover:bg-hover active:bg-active"
           >
-            <WorkspaceAvatar workspace={activeWorkspace} size="sm" className="size-8" />
+            <WorkspaceAvatar workspace={activeWorkspace} size="sm" className="size-8 shrink-0" />
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-body-sm font-bold leading-tight text-fg-primary">
                 {activeWorkspace.name}
@@ -50,16 +53,21 @@ export function TopAppBar() {
 
       <div className="flex-1" />
 
-      <Dropdown label="ایجاد سریع" trigger={<IconButton label="ایجاد سریع" icon={<AddIcon size={20} />} />}>
+      <Dropdown
+        label="ایجاد سریع"
+        trigger={<IconButton className="size-11 shrink-0" label="ایجاد سریع" icon={<AddIcon size={20} />} />}
+      >
         {(close) => <QuickCreateMenu close={close} />}
       </Dropdown>
       <IconButton
+        className="size-11 shrink-0"
         label="جستجوی سراسری"
         icon={<SearchIcon size={20} />}
         onClick={() => open({ kind: 'global-search' })}
       />
       <span className="relative inline-flex">
         <IconButton
+          className="size-11"
           label={
             unreadNotifications > 0
               ? `اعلان‌ها — ${formatCount(unreadNotifications)} خوانده‌نشده`

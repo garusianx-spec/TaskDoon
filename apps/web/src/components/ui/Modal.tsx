@@ -113,7 +113,7 @@ export function Modal({
             icon={<CloseIcon size={20} />}
             onClick={onClose}
             size="sm"
-            className="-me-1.5 -mt-1"
+            className="-me-1.5 -mt-1 shrink-0 max-sm:size-11"
           />
         </header>
 

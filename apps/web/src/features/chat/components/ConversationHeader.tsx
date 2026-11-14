@@ -1,17 +1,18 @@
 'use client';
 
 import { formatCount } from '@/lib/format';
-import { AvatarStack, Badge, IconButton, Input, Tooltip } from '@/components/ui';
-import { ArrowBackwardIcon, HashIcon, InfoCircleIcon, SearchIcon } from '@/components/icons';
+import { AvatarStack, Badge, Button, IconButton, Input, Tooltip } from '@/components/ui';
+import { ArrowBackwardIcon, FolderIcon, HashIcon, InfoCircleIcon, SearchIcon } from '@/components/icons';
 import { type ChatViewProps } from '@/features/chat/types/chat-view';
 import { type ConversationTimelineState } from '@/features/chat/hooks/useConversationTimeline';
 
 export function ConversationHeader({
   conversation,
   onOpenDetails,
+  onOpenProject,
   onBack,
   timeline,
-}: Pick<ChatViewProps, 'conversation' | 'onOpenDetails'> & {
+}: Pick<ChatViewProps, 'conversation' | 'onOpenDetails' | 'onOpenProject'> & {
   readonly onBack: ChatViewProps['onBack'];
   readonly timeline: ConversationTimelineState;
 }) {
@@ -25,7 +26,7 @@ export function ConversationHeader({
             icon={<ArrowBackwardIcon size={20} />}
             size="sm"
             onClick={onBack}
-            className="lg:hidden"
+            className="shrink-0 max-sm:size-11 lg:hidden"
           />
         )}
 
@@ -35,7 +36,7 @@ export function ConversationHeader({
           onClick={onOpenDetails}
           aria-haspopup="dialog"
           aria-label={`${conversation.title} — نمایش جزئیات گفتگو`}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-start transition-colors hover:bg-hover"
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-start transition-colors hover:bg-hover"
         >
           {conversation.kind === 'channel' ? (
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sunken text-fg-secondary">
@@ -59,6 +60,7 @@ export function ConversationHeader({
             label="جستجو در این گفتگو"
             icon={<SearchIcon size={20} />}
             size="sm"
+            className="shrink-0 max-sm:size-11"
             active={searchOpen}
             onClick={() => {
               setSearchOpen((open) => !open);
@@ -71,10 +73,23 @@ export function ConversationHeader({
             label="جزئیات گفتگو"
             icon={<InfoCircleIcon size={20} />}
             size="sm"
+            className="shrink-0 max-sm:size-11"
             onClick={onOpenDetails}
           />
         </Tooltip>
       </div>
+
+      {onOpenProject && (
+        <Button
+          variant="secondary"
+          size="sm"
+          iconStart={<FolderIcon size={16} />}
+          className="self-start max-sm:min-h-11"
+          onClick={onOpenProject}
+        >
+          بورد وظایف پروژه
+        </Button>
+      )}
 
       {searchOpen && (
         <div className="flex items-center gap-2 pb-1">

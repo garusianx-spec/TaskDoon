@@ -18,7 +18,7 @@ import type {
 } from '@taskin/contracts';
 import { BUILT_IN_COLUMNS } from '@/data/reference';
 import { directory } from '@/store/directory';
-import { daysBetween, parseISODate, toISODate } from '@taskin/jalali';
+import { addDays, daysBetween, parseISODate, TEHRAN_TIME_ZONE, toISODate } from '@taskin/jalali';
 
 /* ------------------------------ People & projects ------------------------------ */
 
@@ -49,12 +49,14 @@ export interface TaskFilter {
   readonly projectId: string | null;
   readonly search: string;
   readonly currentUserId: string;
+  readonly today?: string;
 }
 
 export function filterTasks(tasks: readonly Task[], filter: TaskFilter): readonly Task[] {
   const query = filter.search.trim().toLowerCase();
   const scope = filter.projectId ? [filter.projectId] : null;
-  const today = new Date();
+  const today = filter.today ?? toISODate(new Date(), TEHRAN_TIME_ZONE);
+  const end = filter.smartView === 'due-soon' ? addDays(today, 3) : today;
 
   return tasks.filter((task) => {
     if (scope && !scope.includes(task.projectId)) return false;
@@ -67,9 +69,8 @@ export function filterTasks(tasks: readonly Task[], filter: TaskFilter): readonl
         if (!task.starred) return false;
         break;
       case 'due-soon': {
-        if (task.status === 'done') return false;
-        const delta = daysBetween(today, parseISODate(task.dueDate));
-        if (delta > 3) return false;
+        const deadline = task.dueDate?.slice(0, 10);
+        if (task.status === 'done' || !deadline || deadline < today || deadline > end) return false;
         break;
       }
       case 'all':

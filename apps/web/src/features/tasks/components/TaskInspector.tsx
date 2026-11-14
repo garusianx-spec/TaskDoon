@@ -1,5 +1,7 @@
 'use client';
 
+import { cn } from '@/lib/utils';
+
 import { useEffect, useRef, useState } from 'react';
 import { statusTone } from '@/data/reference';
 import { columnForTask, projectById, userById } from '@/store/selectors';
@@ -159,11 +161,12 @@ export function TaskInspector({
               icon={task.starred ? <StarFilledIcon size={18} /> : <StarIcon size={18} />}
               size="sm"
               onClick={onToggleStar}
-              className={task.starred ? 'text-status-progress' : undefined}
+              className={cn('shrink-0 max-sm:size-11', task.starred && 'text-status-progress')}
             />
           </Tooltip>
           <IconButton
             label="بستن پنل جزئیات"
+            className="shrink-0 max-sm:size-11"
             icon={<CloseIcon size={20} />}
             size="sm"
             onClick={onClose}
@@ -241,10 +244,15 @@ export function TaskInspector({
             {error}
           </p>
         )}
-        <Button variant="secondary" onClick={onClose} disabled={saving || fileBusy}>
+        <Button
+          className="max-sm:min-h-11"
+          variant="secondary"
+          onClick={onClose}
+          disabled={saving || fileBusy}
+        >
           انصراف
         </Button>
-        <Button type="submit" loading={saving} aria-disabled={fileBusy}>
+        <Button className="max-sm:min-h-11" type="submit" loading={saving} aria-disabled={fileBusy}>
           ذخیره تغییرات
         </Button>
       </footer>

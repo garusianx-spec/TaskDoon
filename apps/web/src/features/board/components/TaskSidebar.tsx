@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { directory } from '@/store/directory';
 import { DepartmentIcon } from '@/features/board/components/DepartmentIcon';
-import { projectList } from '@/store/selectors';
+import { filterTasks, projectList } from '@/store/selectors';
 import { IconButton, Tooltip } from '@/components/ui';
 import {
   AddIcon,
@@ -25,6 +25,7 @@ export interface TaskSidebarProps {
   readonly smartView: SmartViewId;
   readonly projectFilterId: string | null;
   readonly currentUserId: string;
+  readonly today?: string;
   readonly onSmartViewChange: (view: SmartViewId) => void;
   readonly onProjectChange: (projectId: string | null) => void;
   readonly onCreateProject?: () => void;
@@ -54,6 +55,7 @@ export function TaskSidebar({
   smartView,
   projectFilterId,
   currentUserId,
+  today,
   onSmartViewChange,
   onProjectChange,
   onCreateProject,
@@ -72,7 +74,8 @@ export function TaskSidebar({
       case 'starred':
         return tasks.filter((task) => task.starred).length;
       case 'due-soon':
-        return tasks.filter((task) => task.status !== 'done').length;
+        return filterTasks(tasks, { smartView: view, projectId: null, search: '', currentUserId, today })
+          .length;
       case 'all':
         return tasks.length;
       default: {

@@ -11,6 +11,7 @@ export interface ChatViewProps {
   readonly onConvertToTask: (draft: TaskDraft) => void;
   readonly onOpenTask: (taskId: string) => void;
   readonly onOpenDetails: () => void;
+  readonly onOpenProject?: () => void;
   /** Mobile only — returns to the conversation list. */
   readonly onBack?: () => void;
   readonly defaultProjectId: string;

@@ -25,13 +25,14 @@ export function ProjectDeleteDialog({
       open={project !== null}
       onClose={onClose}
       title={project ? `حذف پروژه «${project.name}»` : 'حذف پروژه'}
-      description={`پروژه، وظایف و کانال گفتگوی آن از همه‌جا پنهان می‌شوند و ${formatCount(PROJECT_TRASH_DAYS)} روز در «آرشیو / سطل زباله» می‌مانند.`}
+      description={`پروژه و وظایفش تا ${formatCount(PROJECT_TRASH_DAYS)} روز از «آرشیو / سطل زباله» بازیابی‌پذیرند.`}
       icon={<TrashIcon size={20} />}
       confirmLabel="انتقال به سطل زباله"
       onConfirm={onConfirm}
     >
       <p className="text-body-sm text-fg-secondary">
-        {`تا ${formatCount(PROJECT_TRASH_DAYS)} روز می‌توانید آن را با همه وظایفش بازیابی کنید؛ پس از آن برای همیشه پاک می‌شود. پیام‌های کانالش پاک نمی‌شوند.`}
+        گفتگوی پروژه در بخش «بایگانی» گفتگوها به‌صورت فقط‌خواندنی باقی می‌ماند. بازیابی پروژه، گفتگو را دوباره
+        فعال نمی‌کند.
       </p>
     </ConfirmDialog>
   );
@@ -41,7 +42,7 @@ const DAY = 86_400_000;
 
 /**
  * «آرشیو / سطل زباله» (workspace owner): deleted projects, each with the days it has left and a
- * one-click «بازیابی» that brings it back with its tasks, board and channel.
+ * one-click «بازیابی» for its tasks and board. The project conversation stays archived.
  */
 export function ProjectTrashModal({
   open,
@@ -60,7 +61,7 @@ export function ProjectTrashModal({
       onClose={onClose}
       size="md"
       title="آرشیو / سطل زباله"
-      description={`پروژه‌های حذف‌شده تا ${formatCount(PROJECT_TRASH_DAYS)} روز بازیابی‌پذیرند و پس از آن برای همیشه پاک می‌شوند.`}
+      description={`پروژه‌های حذف‌شده تا ${formatCount(PROJECT_TRASH_DAYS)} روز بازیابی‌پذیرند و پس از آن پاک می‌شوند. گفتگوهایشان در بایگانی گفتگوها باقی می‌ماند.`}
       icon={<ArchiveIcon size={20} />}
     >
       {entries.length === 0 ? (
@@ -105,6 +106,7 @@ export function ProjectTrashModal({
                 </span>
                 <Button
                   size="sm"
+                  className="max-sm:min-h-11"
                   variant="secondary"
                   iconStart={<RefreshIcon size={16} />}
                   aria-label={`بازیابی ${entry.project.name}`}

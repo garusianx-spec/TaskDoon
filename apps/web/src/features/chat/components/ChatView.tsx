@@ -29,6 +29,7 @@ export function ChatView({
   onConvertToTask,
   onOpenTask,
   onOpenDetails,
+  onOpenProject,
   onBack,
   defaultProjectId,
   typingNames = [],
@@ -115,6 +116,7 @@ export function ChatView({
       <ConversationHeader
         conversation={conversation}
         onOpenDetails={onOpenDetails}
+        onOpenProject={onOpenProject}
         onBack={onBack}
         timeline={timeline}
       />

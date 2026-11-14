@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { conversationById, userById } from '@/store/selectors';
 import { nextLocalId } from '@/store/ids';
@@ -17,11 +18,15 @@ interface ChatContentProps {
 export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatContentProps) {
   const { state, dispatch } = useWorkspace();
   const live = useLive();
+  const router = useRouter();
   const clearFocus = useCallback(() => dispatch({ type: 'clear-message-focus' }), [dispatch]);
   const { openTaskComposer } = useOverlays();
   const conversation = conversationById(state.conversations, state.activeConversationId);
 
   if (!conversation) return null;
+  const projectId = conversation.projectId;
+  const canOpenProject =
+    projectId && !conversation.archived && state.projects.some((project) => project.id === projectId);
 
   return (
     <ChatView
@@ -30,6 +35,15 @@ export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatCon
       currentUserId={currentUserId}
       defaultProjectId={defaultProjectId}
       onBack={onBack}
+      onOpenProject={
+        canOpenProject
+          ? () => {
+              dispatch({ type: 'set-project-filter', projectId });
+              dispatch({ type: 'set-task-view', view: 'board' });
+              router.push('/tasks');
+            }
+          : undefined
+      }
       onSend={(text, replyToId) =>
         dispatch({
           type: 'send-message',
