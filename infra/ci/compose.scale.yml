@@ -1,7 +1,7 @@
 # Apply after infra/compose.scale.yml and infra/ci/compose.yml.
 # Replace the complete daemon environment after extends resolution. A per-key !reset
 # happens before extends and would restore the development owner's URL from its parent.
-# These are ephemeral test credentials; JWT_PRIVATE_JWKS still comes from scale/dev.env.
+# Test secrets come from the CI-generated Compose environment.
 x-ci-daemon-env: &ci-daemon-env
   NODE_ENV: development
   DATABASE_URL: postgres://taskin_app:taskin_app@pgbouncer:6432/taskin
@@ -17,8 +17,9 @@ x-ci-daemon-env: &ci-daemon-env
   SMTP_URL: smtp://mailpit:1025
   PUBLIC_WEB_ORIGIN: http://localhost:3000
   COOKIE_SECURE: 'false'
-  OTP_PEPPER: development-only-pepper-change-me-please
-  APP_ENCRYPTION_KEY: ZGV2ZWxvcG1lbnQtb25seS1rZXktY2hhbmdlLW1lISE=
+  OTP_PEPPER: ${OTP_PEPPER:?generate isolated Compose keys}
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?generate isolated Compose keys}
+  JWT_PRIVATE_JWKS: ${JWT_PRIVATE_JWKS:?generate isolated Compose keys}
   SMS_PROVIDERS: console
   LOG_PRETTY: 'false'
   PORT: '4000'

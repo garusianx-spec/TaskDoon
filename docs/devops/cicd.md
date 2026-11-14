@@ -83,8 +83,9 @@ npm test
 npm run check:contrast
 node --test infra/ci/trigger-coolify.test.mjs
 actionlint .github/workflows/ci.yml .github/workflows/release.yml
-docker compose -f infra/docker-compose.yml -f infra/ci/compose.yml --profile app config --quiet
-docker compose -f infra/docker-compose.yml -f infra/compose.scale.yml -f infra/ci/compose.yml -f infra/ci/compose.scale.yml --profile scale config --quiet
+node infra/init-dev-env.mjs
+docker compose --env-file .env.dev.local -f infra/docker-compose.yml -f infra/ci/compose.yml --profile app config --quiet
+docker compose --env-file .env.dev.local -f infra/docker-compose.yml -f infra/compose.scale.yml -f infra/ci/compose.yml -f infra/ci/compose.scale.yml --profile scale config --quiet
 DOCKER_BUILDKIT=1 docker build --target runner -f apps/api/Dockerfile -t taskdoon-api:ci-dryrun .
 DOCKER_BUILDKIT=1 docker build --target runner -f apps/web/Dockerfile -t taskdoon-web:ci-dryrun .
 DOCKER_BUILDKIT=1 docker build --target migrator -f apps/api/Dockerfile -t taskdoon-migrator:ci-dryrun .

@@ -34,7 +34,7 @@
     "test:int": "npm run test:int -w @taskin/api",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d --wait postgres pgbouncer redis-core redis-rt s3 s3-init mailpit",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
-    "infra:app": "docker compose -f infra/docker-compose.yml --profile app up -d --build --wait",
+    "infra:app": "docker compose --env-file .env.dev.local -f infra/docker-compose.yml --profile app up -d --build --wait",
     "test:broadcasts": "npm run test:broadcasts -w @taskin/web",
     "test:e2e:live:broadcasts": "npm run test:e2e:live:broadcasts -w @taskin/web",
     "test:e2e:live:admin-auth": "npm run test:e2e:live:admin-auth -w @taskin/web",
@@ -52,5 +52,8 @@
     "prettier-plugin-tailwindcss": "0.8.1",
     "typescript": "5.7.2",
     "typescript-eslint": "8.70.1"
+  },
+  "overrides": {
+    "vite": "8.3.3"
   }
 }

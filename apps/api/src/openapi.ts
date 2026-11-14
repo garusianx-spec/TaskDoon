@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import 'reflect-metadata';
 import { fileURLToPath } from 'node:url';
 import { VersioningType } from '@nestjs/common';
@@ -20,7 +21,7 @@ const PREVIEW_ENV = envSchema.parse({
   S3_ACCESS_KEY: 'preview',
   S3_SECRET_KEY: 'preview',
   OTP_PEPPER: 'preview-pepper-preview-pepper-preview',
-  APP_ENCRYPTION_KEY: Buffer.alloc(32).toString('base64'),
+  APP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
 });
 
 export async function buildOpenApiDocument(): Promise<OpenAPIObject> {

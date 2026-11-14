@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { AppConfig } from '../../src/config/app-config.js';
 import { loadEnv } from '../../src/config/env.js';
@@ -7,7 +8,7 @@ const source = {
   DATABASE_URL: 'postgres://localhost/taskin',
   REDIS_CORE_URL: 'redis://localhost:6379',
   REDIS_RT_URL: 'redis://localhost:6380',
-  APP_ENCRYPTION_KEY: Buffer.alloc(32).toString('base64'),
+  APP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   OTP_PEPPER: 'test-pepper-'.repeat(4),
   S3_ENDPOINT: 'http://minio:9000',
   S3_BUCKET: 'taskin-files',

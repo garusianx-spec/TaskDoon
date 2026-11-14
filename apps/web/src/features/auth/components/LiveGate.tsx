@@ -47,7 +47,11 @@ export function LiveGate({
   if (phase === 'signed-out') body = <SignInScreen store={store} />;
   else if (phase === 'restore-error')
     body = (
-      <AuthCard labelledBy="restore-error-title" title="وضعیت ورود بررسی نشد." description="دوباره تلاش کنید.">
+      <AuthCard
+        labelledBy="restore-error-title"
+        title="وضعیت ورود بررسی نشد."
+        description="دوباره تلاش کنید."
+      >
         <Button onClick={() => void store.retryRestore()}>تلاش دوباره</Button>
       </AuthCard>
     );

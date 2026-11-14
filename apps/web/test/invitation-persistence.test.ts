@@ -13,7 +13,9 @@ describe('invitation persistence', () => {
     let state: WorkspaceState = LIVE_EMPTY_STATE;
     store.attach(
       () => state,
-      (action) => { state = workspaceReducer(state, action); },
+      (action) => {
+        state = workspaceReducer(state, action);
+      },
     );
     const invitation = {
       id: 'invitation',
@@ -27,7 +29,9 @@ describe('invitation persistence', () => {
       createdAt: '2026-01-01T00:00:00Z',
       expiresAt: '2027-01-01T00:00:00Z',
     };
-    const invite = vi.spyOn(api.workspaces, 'invite').mockResolvedValue({ created: [invitation], rejected: [] });
+    const invite = vi
+      .spyOn(api.workspaces, 'invite')
+      .mockResolvedValue({ created: [invitation], rejected: [] });
     const draft = {
       recipients: [{ address: 'person@example.test', channel: 'email' as const }],
       role: 'member' as const,
@@ -50,7 +54,9 @@ describe('invitation persistence', () => {
     let state: WorkspaceState = LIVE_EMPTY_STATE;
     store.attach(
       () => state,
-      (action) => { state = workspaceReducer(state, action); },
+      (action) => {
+        state = workspaceReducer(state, action);
+      },
     );
     vi.spyOn(api.workspaces, 'invite').mockRejectedValue(new Error('invalid department'));
     await expect(

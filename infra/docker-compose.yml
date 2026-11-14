@@ -25,8 +25,8 @@ x-api-env: &api-env
   SMTP_URL: smtp://mailpit:1025
   PUBLIC_WEB_ORIGIN: http://localhost:3000
   COOKIE_SECURE: 'false'
-  OTP_PEPPER: development-only-pepper-change-me-please
-  APP_ENCRYPTION_KEY: ZGV2ZWxvcG1lbnQtb25seS1rZXktY2hhbmdlLW1lISE=
+  OTP_PEPPER: ${OTP_PEPPER:-}
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
   SMS_PROVIDERS: console
   LOG_PRETTY: 'false'
 

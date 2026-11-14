@@ -143,6 +143,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_DATA_SOURCE=api
             NEXT_PUBLIC_RT_URL=${{ vars.NEXT_PUBLIC_RT_URL || '' }}
+            NEXT_PUBLIC_GA_ID=${{ vars.NEXT_PUBLIC_GA_ID || 'G-YYNSPSFVCJ' }}
             TASKIN_API_ORIGIN=${{ vars.TASKIN_API_ORIGIN || 'http://api:4000' }}
           cache-from: type=gha,scope=taskdoon-${{ matrix.image }},version=2
           cache-to: type=gha,scope=taskdoon-${{ matrix.image }},version=2,mode=max

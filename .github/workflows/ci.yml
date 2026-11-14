@@ -196,6 +196,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_DATA_SOURCE=api
             NEXT_PUBLIC_RT_URL=
+            NEXT_PUBLIC_GA_ID=
             TASKIN_API_ORIGIN=http://api:4000
           cache-from: type=gha,version=2,scope=taskdoon-${{ matrix.image }}
           cache-to: type=gha,version=2,mode=max,scope=taskdoon-${{ matrix.image }}
@@ -204,12 +205,28 @@ jobs:
         run: |
           image=taskdoon-web:ci
           test "$(docker image inspect "$image" --format '{{.Config.User}}')" = node
-          container=$(docker run --detach --rm --publish 127.0.0.1::3000 "$image")
-          trap 'docker stop "$container" >/dev/null 2>&1 || true' EXIT
+          container=$(docker run --detach --publish 127.0.0.1::3000 "$image")
+          cleanup() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              docker logs --tail 100 "$container" >&2 || true
+              docker inspect --format '{{json .State}}' "$container" >&2 || true
+            fi
+            docker rm --force "$container" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
           endpoint=$(docker port "$container" 3000/tcp)
-          body=$(curl --fail --silent --show-error --retry 20 --retry-delay 1 --retry-connrefused --max-time 3 "http://$endpoint/api/health")
-          test "$body" = '{"status":"ok"}'
-          docker image inspect "$image" --format '{{.Size}} bytes'
+          for attempt in $(seq 1 45); do
+            test "$(docker inspect --format '{{.State.Running}}' "$container")" = true
+            if body=$(curl --fail --silent --max-time 3 "http://$endpoint/api/health") &&
+              test "$body" = '{"status":"ok"}'; then
+              docker image inspect "$image" --format '{{.Size}} bytes'
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'Web container did not serve the expected health response.' >&2
+          exit 1
 
   compose:
     name: Compose stack (API image, migrator, PgBouncer, health)
@@ -223,6 +240,10 @@ jobs:
         with:
           persist-credentials: false
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Generate isolated Compose keys
+        run: |
+          node infra/init-dev-env.mjs "$RUNNER_TEMP/taskdoon.env"
+          printf 'COMPOSE_ENV_FILES=%s/taskdoon.env\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Build the API and start every development test service
         run: docker compose --profile app up -d --build --wait --wait-timeout 300
       - name: API readiness and sign-in through PgBouncer
@@ -256,6 +277,10 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci --workspace @taskin/api --include-workspace-root --no-audit --no-fund
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Generate isolated Compose keys
+        run: |
+          node infra/init-dev-env.mjs "$RUNNER_TEMP/taskdoon.env"
+          printf 'COMPOSE_ENV_FILES=%s/taskdoon.env\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Build and start the scaled topology
         run: docker compose --profile scale up -d --build --wait --wait-timeout 300
       - name: Cross-node delivery, edge routing and relay-driven room changes
@@ -296,6 +321,10 @@ jobs:
       - name: Install the locked Playwright Chromium revision
         run: npx --no-install playwright-core install --with-deps chromium
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Generate isolated Compose keys
+        run: |
+          node infra/init-dev-env.mjs "$RUNNER_TEMP/taskdoon.env"
+          printf 'COMPOSE_ENV_FILES=%s/taskdoon.env\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Start the API and its services
         run: docker compose --profile app up -d --build --wait --wait-timeout 300
       - name: Build the API operator CLI and the live web app

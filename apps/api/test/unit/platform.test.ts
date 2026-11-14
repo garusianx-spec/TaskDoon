@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppConfig } from '../../src/config/app-config.js';
 import { envSchema, InvalidConfigError, loadEnv } from '../../src/config/env.js';
@@ -23,7 +24,7 @@ const BASE_ENV = {
   S3_ACCESS_KEY: 'a',
   S3_SECRET_KEY: 's',
   OTP_PEPPER: 'x'.repeat(32),
-  APP_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
+  APP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
 };
 
 describe('configuration', () => {

@@ -9,7 +9,8 @@ if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(base).hostname))
 const directory = process.env.VISUAL_REVIEW_DIR ?? out;
 mkdirSync(directory, { recursive: true });
 const browser = await launch();
-const context = await browser.newContext({ locale: 'fa-IR' });
+// Measure contrast after route and auth-step transitions without animation.
+const context = await browser.newContext({ locale: 'fa-IR', reducedMotion: 'reduce' });
 await context.addInitScript(() =>
   localStorage.setItem('taskin.theme', JSON.stringify({ mode: 'dark', accent: 'teal' })),
 );

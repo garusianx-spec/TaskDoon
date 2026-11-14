@@ -12,12 +12,14 @@ Redis.
 
 ```bash
 npm run infra:up                                   # from the repo root: Postgres, PgBouncer, Redis ×2, S3, Mailpit
-cp apps/api/.env.example apps/api/.env              # then: set -a; . apps/api/.env; set +a
+cp apps/api/.env.example apps/api/.env
+node infra/init-dev-env.mjs                         # once per local stack
+set -a; . apps/api/.env; . ./.env.dev.local; set +a
 npm run db:migrate -w @taskin/api                   # migrations + seeds, as taskin_migrator
 npm run dev -w @taskin/api                          # http://localhost:4000, recompiles and restarts on change
 ```
 
-Or run everything in containers with `npm run infra:app` (builds `apps/api/Dockerfile`, runs the
+After generating the key file, run everything in containers with `npm run infra:app` (builds `apps/api/Dockerfile`, runs the
 `migrate` job, then the API on :4000). Mailpit's inbox is at http://localhost:8025; with
 `SMS_PROVIDERS=console` sign-in codes and invitation texts are logged instead of sent.
 
@@ -211,7 +213,8 @@ behind nginx on http://localhost:8080 (REST under `/api`, Socket.IO on `/rt`, ro
 both WebSocket nodes, which are also published on 4101 and 4102).
 
 ```bash
-docker compose -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale up -d --build --wait
+node infra/init-dev-env.mjs
+docker compose --env-file .env.dev.local -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale up -d --build --wait
 node apps/api/scripts/scale-smoke.mjs      # also a CI job
 ```
 
@@ -257,5 +260,5 @@ to 9 members.
 ## Configuration
 
 Every variable is listed, with its default and meaning, in [src/config/env.ts](src/config/env.ts);
-[.env.example](.env.example) is a working local set. In production the process refuses to start
+[.env.example](.env.example) supplies the local service settings and leaves keys for the generator. In production the process refuses to start
 with the console SMS driver, without `JWT_PRIVATE_JWKS`, or with `COOKIE_SECURE=false`.

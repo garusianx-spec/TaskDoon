@@ -20,6 +20,7 @@ PostgreSQL، Redis و فضای ذخیره‌سازی سازگار با S3 است
 
 ```bash
 npm ci
+node infra/init-dev-env.mjs
 npm run infra:app
 npm run dev
 ```
@@ -55,7 +56,7 @@ npm run test:int        # API integration suites against a database migrated fro
 npm run infra:app       # also builds and runs the API image (migrations first) on :4000
 npm run infra:down
 # The scaled topology: REST node, two WebSocket nodes, worker, nginx on :8080
-docker compose -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale up -d --build --wait
+docker compose --env-file .env.dev.local -f infra/docker-compose.yml -f infra/compose.scale.yml --profile scale up -d --build --wait
 ```
 
 See [apps/api/README.md](apps/api/README.md) for running the API outside Docker, its
