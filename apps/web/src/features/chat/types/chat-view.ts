@@ -29,7 +29,12 @@ export interface ChatViewProps {
   readonly onFocusShown?: () => void;
   /** Phase 3.2: this member's messages waiting to be sent here, and what can be done with them. */
   readonly scheduled?: readonly ScheduledMessage[];
-  readonly onSchedule?: (text: string, replyToId: string | null, at: Date) => void;
+  readonly onSchedule?: (
+    text: string,
+    replyToId: string | null,
+    at: Date,
+    commandId: string,
+  ) => Promise<void>;
   readonly onSendScheduledNow?: (scheduledId: string) => void;
   readonly onCancelScheduled?: (scheduledId: string) => void;
 }

@@ -27,6 +27,7 @@ import { UnitOfWork } from '../../platform/db/unit-of-work.js';
 import { ApiError } from '../../platform/http/api-error.js';
 import type { AuthPrincipal, MembershipContext } from '../../platform/http/request.js';
 import { OutboxWriter } from '../../platform/outbox/outbox-writer.js';
+import { smsDeliveryView, type InvitationSmsAttempt } from '../../platform/sms/invitation-sms-state.js';
 import { toIranMobileE164 } from '../auth/otp.service.js';
 import { AbilityFactory } from '../rbac/ability.js';
 import { MembershipService } from '../rbac/membership.service.js';
@@ -137,6 +138,12 @@ export class InvitationsService {
       const created: InvitationView[] = [];
       for (const candidate of accepted) {
         const token = randomToken(32);
+        const link = this.box.seal(
+          `${new URL('/invite', this.config.env.PUBLIC_WEB_ORIGIN).toString()}?token=${token}`,
+        );
+        const smsAttempts: InvitationSmsAttempt[] = [
+          { number: 1, status: 'queued', queuedAt: new Date().toISOString() },
+        ];
         const [row] = await tx
           .insert(invitations)
           .values({
@@ -147,14 +154,19 @@ export class InvitationsService {
             departmentId: body.departmentId ?? null,
             message: body.message?.trim() ?? '',
             tokenHash: sha256(token),
+            ...(candidate.channel === 'sms' ? { smsAttempts, smsLinkSealed: link } : {}),
             invitedBy: actor.userId,
             expiresAt: sql`now() + make_interval(days => ${this.config.env.INVITATION_TTL_DAYS})`,
           })
+          .onConflictDoNothing({
+            target: [invitations.workspaceId, invitations.channel, invitations.address],
+            where: sql`${invitations.status} = 'pending'`,
+          })
           .returning();
-        if (!row) throw new Error('invitation insert returned nothing');
-        const link = this.box.seal(
-          `${new URL('/invite', this.config.env.PUBLIC_WEB_ORIGIN).toString()}?token=${token}`,
-        );
+        if (!row) {
+          rejected.push({ address: candidate.raw, reason: 'already_invited' });
+          continue;
+        }
         await this.outbox.add(
           tx,
           candidate.channel === 'sms'
@@ -168,6 +180,7 @@ export class InvitationsService {
                   template: 'invite',
                   tokens: { workspace: workspace.name, link },
                   sealed: ['link'],
+                  invitation: { workspaceId: actor.workspaceId, id: row.id, attempt: 1 },
                 },
               }
             : {
@@ -217,6 +230,71 @@ export class InvitationsService {
         .orderBy(desc(invitations.createdAt)),
     );
     return rows.map(({ invitation, roleKey }) => this.view(invitation, roleKey as RoleId));
+  }
+
+  /** Serialises on the existing invitation: a concurrent retry can never add a second attempt. */
+  async retrySms(actor: MembershipContext, invitationId: string): Promise<InvitationView> {
+    if (!this.abilities.forMember(actor).can('create', 'Invitation')) throw ApiError.forbidden();
+    return this.uow.run({ workspaceId: actor.workspaceId, userId: actor.userId }, async ({ tx }) => {
+      const [found] = await tx
+        .select({ invitation: invitations, role: roles })
+        .from(invitations)
+        .innerJoin(
+          roles,
+          and(eq(roles.workspaceId, invitations.workspaceId), eq(roles.id, invitations.roleId)),
+        )
+        .where(and(eq(invitations.workspaceId, actor.workspaceId), eq(invitations.id, invitationId)))
+        .for('update', { of: invitations });
+      if (!found) throw ApiError.notFound('The invitation');
+      const { invitation, role } = found;
+      if (!actor.isOwner && role.rank <= actor.rank) throw new ApiError('ROLE_RANK_VIOLATION');
+      if (
+        invitation.channel !== 'sms' ||
+        invitation.status !== 'pending' ||
+        invitation.expiresAt <= new Date()
+      )
+        throw new ApiError('INVITATION_INVALID');
+      const delivery = smsDeliveryView(invitation.smsAttempts);
+      if (!delivery.retryable || !invitation.smsLinkSealed) throw new ApiError('CONFLICT');
+      const remaining = Date.parse(delivery.nextRetryAt ?? '') - Date.now();
+      if (remaining > 0) throw ApiError.rateLimited(Math.ceil(remaining / 1000));
+      const [workspace] = await tx
+        .select({ name: workspaces.name })
+        .from(workspaces)
+        .where(eq(workspaces.id, actor.workspaceId));
+      if (!workspace) throw ApiError.notFound('The workspace');
+      const attempt = delivery.attemptCount + 1;
+      const attempts: InvitationSmsAttempt[] = [
+        ...(invitation.smsAttempts ?? []),
+        { number: attempt, status: 'queued', queuedAt: new Date().toISOString() },
+      ];
+      const [updated] = await tx
+        .update(invitations)
+        .set({ smsAttempts: attempts })
+        .where(eq(invitations.id, invitationId))
+        .returning();
+      if (!updated) throw ApiError.notFound('The invitation');
+      await this.outbox.add(tx, {
+        type: 'notification.sms',
+        aggregateType: 'invitation',
+        aggregateId: invitationId,
+        workspaceId: actor.workspaceId,
+        payload: {
+          to: invitation.address,
+          template: 'invite',
+          tokens: { workspace: workspace.name, link: invitation.smsLinkSealed },
+          sealed: ['link'],
+          invitation: { workspaceId: actor.workspaceId, id: invitationId, attempt },
+        },
+      });
+      await this.audit.write(tx, {
+        action: 'invitation.sms.retry',
+        workspaceId: actor.workspaceId,
+        resourceType: 'invitation',
+        resourceId: invitationId,
+      });
+      return this.view(updated, role.key as RoleId);
+    });
   }
 
   async revoke(actor: MembershipContext, invitationId: string): Promise<void> {
@@ -422,6 +500,7 @@ export class InvitationsService {
       invitedById: row.invitedBy,
       createdAt: row.createdAt.toISOString(),
       expiresAt: row.expiresAt.toISOString(),
+      smsDelivery: row.channel === 'sms' ? smsDeliveryView(row.smsAttempts) : null,
     };
   }
 }

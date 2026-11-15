@@ -161,6 +161,8 @@ invitations.id uuid not null default app.uuidv7()
 invitations.invited_by uuid not null
 invitations.message text not null default ''::text
 invitations.role_id uuid not null
+invitations.sms_attempts jsonb
+invitations.sms_link_sealed text
 invitations.status invitation_status not null default 'pending'::invitation_status
 invitations.token_hash bytea not null
 invitations.workspace_id uuid not null
@@ -732,6 +734,7 @@ invitations invitations_message_not_null: NOT NULL message
 invitations invitations_pkey: PRIMARY KEY (id)
 invitations invitations_role_fk: FOREIGN KEY (workspace_id, role_id) REFERENCES roles(workspace_id, id) ON DELETE RESTRICT
 invitations invitations_role_id_not_null: NOT NULL role_id
+invitations invitations_sms_attempts_array: CHECK (((sms_attempts IS NULL) OR (jsonb_typeof(sms_attempts) = 'array'::text)))
 invitations invitations_status_not_null: NOT NULL status
 invitations invitations_token_hash_not_null: NOT NULL token_hash
 invitations invitations_token_uq: UNIQUE (token_hash)

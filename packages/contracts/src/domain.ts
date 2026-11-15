@@ -488,6 +488,29 @@ export type NotificationFilterId = 'all' | 'unread' | 'mentions';
 /** How an invitation reaches its recipient: by email, or by SMS to an Iranian mobile number. */
 export type InvitationChannel = 'email' | 'sms';
 
+export type InvitationSmsStatus = 'unknown' | 'queued' | 'sending' | 'sent' | 'delivered' | 'failed';
+export type InvitationSmsFailure =
+  | 'provider_rejected'
+  | 'provider_unavailable'
+  | 'provider_rate_limited'
+  | 'provider_configuration'
+  | 'template_rejected'
+  | 'invalid_recipient'
+  | 'recipient_blocked'
+  | 'operator_rejected'
+  | 'delivery_failed'
+  | 'acceptance_unknown'
+  | 'test_transport';
+
+/** Evidence available for the latest attempt; never contains provider IDs or the invitation link. */
+export interface InvitationSmsDelivery {
+  readonly status: InvitationSmsStatus;
+  readonly attemptCount: number;
+  readonly failureCode: InvitationSmsFailure | null;
+  readonly retryable: boolean;
+  readonly nextRetryAt: string | null;
+}
+
 export interface InvitationRecipient {
   /** A lower-cased email address, or a mobile number normalised to `09xxxxxxxxx`. */
   readonly address: string;
@@ -501,6 +524,7 @@ export interface Invitation extends InvitationRecipient {
   readonly message: string;
   readonly invitedAt: string;
   readonly invitedById: string;
+  readonly smsDelivery?: InvitationSmsDelivery | null;
 }
 
 export interface LoginSession {

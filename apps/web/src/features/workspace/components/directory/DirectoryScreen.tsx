@@ -10,6 +10,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { PendingInvitationRow } from '@/features/workspace/components/directory/PendingInvitationRow';
 import { RemoveMemberDialog } from '@/features/workspace/components/directory/RemoveMemberDialog';
+import { useInvitationRefresh } from '@/features/workspace/hooks/useInvitationRefresh';
 import { Avatar, Badge, Button, Input, Select } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CallIcon, PeopleIcon, SearchIcon, SmsIcon, TrashIcon, UserAddIcon } from '@/components/icons';
@@ -28,6 +29,8 @@ export function DirectoryPage() {
 function DirectoryContent() {
   const { state, dispatch, currentUser, activeWorkspace, isWorkspaceOwner } = useWorkspace();
   const live = useLive();
+  const canInvite = isWorkspaceOwner || state.permissions[currentUser.role].members.create;
+  useInvitationRefresh(canInvite, activeWorkspace.id);
   const { open } = useOverlays();
   const [query, setQuery] = useState('');
   const [removing, setRemoving] = useState<User | null>(null);
@@ -126,6 +129,9 @@ function DirectoryContent() {
                   key={invitation.id}
                   invitation={invitation}
                   departments={state.departments}
+                  {...(live && canInvite
+                    ? { onRetrySms: (id: string, key: string) => live.store.retryInvitationSms(id, key) }
+                    : {})}
                   onRevoke={(invitationId) => dispatch({ type: 'revoke-invitation', invitationId })}
                 />
               ))}

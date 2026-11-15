@@ -5,7 +5,7 @@
  * away works at once (the admin guard reads it on every request). Both changes are audited.
  */
 import pg from 'pg';
-import { toIranMobileE164 } from '../modules/auth/otp.service.js';
+import { toIranMobileE164 } from '../modules/auth/phone.js';
 
 const url = process.env.DATABASE_MIGRATOR_URL;
 if (!url) {

@@ -17,6 +17,7 @@ type Publication =
       readonly queue: 'notifications';
       readonly name: keyof NotificationJobs;
       readonly payload: NotificationJobs[keyof NotificationJobs];
+      readonly delay?: number;
     }
   | {
       readonly queue: 'work';
@@ -70,6 +71,15 @@ export function publicationsFor(row: OutboxRow, now: number): readonly Publicati
           queue: 'notifications',
           name: 'mail.send',
           payload: row.payload as unknown as OutboxEventMap['notification.email'],
+        },
+      ];
+    case 'notification.sms.report':
+      return [
+        {
+          queue: 'notifications',
+          name: 'sms.report',
+          payload: row.payload as unknown as OutboxEventMap['notification.sms.report'],
+          delay: 60_000,
         },
       ];
     case 'file.uploaded': {
@@ -197,7 +207,10 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
       },
       opts: {
         jobId: (publication.queue === 'work' && publication.jobId) || `evt-${row.id}-${publication.name}`,
-        ...(publication.queue === 'work' && publication.delay ? { delay: publication.delay } : {}),
+        ...(publication.delay ? { delay: publication.delay } : {}),
+        ...(publication.name === 'sms.report'
+          ? { attempts: 30, backoff: { type: 'fixed', delay: 60_000 } }
+          : {}),
       },
     });
     const notifications = publications

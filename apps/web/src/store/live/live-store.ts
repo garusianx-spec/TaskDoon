@@ -172,8 +172,6 @@ export class LiveStore {
    * two adds in flight at once could take the same key and come back in either order.
    */
   private readonly subtaskAdds = new Map<string, Promise<void>>();
-  /** Phase 3.2: schedules made here and not yet acknowledged, by client id → their local id. */
-  private readonly scheduling = new Map<string, string>();
   /**
    * «ارسال فوری» in flight, by the schedule's client id → the local copy of its message. The
    * server broadcasts the message to this member's socket too; it replaces the copy in place.
@@ -397,6 +395,58 @@ export class LiveStore {
     });
     if (added.length) this.notify('دعوت‌نامه ثبت شد.');
     return result;
+  }
+
+  async refreshInvitations(): Promise<void> {
+    const workspaceId = this.workspaceId;
+    const before = this.getState().invitations;
+    const pending = await api.workspaces.invitations(workspaceId);
+    if (workspaceId !== this.workspaceId || before !== this.getState().invitations) return;
+    const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
+    this.apply({
+      type: 'sync/merge',
+      patch: {
+        invitations: pending.map((entry) => invitationFromView(entry, departmentName)),
+      },
+    });
+  }
+
+  async retryInvitationSms(invitationId: string, commandId: string): Promise<void> {
+    const workspaceId = this.workspaceId;
+    const result = await api.workspaces.retryInvitationSms(workspaceId, invitationId, commandId);
+    if (workspaceId !== this.workspaceId) return;
+    const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
+    this.apply({
+      type: 'sync/merge',
+      patch: {
+        invitations: this.getState().invitations.map((entry) =>
+          entry.id === invitationId ? invitationFromView(result, departmentName) : entry,
+        ),
+      },
+    });
+  }
+
+  /** Update the scheduler only after the API confirms the same client command. */
+  async scheduleMessage(
+    conversationId: string,
+    draft: { text: string; replyToId: string | null; scheduledAt: string },
+    clientMsgId: string,
+  ): Promise<void> {
+    const workspaceId = this.workspaceId;
+    const view = await api.scheduled.create(workspaceId, await this.serverId(conversationId), {
+      clientMsgId,
+      kind: 'text',
+      text: draft.text,
+      scheduledAt: draft.scheduledAt,
+      ...(draft.replyToId ? { replyToId: await this.serverId(draft.replyToId) } : {}),
+    });
+    if (workspaceId !== this.workspaceId) return;
+    if (view.status === 'pending')
+      this.apply({ type: 'sync/upsert-scheduled', scheduled: scheduledFromView(view) });
+    this.apply({
+      type: 'sync/merge',
+      patch: { announcement: 'پیام زمان‌بندی شد و در زمان انتخاب‌شده ارسال می‌شود.' },
+    });
   }
 
   /** The first workspace of a new account. Owners need an admin password first. */
@@ -1035,38 +1085,6 @@ export class LiveStore {
       case 'send-message':
         this.sendMessage(action.conversationId, action.text, action.replyToId, prev, next);
         return;
-      case 'schedule-message': {
-        const clientMsgId = crypto.randomUUID();
-        this.scheduling.set(clientMsgId, action.scheduledId);
-        this.track(
-          action.scheduledId,
-          async () => {
-            const view = await api.scheduled.create(
-              this.workspaceId,
-              await this.serverId(action.conversationId),
-              {
-                clientMsgId,
-                kind: 'text',
-                text: action.text,
-                scheduledAt: action.scheduledAt,
-                ...(action.replyToId ? { replyToId: await this.serverId(action.replyToId) } : {}),
-              },
-            );
-            this.scheduling.delete(clientMsgId);
-            this.apply({
-              type: 'sync/upsert-scheduled',
-              scheduled: scheduledFromView(view),
-              replaceId: action.scheduledId,
-            });
-            return view.id;
-          },
-          () => {
-            this.scheduling.delete(clientMsgId);
-            this.apply({ type: 'sync/remove-scheduled', scheduledId: action.scheduledId });
-          },
-        );
-        return;
-      }
       case 'cancel-scheduled-message':
         this.run(
           async () => api.scheduled.cancel(this.workspaceId, await this.serverId(action.scheduledId)),
@@ -1075,9 +1093,7 @@ export class LiveStore {
         return;
       case 'send-scheduled-now': {
         const scheduled = prev.scheduledMessages.find((entry) => entry.id === action.scheduledId);
-        const clientMsgId =
-          scheduled?.clientMsgId ??
-          [...this.scheduling].find(([, localId]) => localId === action.scheduledId)?.[0];
+        const clientMsgId = scheduled?.clientMsgId;
         if (clientMsgId) this.sendingNow.set(clientMsgId, action.messageId);
         this.run(
           async () => {
@@ -2533,12 +2549,10 @@ export class LiveStore {
         // One of this member's schedules, from any of their devices (or the server's worker).
         const data = event('scheduled:updated');
         if (!data) return;
-        const localId = this.scheduling.get(data.clientMsgId);
         if (data.status === 'pending') {
           this.apply({
             type: 'sync/upsert-scheduled',
             scheduled: scheduledFromView(data),
-            ...(localId ? { replaceId: localId } : {}),
           });
           return;
         }

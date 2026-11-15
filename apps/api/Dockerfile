@@ -77,11 +77,13 @@ FROM runtime-base AS migrator
 COPY --from=production-dependencies --chown=node:node /migration-runtime/node_modules /repo/node_modules
 COPY --from=production-dependencies --chown=node:node /migration-runtime/apps/api/node_modules ./node_modules
 COPY --from=builder --chown=node:node /runtime/apps/api/package.json ./package.json
-COPY --from=builder --chown=node:node /repo/apps/api/dist/cli/migrate.js ./dist/cli/migrate.js
+COPY --from=builder --chown=node:node /repo/apps/api/dist/cli/migrate.js /repo/apps/api/dist/cli/platform-admin.js ./dist/cli/
 COPY --from=builder --chown=node:node /repo/apps/api/dist/platform/db/migrate.js ./dist/platform/db/migrate.js
 COPY --from=builder --chown=node:node /repo/apps/api/dist/modules/site/site.seed.js /repo/apps/api/dist/modules/site/site.validation.js ./dist/modules/site/
 COPY --from=builder --chown=node:node /repo/apps/api/dist/platform/http/api-error.js ./dist/platform/http/api-error.js
 COPY --from=builder --chown=node:node /runtime/packages/contracts /repo/node_modules/@taskin/contracts
+COPY --from=builder --chown=node:node /runtime/packages/text /repo/node_modules/@taskin/text
+COPY --from=builder --chown=node:node /repo/apps/api/dist/modules/auth/phone.js ./dist/modules/auth/phone.js
 COPY --chown=node:node apps/api/db/migrations/*.sql ./db/migrations/
 COPY --chown=node:node apps/api/db/migrations/meta/_journal.json ./db/migrations/meta/_journal.json
 CMD ["/usr/local/bin/node", "dist/cli/migrate.js"]

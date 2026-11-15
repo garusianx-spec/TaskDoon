@@ -12,12 +12,15 @@ import {
   CHANNEL_ICONS,
   PendingInvitationRow,
 } from '@/features/workspace/components/directory/PendingInvitationRow';
+import { useInvitationRefresh } from '@/features/workspace/hooks/useInvitationRefresh';
 import { useInvitationForm } from '@/features/workspace/hooks/useInvitationForm';
 
 export interface InviteMemberModalProps {
   readonly open: boolean;
   readonly invitations: readonly Invitation[];
   readonly departments: readonly Department[];
+  readonly workspaceId?: string;
+  readonly onRetrySms?: (invitationId: string, commandId: string) => Promise<void>;
   readonly onClose: () => void;
   readonly onSubmit: (draft: InvitationDraft, commandId: string) => Promise<CreateInvitationsResult | void>;
   readonly onRevoke: (invitationId: string) => void;
@@ -35,10 +38,13 @@ export function InviteMemberModal({
   open,
   invitations,
   departments,
+  workspaceId,
+  onRetrySms,
   onClose,
   onSubmit,
   onRevoke,
 }: InviteMemberModalProps) {
+  useInvitationRefresh(open && Boolean(onRetrySms), workspaceId);
   const {
     recipients,
     setRecipients,
@@ -242,6 +248,7 @@ export function InviteMemberModal({
                   key={invitation.id}
                   invitation={invitation}
                   departments={departments}
+                  {...(onRetrySms ? { onRetrySms } : {})}
                   onRevoke={onRevoke}
                 />
               ))}

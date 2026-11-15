@@ -27,6 +27,7 @@ import {
   presenceStatus,
 } from './enums.js';
 import { users } from './identity.js';
+import type { InvitationSmsAttempt } from '../../sms/invitation-sms-state.js';
 
 /**
  * Tenancy: every table below except `plans` carries `workspace_id` and row-level security (see
@@ -212,6 +213,9 @@ export const invitations = pgTable(
     message: text().notNull().default(''),
     /** SHA-256 of the 256-bit token in the invitation link. */
     tokenHash: bytea().notNull().unique('invitations_token_uq'),
+    /** NULL means historical delivery is unknown; do not infer a send from creation. */
+    smsAttempts: jsonb().$type<InvitationSmsAttempt[]>(),
+    smsLinkSealed: text(),
     status: invitationStatus().notNull().default('pending'),
     invitedBy: uuid()
       .notNull()
@@ -238,5 +242,9 @@ export const invitations = pgTable(
       .where(sql`${t.status} = 'pending'`),
     index('invitations_ws_status_idx').on(t.workspaceId, t.status, t.createdAt),
     check('invitations_message_len', sql`char_length(${t.message}) <= 280`),
+    check(
+      'invitations_sms_attempts_array',
+      sql`${t.smsAttempts} IS NULL OR jsonb_typeof(${t.smsAttempts}) = 'array'`,
+    ),
   ],
 );

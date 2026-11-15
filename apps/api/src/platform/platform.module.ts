@@ -14,6 +14,7 @@ import { PresenceDirectory } from './realtime/presence-directory.js';
 import { RealtimePublisher } from './realtime/realtime-publisher.js';
 import { RedisClients } from './redis/redis.js';
 import { SmsService } from './sms/sms.js';
+import { InvitationSmsProcessor } from './sms/invitation-sms-processor.js';
 import { StorageService } from './storage/storage.js';
 
 const providers = [
@@ -26,6 +27,7 @@ const providers = [
   OutboxWriter,
   Queues,
   SmsService,
+  InvitationSmsProcessor,
   MailService,
   StorageService,
   EventStream,

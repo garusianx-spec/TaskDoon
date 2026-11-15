@@ -574,6 +574,7 @@ export function invitationFromView(
     message: view.message,
     invitedAt: view.createdAt,
     invitedById: view.invitedById,
+    smsDelivery: view.smsDelivery ?? null,
   };
 }
 

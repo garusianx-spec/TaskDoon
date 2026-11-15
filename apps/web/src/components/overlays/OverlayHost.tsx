@@ -183,6 +183,8 @@ export function OverlayHost() {
         open={active?.kind === 'invite-member'}
         invitations={state.invitations}
         departments={state.departments}
+        workspaceId={state.activeWorkspaceId}
+        {...(live ? { onRetrySms: (id: string, key: string) => live.store.retryInvitationSms(id, key) } : {})}
         onClose={close}
         onRevoke={(invitationId) => dispatch({ type: 'revoke-invitation', invitationId })}
         onSubmit={async (draft, commandId) => {

@@ -25,11 +25,12 @@ type Listener = (session: LiveSession | null) => void;
 
 let current: LiveSession | null = null;
 let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-let inFlight: Promise<boolean> | null = null;
+let inFlight: { readonly generation: number; readonly promise: Promise<boolean> } | null = null;
 /** Why the last session ended, when the server said: the account was suspended. */
 let endReason: 'suspended' | null = null;
 /** This device is signing out: the server's own `session:revoked` for it needs no refresh. */
 let signingOut = false;
+let sessionGeneration = 0;
 const listeners = new Set<Listener>();
 
 /** Refresh this long before the access token expires. */
@@ -187,7 +188,10 @@ export const session = {
 
   /** Signs this device out. The local session ends even if the server cannot be reached. */
   async signOut(): Promise<void> {
+    if (signingOut) return;
     signingOut = true;
+    const generation = ++sessionGeneration;
+    clearTimeout(refreshTimer);
     try {
       localStorage.setItem(SIGNED_OUT_KEY, '1');
     } catch {
@@ -198,7 +202,7 @@ export const session = {
     } catch {
       // The cookie is cleared by the server when it answers; either way this tab is done.
     }
-    end();
+    if (generation === sessionGeneration) end();
     signingOut = false;
   },
 
@@ -207,11 +211,12 @@ export const session = {
 
   /**
    * A socket heard `session:revoked`. One refresh asks the server why, so a suspended account
-   * can say so on the sign-in screen; the session ends either way.
+   * can say so on the sign-in screen; only the generation that heard it is ended.
    */
   async revoked(): Promise<void> {
+    const generation = sessionGeneration;
     if (current && !signingOut) await refresh().catch(() => false);
-    end();
+    if (generation === sessionGeneration) end();
   },
 
   /** `suspended` when the last session ended because the account is suspended; cleared by a sign-in. */
@@ -234,6 +239,7 @@ function set(next: LiveSession | null): void {
 
 function adopt(body: AuthSession, fromRefresh = false): LiveSession {
   if (!fromRefresh) {
+    sessionGeneration += 1;
     try {
       localStorage.removeItem(SIGNED_OUT_KEY);
     } catch {
@@ -252,40 +258,50 @@ function adopt(body: AuthSession, fromRefresh = false): LiveSession {
 }
 
 function end(): void {
+  sessionGeneration += 1;
   if (current !== null) set(null);
 }
 
-/** One refresh at a time: concurrent 401s share it. Resolves false when the session is over. */
+/** Concurrent 401s share a refresh only within the same session generation. */
 function refresh(): Promise<boolean> {
-  inFlight ??= (async () => {
-    try {
-      adopt(
-        await http.post<AuthSession>('/auth/refresh', undefined, {
+  if (signingOut) return Promise.resolve(false);
+  const generation = sessionGeneration;
+  if (inFlight?.generation === generation) return inFlight.promise;
+  const flight = {
+    generation,
+    promise: (async () => {
+      try {
+        const body = await http.post<AuthSession>('/auth/refresh', undefined, {
           headers: csrfHeader(),
           authenticated: false,
-        }),
-        true,
-      );
-      return true;
-    } catch (error) {
-      // Only a confirmed invalid credential ends the session. An outage is not a sign-out.
-      if (
-        error instanceof ApiProblem &&
-        (error.code === 'UNAUTHENTICATED' ||
-          error.code === 'REFRESH_INVALID' ||
-          error.code === 'SESSION_REVOKED' ||
-          error.code === 'ACCOUNT_SUSPENDED')
-      ) {
-        if (error.code === 'ACCOUNT_SUSPENDED') endReason = 'suspended';
-        end();
-        return false;
+        });
+        if (generation !== sessionGeneration || signingOut) return false;
+        adopt(body, true);
+        return true;
+      } catch (error) {
+        if (generation !== sessionGeneration || signingOut) return false;
+        // Only a confirmed invalid credential ends the session. An outage is not a sign-out.
+        if (
+          error instanceof ApiProblem &&
+          (error.code === 'UNAUTHENTICATED' ||
+            error.code === 'REFRESH_INVALID' ||
+            error.code === 'SESSION_REVOKED' ||
+            error.code === 'ACCOUNT_SUSPENDED')
+        ) {
+          if (error.code === 'ACCOUNT_SUSPENDED') endReason = 'suspended';
+          end();
+          return false;
+        }
+        throw error;
       }
-      throw error;
-    } finally {
-      inFlight = null;
-    }
-  })();
-  return inFlight;
+    })(),
+  };
+  inFlight = flight;
+  flight.promise = flight.promise.finally(() => {
+    // An older request may finish while a newer generation's refresh is still pending.
+    if (inFlight === flight) inFlight = null;
+  });
+  return flight.promise;
 }
 
 /** The refresh and logout calls echo the readable CSRF cookie (`__Host-` prefixed behind TLS). */

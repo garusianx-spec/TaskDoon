@@ -97,7 +97,12 @@ export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatCon
       scheduled={state.scheduledMessages.filter(
         (entry) => entry.conversationId === conversation.id && entry.authorId === currentUserId,
       )}
-      onSchedule={(text, replyToId, at) =>
+      onSchedule={async (text, replyToId, at, commandId) => {
+        const scheduledAt = at.toISOString();
+        if (live) {
+          await live.store.scheduleMessage(conversation.id, { text, replyToId, scheduledAt }, commandId);
+          return;
+        }
         dispatch({
           type: 'schedule-message',
           scheduledId: nextLocalId('sched'),
@@ -105,9 +110,9 @@ export function ChatContent({ onBack, defaultProjectId, currentUserId }: ChatCon
           authorId: currentUserId,
           text,
           replyToId,
-          scheduledAt: at.toISOString(),
-        })
-      }
+          scheduledAt,
+        });
+      }}
       onSendScheduledNow={(scheduledId) =>
         dispatch({ type: 'send-scheduled-now', scheduledId, messageId: nextLocalId('m') })
       }

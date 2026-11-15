@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { formatJalali, toISODate, toPersianDigits } from '@taskin/jalali';
+import { newIdempotencyKey } from '@/lib/api-client';
+import { problemMessage } from '@/lib/api-problem';
 import { truncate } from '@/lib/format';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { Button, Input, Modal } from '@/components/ui';
@@ -61,11 +63,15 @@ export function ScheduleMessageDialog({
   /** The drafted message, shown so it is clear what is being scheduled. */
   readonly text: string;
   readonly onClose: () => void;
-  readonly onConfirm: (at: Date) => void;
+  readonly onConfirm: (at: Date, commandId: string) => Promise<void>;
 }) {
   const [date, setDate] = useState(() => toISODate(defaultSlot(new Date())));
   const [time, setTime] = useState(() => hhmm(defaultSlot(new Date())));
   const [touched, setTouched] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const pending = useRef(false);
+  const attempt = useRef<{ text: string; time: number; id: string } | null>(null);
   const [openedAt, setOpenedAt] = useState(() => new Date());
 
   useResetOnOpen(open, () => {
@@ -74,12 +80,14 @@ export function ScheduleMessageDialog({
     setDate(toISODate(slot));
     setTime(hhmm(slot));
     setTouched(false);
+    setSaveError(null);
+    attempt.current = null;
     setOpenedAt(now);
   });
 
   const at = useMemo(() => instantOf(date, time), [date, time]);
   const shortcuts = useMemo(() => presets(openedAt), [openedAt]);
-  const lead = at ? at.getTime() - Date.now() : Number.NaN;
+  const lead = at ? at.getTime() - openedAt.getTime() : Number.NaN;
   const error = !at
     ? 'تاریخ و ساعت ارسال را کامل کنید.'
     : lead < MIN_LEAD_MS
@@ -88,30 +96,56 @@ export function ScheduleMessageDialog({
         ? 'زمان ارسال حداکثر تا یک سال بعد است.'
         : null;
 
-  const submit = () => {
+  const submit = async () => {
+    if (pending.current) return;
     setTouched(true);
-    if (error || !at) return;
-    onConfirm(at);
+    setSaveError(null);
+    const now = new Date();
+    setOpenedAt(now);
+    if (!at || at.getTime() - now.getTime() < MIN_LEAD_MS || at.getTime() - now.getTime() > MAX_AHEAD_MS)
+      return;
+
+    const time = at.getTime();
+    if (attempt.current?.text !== text || attempt.current.time !== time) {
+      attempt.current = { text, time, id: newIdempotencyKey() };
+    }
+    pending.current = true;
+    setSaving(true);
+    try {
+      await onConfirm(at, attempt.current.id);
+      attempt.current = null;
+    } catch (cause) {
+      setSaveError(problemMessage(cause, 'پیام زمان‌بندی نشد. دوباره تلاش کنید.'));
+    } finally {
+      pending.current = false;
+      setSaving(false);
+    }
+  };
+
+  const close = () => {
+    if (!pending.current) onClose();
   };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       size="sm"
       title="زمان‌بندی ارسال پیام"
       description={truncate(text, 120)}
       icon={<ClockIcon size={20} />}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={close} disabled={saving}>
             انصراف
           </Button>
-          <Button onClick={submit}>زمان‌بندی ارسال</Button>
+          <Button onClick={() => void submit()} loading={saving}>
+            زمان‌بندی ارسال
+          </Button>
         </>
       }
     >
-      <div className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4" disabled={saving} aria-busy={saving}>
         <div role="group" aria-label="زمان‌های پیشنهادی" className="flex flex-wrap gap-2">
           {shortcuts.map((preset) => (
             <Button
@@ -151,7 +185,12 @@ export function ScheduleMessageDialog({
             {error}
           </p>
         )}
-      </div>
+        {saveError && (
+          <p role="alert" className="text-caption text-status-blocked">
+            {saveError}
+          </p>
+        )}
+      </fieldset>
     </Modal>
   );
 }

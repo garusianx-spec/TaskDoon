@@ -41,6 +41,12 @@ export const workspaceEndpoints = {
       http.post<CreateInvitationsResult>(`${workspacePath(workspaceId)}/invitations`, body, {
         ...(idempotencyKey ? { idempotencyKey } : { idempotent: true }),
       }),
+    retryInvitationSms: (workspaceId: string, invitationId: string, idempotencyKey: string) =>
+      http.post<InvitationView>(
+        `${workspacePath(workspaceId)}/invitations/${invitationId}/retry-sms`,
+        undefined,
+        { idempotencyKey },
+      ),
     revokeInvitation: (workspaceId: string, invitationId: string) =>
       http.delete<void>(`${workspacePath(workspaceId)}/invitations/${invitationId}`),
     acceptInvitation: (token: string) => http.post<AcceptInvitationResult>('/invitations/accept', { token }),

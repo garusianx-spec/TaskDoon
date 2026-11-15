@@ -1,9 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
-import { parsePhoneNumberFromString } from 'libphonenumber-js/max';
 import type { OtpChallenge } from '@taskin/contracts';
-import { normaliseIranMobile } from '@taskin/text';
 import { AppConfig } from '../../config/app-config.js';
 import { AuditWriter } from '../../platform/audit/audit-writer.js';
 import { hmacSha256, numericCode, safeEqual } from '../../platform/crypto/crypto.js';
@@ -13,24 +11,15 @@ import { ApiError } from '../../platform/http/api-error.js';
 import { maskPhone } from '../../platform/logging/logging.js';
 import { RedisClients } from '../../platform/redis/redis.js';
 import { SmsService, SmsUnavailableError } from '../../platform/sms/sms.js';
+import { toIranMobileE164 } from './phone.js';
+
+export { toIranMobileE164 } from './phone.js';
 
 export const OTP_LENGTH = 6;
 const MAX_ATTEMPTS = 5;
 const SENDS_PER_PHONE_PER_HOUR = 5;
 const SENDS_PER_IP_PER_HOUR = 20;
 const VERIFIES_PER_IP_PER_HOUR = 30;
-
-/**
- * Any written form of an Iranian mobile number (`0912…`, `+98 912 …`, `۰۹۱۲…`) to E.164, or
- * `null`. Only mobile ranges pass: SMS pumping to premium or foreign numbers is refused up front.
- */
-export function toIranMobileE164(raw: string): string | null {
-  const local = normaliseIranMobile(raw);
-  if (!local) return null;
-  const parsed = parsePhoneNumberFromString(local, 'IR');
-  if (!parsed?.isValid() || parsed.getType() !== 'MOBILE') return null;
-  return parsed.number;
-}
 
 export interface VerifiedPhone {
   readonly phone: string;
