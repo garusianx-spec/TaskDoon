@@ -205,15 +205,17 @@ function DirectoryContent() {
                 )}
 
                 <div className="flex flex-col gap-1.5 border-t border-secondary pt-3">
-                  <a
-                    href={`mailto:${user.email}`}
-                    className={cn(
-                      'flex items-center gap-2 rounded-lg px-1.5 py-1 text-caption text-fg-secondary transition-colors hover:bg-hover',
-                    )}
-                  >
-                    <SmsIcon size={16} className="shrink-0 text-fg-quaternary" />
-                    <span className="truncate latin-inline">{user.email}</span>
-                  </a>
+                  {user.email.trim() && (
+                    <a
+                      href={`mailto:${user.email}`}
+                      className={cn(
+                        'flex items-center gap-2 rounded-lg px-1.5 py-1 text-caption text-fg-secondary transition-colors hover:bg-hover',
+                      )}
+                    >
+                      <SmsIcon size={16} className="shrink-0 text-fg-quaternary" />
+                      <span className="truncate latin-inline">{user.email}</span>
+                    </a>
+                  )}
                   <span className="flex items-center gap-2 px-1.5 py-1 text-caption text-fg-secondary">
                     <CallIcon size={16} className="shrink-0 text-fg-quaternary" />
                     <span className="truncate numeric">{user.phone}</span>

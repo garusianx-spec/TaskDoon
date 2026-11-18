@@ -43,6 +43,25 @@ export function RoleList({ roles, activeRole, onSelect, permissions }: RoleListP
                 aria-selected={active}
                 tabIndex={active ? 0 : -1}
                 onClick={() => onSelect(role.id)}
+                onKeyDown={(event) => {
+                  const ordered = [...roles].sort((a, b) => a.rank - b.rank);
+                  const index = ordered.findIndex((entry) => entry.id === role.id);
+                  const next =
+                    event.key === 'Home'
+                      ? 0
+                      : event.key === 'End'
+                        ? ordered.length - 1
+                        : event.key === 'ArrowDown'
+                          ? (index + 1) % ordered.length
+                          : event.key === 'ArrowUp'
+                            ? (index + ordered.length - 1) % ordered.length
+                            : null;
+                  if (next === null) return;
+                  event.preventDefault();
+                  onSelect(ordered[next]!.id);
+                  const list = event.currentTarget.closest('[role="tablist"]');
+                  list?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+                }}
                 className={cn(
                   'flex w-full flex-col gap-1 rounded-xl border px-3 py-2.5 text-start transition-colors',
                   active
@@ -65,7 +84,7 @@ export function RoleList({ roles, activeRole, onSelect, permissions }: RoleListP
                   </span>
                 </span>
                 <span className="line-clamp-2 text-micro leading-5 text-fg-tertiary">{role.description}</span>
-                <span className="text-micro font-medium text-fg-quaternary numeric">
+                <span className="text-micro font-medium text-fg-secondary numeric">
                   {`${formatCount(granted)}/${formatCount(totalCells)} دسترسی فعال`}
                 </span>
               </button>

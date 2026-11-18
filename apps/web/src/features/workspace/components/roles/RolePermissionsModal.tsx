@@ -1,7 +1,7 @@
 'use client';
 
 import type { PermissionMatrix } from '@taskin/contracts';
-import { DEPARTMENTS, ROLES } from '@/data/reference';
+import { DEPARTMENTS } from '@/data/reference';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { Badge, Button, Modal } from '@/components/ui';
@@ -10,6 +10,8 @@ import { RoleList } from '@/features/workspace/components/roles/RoleList';
 import { BriefcaseIcon, InfoCircleIcon, KeyIcon, RefreshIcon, ShieldIcon } from '@/components/icons';
 import { SettingRow } from '@/features/workspace/components/roles/PermissionSettingRow';
 import { useRolePermissions } from '@/features/workspace/hooks/useRolePermissions';
+import { useWorkspace } from '@/store/WorkspaceProvider';
+import { workspaceRoleCounts } from '@/features/workspace/lib/member-counts';
 
 export interface RolePermissionsModalProps {
   readonly open: boolean;
@@ -35,6 +37,7 @@ export function RolePermissionsModal({
   onReset,
 }: RolePermissionsModalProps) {
   const form = useRolePermissions({ open, permissions });
+  const { state } = useWorkspace();
   if (!form) return null;
   const {
     staged,
@@ -99,7 +102,12 @@ export function RolePermissionsModal({
               <KeyIcon size={16} variant="twotone" className="text-fg-tertiary" />
               سلسله‌مراتب نقش‌ها
             </h3>
-            <RoleList roles={ROLES} activeRole={activeRole} onSelect={setActiveRole} permissions={staged} />
+            <RoleList
+              roles={workspaceRoleCounts(state.users)}
+              activeRole={activeRole}
+              onSelect={setActiveRole}
+              permissions={staged}
+            />
           </section>
 
           <section className="rounded-xl border border-secondary bg-sunken p-3">
@@ -135,7 +143,12 @@ export function RolePermissionsModal({
                     )}
                   >
                     {department.name}
-                    <span className="text-fg-quaternary">{formatCount(department.memberCount)}</span>
+                    <span className="text-fg-secondary">
+                      {formatCount(
+                        state.users.filter((user) => !user.former && user.department === department.id)
+                          .length,
+                      )}
+                    </span>
                   </button>
                 );
               })}

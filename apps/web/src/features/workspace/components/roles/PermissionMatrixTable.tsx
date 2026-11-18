@@ -95,7 +95,12 @@ export function PermissionMatrixTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-secondary bg-surface shadow-xs scrollbar-thin">
+      <div
+        role="region"
+        aria-label="جدول دسترسی‌ها؛ برای دیدن ستون‌های دیگر افقی پیمایش کنید"
+        tabIndex={0}
+        className="overflow-x-auto rounded-xl border border-secondary bg-surface shadow-xs scrollbar-thin"
+      >
         <table className="w-full min-w-[46rem] border-collapse">
           <caption className="sr-only">
             {`ماتریس دسترسی نقش ${role.name} — ردیف‌ها ماژول‌ها و ستون‌ها اقدام‌ها هستند`}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { RoleId } from '@taskin/contracts';
 import { DEFAULT_PERMISSION_MATRIX, PERMISSION_ACTIONS, PERMISSION_MODULES, ROLES } from '@/data/reference';
 import { useWorkspace } from '@/store/WorkspaceProvider';
+import { workspaceRoleCounts } from '@/features/workspace/lib/member-counts';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
 import { SectionBackLink } from '@/components/layout/NavigationList';
@@ -18,6 +19,7 @@ export default function RolesSettingsPage() {
   const { state, dispatch, currentUser, isWorkspaceOwner } = useWorkspace();
   const [activeRole, setActiveRole] = useState<RoleId>('admin');
   const [modalOpen, setModalOpen] = useState(false);
+  const roles = workspaceRoleCounts(state.users);
 
   const role = ROLES.find((entry) => entry.id === activeRole) ?? ROLES[0];
   const totalCells = PERMISSION_MODULES.length * PERMISSION_ACTIONS.length;
@@ -67,7 +69,7 @@ export default function RolesSettingsPage() {
           <aside className="flex flex-col gap-3">
             <h2 className="text-title-sm font-semibold text-fg-primary">سلسله‌مراتب نقش‌ها</h2>
             <RoleList
-              roles={ROLES}
+              roles={roles}
               activeRole={activeRole}
               onSelect={setActiveRole}
               permissions={state.permissions}
