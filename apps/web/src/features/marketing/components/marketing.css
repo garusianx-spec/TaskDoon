@@ -587,6 +587,16 @@
 .marketing-comparison th[scope='row'] {
   background: rgb(var(--bg-canvas));
 }
+.marketing-comparison th[scope='row'],
+.marketing-comparison thead th:first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  min-width: 150px;
+  max-width: 180px;
+  background: rgb(var(--bg-canvas));
+  border-inline-end: 1px solid rgb(var(--border-secondary));
+}
 .marketing-comparison-note {
   padding: 18px;
   font-size: 12px;

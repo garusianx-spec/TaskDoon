@@ -105,11 +105,11 @@ export function PricingPlans({
           );
         })}
       </div>
-      {!documents.length && <p className="marketing-empty">هنوز طرحی برای نمایش منتشر نشده است.</p>}
+      {!documents.length && <p className="marketing-empty">هنوز پلنی برای نمایش منتشر نشده است.</p>}
       {comparison && documents.length > 1 && rows.length > 0 && (
-        <div className="marketing-comparison-wrap" tabIndex={0} role="region" aria-label="جدول مقایسهٔ طرح‌ها">
+        <div className="marketing-comparison-wrap" tabIndex={0} role="region" aria-label="جدول مقایسهٔ پلن‌ها">
           <table className="marketing-comparison">
-            <caption>مقایسه امکانات معرفی‌شده در طرح‌ها</caption>
+            <caption>مقایسه امکانات معرفی‌شده در پلن‌ها</caption>
             <thead>
               <tr>
                 <th scope="col">امکانات</th>
@@ -127,9 +127,9 @@ export function PricingPlans({
                   {documents.map((document) => (
                     <td key={document.id}>
                       {strings(document.data.features).includes(row) ? (
-                        <span aria-label="در اطلاعات این طرح ذکر شده">✓</span>
+                        <span aria-label="در اطلاعات این پلن ذکر شده">✓</span>
                       ) : (
-                        <span aria-label="در این طرح ذکر نشده">—</span>
+                        <span aria-label="در اطلاعات این پلن ذکر نشده">ذکر نشده</span>
                       )}
                     </td>
                   ))}
@@ -138,8 +138,8 @@ export function PricingPlans({
             </tbody>
           </table>
           <p className="marketing-comparison-note">
-            علامت «—» یعنی این قابلیت در اطلاعات منتشرشده این طرح ذکر نشده است. شرایط نهایی را پیش از انتخاب
-            طرح بررسی کنید.
+            «ذکر نشده» به معنی نبودن این قابلیت در اطلاعات منتشرشدهٔ پلن است؛ دربارهٔ ارائه یا عدم ارائهٔ آن
+            نتیجه‌گیری نمی‌کند. شرایط نهایی را پیش از انتخاب پلن بررسی کنید.
           </p>
         </div>
       )}
