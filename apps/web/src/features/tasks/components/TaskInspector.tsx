@@ -25,6 +25,7 @@ export function TaskInspector({
   onClose,
   onSave,
   onBusyChange,
+  dismissGuardRef,
   onToggleStar,
   onToggleSubtask,
   onAddSubtask,
@@ -46,6 +47,27 @@ export function TaskInspector({
   const fileBusyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [titleTouched, setTitleTouched] = useState(false);
+  const [dismissWarning, setDismissWarning] = useState(false);
+  const savedRef = useRef(false);
+  const dirty =
+    Object.entries(draft).some(
+      ([key, value]) =>
+        JSON.stringify(value) !== JSON.stringify(persistedTask[key as keyof typeof persistedTask]),
+    ) ||
+    (columnId !== undefined && columnId !== columnForTask(columns, persistedTask)?.id);
+  useEffect(() => {
+    if (!dismissGuardRef) return;
+    dismissGuardRef.current = () => {
+      if (savedRef.current) return true;
+      if (savingRef.current || fileBusyRef.current) return false;
+      if (!dirty) return true;
+      setDismissWarning(true);
+      return false;
+    };
+    return () => {
+      dismissGuardRef.current = null;
+    };
+  }, [dismissGuardRef, dirty]);
   useEffect(() => {
     onBusyChange?.(saving || fileBusy);
     return () => onBusyChange?.(false);
@@ -92,6 +114,7 @@ export function TaskInspector({
         { ...draft, ...(draft.title !== undefined ? { title: task.title.trim() } : {}) },
         columnId,
       );
+      savedRef.current = true;
       onClose();
     } catch {
       setError(
@@ -234,6 +257,28 @@ export function TaskInspector({
         </div>
       </fieldset>
       <footer className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-3 border-t border-secondary bg-surface p-4 sm:px-6">
+        {dismissWarning && dirty && (
+          <div role="alert" className="w-full rounded-lg border border-secondary bg-sunken p-3">
+            <p className="text-body-sm text-fg-primary">
+              تغییرات ذخیره‌نشده دارید. پیش از بستن، تغییرات را ذخیره کنید یا کنار بگذارید.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setDismissWarning(false)}>
+                ادامه ویرایش
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={saving || fileBusy}
+                onClick={() => {
+                  savedRef.current = true;
+                  onClose();
+                }}
+              >
+                کنار گذاشتن تغییرات
+              </Button>
+            </div>
+          </div>
+        )}
         {fileBusy && (
           <p role="status" className="me-auto text-caption text-fg-tertiary">
             در حال ذخیره فایل…

@@ -122,6 +122,11 @@ check(
 await details.getByLabel('عنوان وظیفه', { exact: true }).fill('تغییر لغوشده');
 await details.getByRole('button', { name: 'انصراف', exact: true }).click();
 check(
+  await visible(details.getByText(/تغییرات ذخیره‌نشده دارید/)),
+  'Cancel asks before discarding a changed draft',
+);
+await details.getByRole('button', { name: 'کنار گذاشتن تغییرات', exact: true }).click();
+check(
   await visible(page.getByRole('group', { name: /عنوان ذخیره‌شده/ })),
   'Cancel discards unsaved scalar edits',
 );

@@ -65,7 +65,7 @@ export function CreateTaskModal({
         fromMessage
           ? 'متن و پیوست پیام انتخاب‌شده به‌صورت خودکار در فرم قرار گرفت. جزئیات را تکمیل کنید.'
           : fromNote
-            ? 'عنوان و متن یادداشت در فرم قرار گرفت و موارد چک‌لیست به زیروظیفه تبدیل می‌شوند.'
+            ? 'عنوان و متن یادداشت در فرم قرار گرفت و موارد تیک‌نخورده به زیروظیفه تبدیل می‌شوند.'
             : presetDate && form.dueDate
               ? `مهلت انجام روی ${formatJalali(fromISODate(form.dueDate), 'long')} تنظیم شده است.`
               : 'وظیفه را در یکی از پروژه‌های سازمان ثبت کنید.'
@@ -81,6 +81,19 @@ export function CreateTaskModal({
       }
       footer={
         <>
+          {model.dismissWarning && (
+            <div role="alert" className="basis-full rounded-lg border border-secondary bg-sunken p-3">
+              <p>تغییرات ذخیره‌نشده دارید. پیش از بستن، وظیفه را ایجاد کنید یا تغییرات را کنار بگذارید.</p>
+              <div className="mt-2 flex gap-2">
+                <Button variant="secondary" onClick={model.keepEditing}>
+                  ادامه ویرایش
+                </Button>
+                <Button variant="destructive" disabled={saving} onClick={model.discard}>
+                  کنار گذاشتن تغییرات
+                </Button>
+              </div>
+            </div>
+          )}
           {submitError && (
             <p role="alert" className="basis-full text-body-sm text-status-blocked">
               {submitError}

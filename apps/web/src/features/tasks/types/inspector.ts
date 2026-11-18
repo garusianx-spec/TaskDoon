@@ -1,5 +1,6 @@
 import type { BoardColumn, Task, User } from '@taskin/contracts';
 import type { TaskPatch } from '@/store/workspace-reducer';
+import type { RefObject } from 'react';
 
 export interface TaskInspectorProps {
   readonly task: Task;
@@ -7,6 +8,7 @@ export interface TaskInspectorProps {
   /** Board columns, custom ones included — the status picker moves the card between them. */
   readonly columns: readonly BoardColumn[];
   readonly onClose: () => void;
+  readonly dismissGuardRef?: RefObject<(() => boolean) | null>;
   readonly onSave: (patch: TaskPatch, columnId?: string) => Promise<void> | void;
   readonly onBusyChange?: (busy: boolean) => void;
   readonly onToggleStar: () => void;

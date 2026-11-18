@@ -31,6 +31,8 @@ export function useCreateTaskForm({
   const submitting = useRef(false);
   const submission = useRef<{ signature: string; files: readonly File[]; commandId: string } | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
+  const initialForm = useRef('');
+  const [dismissWarning, setDismissWarning] = useState(false);
 
   // Re-seed whenever the modal opens so a sourced draft replaces the previous form.
   useResetOnOpen(
@@ -40,13 +42,16 @@ export function useCreateTaskForm({
       const projectId = fixedProjectId ?? initial.projectId;
       const sourceConversion = initial.sourceMessageId !== null || initial.sourceNoteId !== null;
       const initialToday = today();
-      setForm({
+      const seeded = {
         ...initial,
         projectId,
         boardColumnId: projectId === initial.projectId ? initial.boardColumnId : null,
         startDate: initial.startDate ?? initialToday,
         dueDate: initial.dueDate ?? (sourceConversion ? initialToday : null),
-      });
+      };
+      setForm(seeded);
+      initialForm.current = JSON.stringify(seeded);
+      setDismissWarning(false);
       setTouched(false);
       setFiles([]);
       setFileError(null);
@@ -76,7 +81,12 @@ export function useCreateTaskForm({
   const noProject = !projects.some((project) => project.id === projectId);
 
   const close = () => {
-    if (!submitting.current) onClose();
+    if (submitting.current) return;
+    if (files.length || JSON.stringify(form) !== initialForm.current) {
+      setDismissWarning(true);
+      return;
+    }
+    onClose();
   };
 
   const pickFiles = (list: FileList | null) => {
@@ -170,6 +180,11 @@ export function useCreateTaskForm({
     titleError,
     projects,
     close,
+    dismissWarning,
+    keepEditing: () => setDismissWarning(false),
+    discard: () => {
+      if (!submitting.current) onClose();
+    },
     pickFiles,
     submit,
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLive, useWorkspace } from '@/store/WorkspaceProvider';
 import { conversationById, messagePreview, projectColumns, taskById, userById } from '@/store/selectors';
@@ -43,6 +43,7 @@ export function AppShell({ sidebar, children, pageTitle, mobileShowsDetail = fal
   const pathname = usePathname();
   const { state, dispatch, saveTask, currentUser, isPinned, isMuted } = useWorkspace();
   const [taskBusy, setTaskBusy] = useState(false);
+  const dismissGuardRef = useRef<(() => boolean) | null>(null);
   const signedOut = state.session === 'signed-out';
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export function AppShell({ sidebar, children, pageTitle, mobileShowsDetail = fal
       : undefined;
 
   const closeInspector = useCallback(() => {
-    if (!taskBusy) dispatch({ type: 'close-inspector' });
+    if (!taskBusy && (dismissGuardRef.current?.() ?? true)) dispatch({ type: 'close-inspector' });
   }, [dispatch, taskBusy]);
   // The chat message the inspected task came from: from the loaded history, else as the server described it.
   const sourceMessage = inspectorTask?.sourceMessageId
@@ -165,6 +166,7 @@ export function AppShell({ sidebar, children, pageTitle, mobileShowsDetail = fal
             onClose={closeInspector}
             onSave={(patch, columnId) => saveTask(inspectorTask.id, patch, columnId)}
             onBusyChange={setTaskBusy}
+            dismissGuardRef={dismissGuardRef}
             onToggleStar={() => dispatch({ type: 'toggle-task-star', taskId: inspectorTask.id })}
             onToggleSubtask={(subtaskId) =>
               dispatch({ type: 'toggle-subtask', taskId: inspectorTask.id, subtaskId })
