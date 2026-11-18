@@ -15,6 +15,12 @@ export function SiteLink({
 }) {
   const safe = siteHref(href);
   if (!safe) return <span className={className}>{children}</span>;
+  if (safe.startsWith('#'))
+    return (
+      <a href={safe} className={className} {...rest}>
+        {children}
+      </a>
+    );
   return (
     <Link href={safe} className={className} {...rest}>
       {children}

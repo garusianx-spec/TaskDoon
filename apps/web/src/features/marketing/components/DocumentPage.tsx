@@ -23,6 +23,10 @@ export async function DocumentPage({
     .filter((section) => section.visible)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const firstHero = sections.findIndex((section) => section.type === 'hero' && Boolean(section.title));
+  const demoForm =
+    document.kind === 'page' && document.slug === 'demo-request'
+      ? sections.find((section) => section.type === 'contact-form' && section.formKind === 'demo')
+      : undefined;
   const has = (type: string) => sections.some((section) => section.type === type);
   const crumbs = document.seo.breadcrumbs?.length
     ? document.seo.breadcrumbs
@@ -154,6 +158,9 @@ export async function DocumentPage({
           key={section.id}
           section={{
             ...section,
+            ...(demoForm && index === firstHero && !section.cta
+              ? { cta: { label: 'رفتن به فرم درخواست دمو', href: '#' + demoForm.id } }
+              : {}),
             data: {
               ...(document.kind === 'page' && document.slug === 'faq' ? { searchable: true } : {}),
               ...(document.kind === 'page' && document.slug === 'pricing' ? { comparison: true } : {}),

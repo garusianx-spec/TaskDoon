@@ -251,7 +251,11 @@ export function SectionRenderer({
     );
   }
   return (
-    <section id={section.id} className={className}>
+    <section
+      id={section.id}
+      tabIndex={section.type === 'contact-form' ? -1 : undefined}
+      className={className}
+    >
       <div className="marketing-container">
         <SectionHeading section={section} />
         {section.type === 'rich-text' && <RichText text={section.body ?? ''} />}
