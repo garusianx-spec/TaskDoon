@@ -9,7 +9,7 @@ import { SectionBackLink } from '@/components/layout/NavigationList';
 import { workspaceRoutes } from '@/lib/workspace-navigation';
 import { NotesSidebar } from '@/features/notes/components/NotesSidebar';
 import { NoteEditor } from '@/features/notes/components/NoteEditor';
-import { Button, ExpandableSearch, IconButton } from '@/components/ui';
+import { ExpandableSearch, IconButton } from '@/components/ui';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { AddIcon, FilterIcon, NotebookIcon } from '@/components/icons';
 import { NoteListItem } from '@/features/notes/components/NoteListItem';
@@ -86,7 +86,7 @@ export function NotesPage() {
         <section
           aria-label={`فهرست ${heading}`}
           className={cn(
-            'min-h-0 w-full shrink-0 flex-col border-e border-secondary bg-surface lg:flex lg:w-96',
+            'min-h-0 w-full shrink-0 flex-col border-e border-secondary bg-surface lg:flex lg:w-64 xl:w-96',
             mobileEditorOpen ? 'hidden' : 'flex',
           )}
         >
@@ -138,11 +138,6 @@ export function NotesPage() {
               icon={<NotebookIcon size={20} />}
               title="یادداشتی پیدا نشد"
               description="دسته یا فیلتر دیگری را انتخاب کنید، یا یادداشت تازه‌ای بنویسید."
-              action={
-                <Button size="sm" iconStart={<AddIcon size={16} />} onClick={createNote}>
-                  یادداشت جدید
-                </Button>
-              }
             />
           ) : (
             <ul className="flex flex-1 flex-col gap-1 overflow-y-auto p-2 scrollbar-thin">
@@ -206,11 +201,6 @@ export function NotesPage() {
               icon={<NotebookIcon size={26} />}
               title="یادداشتی انتخاب نشده است"
               description="از فهرست یک یادداشت را باز کنید یا یادداشت تازه‌ای بسازید."
-              action={
-                <Button size="sm" iconStart={<AddIcon size={16} />} onClick={createNote}>
-                  یادداشت جدید
-                </Button>
-              }
             />
           )}
         </div>
