@@ -11,6 +11,7 @@ import {
   sortSiteArticles,
 } from '@/lib/site-utils';
 import { Arrow, SiteLink } from '@/features/marketing/components/SiteLink';
+import { BlogArticleGrid } from '@/features/marketing/components/BlogArticleCard';
 import { ProductPreview } from '@/features/marketing/components/ProductPreview';
 import { FaqList } from '@/features/marketing/components/FaqList';
 import { PricingPlans } from '@/features/marketing/components/PricingPlans';
@@ -54,27 +55,202 @@ export function MarketingMedia({
   );
 }
 
+export type RichTextBlock =
+  | { kind: 'heading'; level: 2 | 3; text: string }
+  | { kind: 'paragraph'; lines: string[] }
+  | { kind: 'bullets'; items: string[] }
+  | { kind: 'checklist'; items: { text: string; checked: boolean }[] }
+  | { kind: 'numbers'; items: string[]; persian: boolean };
+
+const CHECKLIST_MD_RE = /^(?:[-*•▪◦–—]\s+)?\[([ xX])\]\s+(.+)$/;
+const CHECKLIST_UNICODE_RE = /^([☐☑✅✓✔])\s+(.+)$/;
+const BULLET_RE = /^[-*•▪◦–—]\s+(.+)$/;
+const NUMBERED_RE = /^([۰-۹0-9]{1,2})\s*[.)\-–:]\s+(.+)$/;
+
+function matchChecklistLine(line: string): { text: string; checked: boolean } | null {
+  const md = CHECKLIST_MD_RE.exec(line);
+  if (md) return { text: md[2] ?? '', checked: (md[1] ?? '').toLowerCase() === 'x' };
+  const unicode = CHECKLIST_UNICODE_RE.exec(line);
+  if (unicode) return { text: unicode[2] ?? '', checked: unicode[1] !== '☐' };
+  return null;
+}
+
+function isNumberedSubheadingCandidate(line: string): boolean {
+  return NUMBERED_RE.test(line) && line.length <= 140 && !line.endsWith('.');
+}
+
+export function parseRichTextBlocks(
+  text: string,
+  defaultHeadingLevel: 'h2' | 'h3' = 'h2',
+): RichTextBlock[] {
+  const rawParagraphs = text.replace(/\r\n?/g, '\n').split(/\n\s*\n/);
+  const blocks: RichTextBlock[] = [];
+  let sawH2 = false;
+
+  const pushBlock = (block: RichTextBlock) => {
+    const prev = blocks[blocks.length - 1];
+    if (prev && prev.kind === 'bullets' && block.kind === 'bullets') {
+      prev.items.push(...block.items);
+      return;
+    }
+    if (prev && prev.kind === 'checklist' && block.kind === 'checklist') {
+      prev.items.push(...block.items);
+      return;
+    }
+    blocks.push(block);
+  };
+
+  for (const raw of rawParagraphs) {
+    const lines = raw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!lines.length) continue;
+
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i]!;
+      if (line.startsWith('### ')) {
+        pushBlock({ kind: 'heading', level: 3, text: line.slice(4) });
+        i += 1;
+        continue;
+      }
+      if (line.startsWith('## ')) {
+        sawH2 = true;
+        pushBlock({ kind: 'heading', level: 2, text: line.slice(3) });
+        i += 1;
+        continue;
+      }
+
+      const firstCheck = matchChecklistLine(line);
+      if (firstCheck) {
+        const items: { text: string; checked: boolean }[] = [firstCheck];
+        i += 1;
+        while (i < lines.length) {
+          const next = matchChecklistLine(lines[i]!);
+          if (!next) break;
+          items.push(next);
+          i += 1;
+        }
+        pushBlock({ kind: 'checklist', items });
+        continue;
+      }
+
+      const firstBullet = BULLET_RE.exec(line);
+      if (firstBullet) {
+        const items: string[] = [firstBullet[1] ?? ''];
+        i += 1;
+        while (i < lines.length) {
+          if (matchChecklistLine(lines[i]!)) break;
+          const next = BULLET_RE.exec(lines[i]!);
+          if (!next) break;
+          items.push(next[1] ?? '');
+          i += 1;
+        }
+        pushBlock({ kind: 'bullets', items });
+        continue;
+      }
+
+      const firstNumbered = NUMBERED_RE.exec(line);
+      if (firstNumbered) {
+        let count = 1;
+        while (i + count < lines.length && NUMBERED_RE.test(lines[i + count]!)) {
+          count += 1;
+        }
+        if (count >= 2) {
+          const items: string[] = [];
+          const persian = /[۰-۹]/.test(firstNumbered[1] ?? '');
+          for (let j = 0; j < count; j += 1) {
+            const match = NUMBERED_RE.exec(lines[i + j]!);
+            items.push(match?.[2] ?? lines[i + j]!);
+          }
+          pushBlock({ kind: 'numbers', items, persian });
+          i += count;
+          continue;
+        }
+        if (isNumberedSubheadingCandidate(line)) {
+          const level: 2 | 3 = defaultHeadingLevel === 'h3' || sawH2 ? 3 : 2;
+          pushBlock({ kind: 'heading', level, text: line });
+          i += 1;
+          continue;
+        }
+      }
+
+      const paraLines: string[] = [line];
+      i += 1;
+      while (i < lines.length) {
+        const nextLine = lines[i]!;
+        if (
+          nextLine.startsWith('### ') ||
+          nextLine.startsWith('## ') ||
+          matchChecklistLine(nextLine) ||
+          BULLET_RE.test(nextLine) ||
+          (NUMBERED_RE.test(nextLine) &&
+            (isNumberedSubheadingCandidate(nextLine) ||
+              (i + 1 < lines.length && NUMBERED_RE.test(lines[i + 1]!))))
+        ) {
+          break;
+        }
+        paraLines.push(nextLine);
+        i += 1;
+      }
+      pushBlock({ kind: 'paragraph', lines: paraLines });
+    }
+  }
+
+  return blocks;
+}
+
 /** A deliberately small text format: React escapes all input; HTML is never interpreted. */
-export function RichText({ text }: { text: string }) {
-  const paragraphs = text.split(/\n\s*\n/);
+export function RichText({
+  text,
+  headingLevel = 'h2',
+}: {
+  text: string;
+  headingLevel?: 'h2' | 'h3';
+}) {
+  const blocks = parseRichTextBlocks(text, headingLevel);
   return (
     <div className="marketing-prose">
-      {paragraphs.map((paragraph, index) => {
-        const value = paragraph.trim();
-        if (!value) return null;
-        if (value.startsWith('### ')) return <h3 key={index}>{value.slice(4)}</h3>;
-        if (value.startsWith('## ')) return <h2 key={index}>{value.slice(3)}</h2>;
-        if (value.split('\n').every((line) => /^[-*] /.test(line)))
+      {blocks.map((block, index) => {
+        if (block.kind === 'heading') {
+          return block.level === 3 ? <h3 key={index}>{block.text}</h3> : <h2 key={index}>{block.text}</h2>;
+        }
+        if (block.kind === 'bullets') {
           return (
             <ul key={index}>
-              {value.split('\n').map((line, i) => (
-                <li key={i}>{line.slice(2)}</li>
+              {block.items.map((item, i) => (
+                <li key={i}>{item}</li>
               ))}
             </ul>
           );
+        }
+        if (block.kind === 'checklist') {
+          return (
+            <ul key={index} className="marketing-prose-checklist">
+              {block.items.map((item, i) => (
+                <li key={i} className={item.checked ? 'is-checked' : undefined}>
+                  <span className="marketing-checklist-box" aria-hidden="true">
+                    {item.checked ? '✓' : ''}
+                  </span>
+                  <span>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        if (block.kind === 'numbers') {
+          return (
+            <ol key={index} className={block.persian ? 'is-persian' : undefined}>
+              {block.items.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ol>
+          );
+        }
         return (
           <p key={index}>
-            {value.split('\n').map((line, i) => (
+            {block.lines.map((line, i) => (
               <span key={i}>
                 {i > 0 && <br />}
                 {line}
@@ -154,6 +330,9 @@ function ItemCards({
 }
 
 export function DocumentCards({ documents }: { documents: PublishedSiteDocument[] }) {
+  if (documents.length > 0 && documents.every((document) => document.kind === 'article')) {
+    return <BlogArticleGrid articles={documents} featuredSingle />;
+  }
   return (
     <div className="marketing-card-grid">
       {documents.map((document) => {
@@ -262,7 +441,9 @@ export function SectionRenderer({
     <section id={section.id} className={className}>
       <div className="marketing-container">
         <SectionHeading section={section} />
-        {section.type === 'rich-text' && <RichText text={section.body ?? ''} />}
+        {section.type === 'rich-text' && (
+          <RichText text={section.body ?? ''} headingLevel={section.title ? 'h3' : 'h2'} />
+        )}
         {section.type === 'feature-grid' &&
           (items.length ? (
             <ItemCards items={items} />
@@ -275,7 +456,9 @@ export function SectionRenderer({
         {section.type === 'image-text' && (
           <div className="marketing-image-text">
             <div>
-              {section.body && <RichText text={section.body} />}
+              {section.body && (
+                <RichText text={section.body} headingLevel={section.title ? 'h3' : 'h2'} />
+              )}
               <SectionActions section={section} />
             </div>
             {section.media && <MarketingMedia media={section.media} framed />}
@@ -366,7 +549,9 @@ export function SectionRenderer({
         )}
         {section.type === 'cta' && (
           <div className="marketing-cta-body">
-            {section.body && <RichText text={section.body} />}
+            {section.body && (
+              <RichText text={section.body} headingLevel={section.title ? 'h3' : 'h2'} />
+            )}
             <SectionActions section={section} />
           </div>
         )}

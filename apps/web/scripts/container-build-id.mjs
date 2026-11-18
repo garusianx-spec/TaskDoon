@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -48,7 +48,9 @@ export function containerBuildId() {
 
   const hash = createHash('sha256');
   for (const file of files.map((name) => relative(root, join(root, name)).split(sep).join('/')).sort()) {
-    const content = readFileSync(join(root, file));
+    const fullPath = join(root, file);
+    if (!existsSync(fullPath)) continue;
+    const content = readFileSync(fullPath);
     hash.update(`file:${file}\0${content.length}\0`);
     hash.update(content);
   }

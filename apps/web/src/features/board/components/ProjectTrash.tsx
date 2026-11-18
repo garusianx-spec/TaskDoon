@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import type { Project } from '@taskin/contracts';
+import { problemMessage } from '@/lib/api-problem';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { PROJECT_TRASH_DAYS, type TrashedProject } from '@/store/workspace-reducer';
@@ -53,17 +55,58 @@ export function ProjectTrashModal({
   readonly open: boolean;
   readonly entries: readonly TrashedProject[];
   readonly onClose: () => void;
-  readonly onRestore: (projectId: string) => void;
+  readonly onRestore: (projectId: string) => Promise<void> | void;
 }) {
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const restoringRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      restoringRef.current = null;
+      setRestoringId(null);
+      setError(null);
+    }
+  }, [open]);
+
+  const handleClose = () => {
+    if (restoringRef.current !== null) return;
+    onClose();
+  };
+
+  const handleRestore = async (projectId: string) => {
+    if (restoringRef.current !== null) return;
+    restoringRef.current = projectId;
+    setRestoringId(projectId);
+    setError(null);
+    try {
+      await onRestore(projectId);
+    } catch (err) {
+      setError(problemMessage(err, 'بازیابی پروژه ممکن نشد. دوباره تلاش کنید.'));
+    } finally {
+      restoringRef.current = null;
+      setRestoringId(null);
+    }
+  };
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
+      dismissOnOverlayClick={restoringId === null}
       size="md"
       title="آرشیو / سطل زباله"
       description={`پروژه‌های حذف‌شده تا ${formatCount(PROJECT_TRASH_DAYS)} روز بازیابی‌پذیرند و پس از آن پاک می‌شوند. گفتگوهایشان در بایگانی گفتگوها باقی می‌ماند.`}
       icon={<ArchiveIcon size={20} />}
     >
+      {error && (
+        <p
+          role="alert"
+          className="mb-3 rounded-xl border border-status-blocked/25 bg-status-blocked-subtle px-3.5 py-2.5 text-body-sm text-status-blocked"
+        >
+          {error}
+        </p>
+      )}
       {entries.length === 0 ? (
         <EmptyState
           compact
@@ -75,6 +118,7 @@ export function ProjectTrashModal({
         <ul aria-label="پروژه‌های حذف‌شده" className="flex flex-col gap-2">
           {entries.map((entry) => {
             const daysLeft = Math.max(0, Math.ceil((Date.parse(entry.purgeAt) - Date.now()) / DAY));
+            const restoring = restoringId === entry.project.id;
             return (
               <li
                 key={entry.project.id}
@@ -110,9 +154,11 @@ export function ProjectTrashModal({
                   variant="secondary"
                   iconStart={<RefreshIcon size={16} />}
                   aria-label={`بازیابی ${entry.project.name}`}
-                  onClick={() => onRestore(entry.project.id)}
+                  loading={restoring}
+                  disabled={restoringId !== null}
+                  onClick={() => void handleRestore(entry.project.id)}
                 >
-                  بازیابی
+                  {restoring ? 'در حال بازیابی…' : 'بازیابی'}
                 </Button>
               </li>
             );

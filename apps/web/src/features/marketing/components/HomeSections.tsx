@@ -13,6 +13,7 @@ import {
 } from '@/lib/site-utils';
 import { ArrowLeftIcon, ShieldIcon, PeopleIcon, CalendarIcon } from '@/components/icons';
 import { SiteLink } from '@/features/marketing/components/SiteLink';
+import { BlogArticleGrid } from '@/features/marketing/components/BlogArticleCard';
 import { FaqList } from '@/features/marketing/components/FaqList';
 import { PricingPlans } from '@/features/marketing/components/PricingPlans';
 import { ProductJourney } from '@/features/marketing/components/ProductJourney';
@@ -319,29 +320,34 @@ export function HomeSection({
           <Heading section={section} />
           <Actions section={section} />
         </div>
-        <div className="home-articles">
-          {articles.map((article) => {
-            const cover = articleCover(article.data);
-            const publicationDate = sitePublicationDate(article);
-            return (
-              <article key={article.id}>
-                {cover && (
-                  <div className="home-article-cover">
-                    <Media media={cover} />
-                  </div>
-                )}
-                <time dateTime={publicationDate}>{siteDate(publicationDate)}</time>
-                <h3>
-                  <SiteLink href={sitePath(article)}>
-                    {article.title}
-                    <ArrowLeftIcon size={18} />
-                  </SiteLink>
-                </h3>
-                <p>{article.description}</p>
-              </article>
-            );
-          })}
-        </div>
+        {articles.length > 0 &&
+          (source === 'article' ? (
+            <BlogArticleGrid articles={articles} featuredSingle />
+          ) : (
+            <div className="home-articles">
+              {articles.map((article) => {
+                const cover = articleCover(article.data);
+                const publicationDate = sitePublicationDate(article);
+                return (
+                  <article key={article.id}>
+                    {cover && (
+                      <div className="home-article-cover">
+                        <Media media={cover} />
+                      </div>
+                    )}
+                    <time dateTime={publicationDate}>{siteDate(publicationDate)}</time>
+                    <h3>
+                      <SiteLink href={sitePath(article)}>
+                        {article.title}
+                        <ArrowLeftIcon size={18} />
+                      </SiteLink>
+                    </h3>
+                    <p>{article.description}</p>
+                  </article>
+                );
+              })}
+            </div>
+          ))}
         {!articles.length && (
           <div className="home-editorial-empty">
             <h3>نوشته‌های تازه، پس از انتشار اینجا هستند</h3>

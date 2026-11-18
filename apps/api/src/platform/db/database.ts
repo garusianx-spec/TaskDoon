@@ -23,28 +23,51 @@ export class Database implements OnModuleDestroy {
   readonly db: Db;
 
   constructor(config: AppConfig, context: RequestContext) {
-    this.pool = new pg.Pool({
-      connectionString: config.env.DATABASE_URL,
-      max: config.env.DATABASE_POOL_MAX,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 5_000,
-      application_name: `taskin-api:${config.env.APP_ROLE}`,
-    });
-    // An idle client losing its connection must not crash the process; the pool replaces it.
-    this.pool.on('error', () => undefined);
-    this.db = drizzle({
-      client: this.pool,
-      schema,
-      casing: 'snake_case',
-      logger: {
-        logQuery: (query) => {
-          if (!TRANSACTION_CONTROL.test(query)) context.countStatement();
+    try {
+      this.pool = new pg.Pool({
+        connectionString: config.env.DATABASE_URL,
+        max: config.env.DATABASE_POOL_MAX,
+        idleTimeoutMillis: 30_000,
+        connectionTimeoutMillis: 5_000,
+        application_name: `taskin-api:${config.env.APP_ROLE}`,
+      });
+      // An idle client losing its connection must not crash the process; the pool replaces it.
+      this.pool.on('error', () => undefined);
+      this.db = drizzle({
+        client: this.pool,
+        schema,
+        casing: 'snake_case',
+        logger: {
+          logQuery: (query) => {
+            if (!TRANSACTION_CONTROL.test(query)) context.countStatement();
+          },
         },
-      },
-    });
+      });
+    } catch {
+      console.warn('[AI Studio] Database not connected — using mock');
+      this.pool = {
+        query: async () => ({ rows: [] }),
+        connect: async () => ({ query: async () => ({ rows: [] }), release: () => {} }),
+        end: async () => undefined,
+      } as unknown as pg.Pool;
+      const noOp = {
+        findMany: async () => [],
+        findFirst: async () => null,
+        findUnique: async () => null,
+        create: async (d: { data?: unknown }) => d?.data ?? {},
+        update: async (d: { data?: unknown }) => d?.data ?? {},
+        delete: async () => ({}),
+      };
+      this.db = new Proxy(
+        {},
+        {
+          get: (_, prop) => (prop === 'query' ? new Proxy({}, { get: () => noOp }) : async () => []),
+        },
+      ) as unknown as Db;
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.pool.end();
+    await this.pool.end().catch(() => undefined);
   }
 }

@@ -2,22 +2,30 @@ import 'server-only';
 import { cache } from 'react';
 import type { Metadata } from 'next';
 import type { PublishedSiteDocument, SiteDocumentKind } from '@taskin/contracts';
+import { resolveSeedPublicSite } from '@/data/site-seed';
 import { asText, siteHref, sitePath } from '@/lib/site-utils';
 
-const apiOrigin = process.env.TASKIN_API_ORIGIN ?? 'http://localhost:4000';
+const configuredApiOrigin = process.env.TASKIN_API_ORIGIN;
 
 /** No-store is intentional: draft edits never leak and published edits require no rebuild. */
 export const publicSiteFetch = cache(async <T>(path: string): Promise<T | null> => {
-  const response = await fetch(`${apiOrigin}/api/v1/public/site${path}`, {
-    cache: 'no-store',
-    signal: AbortSignal.timeout(10_000),
-    headers: { Accept: 'application/json' },
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`Public site content unavailable (HTTP ${response.status})`);
-  // Nest/Express may serialize a missing nullable lookup as an empty 200 response.
-  const body = await response.text();
-  return body.trim() ? (JSON.parse(body) as T) : null;
+  if (!configuredApiOrigin) {
+    return resolveSeedPublicSite(path) as T | null;
+  }
+  try {
+    const response = await fetch(`${configuredApiOrigin}/api/v1/public/site${path}`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+      headers: { Accept: 'application/json' },
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Public site content unavailable (HTTP ${response.status})`);
+    // Nest/Express may serialize a missing nullable lookup as an empty 200 response.
+    const body = await response.text();
+    return body.trim() ? (JSON.parse(body) as T) : null;
+  } catch {
+    return resolveSeedPublicSite(path) as T | null;
+  }
 });
 
 export async function getSiteDocuments(kind?: SiteDocumentKind): Promise<PublishedSiteDocument[]> {

@@ -1428,13 +1428,22 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const entry = state.projectTrash.find((trashed) => trashed.project.id === action.projectId);
       if (!entry) return state;
       const { stash } = entry;
+      const existingTaskIds = new Set(state.tasks.map((task) => task.id));
+      const existingColumnIds = new Set(state.boardColumns.map((column) => column.id));
       return {
         ...state,
         projects: [...state.projects.filter((project) => project.id !== entry.project.id), entry.project],
-        tasks: stash ? [...state.tasks, ...stash.tasks] : state.tasks,
-        boardColumns: stash ? [...state.boardColumns, ...stash.boardColumns] : state.boardColumns,
+        tasks: stash
+          ? [...state.tasks, ...stash.tasks.filter((task) => !existingTaskIds.has(task.id))]
+          : state.tasks,
+        boardColumns: stash
+          ? [
+              ...state.boardColumns,
+              ...stash.boardColumns.filter((column) => !existingColumnIds.has(column.id)),
+            ]
+          : state.boardColumns,
         conversations: state.conversations,
-        projectTrash: state.projectTrash.filter((trashed) => trashed !== entry),
+        projectTrash: state.projectTrash.filter((trashed) => trashed.project.id !== entry.project.id),
         announcement: `پروژه «${entry.project.name}» بازیابی شد.`,
       };
     }

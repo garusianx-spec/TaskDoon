@@ -24,16 +24,22 @@ export class PlatformAdminDatabase implements OnModuleDestroy {
       this.db = null;
       return;
     }
-    this.pool = new pg.Pool({
-      connectionString: url,
-      max: 3,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 5_000,
-      statement_timeout: 10_000,
-      application_name: `taskin-platform-admin:${config.env.APP_ROLE}`,
-    });
-    this.pool.on('error', () => undefined);
-    this.db = drizzle({ client: this.pool, schema, casing: 'snake_case' });
+    try {
+      this.pool = new pg.Pool({
+        connectionString: url,
+        max: 3,
+        idleTimeoutMillis: 30_000,
+        connectionTimeoutMillis: 5_000,
+        statement_timeout: 10_000,
+        application_name: `taskin-platform-admin:${config.env.APP_ROLE}`,
+      });
+      this.pool.on('error', () => undefined);
+      this.db = drizzle({ client: this.pool, schema, casing: 'snake_case' });
+    } catch {
+      console.warn('[AI Studio] Admin database not connected — disabled');
+      this.pool = null;
+      this.db = null;
+    }
   }
 
   get enabled(): boolean {

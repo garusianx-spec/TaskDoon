@@ -11,7 +11,9 @@ export function SiteLink({
   href: unknown;
   children: ReactNode;
   className?: string;
+  id?: string;
   'aria-label'?: string;
+  'aria-labelledby'?: string;
 }) {
   const safe = siteHref(href);
   if (!safe) return <span className={className}>{children}</span>;

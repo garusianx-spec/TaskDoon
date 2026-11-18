@@ -16,6 +16,7 @@ import {
   RichText,
 } from '@/features/marketing/components/Sections';
 import { SiteLink } from '@/features/marketing/components/SiteLink';
+import { ArrowRightIcon } from '@/components/icons';
 import { PricingPlans } from '@/features/marketing/components/PricingPlans';
 import { FaqList } from '@/features/marketing/components/FaqList';
 import { LeadForm } from '@/features/marketing/components/LeadForm';
@@ -37,14 +38,21 @@ export async function DocumentPage({
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const firstHero = sections.findIndex((section) => section.type === 'hero' && Boolean(section.title));
   const has = (type: string) => sections.some((section) => section.type === type);
+  const isArticle = document.kind === 'article';
   const crumbs = document.seo.breadcrumbs?.length
     ? document.seo.breadcrumbs
     : path === '/'
       ? []
-      : [
-          { label: name, href: '/' },
-          { label: document.title, href: path },
-        ];
+      : isArticle
+        ? [
+            { label: name, href: '/' },
+            { label: 'وبلاگ', href: '/blog' },
+            { label: document.title, href: path },
+          ]
+        : [
+            { label: name, href: '/' },
+            { label: document.title, href: path },
+          ];
   const publicationDate = sitePublicationDate(document);
   const cover = document.kind === 'article' ? articleCover(document.data) : undefined;
   const articleImage = document.seo.ogImage ?? cover?.src;
@@ -122,69 +130,134 @@ export async function DocumentPage({
           }}
         />
       ))}
-      {crumbs.length > 0 && (
-        <nav className="marketing-container marketing-breadcrumbs" aria-label="مسیر صفحه">
-          <ol>
-            {crumbs.map((crumb, index) => (
-              <li key={index}>
-                {index > 0 && <span aria-hidden="true">/</span>}
-                {index === crumbs.length - 1 ? (
-                  <span aria-current="page">{crumb.label}</span>
-                ) : (
-                  <SiteLink href={crumb.href}>{crumb.label}</SiteLink>
-                )}
-              </li>
+      {isArticle ? (
+        <div className="marketing-article-detail">
+          <div className="marketing-container marketing-article-measure marketing-article-topbar">
+            {crumbs.length > 0 && (
+              <nav className="marketing-breadcrumbs" aria-label="مسیر صفحه">
+                <ol>
+                  {crumbs.map((crumb, index) => (
+                    <li key={index}>
+                      {index > 0 && <span aria-hidden="true">/</span>}
+                      {index === crumbs.length - 1 ? (
+                        <span aria-current="page">{crumb.label}</span>
+                      ) : (
+                        <SiteLink href={crumb.href}>{crumb.label}</SiteLink>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
+            <SiteLink href="/blog" className="marketing-article-back">
+              <ArrowRightIcon size={16} />
+              <span>بازگشت به وبلاگ</span>
+            </SiteLink>
+          </div>
+          {firstHero < 0 && (
+            <header className="marketing-container marketing-article-measure marketing-page-intro marketing-article-intro">
+              <h1>{document.title}</h1>
+              {document.description && <p>{document.description}</p>}
+            </header>
+          )}
+          <div className="marketing-container marketing-article-measure marketing-publication-meta marketing-article-meta">
+            <time dateTime={publicationDate}>
+              منتشرشده در {siteDate(publicationDate)}
+            </time>
+            {asText(document.data.author) && (
+              <span>
+                <span aria-hidden="true">·</span> {asText(document.data.author)}
+              </span>
+            )}
+            {asText(document.data.category) && (
+              <span>
+                <span aria-hidden="true">·</span> {asText(document.data.category)}
+              </span>
+            )}
+          </div>
+          {cover && (
+            <figure className="marketing-container marketing-article-measure marketing-article-cover">
+              <MarketingMedia media={cover} priority />
+            </figure>
+          )}
+          <div className="marketing-article-body">
+            {sections.map((section, index) => (
+              <SectionRenderer
+                key={section.id}
+                section={section}
+                documents={documents}
+                isPrimary={index === firstHero}
+              />
             ))}
-          </ol>
-        </nav>
-      )}
-      {firstHero < 0 && (
-        <header className="marketing-container marketing-page-intro">
-          <h1>{document.title}</h1>
-          {document.description && <p>{document.description}</p>}
-        </header>
-      )}
-      {(legal || document.kind === 'article' || document.kind === 'help') && (
-        <div className="marketing-container marketing-publication-meta">
-          <time dateTime={publicationDate}>
-            {legal ? 'آخرین انتشار: ' : 'منتشرشده در '}
-            {siteDate(publicationDate)}
-          </time>
-          {legal && <span>نسخه {new Intl.NumberFormat('fa-IR').format(document.version)}</span>}
-          {asText(document.data.author) && <span>{asText(document.data.author)}</span>}
+          </div>
         </div>
+      ) : (
+        <>
+          {crumbs.length > 0 && (
+            <nav className="marketing-container marketing-breadcrumbs" aria-label="مسیر صفحه">
+              <ol>
+                {crumbs.map((crumb, index) => (
+                  <li key={index}>
+                    {index > 0 && <span aria-hidden="true">/</span>}
+                    {index === crumbs.length - 1 ? (
+                      <span aria-current="page">{crumb.label}</span>
+                    ) : (
+                      <SiteLink href={crumb.href}>{crumb.label}</SiteLink>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+          {firstHero < 0 && (
+            <header className="marketing-container marketing-page-intro">
+              <h1>{document.title}</h1>
+              {document.description && <p>{document.description}</p>}
+            </header>
+          )}
+          {(legal || document.kind === 'help') && (
+            <div className="marketing-container marketing-publication-meta">
+              <time dateTime={publicationDate}>
+                {legal ? 'آخرین انتشار: ' : 'منتشرشده در '}
+                {siteDate(publicationDate)}
+              </time>
+              {legal && <span>نسخه {new Intl.NumberFormat('fa-IR').format(document.version)}</span>}
+              {asText(document.data.author) && <span>{asText(document.data.author)}</span>}
+            </div>
+          )}
+          {cover && (
+            <div className="marketing-container pb-8">
+              <MarketingMedia media={cover} framed />
+            </div>
+          )}
+          {legal && sections.some((section) => section.title && section.type !== 'hero') && (
+            <nav className="marketing-container marketing-toc" aria-label="فهرست بخش‌ها">
+              {sections
+                .filter((section) => section.title && section.type !== 'hero')
+                .map((section) => (
+                  <SiteLink key={section.id} href={`#${section.id}`}>
+                    {section.title}
+                  </SiteLink>
+                ))}
+            </nav>
+          )}
+          {sections.map((section, index) => (
+            <SectionRenderer
+              key={section.id}
+              section={{
+                ...section,
+                data: {
+                  ...(document.kind === 'page' && document.slug === 'faq' ? { searchable: true } : {}),
+                  ...(document.kind === 'page' && document.slug === 'pricing' ? { comparison: true } : {}),
+                  ...section.data,
+                },
+              }}
+              documents={documents}
+              isPrimary={index === firstHero}
+            />
+          ))}
+        </>
       )}
-      {cover && (
-        <div className="marketing-container pb-8">
-          <MarketingMedia media={cover} framed />
-        </div>
-      )}
-      {legal && sections.some((section) => section.title && section.type !== 'hero') && (
-        <nav className="marketing-container marketing-toc" aria-label="فهرست بخش‌ها">
-          {sections
-            .filter((section) => section.title && section.type !== 'hero')
-            .map((section) => (
-              <SiteLink key={section.id} href={`#${section.id}`}>
-                {section.title}
-              </SiteLink>
-            ))}
-        </nav>
-      )}
-      {sections.map((section, index) => (
-        <SectionRenderer
-          key={section.id}
-          section={{
-            ...section,
-            data: {
-              ...(document.kind === 'page' && document.slug === 'faq' ? { searchable: true } : {}),
-              ...(document.kind === 'page' && document.slug === 'pricing' ? { comparison: true } : {}),
-              ...section.data,
-            },
-          }}
-          documents={documents}
-          isPrimary={index === firstHero}
-        />
-      ))}
       {sourceKind &&
         !(sourceKind === 'feature'
           ? has('feature-grid')

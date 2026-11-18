@@ -6,10 +6,10 @@
   "scripts": {
     "build:deps": "tsc -b ../../packages/contracts ../../packages/jalali ../../packages/text",
     "predev": "npm run build:deps",
-    "dev": "next dev",
+    "dev": "next dev -p 3000 -H 0.0.0.0",
     "prebuild": "npm run build:deps",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3000 -H 0.0.0.0",
     "lint": "eslint src",
     "pretypecheck": "npm run build:deps",
     "typecheck": "tsc --noEmit",

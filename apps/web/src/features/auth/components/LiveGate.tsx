@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { LiveStatus, LiveStore } from '@/store/live/live-store';
 import { Button, IconButton } from '@/components/ui';
+import { Logo } from '@/components/brand/Logo';
 import { CloseIcon, WarningIcon } from '@/components/icons';
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
 import { AuthCard } from '@/features/auth/components/AuthCard';
@@ -12,10 +13,21 @@ import { SignInScreen } from '@/features/auth/components/SignInScreen';
 
 const TOAST_MS = 6_000;
 
+export type GateViewKind = 'signed-out' | 'restore-error' | 'no-workspace' | 'loading' | 'ready';
+
+/** Pure gate view resolver so loading/session-restoring never collapses into the signed-out login shell. */
+export function resolveGateView(phase: LiveStatus['phase'], ready: boolean): GateViewKind {
+  if (phase === 'signed-out') return 'signed-out';
+  if (phase === 'restore-error') return 'restore-error';
+  if (phase === 'no-workspace') return 'no-workspace';
+  if (phase === 'restoring' || phase === 'loading' || !ready) return 'loading';
+  return 'ready';
+}
+
 /**
  * What the live app shows before and around the workspace: the session being restored, the
- * sign-in screen, the first-workspace step, the loading state, and — once it is ready — the
- * workspace itself with its error toasts and connection notice.
+ * sign-in screen, the first-workspace step, the neutral workspace loading state, and — once it
+ * is ready — the workspace itself with its error toasts and connection notice.
  */
 export function LiveGate({
   status,
@@ -31,6 +43,7 @@ export function LiveGate({
   const router = useRouter();
   const pathname = usePathname();
   const { phase, toast } = status;
+  const view = resolveGateView(phase, ready);
 
   // Signing in from the signed-out screen lands on the desk, not back on "you signed out".
   useEffect(() => {
@@ -44,8 +57,8 @@ export function LiveGate({
   }, [toast, store]);
 
   let body: ReactNode;
-  if (phase === 'signed-out') body = <SignInScreen store={store} />;
-  else if (phase === 'restore-error')
+  if (view === 'signed-out') body = <SignInScreen store={store} />;
+  else if (view === 'restore-error')
     body = (
       <AuthCard
         labelledBy="restore-error-title"
@@ -55,14 +68,14 @@ export function LiveGate({
         <Button onClick={() => void store.retryRestore()}>تلاش دوباره</Button>
       </AuthCard>
     );
-  else if (phase === 'no-workspace')
+  else if (view === 'no-workspace')
     body = (
       <>
         <SystemBroadcastBanner />
         <FirstWorkspace store={store} user={status.user} />
       </>
     );
-  else if (phase === 'restoring' || !ready) body = <Loading />;
+  else if (view === 'loading') body = <WorkspaceLoading />;
   else body = children;
 
   return (
@@ -101,18 +114,32 @@ export function LiveGate({
   );
 }
 
-function Loading() {
+/** Neutral workspace loading state: preserves authenticated context tokens without flashing the login shell. */
+export function WorkspaceLoading() {
   return (
-    <AuthCard
-      labelledBy="loading-title"
-      title="در حال آماده‌سازی…"
-      description="فضای کاری شما بارگذاری می‌شود."
+    <main
+      dir="rtl"
+      aria-busy="true"
+      aria-labelledby="workspace-loading-title"
+      className="flex min-h-dvh items-center justify-center bg-canvas p-6"
     >
       <div
-        role="progressbar"
-        aria-label="بارگذاری"
-        className="mx-auto size-8 animate-spin rounded-full border-2 border-brand border-t-transparent"
-      />
-    </AuthCard>
+        role="status"
+        className="flex w-full max-w-sm flex-col items-center gap-4 rounded-2xl border border-secondary bg-surface px-6 py-8 text-center shadow-sm"
+      >
+        <Logo className="h-7 w-auto" />
+        <div
+          role="progressbar"
+          aria-label="بارگذاری فضای کاری"
+          className="size-8 animate-spin rounded-full border-2 border-brand border-t-transparent"
+        />
+        <div className="flex flex-col gap-1">
+          <h1 id="workspace-loading-title" className="text-heading-sm font-bold text-fg-primary">
+            در حال آماده‌سازی فضای کاری…
+          </h1>
+          <p className="text-body-sm text-fg-tertiary">اطلاعات فضای کاری شما در حال بارگذاری است.</p>
+        </div>
+      </div>
+    </main>
   );
 }

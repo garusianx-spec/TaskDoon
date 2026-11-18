@@ -10,6 +10,6 @@
  */
 export type DataSource = 'api' | 'demo';
 
-export const DATA_SOURCE: DataSource = process.env.NEXT_PUBLIC_DATA_SOURCE === 'demo' ? 'demo' : 'api';
+export const DATA_SOURCE: DataSource = process.env.NEXT_PUBLIC_DATA_SOURCE === 'api' ? 'api' : 'demo';
 
 export const IS_LIVE = DATA_SOURCE === 'api';

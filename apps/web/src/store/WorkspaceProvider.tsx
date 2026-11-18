@@ -35,6 +35,7 @@ interface WorkspaceContextValue {
   readonly createTask: (draft: TaskDraft, files?: readonly File[], commandId?: string) => Promise<string>;
   readonly saveTask: (taskId: string, patch: TaskPatch, columnId?: string) => Promise<void>;
   readonly createProject: (draft: ProjectDraft, commandId: string) => Promise<string>;
+  readonly restoreProject: (projectId: string) => Promise<void>;
   readonly saveProfile: (fullName: string, profile: ProfileSettings) => Promise<void>;
   readonly saveNote: (noteId: string) => Promise<void>;
   readonly currentUser: User;
@@ -155,6 +156,14 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     [apply, live],
   );
 
+  const restoreProject = useCallback(
+    async (projectId: string) => {
+      if (live) await live.restoreProject(projectId);
+      else apply({ type: 'restore-project', projectId });
+    },
+    [apply, live],
+  );
+
   const saveProfile = useCallback(
     async (fullName: string, profile: ProfileSettings) => {
       const error = profileNameError(fullName);
@@ -247,6 +256,7 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
             createTask,
             saveTask,
             createProject,
+            restoreProject,
             saveProfile,
             saveNote,
             currentUser,
@@ -266,6 +276,7 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
       createTask,
       saveTask,
       createProject,
+      restoreProject,
       saveProfile,
       saveNote,
       currentUser,

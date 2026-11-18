@@ -39,6 +39,7 @@ export function OverlayHost() {
     dispatch,
     createTask,
     createProject,
+    restoreProject,
     saveProfile,
     currentUser,
     activeWorkspace,
@@ -151,7 +152,7 @@ export function OverlayHost() {
         open={isWorkspaceOwner && active?.kind === 'project-trash'}
         entries={state.projectTrash}
         onClose={close}
-        onRestore={(projectId) => dispatch({ type: 'restore-project', projectId })}
+        onRestore={restoreProject}
       />
 
       <NewConversationModal

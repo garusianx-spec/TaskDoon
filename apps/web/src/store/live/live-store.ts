@@ -9,6 +9,7 @@ import type {
   Note,
   CreateNoteBody,
   ProfileSettings,
+  ProjectView,
   Message,
   MessageView,
   PermissionMatrix,
@@ -67,6 +68,7 @@ import { DEFAULT_PERMISSION_MATRIX, DEPARTMENTS } from '@/data/reference';
 import { LIVE_EMPTY_STATE } from '@/store/initial-state';
 import { DEFAULT_WORKING_HOURS } from '@/lib/working-hours';
 import { broadcastJitter, broadcastTimerDelay } from '@/lib/broadcasts';
+import { criticalModulesForPath, type CriticalLoadModules } from '@/store/live/load-plan';
 import type {
   ConversationDraft,
   InvitationDraft,
@@ -133,6 +135,9 @@ export class LiveStore {
   private started = false;
   private workspaceId = '';
   private loadToken = 0;
+  private trashToken = 0;
+  private trashLoaded = false;
+  private readonly projectDeletes = new Set<Promise<void>>();
   private toastId = 0;
   private broadcastWatchers = 0;
   private broadcastGeneration = 0;
@@ -474,6 +479,9 @@ export class LiveStore {
   private reset(): void {
     this.taskUploads = new WeakMap();
     this.workspaceId = '';
+    this.trashToken += 1;
+    this.trashLoaded = false;
+    this.projectDeletes.clear();
     this.versions.clear();
     this.noteVersions.clear();
     for (const timer of this.noteTimers.values()) clearTimeout(timer);
@@ -536,7 +544,8 @@ export class LiveStore {
         usable.find((entry) => entry.id === remembered) ??
         usable[0];
       if (!target) return;
-      if (target.id !== this.workspaceId) this.reset();
+      const sameWorkspace = target.id === this.workspaceId;
+      if (!sameWorkspace) this.reset();
       this.workspaceId = target.id;
       // Subscribe before reading, so nothing that happens meanwhile is missed; it waits in a buffer.
       this.buffered = [];
@@ -546,6 +555,8 @@ export class LiveStore {
       const today = new Date();
       const from = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 45));
       const to = toISODate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 54));
+      const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+      const critical = criticalModulesForPath(pathname, quiet);
       const [
         view,
         members,
@@ -571,21 +582,25 @@ export class LiveStore {
         api.projects.list(w),
         api.workflow.list(w),
         api.tasks.all(w),
-        optional(api.conversations.list(w), []),
-        optional(api.me.notifications({ workspaceId: w, limit: 100 }), {
-          items: [],
-          nextCursor: null,
-          unreadCount: 0,
-        }),
-        optional(api.activity(w), { items: [], nextCursor: null }),
-        optional(api.calendar.range(w, from, to), null),
-        optional(api.workspaces.invitations(w), []),
+        critical.conversations ? optional(api.conversations.list(w), []) : Promise.resolve(null),
+        critical.notifications
+          ? optional(api.me.notifications({ workspaceId: w, limit: 100 }), {
+              items: [],
+              nextCursor: null,
+              unreadCount: 0,
+            })
+          : Promise.resolve(null),
+        critical.activity
+          ? optional(api.activity(w), { items: [], nextCursor: null })
+          : Promise.resolve(null),
+        critical.calendar ? optional(api.calendar.range(w, from, to), null) : Promise.resolve(undefined),
+        critical.invitations ? optional(api.workspaces.invitations(w), []) : Promise.resolve(null),
         optional(api.workspaces.roles(w), []),
-        optional(api.notes.categories(w), []),
-        optional(api.notes.all(w), []),
-        optional(api.sessions.list(), []),
-        optional(api.scheduled.list(w), []),
-        optional(api.workingHours.get(w), null),
+        critical.notes ? optional(api.notes.categories(w), []) : Promise.resolve(null),
+        critical.notes ? optional(api.notes.all(w), []) : Promise.resolve(null),
+        critical.sessions ? optional(api.sessions.list(), []) : Promise.resolve(null),
+        critical.scheduled ? optional(api.scheduled.list(w), []) : Promise.resolve(null),
+        critical.workingHours ? optional(api.workingHours.get(w), null) : Promise.resolve(undefined),
       ]);
       if (token !== this.loadToken) return;
 
@@ -610,13 +625,19 @@ export class LiveStore {
       });
       const previous = new Map(this.getState().tasks.map((task) => [task.id, task]));
       for (const card of cards) this.versions.set(card.id, card.version);
-      for (const note of notes) this.noteVersions.set(note.id, note.version);
+      if (notes) for (const note of notes) this.noteVersions.set(note.id, note.version);
       const mine = members.find((member) => member.userId === me.user.id);
-      const conversationList = conversations.map((entry) => conversationFromView(entry, me.user.id, nameOf));
-      for (const entry of conversations)
-        this.lastSeq.set(entry.id, Math.max(this.lastSeq.get(entry.id) ?? 0, entry.lastSeq));
+      const conversationList = conversations
+        ? conversations.map((entry) => conversationFromView(entry, me.user.id, nameOf))
+        : null;
+      if (conversations) {
+        for (const entry of conversations)
+          this.lastSeq.set(entry.id, Math.max(this.lastSeq.get(entry.id) ?? 0, entry.lastSeq));
+      }
       const state = this.getState();
-      const keepConversation = conversationList.some((entry) => entry.id === state.activeConversationId);
+      const keepConversation = conversationList
+        ? conversationList.some((entry) => entry.id === state.activeConversationId)
+        : false;
       this.roleIds = new Map(roles.map((role) => [role.key, { id: role.id, version: role.version }]));
 
       this.apply({
@@ -627,8 +648,8 @@ export class LiveStore {
           users: users.length > 0 ? users : [meToUser(me.user)],
           departments,
           formerUsers,
-          // Read from the server when «آرشیو / سطل زباله» opens.
-          projectTrash: [],
+          // Read from the server when «آرشیو / سطل زباله» opens; preserve already-loaded entries across quiet reloads.
+          ...(quiet && sameWorkspace && this.trashLoaded ? {} : { projectTrash: [] }),
           projects: projects
             .filter((project) => !project.archived)
             .map((project) => projectFromView(project, departmentName)),
@@ -640,36 +661,48 @@ export class LiveStore {
           boardColumns: columns,
           tasks: orderedCards.map((card) => taskFromCard(card, columns, previous.get(card.id))),
           archivedTasks: [],
-          conversations: conversationList,
-          messages: [
-            ...conversations.flatMap((entry) => (entry.lastMessage ? [previewMessage(entry, nameOf)] : [])),
-            // Unsent messages of this member's stay, with their «ارسال دوباره», through a re-read.
-            ...state.messages.filter(
-              (message) =>
-                message.failed && conversations.some((entry) => entry.id === message.conversationId),
-            ),
-          ],
-          unreadByConversation: Object.fromEntries(
-            conversations.map((entry) => [entry.id, entry.unreadCount]),
-          ),
-          pinnedConversationIds: conversationList.filter((entry) => entry.pinned).map((entry) => entry.id),
-          mutedConversationIds: conversationList.filter((entry) => entry.muted).map((entry) => entry.id),
-          activeConversationId: keepConversation
-            ? state.activeConversationId
-            : (conversationList[0]?.id ?? ''),
-          notifications: inbox.items
-            .map(notificationFromView)
-            .filter((item): item is AppNotification => item !== null),
-          activity: activity.items.map(activityFromView),
+          conversations: conversationList ?? [],
+          messages: conversations
+            ? [
+                ...conversations.flatMap((entry) => (entry.lastMessage ? [previewMessage(entry, nameOf)] : [])),
+                // Unsent messages of this member's stay, with their «ارسال دوباره», through a re-read.
+                ...state.messages.filter(
+                  (message) =>
+                    message.failed && conversations.some((entry) => entry.id === message.conversationId),
+                ),
+              ]
+            : [],
+          unreadByConversation: conversations
+            ? Object.fromEntries(conversations.map((entry) => [entry.id, entry.unreadCount]))
+            : {},
+          pinnedConversationIds: conversationList
+            ? conversationList.filter((entry) => entry.pinned).map((entry) => entry.id)
+            : [],
+          mutedConversationIds: conversationList
+            ? conversationList.filter((entry) => entry.muted).map((entry) => entry.id)
+            : [],
+          activeConversationId: conversationList
+            ? keepConversation
+              ? state.activeConversationId
+              : (conversationList[0]?.id ?? '')
+            : '',
+          notifications: inbox
+            ? inbox.items.map(notificationFromView).filter((item): item is AppNotification => item !== null)
+            : [],
+          activity: activity ? activity.items.map(activityFromView) : [],
           calendarEvents: calendar ? calendar.events.map(eventFromView) : [],
           invitations: invitations
-            .filter((entry) => entry.status === 'pending')
-            .map((entry) => invitationFromView(entry, departmentName)),
+            ? invitations
+                .filter((entry) => entry.status === 'pending')
+                .map((entry) => invitationFromView(entry, departmentName))
+            : [],
           permissions: roles.length > 0 ? matrixFrom(roles) : DEFAULT_PERMISSION_MATRIX,
-          noteCategories: [...categories].sort((a, b) => a.position - b.position).map(noteCategoryFromView),
-          notes: notes.map(noteFromView),
-          loginSessions: sessions.map(sessionFromView),
-          scheduledMessages: scheduled.map(scheduledFromView),
+          noteCategories: categories
+            ? [...categories].sort((a, b) => a.position - b.position).map(noteCategoryFromView)
+            : [],
+          notes: notes ? notes.map(noteFromView) : [],
+          loginSessions: sessions ? sessions.map(sessionFromView) : [],
+          scheduledMessages: scheduled ? scheduled.map(scheduledFromView) : [],
           workingHours: hours ? workingHoursFromView(hours) : DEFAULT_WORKING_HOURS,
           profile: { presence: mine?.presence ?? 'online', statusMessage: mine?.statusMessage ?? '' },
           typingByConversation: {},
@@ -680,6 +713,7 @@ export class LiveStore {
       this.historyLoaded.clear();
       this.detailLoaded.clear();
       this.patch({ phase: 'ready' });
+      if (quiet && sameWorkspace && this.trashLoaded) void this.refreshProjectTrash();
 
       const waiting = this.buffered ?? [];
       this.buffered = null;
@@ -688,6 +722,9 @@ export class LiveStore {
       if (active) void this.ensureHistory(active);
       const inspected = this.getState().inspector;
       if (inspected.kind === 'task') void this.ensureDetail(inspected.taskId);
+      if (Object.values(critical).some((required) => !required)) {
+        void this.loadDeferred(w, token, me.user.id, from, to, departmentName, nameOf, critical);
+      }
     } catch (error) {
       if (token !== this.loadToken) return;
       if (isProblem(error, 'UNAUTHENTICATED') || isProblem(error, 'SESSION_REVOKED')) {
@@ -697,6 +734,123 @@ export class LiveStore {
       this.buffered = null;
       this.notify(problemMessage(error, 'بارگذاری فضای کاری ممکن نشد.'));
       if (!quiet) this.patch({ phase: this.getState().workspaces.length > 0 ? 'ready' : 'restore-error' });
+    }
+  }
+
+  /** Hydrates non-critical secondary modules in background after the active route is already usable. */
+  private async loadDeferred(
+    w: string,
+    token: number,
+    meId: string,
+    from: string,
+    to: string,
+    departmentName: (id: string | null) => string | undefined,
+    nameOf: (userId: string) => string | undefined,
+    critical: CriticalLoadModules,
+  ): Promise<void> {
+    try {
+      const [conversations, inbox, activity, calendar, invitations, categories, notes, sessions, scheduled, hours] =
+        await Promise.all([
+          !critical.conversations ? optional(api.conversations.list(w), []) : Promise.resolve(null),
+          !critical.notifications
+            ? optional(api.me.notifications({ workspaceId: w, limit: 100 }), {
+                items: [],
+                nextCursor: null,
+                unreadCount: 0,
+              })
+            : Promise.resolve(null),
+          !critical.activity
+            ? optional(api.activity(w), { items: [], nextCursor: null })
+            : Promise.resolve(null),
+          !critical.calendar ? optional(api.calendar.range(w, from, to), null) : Promise.resolve(undefined),
+          !critical.invitations ? optional(api.workspaces.invitations(w), []) : Promise.resolve(null),
+          !critical.notes ? optional(api.notes.categories(w), []) : Promise.resolve(null),
+          !critical.notes ? optional(api.notes.all(w), []) : Promise.resolve(null),
+          !critical.sessions ? optional(api.sessions.list(), []) : Promise.resolve(null),
+          !critical.scheduled ? optional(api.scheduled.list(w), []) : Promise.resolve(null),
+          !critical.workingHours ? optional(api.workingHours.get(w), null) : Promise.resolve(undefined),
+        ]);
+      if (token !== this.loadToken) return;
+
+      const state = this.getState();
+      const patch: Partial<WorkspaceState> = {};
+
+      if (conversations) {
+        const list = conversations.map((entry) => conversationFromView(entry, meId, nameOf));
+        for (const entry of conversations)
+          this.lastSeq.set(entry.id, Math.max(this.lastSeq.get(entry.id) ?? 0, entry.lastSeq));
+        const existingMap = new Map(state.conversations.map((c) => [c.id, c]));
+        for (const c of list) if (!existingMap.has(c.id)) existingMap.set(c.id, c);
+        const merged = [...existingMap.values()];
+        const existingMsgIds = new Set(state.messages.map((m) => m.id));
+        const previews = conversations
+          .flatMap((entry) => (entry.lastMessage ? [previewMessage(entry, nameOf)] : []))
+          .filter((msg) => !existingMsgIds.has(msg.id));
+        const keepConversation = merged.some((entry) => entry.id === state.activeConversationId);
+        Object.assign(patch, {
+          conversations: merged,
+          messages: [...state.messages, ...previews],
+          unreadByConversation: {
+            ...Object.fromEntries(conversations.map((entry) => [entry.id, entry.unreadCount])),
+            ...state.unreadByConversation,
+          },
+          pinnedConversationIds: list.filter((entry) => entry.pinned).map((entry) => entry.id),
+          mutedConversationIds: list.filter((entry) => entry.muted).map((entry) => entry.id),
+          activeConversationId: keepConversation ? state.activeConversationId : (merged[0]?.id ?? ''),
+        });
+      }
+
+      if (inbox) {
+        Object.assign(patch, {
+          notifications: inbox.items
+            .map(notificationFromView)
+            .filter((item): item is AppNotification => item !== null),
+        });
+      }
+      if (activity) Object.assign(patch, { activity: activity.items.map(activityFromView) });
+      if (calendar !== undefined)
+        Object.assign(patch, { calendarEvents: calendar ? calendar.events.map(eventFromView) : [] });
+      if (invitations) {
+        Object.assign(patch, {
+          invitations: invitations
+            .filter((entry) => entry.status === 'pending')
+            .map((entry) => invitationFromView(entry, departmentName)),
+        });
+      }
+      if (categories) {
+        Object.assign(patch, {
+          noteCategories: [...categories].sort((a, b) => a.position - b.position).map(noteCategoryFromView),
+        });
+      }
+      if (notes) {
+        for (const note of notes) this.noteVersions.set(note.id, note.version);
+        const dirtyLocal = state.notes.filter(
+          (note) => note.id.startsWith('note-local-') || this.noteTimers.has(note.id) || this.noteWrites.has(note.id),
+        );
+        const dirtyIds = new Set(dirtyLocal.map((note) => note.id));
+        Object.assign(patch, {
+          notes: [...dirtyLocal, ...notes.map(noteFromView).filter((note) => !dirtyIds.has(note.id))],
+        });
+      }
+      if (sessions) Object.assign(patch, { loginSessions: sessions.map(sessionFromView) });
+      if (scheduled) {
+        const loaded = scheduled.map(scheduledFromView);
+        const loadedIds = new Set(loaded.map((item) => item.id));
+        Object.assign(patch, {
+          scheduledMessages: [...loaded, ...state.scheduledMessages.filter((item) => !loadedIds.has(item.id))],
+        });
+      }
+      if (hours !== undefined) {
+        Object.assign(patch, { workingHours: hours ? workingHoursFromView(hours) : DEFAULT_WORKING_HOURS });
+      }
+
+      if (Object.keys(patch).length > 0) this.apply({ type: 'sync/merge', patch });
+      if (conversations) {
+        const active = this.getState().activeConversationId;
+        if (active && !this.historyLoaded.has(active)) void this.ensureHistory(active);
+      }
+    } catch {
+      // Background hydration uses optional() fallbacks; ignore transient cancellation.
     }
   }
 
@@ -1049,25 +1203,32 @@ export class LiveStore {
       case 'create-conversation':
         this.createConversation(action.draft, prev, next);
         return;
-      case 'delete-project':
-        this.run(
+      case 'delete-project': {
+        const workspaceId = this.workspaceId;
+        const removal = (async () => {
+          await api.projects.remove(workspaceId, await this.serverId(action.projectId));
+        })();
+        this.projectDeletes.add(removal);
+        void removal.then(
           async () => {
-            await api.projects.remove(this.workspaceId, await this.serverId(action.projectId));
-            // Its channel went with it: the server archived it.
-            await this.refreshProjectTrash();
+            this.projectDeletes.delete(removal);
+            if (workspaceId === this.workspaceId) await this.refreshProjectTrash();
           },
-          () => this.load(this.workspaceId, true),
+          async (error: unknown) => {
+            this.projectDeletes.delete(removal);
+            if (workspaceId !== this.workspaceId) return;
+            this.fail(error);
+            await this.load(workspaceId, true).catch(() => undefined);
+          },
         );
         return;
+      }
       case 'restore-project':
-        this.run(
-          async () => {
-            await api.projects.restore(this.workspaceId, action.projectId);
-            // Its tasks, board and channel come back from the server.
-            await this.load(this.workspaceId, true);
-          },
-          () => this.load(this.workspaceId, true),
-        );
+        void this.restoreProject(action.projectId).catch((error: unknown) => {
+          this.fail(error);
+          void this.load(this.workspaceId, true).catch(() => undefined);
+          void this.refreshProjectTrash().catch(() => undefined);
+        });
         return;
       case 'load-project-trash':
         void this.refreshProjectTrash();
@@ -1460,6 +1621,54 @@ export class LiveStore {
       if (workspaceId === this.workspaceId) this.fail(error);
       throw error;
     }
+  }
+
+  /**
+   * Restores a deleted project from «آرشیو / سطل زباله». The trashed item stays recoverable until
+   * the API confirms restoration so a failure never drops the project and its restore control.
+   */
+  async restoreProject(projectId: string): Promise<void> {
+    const workspaceId = this.workspaceId;
+    if (!workspaceId) throw new Error('فضای کاری فعال در دسترس نیست.');
+    const resolvedId = await this.serverId(projectId);
+    if (workspaceId !== this.workspaceId) throw new Error('The active workspace changed.');
+
+    let restored: ProjectView;
+    try {
+      restored = await api.projects.restore(workspaceId, resolvedId);
+    } catch (error) {
+      if (isProblem(error, 'UNAUTHENTICATED') || isProblem(error, 'SESSION_REVOKED')) {
+        session.end();
+      } else if (workspaceId === this.workspaceId && isProblem(error, 'NOT_FOUND')) {
+        await Promise.all([
+          this.refreshProjects().catch(() => undefined),
+          this.refreshProjectTrash().catch(() => undefined),
+        ]);
+      }
+      throw error;
+    }
+
+    if (workspaceId !== this.workspaceId) return;
+    this.trashToken += 1;
+    const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
+    this.apply({
+      type: 'sync/upsert-project',
+      project: projectFromView(restored, departmentName),
+    });
+    this.apply({
+      type: 'sync/project-trash',
+      entries: this.getState().projectTrash.filter(
+        (entry) =>
+          entry.project.id !== projectId &&
+          entry.project.id !== resolvedId &&
+          entry.project.id !== restored.id,
+      ),
+    });
+    this.apply({
+      type: 'sync/merge',
+      patch: { announcement: `پروژه «${restored.name}» بازیابی شد.` },
+    });
+    await this.load(workspaceId, true);
   }
 
   /* ---------------------------------------------------------------- tasks */
@@ -2442,20 +2651,28 @@ export class LiveStore {
   }
 
   private async refreshProjectTrash(): Promise<void> {
+    const workspaceId = this.workspaceId;
     if (
+      !workspaceId ||
       !this.getState().workspaces.some(
-        (workspace) => workspace.id === this.workspaceId && workspace.ownerId === this.getState().meId,
+        (workspace) => workspace.id === workspaceId && workspace.ownerId === this.getState().meId,
       )
     )
       return;
+    const token = ++this.trashToken;
+    if (this.projectDeletes.size > 0) await Promise.allSettled([...this.projectDeletes]);
+    if (workspaceId !== this.workspaceId || token !== this.trashToken) return;
     const departmentName = (id: string | null) => (id ? this.departments.get(id) : undefined);
     try {
-      const trashed = await api.projects.trash(this.workspaceId);
+      const trashed = await api.projects.trash(workspaceId);
+      if (workspaceId !== this.workspaceId || token !== this.trashToken) return;
+      this.trashLoaded = true;
       this.apply({
         type: 'sync/project-trash',
         entries: trashed.map((entry) => trashedProjectFromView(entry, departmentName)),
       });
     } catch (error) {
+      if (workspaceId !== this.workspaceId || token !== this.trashToken) return;
       this.fail(error);
     }
   }

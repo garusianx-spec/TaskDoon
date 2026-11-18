@@ -44,7 +44,9 @@ export default async function MarketingLayout({ children }: { children: ReactNod
         siteName={asText(settings.siteName, 'تسک‌دون')}
         logo={settings.logo}
       />
-      <main id="marketing-main">{children}</main>
+      <main id="marketing-main" tabIndex={-1}>
+        {children}
+      </main>
       <MarketingFooter settings={settings} links={footer} social={siteLinks(data.social)} />
     </PublicSurface>
   );

@@ -5,7 +5,7 @@ export async function generateMetadata() {
   return page
     ? siteMetadata(page)
     : {
-        title: 'مقاله‌ها | تسک‌دون',
+        title: { absolute: 'مقاله‌ها | تسک‌دون' },
         alternates: { canonical: `${siteOrigin(await getSiteSettings())}/blog` },
       };
 }
