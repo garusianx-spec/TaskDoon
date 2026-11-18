@@ -156,6 +156,7 @@ export function SwipeableTaskRow({ task, onOpen, onToggleComplete, onPostpone }:
           label={`تعویق یا ارجاع «${task.title}»`}
           icon={<MoreVerticalIcon size={16} />}
           size="xs"
+          className="size-11"
           onClick={() => onPostpone(task)}
         />
       </div>

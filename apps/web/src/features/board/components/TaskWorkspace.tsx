@@ -130,6 +130,7 @@ export function TaskWorkspace({
               iconStart={<FilterIcon size={16} />}
               aria-expanded={filtersOpen}
               aria-controls={filtersId}
+              id={filtersId + '-toggle'}
               onClick={() => setFiltersOpen((open) => !open)}
               className={cn('min-h-11', scope === 'legacy' && 'lg:hidden')}
             >
@@ -156,7 +157,7 @@ export function TaskWorkspace({
               iconStart={<AddIcon size={18} />}
               aria-keyshortcuts="N"
               onClick={() => openTaskComposer(null)}
-              className="hidden sm:inline-flex"
+              className="min-h-11"
             >
               وظیفه جدید
             </Button>
@@ -175,6 +176,13 @@ export function TaskWorkspace({
         <div
           id={filtersId}
           hidden={!filtersOpen}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && !event.defaultPrevented) {
+              event.stopPropagation();
+              setFiltersOpen(false);
+              document.getElementById(filtersId + '-toggle')?.focus();
+            }
+          }}
           className={cn(
             'mt-2 flex-wrap gap-2 rounded-lg border border-secondary bg-sunken p-2',
             scope === 'legacy' && 'lg:hidden',
@@ -198,6 +206,16 @@ export function TaskWorkspace({
               options={ISSUE_TYPE_OPTIONS}
             />
           </div>
+          <Button
+            className="mt-2 min-h-11"
+            variant="secondary"
+            onClick={() => {
+              setFiltersOpen(false);
+              document.getElementById(filtersId + '-toggle')?.focus();
+            }}
+          >
+            نمایش نتایج
+          </Button>
         </div>
         {!personal && (
           <SegmentedControl
@@ -227,6 +245,7 @@ export function TaskWorkspace({
               allTasks={state.tasks}
               columns={boardColumns}
               editable={columnsEditable}
+              filtered={Boolean(search.trim() || activeFilters.length)}
               selectedTaskId={selectedTaskId}
               onOpenTask={openTask}
               onMoveTask={(taskId, columnId) => dispatch({ type: 'move-task-to-column', taskId, columnId })}

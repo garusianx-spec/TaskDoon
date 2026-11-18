@@ -34,6 +34,7 @@ export function TaskCompleteCheckbox({ task, onToggle, className }: TaskComplete
         onCheckedChange={onToggle}
         ariaLabel={`انجام شد: ${task.title}`}
         size="sm"
+        touchTarget
         tone="success"
       />
     </span>

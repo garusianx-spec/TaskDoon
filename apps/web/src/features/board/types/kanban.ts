@@ -12,6 +12,7 @@ export interface KanbanBoardProps {
    * group cards by status, so their (status) columns are not edited. Defaults to `true`.
    */
   readonly editable?: boolean;
+  readonly filtered?: boolean;
   readonly onOpenTask: (taskId: string) => void;
   readonly onMoveTask: (taskId: string, columnId: string) => void;
   readonly onToggleComplete: (taskId: string, completed: boolean) => void;

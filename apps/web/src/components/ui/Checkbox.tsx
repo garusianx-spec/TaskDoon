@@ -16,6 +16,7 @@ export interface CheckboxProps {
   /** `success` paints the checked box green — used where checking means "completed". */
   readonly tone?: 'brand' | 'success';
   readonly className?: string;
+  readonly touchTarget?: boolean;
 }
 
 /**
@@ -33,6 +34,7 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
     size = 'md',
     tone = 'brand',
     className,
+    touchTarget = false,
   },
   ref,
 ) {
@@ -51,21 +53,42 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
       aria-labelledby={label ? labelId : undefined}
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
-      className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-sm border transition-colors duration-150',
-        box,
-        checked || indeterminate
-          ? tone === 'success'
-            ? 'border-success-600 bg-success-600 text-white'
-            : 'border-brand bg-brand-solid text-fg-on-brand'
-          : tone === 'success'
-            ? 'border-primary bg-surface text-transparent hover:border-success-600 hover:bg-status-done-subtle'
-            : 'border-primary bg-surface text-transparent hover:border-brand hover:bg-brand-subtle',
-        disabled && 'cursor-not-allowed border-disabled bg-muted text-fg-disabled',
-        className,
-      )}
+      className={
+        touchTarget
+          ? 'inline-flex size-11 shrink-0 items-center justify-center rounded-lg sm:size-4'
+          : cn(
+              'inline-flex shrink-0 items-center justify-center rounded-sm border transition-colors duration-150',
+              box,
+              checked || indeterminate
+                ? tone === 'success'
+                  ? 'border-success-600 bg-success-600 text-white'
+                  : 'border-brand bg-brand-solid text-fg-on-brand'
+                : tone === 'success'
+                  ? 'border-primary bg-surface text-transparent hover:border-success-600 hover:bg-status-done-subtle'
+                  : 'border-primary bg-surface text-transparent hover:border-brand hover:bg-brand-subtle',
+              disabled && 'cursor-not-allowed border-disabled bg-muted text-fg-disabled',
+              className,
+            )
+      }
     >
-      {indeterminate ? <MinusIcon size={glyph} /> : checked ? <CheckIcon size={glyph} /> : null}
+      <span
+        className={
+          touchTarget
+            ? cn(
+                'pointer-events-none inline-flex items-center justify-center rounded-sm border',
+                box,
+                checked || indeterminate
+                  ? tone === 'success'
+                    ? 'border-success-600 bg-success-600 text-white'
+                    : 'border-brand bg-brand-solid text-fg-on-brand'
+                  : 'border-primary bg-surface text-transparent',
+                disabled && 'border-disabled bg-muted text-fg-disabled',
+              )
+            : 'contents'
+        }
+      >
+        {indeterminate ? <MinusIcon size={glyph} /> : checked ? <CheckIcon size={glyph} /> : null}
+      </span>
     </button>
   );
 
