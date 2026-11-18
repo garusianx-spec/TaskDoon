@@ -1510,6 +1510,8 @@ export class LiveStore {
               dueDate: draft.dueDate,
             },
           );
+          if (converted.existing)
+            this.notify('این یادداشت قبلاً به وظیفه تبدیل شده است؛ مرجع همان وظیفه حفظ شد.');
           detail = converted.task;
         } else {
           const body: CreateTaskBody = {

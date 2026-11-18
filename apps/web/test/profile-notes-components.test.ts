@@ -73,7 +73,7 @@ describe('profile and note forms', () => {
         onBack: () => undefined,
       }),
     );
-    expect(html).toContain('ذخیره یادداشت');
+    expect(html).toContain('ذخیره و ایجاد یادداشت دیگر');
     expect(html).toContain('role="combobox"');
     expect(html).toContain('>دسته</span>');
     expect(html).toContain('عنوان یادداشت');

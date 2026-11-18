@@ -78,7 +78,7 @@ try {
   await page.waitForURL('**/notes');
   await page.getByRole('button', { name: 'یادداشت جدید', exact: true }).first().click();
   const editor = page.getByRole('article');
-  await editor.getByRole('button', { name: 'ذخیره یادداشت', exact: true }).click();
+  await editor.getByRole('button', { name: 'ذخیره و ایجاد یادداشت دیگر', exact: true }).click();
   check(await visible(editor.getByRole('alert')), 'saving a blank note explains what to write');
   for (const category of ['شخصی', 'کاری', 'ایده‌ها', 'صورت‌جلسه‌ها']) {
     await editor.getByRole('combobox', { name: 'دسته', exact: true }).click();
@@ -91,7 +91,7 @@ try {
     await editor
       .getByRole('textbox', { name: 'متن یادداشت', exact: true })
       .fill(`متن ذخیره‌شده در ${category}`);
-    await editor.getByRole('button', { name: 'ذخیره یادداشت', exact: true }).click();
+    await editor.getByRole('button', { name: 'ذخیره و ایجاد یادداشت دیگر', exact: true }).click();
     check(
       await eventually(
         async () =>
@@ -135,7 +135,7 @@ try {
     .first()
     .click();
   check(
-    await visible(editor.getByRole('button', { name: 'ذخیره یادداشت', exact: true })),
+    await visible(editor.getByRole('button', { name: 'ذخیره و ایجاد یادداشت دیگر', exact: true })),
     'Save stays reachable on a 375px phone',
   );
   check(

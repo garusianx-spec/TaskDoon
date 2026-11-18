@@ -238,12 +238,15 @@ export function NoteEditor({
               loading={saving}
               onClick={() => void save()}
             >
-              {saving ? 'در حال ذخیره…' : 'ذخیره یادداشت'}
+              {saving ? 'در حال ذخیره…' : 'ذخیره و ایجاد یادداشت دیگر'}
             </Button>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <p className="px-4 pt-3 text-caption text-fg-tertiary">
+            هنگام تبدیل، موارد تیک‌نخورده به زیروظیفه تبدیل می‌شوند؛ موارد انجام‌شده در توضیحات می‌مانند.
+          </p>
           <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-5 sm:px-8">
             <FormError message={removal.error} />
             <label id={`${id}-title-label`} htmlFor={`${id}-title`} className="sr-only">

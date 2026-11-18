@@ -371,6 +371,34 @@ describe('task form request persistence', () => {
     );
   });
 
+  it('reuses an already-converted note task and explains the existing reference', async () => {
+    const test = stateStore();
+    vi.spyOn(api.notes, 'convert').mockResolvedValue({ task: detail, existing: true });
+    const create = vi.spyOn(api.tasks, 'create');
+    await expect(test.createAwaited({ ...draft, sourceNoteId: 'note-id', attachments: [] })).resolves.toBe(
+      taskId,
+    );
+    expect(test.state().tasks.filter((task) => task.id === taskId)).toHaveLength(1);
+    expect(create).not.toHaveBeenCalled();
+    expect(test.store.current.toast?.text).toContain('این یادداشت قبلاً');
+  });
+
+  it('shows completion feedback after acknowledgement and never on a failed response', async () => {
+    const test = stateStore();
+    vi.spyOn(api.tasks, 'get').mockResolvedValue(detail);
+    const complete = vi
+      .spyOn(api.tasks, 'complete')
+      .mockRejectedValueOnce(new ApiProblem(403, 'FORBIDDEN', 'Denied', null))
+      .mockResolvedValue({ ...detail, status: 'done' });
+    const action = { type: 'set-task-completed', taskId, completed: true } as const;
+    test.store.effect(action, test.state(), test.state());
+    await vi.waitFor(() => expect(test.store.current.toast).not.toBeNull());
+    expect(test.store.current.toast?.text).not.toBe('وظیفه انجام شد.');
+    test.store.effect(action, test.state(), test.state());
+    await vi.waitFor(() => expect(test.store.current.toast?.text).toBe('وظیفه انجام شد.'));
+    expect(complete).toHaveBeenCalledTimes(2);
+  });
+
   it('retries a conversion attachment failure against the existing source task without duplicating it', async () => {
     const sourceId = 'source-message';
     const test = stateStore({

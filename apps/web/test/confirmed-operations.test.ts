@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CalendarEventView, ScheduledMessageView } from '@taskin/contracts';
 import { api } from '@/api/endpoints';
-import type { ConfirmedOperation } from '@/store/confirmed-operation';
+import { operationConfirmation, type ConfirmedOperation } from '@/store/confirmed-operation';
 import { DEMO_WORKSPACE_STATE } from '@/store/initial-state';
 import { LiveStore } from '@/store/live/live-store';
 import { workspaceReducer } from '@/store/workspace-reducer';
@@ -45,6 +45,21 @@ const event: CalendarEventView = {
 afterEach(() => vi.restoreAllMocks());
 
 describe('confirmed workspace operations', () => {
+  it('keeps a note on failed deletion and reports the confirmed fixture deletion', async () => {
+    const fixture = connectedStore();
+    const note = fixture.state().notes[0]!;
+    const operation = { type: 'delete-note', noteId: note.id } as const;
+    const remove = vi
+      .spyOn(api.notes, 'remove')
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue(undefined);
+    await expect(fixture.store.confirmOperation(operation)).rejects.toThrow('offline');
+    expect(fixture.state().notes.some((entry) => entry.id === note.id)).toBe(true);
+    await fixture.store.confirmOperation(operation);
+    expect(fixture.state().notes.some((entry) => entry.id === note.id)).toBe(false);
+    expect(operationConfirmation(operation, fixture.state())).toBe('یادداشت حذف شد.');
+    expect(remove).toHaveBeenCalledTimes(2);
+  });
   it('keeps the calendar unchanged during a failure and inserts the confirmed event once on retry', async () => {
     const fixture = connectedStore();
     const draft = {

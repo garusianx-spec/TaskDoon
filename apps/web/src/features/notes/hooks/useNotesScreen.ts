@@ -124,6 +124,10 @@ export function useNotesScreen() {
   const createNote = () => startNote(newNoteCategory(categories, categoryId));
 
   const convertToTask = (note: Note) => {
+    if (note.linkedTaskId) {
+      setSaveNotice('این یادداشت قبلاً به وظیفه تبدیل شده است؛ مرجع همان وظیفه حفظ شد.');
+      return;
+    }
     const { description, subtasks } = splitForTask(note.body);
     const title = note.title.trim() || stripInline(notePreview(note.body, 70)) || 'وظیفه از یادداشت';
     openTaskComposer(taskDraft({ title, description, subtaskTitles: subtasks, sourceNoteId: note.id }));
