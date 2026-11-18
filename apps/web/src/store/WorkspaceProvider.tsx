@@ -110,6 +110,18 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     (action) => {
       const { prev, next } = apply(action);
       live?.effect(action, prev, next);
+      if (!live && prev !== next) {
+        const text =
+          action.type === 'set-task-completed'
+            ? action.completed
+              ? 'وظیفه انجام شد.'
+              : 'وظیفه دوباره باز شد.'
+            : action.type === 'move-task' || action.type === 'move-task-to-column'
+              ? 'وظیفه منتقل شد.'
+              : null;
+        if (text)
+          setToast({ id: ++toastId.current, text, workspaceId: next.activeWorkspaceId, userId: next.meId });
+      }
     },
     [apply, live],
   );
@@ -179,8 +191,9 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
         apply({ type: 'patch-task', taskId, patch });
         if (columnId !== undefined) apply({ type: 'move-task-to-column', taskId, columnId });
       }
+      showOperationToast('تغییرات وظیفه ذخیره شد.');
     },
-    [apply, live],
+    [apply, live, showOperationToast],
   );
 
   const createProject = useCallback(

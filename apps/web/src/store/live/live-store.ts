@@ -1595,6 +1595,7 @@ export class LiveStore {
         expectedVersion: version,
       });
       this.upsertCard(card);
+      this.notify('وظیفه منتقل شد.');
     });
   }
 
@@ -1603,6 +1604,7 @@ export class LiveStore {
     await this.attempt(taskId, async (id, version) => {
       const card = await api.tasks.complete(this.workspaceId, id, completed, version);
       this.upsertCard(card);
+      this.notify(completed ? 'وظیفه انجام شد.' : 'وظیفه دوباره باز شد.');
     });
   }
 
