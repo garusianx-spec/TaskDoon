@@ -39,6 +39,8 @@ it('renders a read-only archive without a message composer', () => {
   );
   expect(html).toContain('فقط خواندنی');
   expect(html).not.toContain('نوشتن پیام در');
+  expect(html).not.toContain('اولین پیام را بنویسید');
+  expect(html).toContain('امکان ارسال پیام وجود ندارد');
 });
 
 it('removes mutating message actions from archived message markup', () => {

@@ -22,7 +22,12 @@ function ChatsShell() {
   const { state, dispatch, currentUser, conversations, unreadFor, isPinned, totalUnread } = useWorkspace();
   const { open } = useOverlays();
   // Mobile: the sidebar is the list screen until a conversation is opened.
-  const [mobileDetail, setMobileDetail] = useState(false);
+  const [mobileDetail, setMobileDetail] = useState(() => state.focusedMessageId !== null);
+  const [seenFocus, setSeenFocus] = useState(state.focusedMessageId);
+  if (seenFocus !== state.focusedMessageId) {
+    setSeenFocus(state.focusedMessageId);
+    if (state.focusedMessageId !== null) setMobileDetail(true);
+  }
   const live = useLive();
   const [archive, setArchive] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{
