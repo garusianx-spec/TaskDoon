@@ -2,6 +2,7 @@ import type { PublishedSiteDocument } from '@taskin/contracts';
 import { getSiteDocuments, getSitePage } from '@/lib/site-public';
 import { DocumentPage } from '@/features/marketing/components/DocumentPage';
 import { DocumentCards } from '@/features/marketing/components/Sections';
+import { SiteLink } from '@/features/marketing/components/SiteLink';
 
 /** Published collection documents remain optional; an empty collection is a valid page. */
 export async function CollectionPage({
@@ -26,7 +27,15 @@ export async function CollectionPage({
           {entries.length ? (
             <DocumentCards documents={entries} />
           ) : (
-            <p className="marketing-empty">هنوز محتوایی در این بخش منتشر نشده است.</p>
+            <div className="marketing-empty">
+              <p>هنوز محتوایی در این بخش منتشر نشده است.</p>
+              {kind === 'help' &&
+                documents.some((entry) => entry.kind === 'page' && entry.slug === 'faq') && (
+                  <SiteLink href="/faq" className="marketing-button marketing-button-secondary">
+                    مشاهده پرسش‌های متداول
+                  </SiteLink>
+                )}
+            </div>
           )}
         </div>
       </section>
