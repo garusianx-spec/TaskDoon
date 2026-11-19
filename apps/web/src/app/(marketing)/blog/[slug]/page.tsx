@@ -11,5 +11,9 @@ export default async function ArticlePage({ params }: Props) {
     resolveSiteDocument('article', (await params).slug),
     getSiteDocuments(),
   ]);
-  return <DocumentPage document={document} documents={documents} />;
+  return (
+    <article className="marketing-article-detail">
+      <DocumentPage document={document} documents={documents} />
+    </article>
+  );
 }

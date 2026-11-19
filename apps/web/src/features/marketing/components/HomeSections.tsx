@@ -8,6 +8,7 @@ import { FaqList } from '@/features/marketing/components/FaqList';
 import { PricingPlans } from '@/features/marketing/components/PricingPlans';
 import { ProductJourney } from '@/features/marketing/components/ProductJourney';
 import { WorkspacePreview } from '@/features/marketing/components/WorkspacePreview';
+import { BlogCard } from './BlogCard';
 
 const FEATURE_PREVIEWS = new Map([
   ['tasks', '/marketing/tasks.png'],
@@ -309,23 +310,35 @@ export function HomeSection({
           <Actions section={section} />
         </div>
         <div className="home-articles">
-          {articles.map((article) => (
-            <article key={article.id}>
-              {Boolean(article.data.cover) && typeof article.data.cover === 'object' && (
-                <div className="home-article-cover">
-                  <Media media={article.data.cover as SiteMediaRef} />
-                </div>
-              )}
-              <time dateTime={article.publishedAt}>{siteDate(article.publishedAt)}</time>
-              <h3>
-                <SiteLink href={sitePath(article)}>
-                  {article.title}
-                  <ArrowLeftIcon size={18} />
-                </SiteLink>
-              </h3>
-              <p>{article.description}</p>
-            </article>
-          ))}
+          {articles.map((article) =>
+            article.kind === 'article' ? (
+              <BlogCard
+                key={article.id}
+                document={article}
+                cover={
+                  article.data.cover && typeof article.data.cover === 'object' ? (
+                    <Media media={article.data.cover as SiteMediaRef} />
+                  ) : undefined
+                }
+              />
+            ) : (
+              <article key={article.id}>
+                {Boolean(article.data.cover) && typeof article.data.cover === 'object' && (
+                  <div className="home-article-cover">
+                    <Media media={article.data.cover as SiteMediaRef} />
+                  </div>
+                )}
+                <time dateTime={article.publishedAt}>{siteDate(article.publishedAt)}</time>
+                <h3>
+                  <SiteLink href={sitePath(article)}>
+                    {article.title}
+                    <ArrowLeftIcon size={18} />
+                  </SiteLink>
+                </h3>
+                <p>{article.description}</p>
+              </article>
+            ),
+          )}
         </div>
         {!articles.length && (
           <div className="home-editorial-empty">

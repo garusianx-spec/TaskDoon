@@ -7,6 +7,7 @@ import { MarketingHeader } from '@/features/marketing/components/MarketingHeader
 import { MarketingFooter } from '@/features/marketing/components/MarketingFooter';
 import '@/features/marketing/components/marketing.css';
 import '@/features/marketing/components/homepage.css';
+import '@/features/marketing/components/blog.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,9 @@ export default async function MarketingLayout({ children }: { children: ReactNod
         siteName={asText(settings.siteName, 'تسک‌دون')}
         logo={settings.logo}
       />
-      <main id="marketing-main">{children}</main>
+      <main id="marketing-main" tabIndex={-1}>
+        {children}
+      </main>
       <MarketingFooter settings={settings} links={available(data.footer)} social={siteLinks(data.social)} />
     </PublicSurface>
   );

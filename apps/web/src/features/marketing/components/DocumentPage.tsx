@@ -112,6 +112,11 @@ export async function DocumentPage({
       ))}
       {crumbs.length > 0 && (
         <nav className="marketing-container marketing-breadcrumbs" aria-label="مسیر صفحه">
+          {document.kind === 'article' && (
+            <SiteLink href="/blog" className="marketing-blog-back">
+              بازگشت به بلاگ
+            </SiteLink>
+          )}
           <ol>
             {crumbs.map((crumb, index) => (
               <li key={index}>
@@ -169,6 +174,7 @@ export async function DocumentPage({
           }}
           documents={documents}
           isPrimary={index === firstHero}
+          article={document.kind === 'article'}
         />
       ))}
       {sourceKind &&

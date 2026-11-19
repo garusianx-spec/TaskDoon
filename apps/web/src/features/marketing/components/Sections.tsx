@@ -1,6 +1,8 @@
 import Image from 'next/image';
+import { Fragment } from 'react';
+import { BlogCard } from './BlogCard';
 import type { PublishedSiteDocument, SiteSection, SiteMediaRef, SiteItem } from '@taskin/contracts';
-import { asText, shouldOptimizeSiteImage, siteDate, siteMediaHref, sitePath } from '@/lib/site-utils';
+import { asText, shouldOptimizeSiteImage, siteMediaHref, sitePath } from '@/lib/site-utils';
 import { Arrow, SiteLink } from '@/features/marketing/components/SiteLink';
 import { ProductPreview } from '@/features/marketing/components/ProductPreview';
 import { FaqList } from '@/features/marketing/components/FaqList';
@@ -12,10 +14,12 @@ export function MarketingMedia({
   media,
   priority = false,
   framed = false,
+  eager = false,
 }: {
   media: SiteMediaRef;
   priority?: boolean;
   framed?: boolean;
+  eager?: boolean;
 }) {
   if (!siteMediaHref(media.src)) return null;
   const image = (
@@ -26,6 +30,7 @@ export function MarketingMedia({
       height={media.height ?? 1000}
       sizes="(max-width: 768px) 95vw, 1120px"
       preload={priority}
+      loading={eager ? 'eager' : undefined}
       unoptimized={!shouldOptimizeSiteImage(media.src)}
       className="marketing-product-image"
     />
@@ -46,13 +51,44 @@ export function MarketingMedia({
 }
 
 /** A deliberately small text format: React escapes all input; HTML is never interpreted. */
-export function RichText({ text }: { text: string }) {
+export function RichText({ text, article = false }: { text: string; article?: boolean }) {
   const paragraphs = text.split(/\n\s*\n/);
   return (
     <div className="marketing-prose">
       {paragraphs.map((paragraph, index) => {
         const value = paragraph.trim();
         if (!value) return null;
+        const lines = value.split('\n');
+        if (article && /^[0-9۰-۹]+[.)]\s/.test(lines[0]!) && lines.length > 1)
+          return (
+            <Fragment key={index}>
+              <h3>{lines[0]}</h3>
+              <RichText text={lines.slice(1).join('\n')} article />
+            </Fragment>
+          );
+        if (article && lines.some((line) => /^• /.test(line))) {
+          const groups: { bullet: boolean; lines: string[] }[] = [];
+          for (const line of lines) {
+            const bullet = /^• /.test(line);
+            if (groups.at(-1)?.bullet !== bullet) groups.push({ bullet, lines: [] });
+            groups.at(-1)!.lines.push(line);
+          }
+          return (
+            <Fragment key={index}>
+              {groups.map((group, i) =>
+                group.bullet ? (
+                  <ul key={i}>
+                    {group.lines.map((line, j) => (
+                      <li key={j}>{line.slice(2)}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <RichText key={i} text={group.lines.join('\n')} />
+                ),
+              )}
+            </Fragment>
+          );
+        }
         if (value.startsWith('### ')) return <h3 key={index}>{value.slice(4)}</h3>;
         if (value.startsWith('## ')) return <h2 key={index}>{value.slice(3)}</h2>;
         if (value.split('\n').every((line) => /^[-*] /.test(line)))
@@ -146,14 +182,28 @@ function ItemCards({
 
 export function DocumentCards({ documents }: { documents: PublishedSiteDocument[] }) {
   return (
-    <div className="marketing-card-grid">
-      {documents.map((document) => {
+    <div
+      className={
+        documents.length > 0 && documents.every((document) => document.kind === 'article')
+          ? 'marketing-blog-grid' + (documents.length === 1 ? ' is-featured' : '')
+          : 'marketing-card-grid'
+      }
+    >
+      {documents.map((document, index) => {
         const path = sitePath(document);
         const media = document.data.cover as SiteMediaRef | undefined;
         const image =
           media && typeof media.src === 'string'
             ? media
             : document.sections.find((section) => section.visible && section.media)?.media;
+        if (document.kind === 'article')
+          return (
+            <BlogCard
+              key={document.id}
+              document={document}
+              cover={image ? <MarketingMedia media={image} eager={index < 3} /> : undefined}
+            />
+          );
         return (
           <article className="marketing-card marketing-document-card" key={document.id}>
             {image && (
@@ -171,9 +221,6 @@ export function DocumentCards({ documents }: { documents: PublishedSiteDocument[
               </SiteLink>
             </h3>
             <p>{document.description}</p>
-            {document.kind === 'article' && (
-              <time dateTime={document.publishedAt}>{siteDate(document.publishedAt)}</time>
-            )}
             {document.kind === 'job' && (
               <p className="marketing-job-tags">
                 {[asText(document.data.location), asText(document.data.employmentType)]
@@ -193,11 +240,13 @@ export function SectionRenderer({
   documents = [],
   depth = 0,
   isPrimary = false,
+  article = false,
 }: {
   section: SiteSection;
   documents?: PublishedSiteDocument[];
   depth?: number;
   isPrimary?: boolean;
+  article?: boolean;
 }) {
   if (!section.visible || depth > 3) return null;
   if (typeof section.data?.presentation === 'string' && section.data.presentation === `home-${section.type}`)
@@ -258,7 +307,7 @@ export function SectionRenderer({
     >
       <div className="marketing-container">
         <SectionHeading section={section} />
-        {section.type === 'rich-text' && <RichText text={section.body ?? ''} />}
+        {section.type === 'rich-text' && <RichText text={section.body ?? ''} article={article} />}
         {section.type === 'feature-grid' &&
           (items.length ? (
             <ItemCards items={items} />
