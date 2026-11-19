@@ -217,7 +217,7 @@ check(
 );
 await menuFor('بازبینی امنیتی').click();
 await page.getByRole('menuitem', { name: 'تغییر نام ستون' }).click();
-await page.keyboard.press('Control+a');
+await page.keyboard.press('ControlOrMeta+a');
 await page.keyboard.type('بازبینی نهایی');
 await page.keyboard.press('Enter');
 await pause(300);
