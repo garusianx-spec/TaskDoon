@@ -279,13 +279,8 @@ export function SectionRenderer({
       <section id={section.id} className={`${className} marketing-hero ${section.media ? 'has-media' : ''}`}>
         <div className="marketing-container">
           <div className="marketing-hero-content">
-            {section.subtitle && (
-              <p className="marketing-eyebrow">
-                <span />
-                {section.subtitle}
-              </p>
-            )}
             {section.title && <Heading>{section.title}</Heading>}
+            {section.subtitle && <p className="marketing-hero-description">{section.subtitle}</p>}
             {section.description && <p className="marketing-hero-description">{section.description}</p>}
             <SectionActions section={section} />
           </div>

@@ -60,8 +60,8 @@ check(
 );
 const canvas = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 check(
-  await eventually(async () => (await canvas()) === 'rgb(12, 17, 29)'),
-  `OLED canvas #0C111D (${await canvas()})`,
+  await eventually(async () => (await canvas()) === 'rgb(0, 0, 0)'),
+  `OLED canvas #000000 (${await canvas()})`,
 );
 await page.waitForTimeout(250);
 await page.screenshot({ path: `${out}/th1_dark_ocean_picker.png` });

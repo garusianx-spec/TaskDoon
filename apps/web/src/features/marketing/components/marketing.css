@@ -17,7 +17,14 @@
   top: 0;
   z-index: 40;
   border-bottom: 1px solid rgb(var(--border-secondary));
-  background: rgb(var(--bg-surface));
+  background: rgb(var(--bg-surface) / 0.8);
+  backdrop-filter: blur(12px);
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease;
+}
+.marketing-header.is-scrolled {
+  background: rgb(var(--bg-surface) / 0.95);
 }
 .marketing-header-inner {
   display: flex;
@@ -40,13 +47,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 4px;
   flex: 1;
 }
 .marketing-nav-link {
   color: rgb(var(--fg-secondary));
   font-size: 13px;
-  padding-block: 14px;
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 8px;
   min-height: 44px;
 }
 .marketing-nav-link:hover,
@@ -67,6 +77,8 @@
   font-size: 13px;
   color: rgb(var(--fg-secondary));
   min-height: 44px;
+  min-width: 44px;
+  justify-content: center;
   display: flex;
   align-items: center;
 }
@@ -179,8 +191,9 @@
   font-size: 10px;
   color: rgb(var(--fg-tertiary));
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  inset-inline: 0;
+  width: max-content;
+  margin-inline: auto;
   white-space: nowrap;
 }
 .marketing-product-image {

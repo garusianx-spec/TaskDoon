@@ -23,8 +23,7 @@
  * two at runtime (see ThemeProvider) so there is a single source of truth in the DOM.
  */
 
-:root,
-.public-surface {
+:root {
   /* ---------- Layer 1: neutral ramp (Untitled UI Gray, light) ---------- */
   --gray-25: 252 252 253; /* #FCFCFD */
   --gray-50: 249 250 251; /* #F9FAFB */
@@ -156,7 +155,7 @@
   --shadow-xl: 0 20px 24px -4px rgb(16 24 40 / 0.08), 0 8px 8px -4px rgb(16 24 40 / 0.03);
 }
 
-/* ---------- OLED Charcoal dark mode ---------- */
+/* ---------- OLED dark mode ---------- */
 [data-theme='dark'] {
   /* Untitled UI "Gray dark" ramp, inverted so 25 stays the lightest step. */
   --gray-25: 250 250 250; /* #FAFAFA */
@@ -172,14 +171,14 @@
   --gray-900: 22 27 38; /* #161B26 */
   --gray-950: 12 17 29; /* #0C111D */
 
-  --bg-canvas: 12 17 29; /* #0C111D */
-  --bg-surface: 22 27 38; /* #161B26 */
-  --bg-raised: 31 36 47; /* #1F242F */
-  --bg-sunken: 12 17 29;
-  --bg-rail: 22 27 38;
-  --bg-hover: 31 36 47;
-  --bg-active: 51 55 65;
-  --bg-disabled: 31 36 47;
+  --bg-canvas: 0 0 0; /* #000000 */
+  --bg-surface: 18 18 18; /* #121212 */
+  --bg-raised: 28 28 30; /* #1C1C1E */
+  --bg-sunken: 10 10 10;
+  --bg-rail: 18 18 18;
+  --bg-hover: 28 28 30;
+  --bg-active: 38 38 42;
+  --bg-disabled: 28 28 30;
   --bg-overlay: 0 0 0;
   --bg-brand-subtle: var(--brand-900);
   --bg-brand-subtle-hover: var(--brand-800);
@@ -195,9 +194,9 @@
   --fg-on-brand: 255 255 255;
   --fg-brand: var(--brand-300);
 
-  --border-primary: 51 55 65; /* #333741 */
-  --border-secondary: 31 36 47; /* #1F242F */
-  --border-tertiary: 31 36 47;
+  --border-primary: 38 38 42;
+  --border-secondary: 28 28 32;
+  --border-tertiary: 28 28 32;
   /* 400, not 500: every palette's 400 clears 3:1 against the charcoal surface, so selected
      and hovered card borders read identically under all six accents. */
   --border-brand: var(--brand-400);
