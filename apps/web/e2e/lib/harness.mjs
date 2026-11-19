@@ -62,8 +62,10 @@ export function visible(locator, timeout = 5000) {
  * `filename*` only when the locale can spell it, and CI containers often have none.
  */
 export function launch(options = {}) {
+  const headless = process.env.HEADED === '1' || process.env.HEADED === 'true' ? false : (options.headless ?? true);
   return chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || undefined,
+    headless,
     ...options,
     env: { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', ...options.env },
   });

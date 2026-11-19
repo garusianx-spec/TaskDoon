@@ -82,22 +82,31 @@ function CalendarContent() {
 
       <div className="grid gap-5 p-3 sm:p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <section aria-label="نمای ماهانه" className="flex min-w-0 flex-col gap-3">
+          {/*
+            One baseline for the whole bar. The two outer groups share the leftover width
+            equally (`flex-1`), so the date controls sit exactly over the grid's centre
+            whatever the legend or the button measure.
+          */}
           <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="order-last w-full sm:order-none sm:w-auto sm:flex-1">
+              <Legend />
+            </div>
             <CalendarMonthNavigation
               system={system}
               monthLabel={grid.monthLabel}
               onStep={(delta) => setFocusedIso((iso) => shiftCalendarMonth(system, iso ?? todayIso, delta))}
               onToday={() => setFocusedIso(toISODate(new Date(), timeZone))}
             />
-            <Legend />
-            <Button
-              size="lg"
-              iconStart={<AddIcon size={16} />}
-              aria-haspopup="dialog"
-              onClick={() => createEvent(focusedIso)}
-            >
-              رویداد جدید
-            </Button>
+            <div className="flex justify-end sm:flex-1">
+              <Button
+                size="lg"
+                iconStart={<AddIcon size={16} />}
+                aria-haspopup="dialog"
+                onClick={() => createEvent(focusedIso)}
+              >
+                رویداد جدید
+              </Button>
+            </div>
           </div>
           <div className="overflow-visible rounded-xl border border-secondary bg-surface shadow-xs">
             <MonthGrid

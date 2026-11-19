@@ -175,7 +175,7 @@ function MoreContent() {
               onClick={() => open({ kind: 'invite-member' })}
             />
             <ActionItem
-              label="امنیت و نشست‌های فعال"
+              label="امنیت و ورود"
               description="تغییر کلمه عبور، مدیریت دستگاه‌ها و نشست‌های ورود"
               icon={<KeyIcon size={20} />}
               iconBgClass="bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300"
