@@ -67,7 +67,7 @@ export function ProductPreview({ items, priority = false }: { items: SiteItem[];
                 alt={item.media.alt}
                 width={item.media.width ?? 1440}
                 height={item.media.height ?? 1000}
-                preload={priority && index === 0}
+                priority={priority && index === 0}
                 className="marketing-product-image"
                 sizes="(max-width: 768px) 95vw, 1120px"
                 unoptimized={!shouldOptimizeSiteImage(item.media.src)}

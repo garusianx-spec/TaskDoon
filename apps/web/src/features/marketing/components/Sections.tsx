@@ -35,7 +35,7 @@ export function MarketingMedia({
       width={media.width ?? 1440}
       height={media.height ?? 1000}
       sizes="(max-width: 768px) 95vw, 1120px"
-      preload={priority}
+      priority={priority}
       unoptimized={!shouldOptimizeSiteImage(media.src)}
       className="marketing-product-image"
     />

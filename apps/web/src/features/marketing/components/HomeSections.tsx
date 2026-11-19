@@ -34,7 +34,7 @@ function Media({ media, priority = false }: { media: SiteMediaRef; priority?: bo
       width={media.width ?? 1440}
       height={media.height ?? 960}
       sizes="(max-width: 768px) 94vw, 1160px"
-      preload={priority}
+      priority={priority}
       unoptimized={!shouldOptimizeSiteImage(media.src)}
     />
   ) : null;
