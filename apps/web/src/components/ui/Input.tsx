@@ -8,6 +8,8 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   readonly label?: string;
   readonly hint?: string;
   readonly error?: string;
+  readonly controlDir?: 'ltr' | 'rtl';
+  readonly errorRole?: 'alert';
   readonly iconStart?: ReactNode;
   readonly iconEnd?: ReactNode;
   readonly className?: string;
@@ -17,14 +19,27 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, hint, error, iconStart, iconEnd, className, containerClassName, hideLabel = false, id, ...rest },
+  {
+    label,
+    hint,
+    error,
+    controlDir,
+    errorRole,
+    iconStart,
+    iconEnd,
+    className,
+    containerClassName,
+    hideLabel = false,
+    id,
+    ...rest
+  },
   ref,
 ) {
   const generatedId = useNamespacedId('input-');
   const inputId = id ?? generatedId;
   const hintId = `${inputId}-hint`;
   const errorId = `${inputId}-error`;
-  const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ');
+  const describedBy = error ? errorId : hint ? hintId : undefined;
 
   return (
     <div className={cn('flex flex-col gap-1.5', containerClassName)}>
@@ -36,7 +51,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           {label}
         </label>
       )}
-      <div className="relative flex items-center">
+      <div dir={controlDir} className="relative flex items-center">
         {iconStart && (
           <span className="pointer-events-none absolute start-3 flex text-fg-quaternary" aria-hidden="true">
             {iconStart}
@@ -62,7 +77,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         {iconEnd && <span className="absolute end-3 flex text-fg-quaternary">{iconEnd}</span>}
       </div>
       {error ? (
-        <p id={errorId} className="text-caption text-status-blocked">
+        <p id={errorId} role={errorRole} className="text-caption text-status-blocked">
           {error}
         </p>
       ) : hint ? (

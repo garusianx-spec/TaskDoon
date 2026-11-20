@@ -21,3 +21,5 @@ export { Tooltip, type TooltipProps } from '@/components/ui/Tooltip';
 export { Skeleton, type SkeletonProps } from '@/components/ui/Skeleton';
 export { ClockTime, type ClockTimeProps } from '@/components/ui/ClockTime';
 export { RelativeTime, type RelativeTimeProps } from '@/components/ui/RelativeTime';
+
+export { PasswordInput, type PasswordInputProps } from '@/components/ui/PasswordInput';
