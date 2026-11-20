@@ -10,7 +10,7 @@ export function PublicSurface({
   readonly className?: string;
 }) {
   return (
-    <div className={`public-surface ${className}`} data-theme="light" data-accent="indigo">
+    <div className={`public-surface ${className}`} data-theme="dark" data-accent="indigo">
       {children}
     </div>
   );

@@ -46,7 +46,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
     // `data-source` tells tooling which build this is (`api` or `demo`); it is inlined at build time.
-    <html lang="fa" dir="rtl" data-source={DATA_SOURCE} suppressHydrationWarning>
+    <html lang="fa" dir="rtl" data-theme="dark" data-source={DATA_SOURCE} suppressHydrationWarning>
       <head>
         {/*
           Applies data-theme / data-accent before first paint so a hard navigation never

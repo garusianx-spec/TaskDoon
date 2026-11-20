@@ -60,7 +60,7 @@ export function ProductPreview({ items, priority = false }: { items: SiteItem[];
                 <span />
                 <span />
                 <span />
-                <div>TaskDoon / {selected.title}</div>
+                <div>taskdoon.ir/app • {selected.title}</div>
               </div>
               <Image
                 src={item.media.src}

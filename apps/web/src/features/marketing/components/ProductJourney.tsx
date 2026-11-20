@@ -85,7 +85,12 @@ export function ProductJourney() {
       </div>
       <div className="journey-window">
         <div className="journey-window-bar">
-          <span>پروژهٔ معرفی محصول</span>
+          <div className="journey-window-controls" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <span className="journey-window-title">تسک‌دون • پروژهٔ معرفی محصول</span>
           <Badge tone="neutral">نمونهٔ تعاملی</Badge>
         </div>
         {STEPS.map((_, index) => (

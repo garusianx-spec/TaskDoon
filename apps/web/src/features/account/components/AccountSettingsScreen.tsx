@@ -2,7 +2,6 @@
 
 import { AppShell } from '@/components/layout/AppShell';
 import { NavigationList, NavigationRow, SectionBackLink } from '@/components/layout/NavigationList';
-import { ThemePicker } from '@/components/layout/ThemePicker';
 import { Avatar } from '@/components/ui';
 import { ClockIcon, LogoutIcon, MonitorIcon, ShieldIcon, UserIcon } from '@/components/icons';
 import { useOverlays } from '@/components/overlays/context';
@@ -81,7 +80,9 @@ export function PersonalAppearanceScreen() {
             <h1 className="text-heading font-bold text-fg-primary">ظاهر شخصی</h1>
           </header>
           <div className="rounded-xl border border-secondary bg-surface p-4">
-            <ThemePicker section="mode" className="w-full p-0" />
+            <p className="text-body-sm text-fg-secondary">
+              پوستهٔ تسک‌دون به صورت سراسری بر روی حالت تیره (Dark Mode) فعال است.
+            </p>
           </div>
         </div>
       </div>

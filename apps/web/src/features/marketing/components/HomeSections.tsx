@@ -30,19 +30,30 @@ function Media({ media, priority = false }: { media: SiteMediaRef; priority?: bo
     />
   ) : null;
 }
-function Actions({ section }: { section: SiteSection }) {
+function Actions({ section, isHero = false }: { section: SiteSection; isHero?: boolean }) {
   return (
-    <div className="marketing-actions home-actions">
-      {section.cta && (
-        <SiteLink href={section.cta.href} className="marketing-button marketing-button-primary">
-          {section.cta.label}
-          <ArrowLeftIcon size={18} />
-        </SiteLink>
-      )}
-      {section.secondaryCta && (
-        <SiteLink href={section.secondaryCta.href} className="marketing-button marketing-button-secondary">
-          {section.secondaryCta.label}
-        </SiteLink>
+    <div className="home-actions-wrap">
+      <div className="marketing-actions home-actions">
+        {section.cta && (
+          <SiteLink href={section.cta.href} className="marketing-button marketing-button-primary">
+            {section.cta.label}
+            <ArrowLeftIcon size={18} />
+          </SiteLink>
+        )}
+        {section.secondaryCta && (
+          <SiteLink href={section.secondaryCta.href} className="marketing-button marketing-button-secondary">
+            {section.secondaryCta.label}
+          </SiteLink>
+        )}
+      </div>
+      {isHero && (
+        <div className="home-microcopy">
+          <span>شروع فوری در ۳۰ ثانیه</span>
+          <span className="home-microcopy-dot" aria-hidden="true">•</span>
+          <span>بدون نیاز به ثبت کارت بانکی</span>
+          <span className="home-microcopy-dot" aria-hidden="true">•</span>
+          <span>پلن پایه رایگان برای تیم‌های نوپا</span>
+        </div>
       )}
     </div>
   );
@@ -111,18 +122,48 @@ export function HomeSection({
   if (section.type === 'hero')
     return (
       <section id={section.id} className="home-hero">
+        <div className="home-hero-ambient" aria-hidden="true" />
         <div className="home-container">
           <div className="home-hero-copy">
+            {Boolean(section.data?.badge) && (
+              <div className="home-hero-badge-wrap">
+                <span className="home-hero-badge">
+                  <span className="home-hero-badge-dot" aria-hidden="true" />
+                  {String(section.data?.badge)}
+                </span>
+              </div>
+            )}
             <Heading section={section} hero={isPrimary} />
-            <Actions section={section} />
+            <Actions section={section} isHero={isPrimary} />
           </div>
-          {section.media ? (
-            <div className="home-authored-hero-media">
-              <Media media={section.media} priority={isPrimary} />
+          <div className="home-preview-wrapper">
+            <div className="home-preview-glow" aria-hidden="true" />
+            <div className="home-preview-card">
+              {section.media ? (
+                <div className="home-authored-hero-media">
+                  <Media media={section.media} priority={isPrimary} />
+                </div>
+              ) : (
+                <WorkspacePreview />
+              )}
             </div>
-          ) : (
-            <WorkspacePreview />
-          )}
+          </div>
+          <div className="home-metrics-bar" role="region" aria-label="شاخص‌های عملکردی تسک‌دون">
+            <div className="home-metric-item">
+              <span className="home-metric-val">۳×</span>
+              <span className="home-metric-lbl">سرعت تصمیم‌گیری تا اقدام اجرایی</span>
+            </div>
+            <div className="home-metric-divider" aria-hidden="true" />
+            <div className="home-metric-item">
+              <span className="home-metric-val">۲ تقویم</span>
+              <span className="home-metric-lbl">انعطاف در هماهنگی شمسی و میلادی</span>
+            </div>
+            <div className="home-metric-divider" aria-hidden="true" />
+            <div className="home-metric-item">
+              <span className="home-metric-val">۱۰۰٪</span>
+              <span className="home-metric-lbl">یکپارچگی گفتگو، اسناد و وظایف</span>
+            </div>
+          </div>
         </div>
       </section>
     );

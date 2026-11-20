@@ -60,7 +60,7 @@
   /* Native form controls inherit the accent so checkboxes/range match the theme. */
   :root {
     accent-color: rgb(var(--brand-600));
-    color-scheme: light;
+    color-scheme: dark;
   }
   [data-theme='dark'] {
     color-scheme: dark;

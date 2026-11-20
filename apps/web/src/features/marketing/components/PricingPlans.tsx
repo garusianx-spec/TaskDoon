@@ -59,7 +59,12 @@ export function PricingPlans({
               className={`marketing-plan ${data.recommended ? 'is-recommended' : ''}`}
               key={document.id}
             >
-              {Boolean(data.recommended) && <span className="marketing-plan-badge">پیشنهاد تسک‌دون</span>}
+              {Boolean(data.recommended) && (
+                <span className="marketing-plan-badge">
+                  <span className="marketing-plan-badge-dot" aria-hidden="true" />
+                  پیشنهاد تسک‌دون
+                </span>
+              )}
               <h3>{document.title}</h3>
               <p className="marketing-plan-description">{document.description}</p>
               <div className="marketing-plan-price">

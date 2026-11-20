@@ -10,7 +10,6 @@ import { useWorkspace } from '@/store/WorkspaceProvider';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { CountPill, Dropdown, IconButton, Tooltip } from '@/components/ui';
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
-import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { ProfileMenu } from '@/components/layout/ProfileMenu';
 import { QuickCreateMenu } from '@/components/layout/QuickCreateMenu';
 import { isRoute, workspaceRoutes } from '@/lib/workspace-navigation';
@@ -95,7 +94,6 @@ export function NavRail() {
       </ul>
 
       <div className="flex flex-col items-center gap-1">
-        <ThemeToggle />
 
         <Tooltip content="نقش‌ها و تنظیمات" placement="start">
           <Link

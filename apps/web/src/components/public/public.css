@@ -1,20 +1,20 @@
 .public-surface {
-  color-scheme: light;
-  --logo-front: rgb(var(--brand-600));
-  --logo-back: rgb(var(--brand-800));
-  --logo-ink: rgb(var(--fg-primary));
-  --logo-accent: rgb(var(--brand-600));
+  color-scheme: dark;
+  --logo-front: #4c8df6;
+  --logo-back: #2e5cc9;
+  --logo-ink: #f5f5f6;
+  --logo-accent: #6d9bf6;
   min-height: 100dvh;
-  background: rgb(var(--bg-surface));
+  background: rgb(var(--bg-canvas));
   color: rgb(var(--fg-primary));
   font-size: 16px;
   line-height: 1.85;
-  caret-color: rgb(var(--brand-600));
+  caret-color: rgb(var(--brand-400));
   text-underline-offset: 0.3em;
 }
 .public-surface ::selection {
-  background: rgb(var(--brand-100));
-  color: rgb(var(--brand-900));
+  background: rgb(var(--brand-900));
+  color: rgb(var(--brand-200));
 }
 .public-surface h1,
 .public-surface h2,

@@ -3,7 +3,7 @@ import type { AccentDescriptor, AccentId, ThemeConfig, ThemeMode } from '@taskin
 export const THEME_STORAGE_KEY = 'taskin.theme';
 
 /** Indigo is the corporate default palette. */
-export const DEFAULT_THEME: ThemeConfig = { mode: 'system', accent: 'indigo' };
+export const DEFAULT_THEME: ThemeConfig = { mode: 'dark', accent: 'indigo' };
 
 export const THEME_MODES: ReadonlyArray<{ readonly id: ThemeMode; readonly label: string }> = [
   { id: 'system', label: 'سیستم' },
@@ -108,9 +108,9 @@ cfg={mode:modes.indexOf(p.mode)>-1?p.mode:d.mode,
 accent:accents.indexOf(p.accent)>-1?p.accent:d.accent};}}catch(e){}}
 var m=cfg.mode==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):cfg.mode;
 var r=document.documentElement;
-r.setAttribute('data-theme',m);
+r.setAttribute('data-theme','dark');
 r.setAttribute('data-accent',cfg.accent);
 }catch(e){
-document.documentElement.setAttribute('data-theme','light');
+document.documentElement.setAttribute('data-theme','dark');
 document.documentElement.setAttribute('data-accent',${JSON.stringify(DEFAULT_THEME.accent)});
 }})();`;
