@@ -1,4 +1,5 @@
 'use client';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { toLatinDigits } from '@taskin/text';
@@ -169,11 +170,11 @@ export function StepUpPrompt({ name }: { readonly name: string }) {
       }
     >
       <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)} noValidate>
-        <Input
+        <PasswordInput
           ref={fieldRef}
           label="رمز عبور"
           name="password"
-          type="password"
+
           dir="ltr"
           autoComplete={needsPassword ? 'new-password' : 'current-password'}
           value={password}

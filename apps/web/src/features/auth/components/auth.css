@@ -47,7 +47,7 @@
   margin-bottom: 24px;
   border-radius: 14px;
   color: rgb(var(--fg-brand));
-  background: rgb(var(--brand-50));
+  background: rgb(var(--bg-brand-subtle));
 }
 .auth-form-heading {
   margin-bottom: 32px;
@@ -222,7 +222,7 @@
   place-items: center;
   width: 36px;
   height: 36px;
-  background: rgb(var(--brand-50));
+  background: rgb(var(--bg-brand-subtle));
   color: rgb(var(--brand-600));
   border-radius: 8px;
 }

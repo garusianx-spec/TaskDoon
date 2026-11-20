@@ -45,7 +45,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       aria-label={label}
       aria-pressed={rest['aria-pressed'] ?? (active ? true : undefined)}
       className={cn(
-        'inline-flex items-center justify-center transition-colors duration-150 disabled:cursor-not-allowed disabled:text-fg-disabled',
+        'inline-flex min-h-11 min-w-11 items-center justify-center transition-[color,background-color,transform] duration-150 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:text-fg-disabled motion-reduce:transform-none',
         SIZES[size],
         VARIANTS[variant],
         active && variant === 'ghost' && 'bg-brand-subtle text-fg-brand',

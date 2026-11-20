@@ -81,7 +81,7 @@ export function PersonalAppearanceScreen() {
             <h1 className="text-heading font-bold text-fg-primary">ظاهر شخصی</h1>
           </header>
           <div className="rounded-xl border border-secondary bg-surface p-4">
-            <ThemePicker section="mode" className="w-full p-0" />
+            <ThemePicker className="w-full p-0" />
           </div>
         </div>
       </div>

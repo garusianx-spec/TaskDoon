@@ -34,7 +34,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#FFFFFF' },
-    { media: '(prefers-color-scheme: dark)', color: '#0C111D' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
   ],
 };
 
@@ -49,7 +49,7 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
     <html lang="fa" dir="rtl" data-source={DATA_SOURCE} suppressHydrationWarning>
       <head>
         {/*
-          Applies data-theme / data-accent before first paint so a hard navigation never
+          Applies data-theme before first paint so a hard navigation never
           flashes the default palette. Runs ahead of hydration; ThemeProvider adopts it.
         */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />

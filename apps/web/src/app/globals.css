@@ -21,8 +21,11 @@
     @apply bg-canvas font-sans text-fg-primary antialiased;
     font-size: 0.875rem;
     font-weight: 400;
+    line-height: 1.75;
     /* ss01 renders the Persian four/five/six variants; applied document-wide. */
-    font-feature-settings: 'ss01' 1;
+    font-feature-settings:
+      'ss01' 1,
+      'ss02' 1;
     text-rendering: optimizeLegibility;
   }
 
@@ -33,13 +36,46 @@
   }
 
   ::selection {
-    background-color: rgb(var(--brand-200));
-    color: rgb(var(--brand-900));
+    background-color: rgb(var(--brand-solid) / 0.25);
+    color: inherit;
   }
 
   [data-theme='dark'] ::selection {
-    background-color: rgb(var(--brand-800));
-    color: rgb(var(--brand-25));
+    background-color: rgb(var(--brand-solid) / 0.25);
+    color: inherit;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    line-height: 1.6;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  button,
+  [role='tab'],
+  [role='button'],
+  nav a,
+  summary {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  body,
+  header,
+  aside,
+  main,
+  section,
+  dialog {
+    transition:
+      background-color 200ms ease,
+      color 200ms ease,
+      border-color 200ms ease;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--gray-400)) transparent;
   }
 
   /* Scrollbars follow the surface tokens in both modes. */

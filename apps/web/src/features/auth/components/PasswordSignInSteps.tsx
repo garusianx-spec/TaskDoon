@@ -50,13 +50,13 @@ export function PasswordSignInStep({ flow }: { readonly flow: SignInFlow }) {
             hint="با صفر آغاز کنید یا شماره را با کد ۹۸+ وارد کنید."
             iconEnd={
               <bdi className="text-caption text-fg-secondary" dir="ltr">
-                +98
+                +۹۸
               </bdi>
             }
             inputMode="tel"
             autoComplete="username"
             dir="ltr"
-            placeholder="۰۹۱۲ ۱۲۳ ۴۵۶۷"
+            placeholder="۰۹۱۲ ۳۴۵ ۶۷۸۹"
             value={phone}
             onChange={(event) => {
               setPhone(event.target.value);
@@ -120,13 +120,13 @@ export function ForgotPasswordStep({ flow }: { readonly flow: SignInFlow }) {
             hint="با صفر آغاز کنید یا شماره را با کد ۹۸+ وارد کنید."
             iconEnd={
               <bdi className="text-caption text-fg-secondary" dir="ltr">
-                +98
+                +۹۸
               </bdi>
             }
             inputMode="tel"
             autoComplete="tel"
             dir="ltr"
-            placeholder="۰۹۱۲ ۱۲۳ ۴۵۶۷"
+            placeholder="۰۹۱۲ ۳۴۵ ۶۷۸۹"
             value={phone}
             onChange={(event) => {
               setPhone(event.target.value);
