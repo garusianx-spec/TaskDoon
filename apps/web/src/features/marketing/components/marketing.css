@@ -1249,3 +1249,65 @@
     gap: 12px;
   }
 }
+
+/* e-NAMAD Trust Badge - Dark Obsidian Glass */
+.enamad-badge-wrapper {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.enamad-card {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 88px !important;
+  height: 88px !important;
+  min-width: 88px !important;
+  min-height: 88px !important;
+  background: rgba(18, 24, 38, 0.75) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  text-decoration: none !important;
+}
+.enamad-card:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(76, 141, 246, 0.45) !important;
+  box-shadow: 0 8px 24px -4px rgba(76, 141, 246, 0.25) !important;
+}
+.enamad-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.enamad-info-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgb(var(--fg-primary));
+}
+.enamad-info-desc {
+  font-size: 12px;
+  color: rgb(var(--fg-secondary));
+}
+.enamad-info-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgb(var(--brand-solid-hover));
+  margin-top: 2px;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.enamad-info-link:hover {
+  text-decoration: underline;
+  color: rgb(var(--brand-300));
+}

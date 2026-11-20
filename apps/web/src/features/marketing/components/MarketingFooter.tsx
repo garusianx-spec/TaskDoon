@@ -1,4 +1,4 @@
-import { ArrowLeftIcon } from '@/components/icons';
+import { ArrowLeftIcon, ShieldIcon } from '@/components/icons';
 import { MarketingLogo } from '@/features/marketing/components/MarketingLogo';
 import type { SiteLink as SiteLinkType } from '@taskin/contracts';
 import { asText, siteLinks } from '@/lib/site-utils';
@@ -43,28 +43,45 @@ export function MarketingFooter({
                 ))}
               </nav>
             )}
-            <a
-              className="marketing-trust-link"
-              href="https://trustseal.enamad.ir/?id=8460779&Code=Mz1009wLpLpP4iuT8MT16KyhWiAeLDSj"
-              referrerPolicy="origin"
-              target="_blank"
-              rel="noopener"
-              title="استعلام نماد اعتماد الکترونیکی ۵ ستاره تسک‌دون در سامانه اینماد"
-              aria-label="نماد اعتماد الکترونیکی (اینماد) تسک‌دون"
-            >
-              <img
-                src={ENAMAD_IMAGE_DATA}
-                alt="نماد اعتماد الکترونیکی ۵ ستاره تسک‌دون"
-                width={32}
-                height={32}
-                className="shrink-0 object-contain"
-              />
-              <span>
-                <strong>استعلام نماد اعتماد</strong>
-                <small>مشاهده در سامانهٔ اینماد (پنجرهٔ تازه)</small>
-              </span>
-              <ArrowLeftIcon size={16} />
-            </a>
+            <section aria-label="نمادهای اعتماد و مجوزها" className="enamad-badge-wrapper">
+              <a
+                href="https://trustseal.enamad.ir/?id=8460779&Code=Mz1009wLpLpP4iuT8MT16KyhWiAeLDSj"
+                referrerPolicy="origin"
+                target="_blank"
+                rel="noopener"
+                title="استعلام نماد اعتماد الکترونیکی ۵ ستاره تسک‌دون در سامانه اینماد"
+                aria-label="نماد اعتماد الکترونیکی (اینماد) تسک‌دون"
+                className="enamad-card"
+              >
+                <img
+                  src={ENAMAD_IMAGE_DATA}
+                  alt="نماد اعتماد الکترونیکی ۵ ستاره تسک‌دون"
+                  width={72}
+                  height={72}
+                  className="object-contain"
+                />
+              </a>
+
+              <div className="enamad-info">
+                <div className="enamad-info-title">
+                  <ShieldIcon size={16} className="text-blue-400" />
+                  <span>نماد اعتماد الکترونیکی</span>
+                </div>
+                <span className="enamad-info-desc">
+                  احراز هویت و صلاحیت کسب‌وکار اینترنتی
+                </span>
+                <a
+                  href="https://trustseal.enamad.ir/?id=8460779&Code=Mz1009wLpLpP4iuT8MT16KyhWiAeLDSj"
+                  target="_blank"
+                  rel="noopener"
+                  referrerPolicy="origin"
+                  className="enamad-info-link"
+                >
+                  <span>استعلام در سامانه اینماد</span>
+                  <ArrowLeftIcon size={12} />
+                </a>
+              </div>
+            </section>
           </div>
           <div className="home-footer-columns">
             {[
