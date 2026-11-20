@@ -1274,6 +1274,13 @@
   gap: 16px;
   flex-wrap: wrap;
 }
+.enamad-badge-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+  color: inherit;
+}
 .enamad-card {
   display: flex !important;
   align-items: center !important;
@@ -1291,7 +1298,7 @@
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   text-decoration: none !important;
 }
-.enamad-card:hover {
+.enamad-badge-link:hover .enamad-card {
   transform: translateY(-2px) !important;
   border-color: rgba(76, 141, 246, 0.45) !important;
   box-shadow: 0 8px 24px -4px rgba(76, 141, 246, 0.25) !important;
@@ -1323,7 +1330,7 @@
   text-decoration: none;
   transition: color 0.15s ease;
 }
-.enamad-info-link:hover {
+.enamad-badge-link:hover .enamad-info-link {
   text-decoration: underline;
   color: rgb(var(--brand-300));
 }
