@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const SECTIONS = [
+  { href: '/admin/coupons', label: 'کدهای تخفیف و قیمت‌ها', icon: ChartIcon },
   { href: '/admin/overview', label: 'نمای کلی پلتفرم', icon: ChartIcon },
   { href: '/admin/broadcasts', label: 'اطلاعیه‌های سراسری', icon: NotificationIcon },
   { href: '/admin/users', label: 'کاربران و سشن‌ها', icon: PeopleIcon },
@@ -56,29 +57,30 @@ export function AdminShell({ children }: { readonly children: ReactNode }) {
           aria-label="بخش‌های پنل مدیریت"
           className="-mx-1 flex gap-1 overflow-x-auto lg:mx-0 lg:flex-col lg:overflow-visible"
         >
-          {SECTIONS.filter((section) => section.href !== '/admin/roles' || admin.role === 'SUPER_ADMIN').map(
-            ({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
-              // The CMS layout imports public preview CSS. Load it when an admin opens the CMS.
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  prefetch={href === '/admin/site' ? false : undefined}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-body-sm font-medium transition-colors',
-                    active
-                      ? 'bg-brand-subtle text-fg-brand'
-                      : 'text-fg-secondary hover:bg-hover hover:text-fg-primary',
-                  )}
-                >
-                  <Icon size={18} />
-                  {label}
-                </Link>
-              );
-            },
-          )}
+          {SECTIONS.filter(
+            (section) =>
+              !['/admin/roles', '/admin/coupons'].includes(section.href) || admin.role === 'SUPER_ADMIN',
+          ).map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            // The CMS layout imports public preview CSS. Load it when an admin opens the CMS.
+            return (
+              <Link
+                key={href}
+                href={href}
+                prefetch={href === '/admin/site' ? false : undefined}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-body-sm font-medium transition-colors',
+                  active
+                    ? 'bg-brand-subtle text-fg-brand'
+                    : 'text-fg-secondary hover:bg-hover hover:text-fg-primary',
+                )}
+              >
+                <Icon size={18} />
+                {label}
+              </Link>
+            );
+          })}
         </nav>
         <div className="hidden flex-col gap-2 border-t border-secondary pt-4 lg:mt-auto lg:flex">
           <p className="text-body-sm font-semibold text-fg-primary">{admin.fullName}</p>

@@ -105,6 +105,22 @@ calendar_events.title text not null
 calendar_events.updated_at timestamp with time zone not null default now()
 calendar_events.version integer not null default 1
 calendar_events.workspace_id uuid not null
+checkout_orders.command_id uuid not null
+checkout_orders.coupon_code text not null default ''::text
+checkout_orders.coupon_id uuid
+checkout_orders.created_at timestamp with time zone not null default now()
+checkout_orders.discount bigint not null
+checkout_orders.id uuid not null default app.uuidv7()
+checkout_orders.paid_at timestamp with time zone
+checkout_orders.payment_reference text
+checkout_orders.period billing_period not null
+checkout_orders.plan_id text not null
+checkout_orders.reservation_expires_at timestamp with time zone not null
+checkout_orders.status checkout_status not null default 'pending'::checkout_status
+checkout_orders.subtotal bigint not null
+checkout_orders.total bigint not null
+checkout_orders.user_id uuid not null
+checkout_orders.workspace_id uuid not null
 conversation_members.conversation_id uuid not null
 conversation_members.hidden_at timestamp with time zone
 conversation_members.joined_at timestamp with time zone not null default now()
@@ -134,6 +150,25 @@ conversations.tone avatar_tone not null default 'brand'::avatar_tone
 conversations.topic text not null default ''::text
 conversations.updated_at timestamp with time zone not null default now()
 conversations.workspace_id uuid not null
+coupon_plans.coupon_id uuid not null
+coupon_plans.plan_id text not null
+coupon_reservations.consumed_at timestamp with time zone
+coupon_reservations.coupon_id uuid not null
+coupon_reservations.expires_at timestamp with time zone not null
+coupon_reservations.order_id uuid not null
+coupons.code text not null
+coupons.created_at timestamp with time zone not null default now()
+coupons.created_by uuid not null
+coupons.discount_type coupon_discount_type not null
+coupons.discount_value bigint not null
+coupons.expires_at timestamp with time zone
+coupons.id uuid not null default app.uuidv7()
+coupons.is_active boolean not null default true
+coupons.max_discount_amount bigint
+coupons.min_order_amount bigint not null default 0
+coupons.updated_at timestamp with time zone not null default now()
+coupons.usage_limit integer
+coupons.used_count integer not null default 0
 departments.created_at timestamp with time zone not null default now()
 departments.id uuid not null default app.uuidv7()
 departments.name text not null
@@ -266,6 +301,12 @@ password_reset_tokens.id uuid not null default app.uuidv7()
 password_reset_tokens.token_hash bytea not null
 password_reset_tokens.used_at timestamp with time zone
 password_reset_tokens.user_id uuid not null
+plan_prices.amount_toman bigint not null
+plan_prices.is_active boolean not null default true
+plan_prices.period billing_period not null
+plan_prices.plan_id text not null
+plan_prices.updated_at timestamp with time zone not null default now()
+plan_prices.updated_by uuid not null
 plans.created_at timestamp with time zone not null default now()
 plans.id text not null
 plans.limits jsonb not null
@@ -665,6 +706,28 @@ calendar_events calendar_events_version_not_null: NOT NULL version
 calendar_events calendar_events_workspace_id_not_null: NOT NULL workspace_id
 calendar_events calendar_events_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 calendar_events calendar_events_ws_id_uq: UNIQUE (workspace_id, id)
+checkout_orders checkout_orders_amount_ck: CHECK ((((subtotal >= 0) AND (subtotal <= '1000000000000'::bigint)) AND ((discount >= 0) AND (discount <= subtotal)) AND (total = (subtotal - discount))))
+checkout_orders checkout_orders_command_id_not_null: NOT NULL command_id
+checkout_orders checkout_orders_command_uq: UNIQUE (workspace_id, user_id, command_id)
+checkout_orders checkout_orders_coupon_code_not_null: NOT NULL coupon_code
+checkout_orders checkout_orders_coupon_id_coupons_id_fk: FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE RESTRICT
+checkout_orders checkout_orders_created_at_not_null: NOT NULL created_at
+checkout_orders checkout_orders_discount_not_null: NOT NULL discount
+checkout_orders checkout_orders_id_not_null: NOT NULL id
+checkout_orders checkout_orders_paymentReference_unique: UNIQUE (payment_reference)
+checkout_orders checkout_orders_payment_ck: CHECK ((((status = 'pending'::checkout_status) AND (payment_reference IS NULL) AND (paid_at IS NULL)) OR ((status = 'paid'::checkout_status) AND (payment_reference IS NOT NULL) AND (paid_at IS NOT NULL))))
+checkout_orders checkout_orders_period_not_null: NOT NULL period
+checkout_orders checkout_orders_pkey: PRIMARY KEY (id)
+checkout_orders checkout_orders_plan_id_not_null: NOT NULL plan_id
+checkout_orders checkout_orders_plan_id_period_plan_prices_plan_id_period_fk: FOREIGN KEY (plan_id, period) REFERENCES plan_prices(plan_id, period) ON DELETE RESTRICT
+checkout_orders checkout_orders_reservation_expires_at_not_null: NOT NULL reservation_expires_at
+checkout_orders checkout_orders_status_not_null: NOT NULL status
+checkout_orders checkout_orders_subtotal_not_null: NOT NULL subtotal
+checkout_orders checkout_orders_total_not_null: NOT NULL total
+checkout_orders checkout_orders_user_id_not_null: NOT NULL user_id
+checkout_orders checkout_orders_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+checkout_orders checkout_orders_workspace_id_not_null: NOT NULL workspace_id
+checkout_orders checkout_orders_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT
 conversation_members conversation_members_conversation_fk: FOREIGN KEY (workspace_id, conversation_id) REFERENCES conversations(workspace_id, id) ON DELETE CASCADE
 conversation_members conversation_members_conversation_id_not_null: NOT NULL conversation_id
 conversation_members conversation_members_joined_at_not_null: NOT NULL joined_at
@@ -698,6 +761,34 @@ conversations conversations_updated_at_not_null: NOT NULL updated_at
 conversations conversations_workspace_id_not_null: NOT NULL workspace_id
 conversations conversations_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 conversations conversations_ws_id_uq: UNIQUE (workspace_id, id)
+coupon_plans coupon_plans_coupon_id_coupons_id_fk: FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE RESTRICT
+coupon_plans coupon_plans_coupon_id_not_null: NOT NULL coupon_id
+coupon_plans coupon_plans_coupon_id_plan_id_pk: PRIMARY KEY (coupon_id, plan_id)
+coupon_plans coupon_plans_plan_id_not_null: NOT NULL plan_id
+coupon_plans coupon_plans_plan_id_plans_id_fk: FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE RESTRICT
+coupon_reservations coupon_reservations_coupon_id_coupons_id_fk: FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE RESTRICT
+coupon_reservations coupon_reservations_coupon_id_not_null: NOT NULL coupon_id
+coupon_reservations coupon_reservations_expires_at_not_null: NOT NULL expires_at
+coupon_reservations coupon_reservations_order_id_checkout_orders_id_fk: FOREIGN KEY (order_id) REFERENCES checkout_orders(id) ON DELETE RESTRICT
+coupon_reservations coupon_reservations_order_id_not_null: NOT NULL order_id
+coupon_reservations coupon_reservations_pkey: PRIMARY KEY (order_id)
+coupons coupons_amount_ck: CHECK ((((min_order_amount >= 0) AND (min_order_amount <= '1000000000000'::bigint)) AND ((max_discount_amount IS NULL) OR ((discount_type = 'PERCENTAGE'::coupon_discount_type) AND ((max_discount_amount >= 0) AND (max_discount_amount <= '1000000000000'::bigint))))))
+coupons coupons_code_ck: CHECK ((code ~ '^[A-Z0-9]{3,40}$'::text))
+coupons coupons_code_not_null: NOT NULL code
+coupons coupons_code_unique: UNIQUE (code)
+coupons coupons_created_at_not_null: NOT NULL created_at
+coupons coupons_created_by_not_null: NOT NULL created_by
+coupons coupons_created_by_users_id_fk: FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+coupons coupons_discount_type_not_null: NOT NULL discount_type
+coupons coupons_discount_value_not_null: NOT NULL discount_value
+coupons coupons_id_not_null: NOT NULL id
+coupons coupons_is_active_not_null: NOT NULL is_active
+coupons coupons_min_order_amount_not_null: NOT NULL min_order_amount
+coupons coupons_pkey: PRIMARY KEY (id)
+coupons coupons_updated_at_not_null: NOT NULL updated_at
+coupons coupons_usage_ck: CHECK (((used_count >= 0) AND ((usage_limit IS NULL) OR ((usage_limit > 0) AND (used_count <= usage_limit)))))
+coupons coupons_used_count_not_null: NOT NULL used_count
+coupons coupons_value_ck: CHECK ((((discount_value >= 1) AND (discount_value <= '1000000000000'::bigint)) AND ((discount_type <> 'PERCENTAGE'::coupon_discount_type) OR (discount_value <= 100))))
 departments departments_created_at_not_null: NOT NULL created_at
 departments departments_id_not_null: NOT NULL id
 departments departments_name_len: CHECK (((char_length(name) >= 1) AND (char_length(name) <= 60)))
@@ -871,6 +962,16 @@ password_reset_tokens password_reset_tokens_pkey: PRIMARY KEY (id)
 password_reset_tokens password_reset_tokens_token_hash_not_null: NOT NULL token_hash
 password_reset_tokens password_reset_tokens_user_id_not_null: NOT NULL user_id
 password_reset_tokens password_reset_tokens_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+plan_prices plan_prices_amount_ck: CHECK (((amount_toman >= 0) AND (amount_toman <= '1000000000000'::bigint)))
+plan_prices plan_prices_amount_toman_not_null: NOT NULL amount_toman
+plan_prices plan_prices_is_active_not_null: NOT NULL is_active
+plan_prices plan_prices_period_not_null: NOT NULL period
+plan_prices plan_prices_plan_id_not_null: NOT NULL plan_id
+plan_prices plan_prices_plan_id_period_pk: PRIMARY KEY (plan_id, period)
+plan_prices plan_prices_plan_id_plans_id_fk: FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE RESTRICT
+plan_prices plan_prices_updated_at_not_null: NOT NULL updated_at
+plan_prices plan_prices_updated_by_not_null: NOT NULL updated_by
+plan_prices plan_prices_updated_by_users_id_fk: FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE RESTRICT
 plans plans_created_at_not_null: NOT NULL created_at
 plans plans_id_not_null: NOT NULL id
 plans plans_limits_not_null: NOT NULL limits
@@ -1283,6 +1384,11 @@ calendar_events CREATE INDEX calendar_events_start_date_idx ON public.calendar_e
 calendar_events CREATE INDEX calendar_events_starts_idx ON public.calendar_events USING btree (workspace_id, starts_at) WHERE (deleted_at IS NULL)
 calendar_events CREATE UNIQUE INDEX calendar_events_pkey ON public.calendar_events USING btree (id)
 calendar_events CREATE UNIQUE INDEX calendar_events_ws_id_uq ON public.calendar_events USING btree (workspace_id, id)
+checkout_orders CREATE INDEX checkout_orders_reservations_idx ON public.checkout_orders USING btree (coupon_id, reservation_expires_at) WHERE (status = 'pending'::checkout_status)
+checkout_orders CREATE INDEX checkout_orders_workspace_idx ON public.checkout_orders USING btree (workspace_id, created_at DESC NULLS LAST)
+checkout_orders CREATE UNIQUE INDEX "checkout_orders_paymentReference_unique" ON public.checkout_orders USING btree (payment_reference)
+checkout_orders CREATE UNIQUE INDEX checkout_orders_command_uq ON public.checkout_orders USING btree (workspace_id, user_id, command_id)
+checkout_orders CREATE UNIQUE INDEX checkout_orders_pkey ON public.checkout_orders USING btree (id)
 conversation_members CREATE INDEX conversation_members_user_idx ON public.conversation_members USING btree (workspace_id, user_id) WHERE (left_at IS NULL)
 conversation_members CREATE UNIQUE INDEX conversation_members_pk ON public.conversation_members USING btree (conversation_id, user_id)
 conversations CREATE INDEX conversations_project_idx ON public.conversations USING btree (workspace_id, project_id) WHERE (project_id IS NOT NULL)
@@ -1291,6 +1397,12 @@ conversations CREATE UNIQUE INDEX conversations_direct_uq ON public.conversation
 conversations CREATE UNIQUE INDEX conversations_pkey ON public.conversations USING btree (id)
 conversations CREATE UNIQUE INDEX conversations_project_uq ON public.conversations USING btree (workspace_id, project_id) WHERE (project_id IS NOT NULL)
 conversations CREATE UNIQUE INDEX conversations_ws_id_uq ON public.conversations USING btree (workspace_id, id)
+coupon_plans CREATE UNIQUE INDEX coupon_plans_coupon_id_plan_id_pk ON public.coupon_plans USING btree (coupon_id, plan_id)
+coupon_reservations CREATE INDEX coupon_reservations_available_idx ON public.coupon_reservations USING btree (coupon_id, expires_at) WHERE (consumed_at IS NULL)
+coupon_reservations CREATE UNIQUE INDEX coupon_reservations_pkey ON public.coupon_reservations USING btree (order_id)
+coupons CREATE INDEX coupons_created_idx ON public.coupons USING btree (created_at DESC NULLS LAST, id DESC NULLS LAST)
+coupons CREATE UNIQUE INDEX coupons_code_unique ON public.coupons USING btree (code)
+coupons CREATE UNIQUE INDEX coupons_pkey ON public.coupons USING btree (id)
 departments CREATE UNIQUE INDEX departments_pkey ON public.departments USING btree (id)
 departments CREATE UNIQUE INDEX departments_ws_id_uq ON public.departments USING btree (workspace_id, id)
 departments CREATE UNIQUE INDEX departments_ws_name_uq ON public.departments USING btree (workspace_id, lower(name))
@@ -1338,6 +1450,7 @@ outbox_events CREATE UNIQUE INDEX outbox_events_pkey ON public.outbox_events USI
 password_reset_tokens CREATE INDEX password_reset_tokens_user_idx ON public.password_reset_tokens USING btree (user_id) WHERE (used_at IS NULL)
 password_reset_tokens CREATE UNIQUE INDEX password_reset_tokens_hash_uq ON public.password_reset_tokens USING btree (token_hash)
 password_reset_tokens CREATE UNIQUE INDEX password_reset_tokens_pkey ON public.password_reset_tokens USING btree (id)
+plan_prices CREATE UNIQUE INDEX plan_prices_plan_id_period_pk ON public.plan_prices USING btree (plan_id, period)
 plans CREATE UNIQUE INDEX plans_pkey ON public.plans USING btree (id)
 platform_audit_logs CREATE INDEX platform_audit_logs_admin_idx ON public.platform_audit_logs USING btree (admin_id, created_at DESC NULLS LAST)
 platform_audit_logs CREATE INDEX platform_audit_logs_target_idx ON public.platform_audit_logs USING btree (target_user_id, created_at DESC NULLS LAST) WHERE (target_user_id IS NOT NULL)
@@ -1440,8 +1553,12 @@ auto_reply_log enabled=true forced=true
 board_columns enabled=true forced=true
 calendar_event_attendees enabled=true forced=true
 calendar_events enabled=true forced=true
+checkout_orders enabled=true forced=true
 conversation_members enabled=true forced=true
 conversations enabled=true forced=true
+coupon_plans enabled=false forced=false
+coupon_reservations enabled=false forced=false
+coupons enabled=false forced=false
 departments enabled=true forced=true
 idempotency_keys enabled=false forced=false
 invitations enabled=true forced=true
@@ -1456,6 +1573,7 @@ notifications enabled=true forced=true
 otp_challenges enabled=false forced=false
 outbox_events enabled=false forced=false
 password_reset_tokens enabled=false forced=false
+plan_prices enabled=false forced=false
 plans enabled=false forced=false
 platform_audit_logs enabled=false forced=false
 project_departments enabled=true forced=true
@@ -1497,6 +1615,7 @@ auto_reply_log auto_reply_log_tenant ALL using((workspace_id = ( SELECT app.curr
 board_columns board_columns_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 calendar_event_attendees calendar_event_attendees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 calendar_events calendar_events_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+checkout_orders checkout_orders_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 conversation_members conversation_members_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 conversations conversations_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 departments departments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
@@ -1557,11 +1676,13 @@ board_columns board_columns_categories -> check_workflow_categories
 board_columns board_columns_touch -> touch_updated_at
 calendar_events calendar_events_touch -> touch_updated_at
 conversations conversations_touch -> touch_updated_at
+coupons coupons_touch_updated_at -> touch_updated_at
 departments departments_touch -> touch_updated_at
 idempotency_keys idempotency_keys_touch -> touch_updated_at
 member_working_hours member_working_hours_touch -> touch_updated_at
 notes notes_touch -> touch_updated_at
 outbox_events outbox_events_notify -> notify_outbox
+plan_prices plan_prices_touch_updated_at -> touch_updated_at
 projects projects_sync_primary_department -> sync_project_primary_department
 projects projects_touch -> touch_updated_at
 role_permissions role_permissions_protect_locked -> protect_locked_role_permissions
@@ -1617,8 +1738,12 @@ auto_reply_log DELETE,INSERT,SELECT,UPDATE
 board_columns DELETE,INSERT,SELECT,UPDATE
 calendar_event_attendees DELETE,INSERT,SELECT,UPDATE
 calendar_events DELETE,INSERT,SELECT,UPDATE
+checkout_orders INSERT,SELECT,UPDATE
 conversation_members DELETE,INSERT,SELECT,UPDATE
 conversations DELETE,INSERT,SELECT,UPDATE
+coupon_plans INSERT,SELECT,UPDATE
+coupon_reservations INSERT,SELECT,UPDATE
+coupons INSERT,SELECT,UPDATE
 departments DELETE,INSERT,SELECT,UPDATE
 idempotency_keys DELETE,INSERT,SELECT,UPDATE
 invitations DELETE,INSERT,SELECT,UPDATE
@@ -1633,6 +1758,7 @@ notifications DELETE,INSERT,SELECT,UPDATE
 otp_challenges DELETE,INSERT,SELECT,UPDATE
 outbox_events DELETE,INSERT,SELECT,UPDATE
 password_reset_tokens DELETE,INSERT,SELECT,UPDATE
+plan_prices INSERT,SELECT,UPDATE
 plans SELECT
 platform_audit_logs INSERT,SELECT
 project_departments DELETE,INSERT,SELECT,UPDATE

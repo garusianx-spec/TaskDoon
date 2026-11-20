@@ -1,3 +1,10 @@
+import { CouponsService } from '../coupons/coupons.service.js';
+import {
+  AdminCouponsController,
+  AdminPlanPricesController,
+  CouponsController,
+  CheckoutOrdersController,
+} from '../coupons/coupons.controller.js';
 import { AdminRolesController } from './admin-roles.controller.js';
 import { AdminRolesService } from './admin-roles.service.js';
 import { PlatformRoleGuard } from './admin-roles.guard.js';
@@ -28,14 +35,20 @@ import { PlatformWorkspacesService } from './platform-workspaces.service.js';
  * the same global guards as every other route; nothing else in the API depends on it.
  */
 @Module({
+  exports: [CouponsService],
   imports: [DomainModule],
   controllers: [
+    AdminCouponsController,
+    AdminPlanPricesController,
+    CouponsController,
+    CheckoutOrdersController,
     AdminRolesController,
     PlatformAdminProbeController,
     PlatformAdminController,
     PasswordResetController,
   ],
   providers: [
+    CouponsService,
     AdminRolesService,
     PlatformRoleGuard,
     PlatformBroadcastsService,

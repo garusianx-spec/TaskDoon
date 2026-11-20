@@ -211,6 +211,20 @@
       "when": 1794528000000,
       "tag": "0029_invitation_sms_attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795170441092,
+      "tag": "0030_coupons_checkout",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795170498310,
+      "tag": "0031_coupons_checkout_security",
+      "breakpoints": true
     }
   ]
 }

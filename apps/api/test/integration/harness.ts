@@ -93,8 +93,11 @@ export function invitationToken(link: string | undefined): string {
  * Boots the full app (`APP_ROLE=all`, relay and workers off so tests drive them) against a fresh
  * clone of the migrated template database and a private Redis prefix.
  */
-export async function createTestApp(overrides: Record<string, string> = {}): Promise<TestApp> {
-  const database = `taskin_test_${randomBytes(5).toString('hex')}`;
+export async function createTestApp(
+  overrides: Record<string, string> = {},
+  options: { preserveFixtures?: boolean } = {},
+): Promise<TestApp> {
+  const database = `${options.preserveFixtures ? 'taskin_coupon_qa' : 'taskin_test'}_${randomBytes(5).toString('hex')}`;
   const creator = new pg.Client({ connectionString: adminUrl() });
   await creator.connect();
   await creator.query(`create database ${database} template ${inject('templateDb')} owner taskin_migrator`);
@@ -200,6 +203,10 @@ export async function createTestApp(overrides: Record<string, string> = {}): Pro
     async close() {
       await app.close();
       await Promise.allSettled([admin.end(), appPool.end()]);
+      if (options.preserveFixtures) {
+        await redis.quit();
+        return;
+      }
       const keys = await redis.keys(`${prefix}:*`);
       if (keys.length > 0) await redis.del(...keys);
       await redis.quit();
