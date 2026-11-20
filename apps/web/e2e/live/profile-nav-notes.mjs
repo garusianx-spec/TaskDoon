@@ -102,7 +102,7 @@ export async function verifyProfileNavNotes(page, { runId }) {
     await editor.getByRole('combobox', { name: 'دسته', exact: true }).click();
     await page.getByRole('option', { name: 'کاری', exact: true }).click();
     await editor.getByRole('textbox', { name: 'متن یادداشت', exact: true }).fill(body);
-    await editor.getByRole('button', { name: 'ذخیره یادداشت', exact: true }).click();
+    await editor.getByRole('button', { name: 'ذخیره و ایجاد یادداشت دیگر', exact: true }).click();
     check(
       await eventually(async () => (await editor.getAttribute('aria-busy')) === 'true'),
       'explicit Save waits for the pending create before resetting',
@@ -198,7 +198,7 @@ export async function verifyProfileNavNotes(page, { runId }) {
         response.request().method() === 'PATCH' && /\/notes\//.test(new URL(response.url()).pathname),
     )
     .then((response) => response.json());
-  await editor.getByRole('button', { name: 'ذخیره یادداشت', exact: true }).click();
+  await editor.getByRole('button', { name: 'ذخیره و ایجاد یادداشت دیگر', exact: true }).click();
   const customNote = await customSave;
   check(
     customNote.categoryId === customCategory.id && customNote.body === 'محتوای دفتر سفارشی',

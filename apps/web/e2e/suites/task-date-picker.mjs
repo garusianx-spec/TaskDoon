@@ -150,6 +150,11 @@ try {
       );
     }
     await composer.getByRole('button', { name: 'انصراف', exact: true }).click();
+    const discard = composer.getByRole('button', { name: 'کنار گذاشتن تغییرات', exact: true });
+    if (await discard.isVisible().catch(() => false)) {
+      await discard.click();
+    }
+    await composer.waitFor({ state: 'hidden' });
   }
 
   // Reposition an already-open left-column calendar after viewport changes.

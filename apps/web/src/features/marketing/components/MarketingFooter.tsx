@@ -52,34 +52,30 @@ export function MarketingFooter({
                 rel="noopener"
                 title="استعلام نماد اعتماد الکترونیکی ۵ ستاره تسک‌دون در سامانه اینماد"
                 aria-label="نماد اعتماد الکترونیکی (اینماد) تسک‌دون"
-                className="enamad-card"
+                className="enamad-badge-link"
               >
-                <img
-                  src={ENAMAD_IMAGE_DATA}
-                  alt="نماد اعتماد الکترونیکی ۵ ستاره تسک‌دون"
-                  width={72}
-                  height={72}
-                  className="object-contain"
-                />
-              </a>
-
-              <div className="enamad-info">
-                <div className="enamad-info-title">
-                  <ShieldIcon size={16} className="text-blue-400" />
-                  <span>نماد اعتماد الکترونیکی</span>
+                <div className="enamad-card">
+                  <img
+                    src={ENAMAD_IMAGE_DATA}
+                    alt="نماد اعتماد الکترونیکی ۵ ستاره تسک‌دون"
+                    width={72}
+                    height={72}
+                    className="object-contain"
+                  />
                 </div>
-                <span className="enamad-info-desc">احراز هویت و صلاحیت کسب‌وکار اینترنتی</span>
-                <a
-                  href="https://trustseal.enamad.ir/?id=8460779&Code=Mz1009wLpLpP4iuT8MT16KyhWiAeLDSj"
-                  target="_blank"
-                  rel="noopener"
-                  referrerPolicy="origin"
-                  className="enamad-info-link"
-                >
-                  <span>استعلام در سامانه اینماد</span>
-                  <ArrowLeftIcon size={12} />
-                </a>
-              </div>
+
+                <div className="enamad-info">
+                  <div className="enamad-info-title">
+                    <ShieldIcon size={16} className="text-blue-400" />
+                    <span>نماد اعتماد الکترونیکی</span>
+                  </div>
+                  <span className="enamad-info-desc">احراز هویت و صلاحیت کسب‌وکار اینترنتی</span>
+                  <div className="enamad-info-link">
+                    <span>استعلام در سامانه اینماد</span>
+                    <ArrowLeftIcon size={12} />
+                  </div>
+                </div>
+              </a>
             </section>
           </div>
           <div className="home-footer-columns">
