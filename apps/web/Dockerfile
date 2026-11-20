@@ -15,10 +15,10 @@ RUN mkdir -p /runtime-root/app /runtime-root/tmp \
 FROM base AS runtime-binaries
 RUN apk add --no-cache binutils=2.45.1-r1 gcc musl-dev
 COPY apps/web/runner.c /tmp/runner.c
-RUN gcc -O2 -static /tmp/runner.c -o /runtime-root/usr/local/bin/web-runner \
-    && strip --strip-unneeded /runtime-root/usr/local/bin/web-runner \
-    && mkdir -p /runtime-root/usr/local/bin /runtime-root/usr/local/share/licenses/node \
+RUN mkdir -p /runtime-root/usr/local/bin /runtime-root/usr/local/share/licenses/node \
         /runtime-root/usr/lib /runtime-root/lib /runtime-root/etc/ssl/certs \
+    && gcc -O2 -static /tmp/runner.c -o /runtime-root/usr/local/bin/web-runner \
+    && strip --strip-unneeded /runtime-root/usr/local/bin/web-runner \
     && cp /usr/local/bin/node /runtime-root/usr/local/bin/node \
     && strip --strip-unneeded /runtime-root/usr/local/bin/node \
     && cp -a /lib/*musl*.so.1 /runtime-root/lib/ \
