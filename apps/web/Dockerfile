@@ -13,7 +13,10 @@ RUN mkdir -p /runtime-root/app /runtime-root/tmp \
 # Strip only non-runtime ELF symbols in a build stage. The exact package pin
 # keeps this preparation reproducible; no binutils/APK files enter the runner.
 FROM base AS runtime-binaries
-RUN apk add --no-cache binutils=2.45.1-r1 \
+RUN apk add --no-cache binutils=2.45.1-r1 gcc musl-dev
+COPY apps/web/runner.c /tmp/runner.c
+RUN gcc -O2 -static /tmp/runner.c -o /runtime-root/usr/local/bin/web-runner \
+    && strip --strip-unneeded /runtime-root/usr/local/bin/web-runner \
     && mkdir -p /runtime-root/usr/local/bin /runtime-root/usr/local/share/licenses/node \
         /runtime-root/usr/lib /runtime-root/lib /runtime-root/etc/ssl/certs \
     && cp /usr/local/bin/node /runtime-root/usr/local/bin/node \
@@ -94,9 +97,8 @@ WORKDIR /app
 COPY --from=runtime-artifacts --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/web/public ./apps/web/public
 COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
-COPY --chown=node:node apps/web/runner.js ./apps/web/runner.js
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD ["/usr/local/bin/node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-CMD ["/usr/local/bin/node", "apps/web/runner.js"]
+CMD ["/usr/local/bin/web-runner"]

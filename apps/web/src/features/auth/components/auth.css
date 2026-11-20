@@ -58,7 +58,7 @@
   line-height: 1.65;
 }
 .auth-form-heading p {
-  color: rgb(var(--fg-tertiary));
+  color: rgb(var(--fg-secondary));
   font-size: 14px;
   line-height: 2;
   margin-top: 12px;
