@@ -94,8 +94,9 @@ WORKDIR /app
 COPY --from=runtime-artifacts --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/web/public ./apps/web/public
 COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+COPY --chown=node:node apps/web/runner.js ./apps/web/runner.js
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD ["/usr/local/bin/node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-CMD ["/usr/local/bin/node", "apps/web/server.js"]
+CMD ["/usr/local/bin/node", "apps/web/runner.js"]
