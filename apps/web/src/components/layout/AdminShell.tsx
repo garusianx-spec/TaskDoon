@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const SECTIONS = [
+  { href: '/admin/tickets', label: 'درخواست‌های پشتیبانی', icon: MessagesIcon },
   { href: '/admin/coupons', label: 'کدهای تخفیف و قیمت‌ها', icon: ChartIcon },
   { href: '/admin/overview', label: 'نمای کلی پلتفرم', icon: ChartIcon },
   { href: '/admin/broadcasts', label: 'اطلاعیه‌های سراسری', icon: NotificationIcon },

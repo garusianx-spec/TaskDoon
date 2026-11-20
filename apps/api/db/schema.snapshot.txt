@@ -452,6 +452,48 @@ subtasks.task_id uuid not null
 subtasks.title text not null
 subtasks.updated_at timestamp with time zone not null default now()
 subtasks.workspace_id uuid not null
+support_messages.body text not null
+support_messages.command_hash text not null
+support_messages.command_id uuid not null
+support_messages.created_at timestamp with time zone not null default now()
+support_messages.id uuid not null default app.uuidv7()
+support_messages.is_internal boolean not null default false
+support_messages.public_seq integer
+support_messages.sender_id uuid not null
+support_messages.sender_type support_sender_type not null
+support_messages.ticket_id uuid not null
+support_tickets.agent_read_seq integer not null default 0
+support_tickets.assigned_admin_id uuid
+support_tickets.command_hash text not null
+support_tickets.command_id uuid not null
+support_tickets.created_at timestamp with time zone not null default now()
+support_tickets.department ticket_department not null
+support_tickets.id uuid not null default app.uuidv7()
+support_tickets.last_public_seq integer not null default 1
+support_tickets.priority ticket_priority not null
+support_tickets.reference_number bigint not null identity
+support_tickets.related_workspace_id uuid
+support_tickets.status ticket_status not null default 'OPEN'::ticket_status
+support_tickets.subject text not null
+support_tickets.updated_at timestamp with time zone not null default now()
+support_tickets.user_id uuid not null
+support_tickets.user_read_seq integer not null default 1
+support_tickets.version integer not null default 1
+support_tickets.workspace_name text not null
+support_uploads.command_hash text not null
+support_uploads.command_id uuid not null
+support_uploads.created_at timestamp with time zone not null default now()
+support_uploads.expires_at timestamp with time zone not null
+support_uploads.file_name text not null
+support_uploads.id uuid not null default app.uuidv7()
+support_uploads.message_id uuid
+support_uploads.mime_type text not null
+support_uploads.related_workspace_id uuid
+support_uploads.sender_type support_sender_type not null
+support_uploads.size_bytes bigint not null
+support_uploads.status support_upload_status not null default 'pending'::support_upload_status
+support_uploads.ticket_id uuid
+support_uploads.uploader_id uuid not null
 system_broadcasts.archived_at timestamp with time zone
 system_broadcasts.created_at timestamp with time zone not null default now()
 system_broadcasts.created_by uuid not null
@@ -1154,6 +1196,67 @@ subtasks subtasks_updated_at_not_null: NOT NULL updated_at
 subtasks subtasks_workspace_id_not_null: NOT NULL workspace_id
 subtasks subtasks_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 subtasks subtasks_ws_id_uq: UNIQUE (workspace_id, id)
+support_messages support_message_body_ck: CHECK (((char_length(btrim(body)) >= 1) AND (char_length(btrim(body)) <= 8000)))
+support_messages support_message_command_uq: UNIQUE (ticket_id, sender_id, command_id)
+support_messages support_message_parent_uq: UNIQUE (ticket_id, id)
+support_messages support_message_public_seq_uq: UNIQUE (ticket_id, public_seq)
+support_messages support_message_visibility_ck: CHECK (((is_internal AND (sender_type = 'AGENT'::support_sender_type) AND (public_seq IS NULL)) OR ((NOT is_internal) AND (public_seq IS NOT NULL) AND (public_seq > 0))))
+support_messages support_messages_body_not_null: NOT NULL body
+support_messages support_messages_command_hash_not_null: NOT NULL command_hash
+support_messages support_messages_command_id_not_null: NOT NULL command_id
+support_messages support_messages_created_at_not_null: NOT NULL created_at
+support_messages support_messages_id_not_null: NOT NULL id
+support_messages support_messages_is_internal_not_null: NOT NULL is_internal
+support_messages support_messages_pkey: PRIMARY KEY (id)
+support_messages support_messages_sender_id_not_null: NOT NULL sender_id
+support_messages support_messages_sender_id_users_id_fk: FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE RESTRICT
+support_messages support_messages_sender_type_not_null: NOT NULL sender_type
+support_messages support_messages_ticket_id_not_null: NOT NULL ticket_id
+support_messages support_messages_ticket_id_support_tickets_id_fk: FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE RESTRICT
+support_tickets support_ticket_command_uq: UNIQUE (user_id, command_id)
+support_tickets support_ticket_sequence_ck: CHECK (((version > 0) AND (last_public_seq > 0) AND ((user_read_seq >= 0) AND (user_read_seq <= last_public_seq)) AND ((agent_read_seq >= 0) AND (agent_read_seq <= last_public_seq))))
+support_tickets support_ticket_subject_ck: CHECK (((char_length(btrim(subject)) >= 3) AND (char_length(btrim(subject)) <= 160)))
+support_tickets support_tickets_agent_read_seq_not_null: NOT NULL agent_read_seq
+support_tickets support_tickets_assigned_admin_id_users_id_fk: FOREIGN KEY (assigned_admin_id) REFERENCES users(id) ON DELETE SET NULL
+support_tickets support_tickets_command_hash_not_null: NOT NULL command_hash
+support_tickets support_tickets_command_id_not_null: NOT NULL command_id
+support_tickets support_tickets_created_at_not_null: NOT NULL created_at
+support_tickets support_tickets_department_not_null: NOT NULL department
+support_tickets support_tickets_id_not_null: NOT NULL id
+support_tickets support_tickets_last_public_seq_not_null: NOT NULL last_public_seq
+support_tickets support_tickets_pkey: PRIMARY KEY (id)
+support_tickets support_tickets_priority_not_null: NOT NULL priority
+support_tickets support_tickets_referenceNumber_unique: UNIQUE (reference_number)
+support_tickets support_tickets_reference_number_not_null: NOT NULL reference_number
+support_tickets support_tickets_related_workspace_id_workspaces_id_fk: FOREIGN KEY (related_workspace_id) REFERENCES workspaces(id) ON DELETE SET NULL
+support_tickets support_tickets_status_not_null: NOT NULL status
+support_tickets support_tickets_subject_not_null: NOT NULL subject
+support_tickets support_tickets_updated_at_not_null: NOT NULL updated_at
+support_tickets support_tickets_user_id_not_null: NOT NULL user_id
+support_tickets support_tickets_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+support_tickets support_tickets_user_read_seq_not_null: NOT NULL user_read_seq
+support_tickets support_tickets_version_not_null: NOT NULL version
+support_tickets support_tickets_workspace_name_not_null: NOT NULL workspace_name
+support_uploads support_upload_command_uq: UNIQUE (uploader_id, command_id)
+support_uploads support_upload_name_ck: CHECK (((char_length(file_name) >= 1) AND (char_length(file_name) <= 255)))
+support_uploads support_upload_parent_ck: CHECK (((message_id IS NULL) OR (ticket_id IS NOT NULL)))
+support_uploads support_upload_size_ck: CHECK (((size_bytes >= 1) AND (size_bytes <= 10485760)))
+support_uploads support_uploads_command_hash_not_null: NOT NULL command_hash
+support_uploads support_uploads_command_id_not_null: NOT NULL command_id
+support_uploads support_uploads_created_at_not_null: NOT NULL created_at
+support_uploads support_uploads_expires_at_not_null: NOT NULL expires_at
+support_uploads support_uploads_file_name_not_null: NOT NULL file_name
+support_uploads support_uploads_id_not_null: NOT NULL id
+support_uploads support_uploads_mime_type_not_null: NOT NULL mime_type
+support_uploads support_uploads_pkey: PRIMARY KEY (id)
+support_uploads support_uploads_related_workspace_id_workspaces_id_fk: FOREIGN KEY (related_workspace_id) REFERENCES workspaces(id) ON DELETE SET NULL
+support_uploads support_uploads_sender_type_not_null: NOT NULL sender_type
+support_uploads support_uploads_size_bytes_not_null: NOT NULL size_bytes
+support_uploads support_uploads_status_not_null: NOT NULL status
+support_uploads support_uploads_ticket_id_message_id_support_messages_ticket_id: FOREIGN KEY (ticket_id, message_id) REFERENCES support_messages(ticket_id, id) ON DELETE RESTRICT
+support_uploads support_uploads_ticket_id_support_tickets_id_fk: FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE RESTRICT
+support_uploads support_uploads_uploader_id_not_null: NOT NULL uploader_id
+support_uploads support_uploads_uploader_id_users_id_fk: FOREIGN KEY (uploader_id) REFERENCES users(id) ON DELETE RESTRICT
 system_broadcasts system_broadcasts_created_at_not_null: NOT NULL created_at
 system_broadcasts system_broadcasts_created_by_not_null: NOT NULL created_by
 system_broadcasts system_broadcasts_created_by_users_id_fk: FOREIGN KEY (created_by) REFERENCES users(id)
@@ -1496,6 +1599,23 @@ site_submissions CREATE UNIQUE INDEX site_submissions_pkey ON public.site_submis
 subtasks CREATE INDEX subtasks_task_position_idx ON public.subtasks USING btree (task_id, "position")
 subtasks CREATE UNIQUE INDEX subtasks_pkey ON public.subtasks USING btree (id)
 subtasks CREATE UNIQUE INDEX subtasks_ws_id_uq ON public.subtasks USING btree (workspace_id, id)
+support_messages CREATE INDEX support_message_thread_idx ON public.support_messages USING btree (ticket_id, created_at DESC NULLS LAST, id DESC NULLS LAST)
+support_messages CREATE UNIQUE INDEX support_message_command_uq ON public.support_messages USING btree (ticket_id, sender_id, command_id)
+support_messages CREATE UNIQUE INDEX support_message_parent_uq ON public.support_messages USING btree (ticket_id, id)
+support_messages CREATE UNIQUE INDEX support_message_public_seq_uq ON public.support_messages USING btree (ticket_id, public_seq)
+support_messages CREATE UNIQUE INDEX support_messages_pkey ON public.support_messages USING btree (id)
+support_tickets CREATE INDEX support_ticket_assignee_idx ON public.support_tickets USING btree (assigned_admin_id, updated_at DESC NULLS LAST)
+support_tickets CREATE INDEX support_ticket_owner_idx ON public.support_tickets USING btree (user_id, updated_at DESC NULLS LAST, id DESC NULLS LAST)
+support_tickets CREATE INDEX support_ticket_queue_idx ON public.support_tickets USING btree (status, priority, department, updated_at DESC NULLS LAST, id DESC NULLS LAST)
+support_tickets CREATE INDEX support_ticket_rate_idx ON public.support_tickets USING btree (user_id, created_at)
+support_tickets CREATE UNIQUE INDEX "support_tickets_referenceNumber_unique" ON public.support_tickets USING btree (reference_number)
+support_tickets CREATE UNIQUE INDEX support_ticket_command_uq ON public.support_tickets USING btree (user_id, command_id)
+support_tickets CREATE UNIQUE INDEX support_tickets_pkey ON public.support_tickets USING btree (id)
+support_uploads CREATE INDEX support_upload_message_idx ON public.support_uploads USING btree (message_id)
+support_uploads CREATE INDEX support_upload_rate_idx ON public.support_uploads USING btree (uploader_id, created_at)
+support_uploads CREATE INDEX support_upload_ticket_idx ON public.support_uploads USING btree (ticket_id)
+support_uploads CREATE UNIQUE INDEX support_upload_command_uq ON public.support_uploads USING btree (uploader_id, command_id)
+support_uploads CREATE UNIQUE INDEX support_uploads_pkey ON public.support_uploads USING btree (id)
 system_broadcasts CREATE INDEX system_broadcasts_active_starts_idx ON public.system_broadcasts USING btree (starts_at) WHERE ((archived_at IS NULL) AND (is_active = true))
 system_broadcasts CREATE INDEX system_broadcasts_created_by_idx ON public.system_broadcasts USING btree (created_by)
 system_broadcasts CREATE INDEX system_broadcasts_created_idx ON public.system_broadcasts USING btree (created_at DESC NULLS LAST, id DESC NULLS LAST)
@@ -1591,6 +1711,9 @@ site_redirects enabled=true forced=false
 site_revisions enabled=true forced=false
 site_submissions enabled=true forced=false
 subtasks enabled=true forced=true
+support_messages enabled=true forced=true
+support_tickets enabled=true forced=true
+support_uploads enabled=true forced=true
 system_broadcasts enabled=false forced=false
 task_assignees enabled=true forced=true
 task_attachments enabled=true forced=true
@@ -1654,6 +1777,18 @@ site_revisions site_revisions_read SELECT using(app.is_site_admin()) check()
 site_submissions site_submissions_admin ALL using(app.is_site_admin()) check(app.is_site_admin())
 site_submissions site_submissions_public_insert INSERT using() check((((payload ->> 'consent'::text) = 'true'::text) AND (status = 'new'::text) AND (notes = ''::text)))
 subtasks subtasks_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+support_messages support_message_private ALL using((( SELECT app.is_support_agent() AS is_support_agent) OR ((NOT is_internal) AND (EXISTS ( SELECT 1
+   FROM support_tickets t
+  WHERE ((t.id = support_messages.ticket_id) AND (t.user_id = ( SELECT app.current_user_id() AS current_user_id)))))))) check((( SELECT app.is_support_agent() AS is_support_agent) OR ((sender_id = ( SELECT app.current_user_id() AS current_user_id)) AND (sender_type = 'USER'::support_sender_type) AND (NOT is_internal) AND (EXISTS ( SELECT 1
+   FROM support_tickets t
+  WHERE ((t.id = support_messages.ticket_id) AND (t.user_id = ( SELECT app.current_user_id() AS current_user_id))))))))
+support_tickets support_ticket_private ALL using(((user_id = ( SELECT app.current_user_id() AS current_user_id)) OR ( SELECT app.is_support_agent() AS is_support_agent))) check(((user_id = ( SELECT app.current_user_id() AS current_user_id)) OR ( SELECT app.is_support_agent() AS is_support_agent)))
+support_uploads support_upload_private ALL using((( SELECT app.is_support_agent() AS is_support_agent) OR ((message_id IS NULL) AND (uploader_id = ( SELECT app.current_user_id() AS current_user_id)) AND (sender_type = 'USER'::support_sender_type)) OR (EXISTS ( SELECT 1
+   FROM (support_messages m
+     JOIN support_tickets t ON ((t.id = m.ticket_id)))
+  WHERE ((m.id = support_uploads.message_id) AND (t.user_id = ( SELECT app.current_user_id() AS current_user_id)) AND (NOT m.is_internal)))))) check(((( SELECT app.is_support_agent() AS is_support_agent) OR ((uploader_id = ( SELECT app.current_user_id() AS current_user_id)) AND (sender_type = 'USER'::support_sender_type))) AND ((ticket_id IS NULL) OR (EXISTS ( SELECT 1
+   FROM support_tickets t
+  WHERE (t.id = support_uploads.ticket_id))))))
 task_assignees task_assignees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_attachments task_attachments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_comments task_comments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
@@ -1712,6 +1847,7 @@ app.ensure_audit_partitions(months_ahead integer) security definer
 app.find_invitation(p_token_hash bytea) security definer
 app.include_deleted() invoker
 app.is_site_admin() security definer
+app.is_support_agent() security definer
 app.notify_outbox() invoker
 app.projects_due_for_purge(p_days integer, p_limit integer) security definer
 app.protect_locked_role_permissions() invoker
@@ -1776,6 +1912,9 @@ site_redirects DELETE,INSERT,SELECT,UPDATE
 site_revisions INSERT,SELECT
 site_submissions INSERT,SELECT,UPDATE
 subtasks DELETE,INSERT,SELECT,UPDATE
+support_messages INSERT,SELECT
+support_tickets INSERT,SELECT,UPDATE
+support_uploads INSERT,SELECT,UPDATE
 system_broadcasts INSERT,SELECT,UPDATE
 task_assignees DELETE,INSERT,SELECT,UPDATE
 task_attachments DELETE,INSERT,SELECT,UPDATE

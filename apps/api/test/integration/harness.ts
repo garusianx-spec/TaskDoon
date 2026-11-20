@@ -95,9 +95,9 @@ export function invitationToken(link: string | undefined): string {
  */
 export async function createTestApp(
   overrides: Record<string, string> = {},
-  options: { preserveFixtures?: boolean } = {},
+  options: { preserveFixtures?: boolean; fixtureKind?: 'coupon' | 'support' } = {},
 ): Promise<TestApp> {
-  const database = `${options.preserveFixtures ? 'taskin_coupon_qa' : 'taskin_test'}_${randomBytes(5).toString('hex')}`;
+  const database = `${options.preserveFixtures ? `taskin_${options.fixtureKind ?? 'coupon'}_qa` : 'taskin_test'}_${randomBytes(5).toString('hex')}`;
   const creator = new pg.Client({ connectionString: adminUrl() });
   await creator.connect();
   await creator.query(`create database ${database} template ${inject('templateDb')} owner taskin_migrator`);

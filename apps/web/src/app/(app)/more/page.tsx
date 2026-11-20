@@ -1,6 +1,13 @@
 import { AppShell } from '@/components/layout/AppShell';
 import { NavigationList, NavigationRow } from '@/components/layout/NavigationList';
-import { CalendarIcon, NotebookIcon, PeopleIcon, SettingsIcon, UserIcon } from '@/components/icons';
+import {
+  CalendarIcon,
+  MessagesIcon,
+  NotebookIcon,
+  PeopleIcon,
+  SettingsIcon,
+  UserIcon,
+} from '@/components/icons';
 import { workspaceRoutes } from '@/lib/workspace-navigation';
 
 export default function MorePage() {
@@ -16,6 +23,7 @@ export default function MorePage() {
               <NavigationRow href="/directory" label="اعضا" Icon={PeopleIcon} />
             </NavigationList>
             <NavigationList id="more-settings" title="تنظیمات">
+              <NavigationRow href="/support/tickets" label="درخواست‌های پشتیبانی" Icon={MessagesIcon} />
               <NavigationRow href={workspaceRoutes.account} label="حساب من" Icon={UserIcon} />
               <NavigationRow
                 href={workspaceRoutes.workspaceSettings}

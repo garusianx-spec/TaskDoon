@@ -4,10 +4,7 @@
     "composite": false,
     "noEmit": true,
     "rootDir": ".",
-    "types": [
-      "node",
-      "vitest/importMeta"
-    ]
+    "types": ["node", "vitest/importMeta"]
   },
   "include": [
     "src",
@@ -15,6 +12,8 @@
     "vitest.config.ts",
     "vitest.integration.config.ts",
     "drizzle.config.ts",
-    "vitest.coupons.config.ts"
+    "vitest.coupons.config.ts",
+    "vitest.support.config.ts",
+    "vitest.support-browser.config.ts"
   ]
 }

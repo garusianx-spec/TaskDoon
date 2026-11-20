@@ -44,3 +44,10 @@ BEGIN
   END IF;
 END
 $$;
+
+-- Support desk read pool; writes still use the guarded application transaction.
+DO $$ BEGIN
+  IF to_regclass('public.support_tickets') IS NOT NULL THEN
+    GRANT SELECT ON support_tickets, support_messages, support_uploads TO taskin_platform_admin;
+  END IF;
+END $$;

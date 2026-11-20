@@ -35,7 +35,14 @@ import { PlatformWorkspacesService } from './platform-workspaces.service.js';
  * the same global guards as every other route; nothing else in the API depends on it.
  */
 @Module({
-  exports: [CouponsService],
+  exports: [
+    CouponsService,
+    PlatformAdminUnitOfWork,
+    PlatformAuditWriter,
+    PlatformAdminGuard,
+    PlatformAdminSmsGuard,
+    NoStoreInterceptor,
+  ],
   imports: [DomainModule],
   controllers: [
     AdminCouponsController,

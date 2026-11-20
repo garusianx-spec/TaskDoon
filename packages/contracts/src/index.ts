@@ -7,3 +7,5 @@ export * from './site.js';
 export * from './site-homepage.js';
 
 export * from './coupons.js';
+
+export * from './support.js';

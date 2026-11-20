@@ -1,10 +1,11 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import type { PresenceState } from '@taskin/contracts';
 import { PRESENCE_OPTIONS } from '@/data/reference';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
 import { Avatar, Button, MenuItem, MenuList, Popover, PopoverDivider } from '@/components/ui';
-import { ClockIcon, LogoutIcon, ShieldIcon, UserIcon } from '@/components/icons';
+import { ClockIcon, LogoutIcon, MessagesIcon, ShieldIcon, UserIcon } from '@/components/icons';
 
 interface ProfileMenuProps {
   readonly fullName: string;
@@ -16,6 +17,7 @@ interface ProfileMenuProps {
 
 export function ProfileMenu({ fullName, initials, jobTitle, presence, statusMessage }: ProfileMenuProps) {
   const { open } = useOverlays();
+  const router = useRouter();
   const presenceLabel = PRESENCE_OPTIONS.find((option) => option.id === presence)?.label ?? '';
 
   return (
@@ -58,6 +60,12 @@ export function ProfileMenu({ fullName, initials, jobTitle, presence, statusMess
             </div>
             <PopoverDivider />
             <MenuList>
+              <MenuItem
+                onSelect={run(() => router.push('/support/tickets'))}
+                icon={<MessagesIcon size={18} />}
+              >
+                درخواست‌های پشتیبانی
+              </MenuItem>
               <MenuItem onSelect={run(() => open({ kind: 'profile' }))} icon={<UserIcon size={18} />}>
                 پروفایل من
               </MenuItem>
