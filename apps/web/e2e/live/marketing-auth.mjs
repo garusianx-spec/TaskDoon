@@ -204,10 +204,10 @@ try {
       .locator('.public-surface')
       .evaluate(
         (node) =>
-          getComputedStyle(node).backgroundColor === 'rgb(255, 255, 255)' &&
+          getComputedStyle(node).backgroundColor === 'rgb(12, 17, 29)' &&
           getComputedStyle(node).getPropertyValue('--brand-600').trim() === '53 56 205',
       ),
-    'public surface remains light and indigo under a saved dark/teal workspace theme',
+    'public surface remains dark and indigo under a saved dark/teal workspace theme',
   );
   check(
     await page.evaluate(() => JSON.parse(localStorage.getItem('taskin.theme')).mode === 'dark'),

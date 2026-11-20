@@ -34,7 +34,7 @@ const grantCommand =
   `node ${fileURLToPath(new URL('../../../api/dist/cli/platform-admin.js', import.meta.url))} grant`;
 
 const OTP = /"text":"کد ورود شما به تسک‌دون: (\d{6})"/g;
-const INVITE = /"text":"[^"]*?https?:\/\/[^"\s]+\/invite\?token=([^"\s&]+)"/g;
+const INVITE = /"text":"[^"]*?https?:\/\/[^"\s]+\/invite(?:\/|\?token=)([^"\s&]+)"/g;
 const runId = String(Date.now()).slice(-4);
 const used = new Set();
 const phoneOf = () => {
