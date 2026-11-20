@@ -122,7 +122,11 @@
   padding-block: 84px 64px;
   position: relative;
   overflow: hidden;
-  background: radial-gradient(ellipse 90% 55% at 50% -15%, rgb(var(--brand-solid) / 0.22) 0%, rgb(var(--bg-canvas)) 70%);
+  background: radial-gradient(
+    ellipse 90% 55% at 50% -15%,
+    rgb(var(--brand-solid) / 0.22) 0%,
+    rgb(var(--bg-canvas)) 70%
+  );
 }
 .marketing-eyebrow {
   display: inline-flex;
@@ -204,13 +208,13 @@
   opacity: 0.9;
 }
 .marketing-screen-toolbar > span:nth-child(1) {
-  background: #FF5F56;
+  background: #ff5f56;
 }
 .marketing-screen-toolbar > span:nth-child(2) {
-  background: #FFBD2E;
+  background: #ffbd2e;
 }
 .marketing-screen-toolbar > span:nth-child(3) {
-  background: #27C93F;
+  background: #27c93f;
 }
 .marketing-screen-toolbar > div {
   font-size: 11px;
@@ -279,7 +283,9 @@
 .marketing-card:hover {
   border-color: rgb(var(--brand-solid) / 0.45);
   transform: translateY(-3px);
-  box-shadow: 0 16px 36px -8px rgb(0 0 0 / 0.55), 0 0 24px -6px rgb(var(--brand-solid) / 0.18);
+  box-shadow:
+    0 16px 36px -8px rgb(0 0 0 / 0.55),
+    0 0 24px -6px rgb(var(--brand-solid) / 0.18);
 }
 .marketing-card h3 {
   font-size: 20px;
@@ -577,13 +583,17 @@
 .marketing-plan:hover {
   border-color: rgb(var(--brand-solid) / 0.45);
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px -12px rgb(0 0 0 / 0.6), 0 0 24px -6px rgb(var(--brand-solid) / 0.15);
+  box-shadow:
+    0 20px 40px -12px rgb(0 0 0 / 0.6),
+    0 0 24px -6px rgb(var(--brand-solid) / 0.15);
 }
 .marketing-plan.is-recommended {
   border: 2px solid rgb(var(--brand-solid));
   padding: 35px 29px;
   background: linear-gradient(180deg, rgb(var(--brand-solid) / 0.1) 0%, rgb(var(--bg-surface)) 100%);
-  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.7), 0 0 36px -4px rgb(var(--brand-solid) / 0.35);
+  box-shadow:
+    0 24px 48px -12px rgb(0 0 0 / 0.7),
+    0 0 36px -4px rgb(var(--brand-solid) / 0.35);
 }
 .marketing-plan-badge {
   display: inline-flex;
@@ -742,12 +752,12 @@
   text-align: start;
   border-top: 1px solid rgb(var(--border-secondary));
 }
-.marketing-comparison td span[aria-label="در اطلاعات این طرح ذکر شده"] {
+.marketing-comparison td span[aria-label='در اطلاعات این طرح ذکر شده'] {
   color: rgb(var(--brand-solid-hover));
   font-weight: 800;
   font-size: 16px;
 }
-.marketing-comparison td span[aria-label="در این طرح ذکر نشده"] {
+.marketing-comparison td span[aria-label='در این طرح ذکر نشده'] {
   color: rgb(var(--fg-quaternary));
 }
 .marketing-comparison thead th {
@@ -768,7 +778,7 @@
   border-top: 1px solid rgb(var(--border-secondary));
 }
 .marketing-footer {
-  background: #080C14;
+  background: #080c14;
   border-top: 1px solid rgb(255 255 255 / 0.08);
   position: relative;
 }
@@ -777,10 +787,16 @@
   flex-direction: column;
   gap: 20px;
   padding: 36px 40px;
-  background: radial-gradient(ellipse 90% 80% at 50% -20%, rgb(var(--brand-solid) / 0.28) 0%, rgb(var(--bg-surface)) 100%);
+  background: radial-gradient(
+    ellipse 90% 80% at 50% -20%,
+    rgb(var(--brand-solid) / 0.28) 0%,
+    rgb(var(--bg-surface)) 100%
+  );
   border: 1px solid rgb(var(--brand-solid) / 0.35);
   border-radius: 20px;
-  box-shadow: 0 16px 36px -8px rgb(0 0 0 / 0.6), 0 0 32px -8px rgb(var(--brand-solid) / 0.2);
+  box-shadow:
+    0 16px 36px -8px rgb(0 0 0 / 0.6),
+    0 0 32px -8px rgb(var(--brand-solid) / 0.2);
 }
 @media (min-width: 640px) {
   .marketing-footer-cta {

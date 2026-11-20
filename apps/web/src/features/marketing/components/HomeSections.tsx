@@ -49,9 +49,13 @@ function Actions({ section, isHero = false }: { section: SiteSection; isHero?: b
       {isHero && (
         <div className="home-microcopy">
           <span>شروع فوری در ۳۰ ثانیه</span>
-          <span className="home-microcopy-dot" aria-hidden="true">•</span>
+          <span className="home-microcopy-dot" aria-hidden="true">
+            •
+          </span>
           <span>بدون نیاز به ثبت کارت بانکی</span>
-          <span className="home-microcopy-dot" aria-hidden="true">•</span>
+          <span className="home-microcopy-dot" aria-hidden="true">
+            •
+          </span>
           <span>پلن پایه رایگان برای تیم‌های نوپا</span>
         </div>
       )}
