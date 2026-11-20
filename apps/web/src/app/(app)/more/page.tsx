@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useWorkspace } from '@/store/WorkspaceProvider';
 import { useOverlays } from '@/components/overlays/OverlayProvider';
+import { useTheme } from '@/components/theme/ThemeProvider';
 import { roleLabel } from '@/data/reference';
 import { formatCount } from '@/lib/format';
 import { AppShell } from '@/components/layout/AppShell';
-import { ThemePicker } from '@/components/layout/ThemePicker';
 import { Avatar, Badge, Button, Popover } from '@/components/ui';
 import { WorkspaceAvatar } from '@/features/workspace/components/WorkspaceAvatar';
 import { WorkspaceMenu } from '@/features/workspace/components/WorkspaceMenu';
@@ -15,17 +15,24 @@ import {
   ClockIcon,
   KeyIcon,
   LogoutIcon,
+  MonitorIcon,
+  MoonIcon,
   NotebookIcon,
   PeopleIcon,
   SettingsIcon,
   ShieldIcon,
+  SunIcon,
   UserAddIcon,
   UserIcon,
 } from '@/components/icons';
 
 /**
  * Mobile "بیشتر" tab & desktop settings hub.
- * Redesigned into an Inset-Grouped visual architecture matching modern linear/iOS design patterns.
+ * Modern Action Hub architecture:
+ * - Unified profile & active workspace pill
+ * - 2x2 Quick Action grid with distinct iconography
+ * - Compact grouped settings without redundant description clutter
+ * - Streamlined inline theme switcher (Light / Dark / System)
  */
 export default function MorePage() {
   return (
@@ -38,34 +45,35 @@ export default function MorePage() {
 function MoreContent() {
   const { state, currentUser, activeWorkspace } = useWorkspace();
   const { open } = useOverlays();
+  const { theme, setMode } = useTheme();
 
   return (
     <div className="scrollbar-thin h-full overflow-y-auto">
-      <div className="mx-auto max-w-xl space-y-6 px-4 py-6 pb-28 sm:px-6">
-        {/* Flagship Header: Profile & Active Workspace Card */}
+      <div className="mx-auto max-w-lg space-y-5 px-4 py-5 pb-28 sm:px-6">
+        {/* Unified Profile & Workspace Card */}
         <section
           aria-label="پروفایل و فضای کاری فعال"
-          className="rounded-2xl border border-secondary bg-surface p-5 shadow-xs transition-shadow"
+          className="rounded-2xl border border-secondary bg-surface p-4 shadow-xs sm:p-5"
         >
           {/* User Profile Block */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3.5">
             <Avatar
               name={currentUser.fullName}
               initials={currentUser.initials}
               tone={currentUser.avatarTone}
-              size="xl"
+              size="lg"
               presence={currentUser.presence}
             />
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex items-center gap-2">
-                <span className="truncate text-title font-bold text-fg-primary">
+                <span className="truncate text-title-sm font-bold text-fg-primary">
                   {currentUser.fullName}
                 </span>
                 <Badge tone="brand" size="sm">
                   {roleLabel(currentUser.role)}
                 </Badge>
               </div>
-              <span className="truncate text-caption text-fg-tertiary">
+              <span className="truncate text-micro text-fg-tertiary">
                 {state.profile.statusMessage || currentUser.jobTitle}
               </span>
               <span className="truncate text-micro text-fg-quaternary numeric">
@@ -76,30 +84,25 @@ function MoreContent() {
               type="button"
               aria-haspopup="dialog"
               onClick={() => open({ kind: 'profile' })}
-              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border border-secondary bg-surface p-2.5 text-fg-secondary transition-colors hover:border-brand hover:bg-hover hover:text-fg-brand active:bg-active"
+              className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-secondary bg-surface text-fg-secondary transition-colors hover:border-brand hover:bg-hover hover:text-fg-brand active:bg-active"
               aria-label="ویرایش حساب کاربری"
             >
               <UserIcon size={18} />
             </button>
           </div>
 
-          <div className="my-4 border-t border-secondary/60" />
+          <div className="my-3.5 border-t border-secondary/60" />
 
-          {/* Active Workspace Block */}
+          {/* Active Workspace Switcher Row */}
           <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <WorkspaceAvatar workspace={activeWorkspace} size="md" />
-              <div className="flex min-w-0 flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-body-sm font-semibold text-fg-primary">
-                    {activeWorkspace.name}
-                  </span>
-                  <Badge tone="neutral" size="sm">
-                    {activeWorkspace.plan}
-                  </Badge>
-                </div>
-                <span className="truncate text-micro text-fg-tertiary numeric">
-                  {`${formatCount(activeWorkspace.memberCount)} عضو تیم`}
+            <div className="flex min-w-0 items-center gap-2.5">
+              <WorkspaceAvatar workspace={activeWorkspace} size="sm" />
+              <div className="flex min-w-0 items-baseline gap-2">
+                <span className="truncate text-body-sm font-semibold text-fg-primary">
+                  {activeWorkspace.name}
+                </span>
+                <span className="text-micro text-fg-tertiary numeric">
+                  ({formatCount(activeWorkspace.memberCount)} عضو)
                 </span>
               </div>
             </div>
@@ -109,8 +112,8 @@ function MoreContent() {
               align="end"
               panelClassName="min-w-72"
               trigger={
-                <Button variant="secondary" size="md" className="min-h-[44px]">
-                  تعویض
+                <Button variant="secondary" size="sm" className="min-h-[36px] text-caption font-medium">
+                  تعویض فضا
                 </Button>
               }
             >
@@ -119,82 +122,176 @@ function MoreContent() {
           </div>
         </section>
 
-        {/* Theme & Palette Section */}
-        <section
-          aria-label="پوسته و رنگ سازمان"
-          className="rounded-2xl border border-secondary bg-surface p-5 shadow-xs"
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-title-sm font-semibold text-fg-primary">پوسته و رنگ سازمان</h2>
-            <span className="text-micro text-fg-tertiary">شخصی‌سازی رابط کاربری</span>
-          </div>
-          <ThemePicker className="w-full" />
-        </section>
-
-        {/* Group 1: Workspace Collaboration Tools */}
-        <section aria-label="ابزارهای تیم">
-          <h2 className="mb-2 px-2 text-caption font-semibold tracking-wide text-fg-tertiary">
-            همکاری و منابع تیم
+        {/* 2x2 Quick Actions Grid */}
+        <section aria-label="دسترسی سریع">
+          <h2 className="mb-2 px-1 text-micro font-semibold uppercase tracking-wider text-fg-quaternary">
+            دسترسی سریع
           </h2>
-          <div className="divide-y divide-secondary/40 overflow-hidden rounded-2xl border border-secondary bg-surface shadow-xs">
-            <LinkItem
+          <div className="grid grid-cols-2 gap-2.5">
+            <Link
               href="/notes"
-              label="یادداشت‌ها و صورت‌جلسات"
-              description="دسته‌های شخصی، کاری، ایده‌ها و ثبت صورت‌جلسات تیمی"
-              icon={<NotebookIcon size={20} />}
-              iconBgClass="bg-brand-50 text-fg-brand dark:bg-brand-950/60 dark:text-brand-300"
-            />
-            <LinkItem
+              className="group flex flex-col justify-between rounded-2xl border border-secondary bg-surface p-3.5 shadow-xs transition-all duration-150 hover:border-brand/40 hover:bg-hover active:bg-active"
+            >
+              <div className="flex items-center justify-between">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-fg-brand dark:bg-brand-950/60 dark:text-brand-300">
+                  <NotebookIcon size={19} />
+                </span>
+                <ChevronForwardIcon size={16} className="text-fg-quaternary transition-transform group-hover:translate-x-[-2px]" />
+              </div>
+              <div className="mt-3">
+                <span className="block truncate text-body-sm font-semibold text-fg-primary group-hover:text-fg-brand">
+                  یادداشت‌ها و جلسات
+                </span>
+                <span className="block truncate text-micro text-fg-tertiary">شخصی و تیمی</span>
+              </div>
+            </Link>
+
+            <Link
               href="/directory"
-              label="اعضای سازمان"
-              description="فهرست همکاران، دپارتمان‌ها و اطلاعات ارتباطی"
-              icon={<PeopleIcon size={20} />}
-              iconBgClass="bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300"
-            />
-            <LinkItem
-              href="/settings/roles"
-              label="نقش‌ها و دسترسی‌ها"
-              description="ماتریس مجوزها و سطوح دسترسی بخش‌های سازمان"
-              icon={<ShieldIcon size={20} />}
-              iconBgClass="bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300"
-            />
+              className="group flex flex-col justify-between rounded-2xl border border-secondary bg-surface p-3.5 shadow-xs transition-all duration-150 hover:border-blue-500/40 hover:bg-hover active:bg-active"
+            >
+              <div className="flex items-center justify-between">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300">
+                  <PeopleIcon size={19} />
+                </span>
+                <ChevronForwardIcon size={16} className="text-fg-quaternary transition-transform group-hover:translate-x-[-2px]" />
+              </div>
+              <div className="mt-3">
+                <span className="block truncate text-body-sm font-semibold text-fg-primary group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                  اعضای سازمان
+                </span>
+                <span className="block truncate text-micro text-fg-tertiary">فهرست همکاران</span>
+              </div>
+            </Link>
+
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => open({ kind: 'invite-member' })}
+              className="group flex flex-col justify-between rounded-2xl border border-secondary bg-surface p-3.5 text-start shadow-xs transition-all duration-150 hover:border-emerald-500/40 hover:bg-hover active:bg-active"
+            >
+              <div className="flex items-center justify-between">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  <UserAddIcon size={19} />
+                </span>
+                <ChevronForwardIcon size={16} className="text-fg-quaternary transition-transform group-hover:translate-x-[-2px]" />
+              </div>
+              <div className="mt-3">
+                <span className="block truncate text-body-sm font-semibold text-fg-primary group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                  دعوت همکار جدید
+                </span>
+                <span className="block truncate text-micro text-fg-tertiary">ارسال دعوت‌نامه</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => open({ kind: 'working-hours' })}
+              className="group flex flex-col justify-between rounded-2xl border border-secondary bg-surface p-3.5 text-start shadow-xs transition-all duration-150 hover:border-indigo-500/40 hover:bg-hover active:bg-active"
+            >
+              <div className="flex items-center justify-between">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
+                  <ClockIcon size={19} />
+                </span>
+                <ChevronForwardIcon size={16} className="text-fg-quaternary transition-transform group-hover:translate-x-[-2px]" />
+              </div>
+              <div className="mt-3">
+                <span className="block truncate text-body-sm font-semibold text-fg-primary group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                  ساعات کاری
+                </span>
+                <span className="block truncate text-micro text-fg-tertiary">پاسخ خودکار</span>
+              </div>
+            </button>
           </div>
         </section>
 
-        {/* Group 2: Account & Workspace Management */}
-        <section aria-label="مدیریت سازمان و امنیت">
-          <h2 className="mb-2 px-2 text-caption font-semibold tracking-wide text-fg-tertiary">
-            مدیریت و تنظیمات
+        {/* Compact Settings & Security List */}
+        <section aria-label="تنظیمات و دسترسی‌ها">
+          <h2 className="mb-2 px-1 text-micro font-semibold uppercase tracking-wider text-fg-quaternary">
+            تنظیمات و امنیت
           </h2>
           <div className="divide-y divide-secondary/40 overflow-hidden rounded-2xl border border-secondary bg-surface shadow-xs">
-            <ActionItem
-              label="دعوت همکار جدید"
-              description="ارسال دعوت‌نامه پیامکی و ایجاد دسترسی برای عضو جدید"
-              icon={<UserAddIcon size={20} />}
-              iconBgClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300"
-              onClick={() => open({ kind: 'invite-member' })}
-            />
-            <ActionItem
-              label="امنیت و ورود"
-              description="تغییر کلمه عبور، مدیریت دستگاه‌ها و نشست‌های ورود"
-              icon={<KeyIcon size={20} />}
-              iconBgClass="bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300"
-              onClick={() => open({ kind: 'security' })}
-            />
-            <ActionItem
-              label="ساعات کاری و پاسخ خودکار"
-              description="تنظیم روزها و زمان پاسخ‌گویی و پیام خارج از دسترس"
-              icon={<ClockIcon size={20} />}
-              iconBgClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300"
-              onClick={() => open({ kind: 'working-hours' })}
-            />
-            <ActionItem
-              label="تنظیمات فضای کاری"
-              description="نام سازمان، لوگو، مالکیت و مدیریت طرح اشتراک"
-              icon={<SettingsIcon size={20} />}
-              iconBgClass="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+            <Link
+              href="/settings/roles"
+              className="group flex min-h-[50px] items-center gap-3 px-4 py-3 transition-colors hover:bg-hover active:bg-active"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300">
+                <ShieldIcon size={18} />
+              </span>
+              <span className="flex-1 truncate text-body-sm font-medium text-fg-primary group-hover:text-fg-brand">
+                نقش‌ها و دسترسی‌ها
+              </span>
+              <ChevronForwardIcon size={16} className="shrink-0 text-fg-quaternary group-hover:text-fg-secondary" />
+            </Link>
+
+            <button
+              type="button"
+              aria-haspopup="dialog"
               onClick={() => open({ kind: 'workspace-settings' })}
-            />
+              className="group flex min-h-[50px] w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-hover active:bg-active"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                <SettingsIcon size={18} />
+              </span>
+              <span className="flex-1 truncate text-body-sm font-medium text-fg-primary group-hover:text-fg-brand">
+                تنظیمات فضای کاری
+              </span>
+              <ChevronForwardIcon size={16} className="shrink-0 text-fg-quaternary group-hover:text-fg-secondary" />
+            </button>
+
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => open({ kind: 'security' })}
+              className="group flex min-h-[50px] w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-hover active:bg-active"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300">
+                <KeyIcon size={18} />
+              </span>
+              <span className="flex-1 truncate text-body-sm font-medium text-fg-primary group-hover:text-fg-brand">
+                امنیت و ورود
+              </span>
+              <ChevronForwardIcon size={16} className="shrink-0 text-fg-quaternary group-hover:text-fg-secondary" />
+            </button>
+          </div>
+        </section>
+
+        {/* Streamlined Inline Theme Mode Switcher */}
+        <section aria-label="حالت نمایش">
+          <div className="flex items-center justify-between rounded-2xl border border-secondary bg-surface p-3.5 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-brand-50 text-fg-brand dark:bg-brand-950/60 dark:text-brand-300">
+                {theme.mode === 'dark' ? <MoonIcon size={18} /> : theme.mode === 'light' ? <SunIcon size={18} /> : <MonitorIcon size={18} />}
+              </span>
+              <span className="text-body-sm font-semibold text-fg-primary">حالت نمایش</span>
+            </div>
+            <div role="radiogroup" aria-label="انتخاب پوسته" className="flex items-center rounded-xl bg-sunken p-1">
+              {[
+                { id: 'light', label: 'روشن', icon: SunIcon },
+                { id: 'dark', label: 'تاریک', icon: MoonIcon },
+                { id: 'system', label: 'خودکار', icon: MonitorIcon },
+              ].map(({ id, label, icon: Icon }) => {
+                const selected = theme.mode === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setMode(id as any)}
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-caption font-medium transition-all ${
+                      selected
+                        ? 'bg-surface font-semibold text-fg-primary shadow-xs'
+                        : 'text-fg-tertiary hover:text-fg-secondary'
+                    }`}
+                  >
+                    <Icon size={15} />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
 
@@ -205,16 +302,16 @@ function MoreContent() {
               type="button"
               aria-haspopup="dialog"
               onClick={() => open({ kind: 'sign-out' })}
-              className="group flex min-h-[56px] w-full items-center gap-3.5 px-4 py-3.5 text-start transition-colors duration-150 hover:bg-status-blocked-subtle active:opacity-90"
+              className="group flex min-h-[50px] w-full items-center gap-3 px-4 py-3 text-start transition-colors duration-150 hover:bg-status-blocked-subtle active:opacity-90"
             >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-status-blocked-subtle text-status-blocked transition-transform group-hover:scale-105">
-                <LogoutIcon size={20} />
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-status-blocked-subtle text-status-blocked transition-transform group-hover:scale-105">
+                <LogoutIcon size={18} />
               </span>
               <span className="flex-1 truncate text-body-sm font-semibold text-status-blocked">
                 خروج از حساب کاربری
               </span>
               <ChevronForwardIcon
-                size={18}
+                size={16}
                 className="shrink-0 text-status-blocked/60 transition-transform group-hover:translate-x-[-2px]"
               />
             </button>
@@ -222,72 +319,5 @@ function MoreContent() {
         </section>
       </div>
     </div>
-  );
-}
-
-interface ItemBaseProps {
-  readonly label: string;
-  readonly description: string;
-  readonly icon: React.ReactNode;
-  readonly iconBgClass: string;
-}
-
-interface LinkItemProps extends ItemBaseProps {
-  readonly href: string;
-}
-
-function LinkItem({ href, label, description, icon, iconBgClass }: LinkItemProps) {
-  return (
-    <Link
-      href={href}
-      className="group flex min-h-[56px] items-center gap-3.5 px-4 py-3.5 transition-colors duration-150 hover:bg-hover active:bg-active"
-    >
-      <span
-        className={`flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${iconBgClass}`}
-      >
-        {icon}
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-body-sm font-semibold text-fg-primary group-hover:text-fg-brand">
-          {label}
-        </span>
-        <span className="truncate text-micro text-fg-tertiary">{description}</span>
-      </span>
-      <ChevronForwardIcon
-        size={18}
-        className="shrink-0 text-fg-quaternary transition-transform group-hover:translate-x-[-2px] group-hover:text-fg-secondary"
-      />
-    </Link>
-  );
-}
-
-interface ActionItemProps extends ItemBaseProps {
-  readonly onClick: () => void;
-}
-
-function ActionItem({ label, description, icon, iconBgClass, onClick }: ActionItemProps) {
-  return (
-    <button
-      type="button"
-      aria-haspopup="dialog"
-      onClick={onClick}
-      className="group flex min-h-[56px] w-full items-center gap-3.5 px-4 py-3.5 text-start transition-colors duration-150 hover:bg-hover active:bg-active"
-    >
-      <span
-        className={`flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${iconBgClass}`}
-      >
-        {icon}
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-body-sm font-semibold text-fg-primary group-hover:text-fg-brand">
-          {label}
-        </span>
-        <span className="truncate text-micro text-fg-tertiary">{description}</span>
-      </span>
-      <ChevronForwardIcon
-        size={18}
-        className="shrink-0 text-fg-quaternary transition-transform group-hover:translate-x-[-2px] group-hover:text-fg-secondary"
-      />
-    </button>
   );
 }
