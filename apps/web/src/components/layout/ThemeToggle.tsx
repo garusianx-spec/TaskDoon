@@ -12,7 +12,7 @@ export function ThemeToggle({ placement = 'top' }: { readonly placement?: 'top' 
       align="end"
       constrainToViewport
       panelClassName="min-w-0 p-3"
-      trigger={<IconButton label="پوسته و رنگ سازمان" icon={<PaletteIcon size={21} />} size="lg" />}
+      trigger={<IconButton label="تنظیم نمایش" icon={<PaletteIcon size={21} />} size="lg" />}
     >
       <ThemePicker />
     </Popover>

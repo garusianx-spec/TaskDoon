@@ -16,7 +16,7 @@ try {
     if ((await page.locator('html').getAttribute('data-source')) !== 'demo') throw new Error('Demo required');
     for (const mode of ['dark', 'light', 'system']) {
       await page.goto(base + '/');
-      const toggle = page.getByRole('button', { name: 'پوسته و رنگ سازمان', exact: true });
+      const toggle = page.getByRole('button', { name: 'تنظیم نمایش', exact: true });
       await toggle.click();
       const picker = page.getByRole('dialog', { name: 'انتخاب پوسته' });
       check(await picker.isVisible(), `${width}: marketing theme picker visible`);
@@ -43,8 +43,7 @@ try {
           const surface = document.querySelector('.public-surface') ?? document.body;
           const styles = getComputedStyle(surface);
           const trigger = [...document.querySelectorAll('button')].find(
-            (el) =>
-              el.getAttribute('aria-label') === 'پوسته و رنگ سازمان' && el.getBoundingClientRect().width > 0,
+            (el) => el.getAttribute('aria-label') === 'تنظیم نمایش' && el.getBoundingClientRect().width > 0,
           );
           return {
             overflow: root.scrollWidth > root.clientWidth,
@@ -55,7 +54,7 @@ try {
         });
         check(!metrics.overflow, `${width} ${route}: no page horizontal overflow`);
         check(
-          mode !== 'dark' || (metrics.canvas === '0 0 0' && metrics.surface === '18 18 18'),
+          mode !== 'dark' || (metrics.canvas === '0 0 0' && metrics.surface === '12 17 29'),
           `${width} ${route}: inherited OLED tokens`,
         );
         check(

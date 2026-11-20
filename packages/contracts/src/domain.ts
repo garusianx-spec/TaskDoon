@@ -568,21 +568,8 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 /** The resolved mode actually written to `data-theme`. */
 export type ResolvedThemeMode = 'light' | 'dark';
 
-export type AccentId = 'indigo' | 'teal' | 'violet' | 'rose' | 'amber' | 'ocean';
-
-export interface AccentDescriptor {
-  readonly id: AccentId;
-  readonly name: string;
-  readonly subtitle: string;
-  /** Preview swatch only — rendered as an inline style, never as a Tailwind class. */
-  readonly swatch: readonly [string, string, string];
-  /** The palette's 600 step, shown as the hex a brand team would recognise. */
-  readonly primaryHex: string;
-}
-
 export interface ThemeConfig {
-  readonly mode: ThemeMode;
-  readonly accent: AccentId;
+  readonly theme: ThemeMode;
 }
 
 /* ============================== Navigation ============================== */
