@@ -1,6 +1,6 @@
 {
-  "id": "4dac8ebd-6584-4bb7-a75f-eb91bc65e4f6",
-  "prevId": "32531f8c-2382-457a-8201-fdf6a7fb1748",
+  "id": "0029_invitation_sms_attempts",
+  "prevId": "0028_site_cms",
   "version": "7",
   "dialect": "postgresql",
   "tables": {

@@ -14,7 +14,11 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const resolve = (_mode: ThemeMode): ResolvedThemeMode => 'dark';
+const prefersDark = (): boolean =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+const resolve = (mode: ThemeMode): ResolvedThemeMode =>
+  mode === 'system' ? (prefersDark() ? 'dark' : 'light') : mode;
 
 /**
  * Owns the workspace/user theme. The DOM is the single source of truth for the *resolved*
@@ -23,7 +27,7 @@ const resolve = (_mode: ThemeMode): ResolvedThemeMode => 'dark';
  */
 export function ThemeProvider({ children }: { readonly children: ReactNode }) {
   const [theme, setTheme] = useState<ThemeConfig>(DEFAULT_THEME);
-  const [resolvedMode, setResolvedMode] = useState<ResolvedThemeMode>('dark');
+  const [resolvedMode, setResolvedMode] = useState<ResolvedThemeMode>('light');
 
   // Adopt whatever the bootstrap script already applied, before the first paint React owns.
   useIsomorphicLayoutEffect(() => {
@@ -34,7 +38,7 @@ export function ThemeProvider({ children }: { readonly children: ReactNode }) {
 
   useIsomorphicLayoutEffect(() => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', 'dark');
+    root.setAttribute('data-theme', resolvedMode);
     root.setAttribute('data-accent', theme.accent);
   }, [resolvedMode, theme.accent]);
 
@@ -74,7 +78,7 @@ export function ThemeProvider({ children }: { readonly children: ReactNode }) {
     () => ({
       theme,
       resolvedMode,
-      setMode: (_mode) => persist({ ...theme, mode: 'dark' }),
+      setMode: (mode) => persist({ ...theme, mode }),
       setAccent: (accent) => persist({ ...theme, accent }),
     }),
     [theme, resolvedMode, persist],
