@@ -131,7 +131,7 @@ export function LeadForm({ kind = 'contact', jobId }: { kind?: SiteSubmissionKin
 
   if (success)
     return (
-      <div className="marketing-form-success">
+      <div className="marketing-form-success" role="status">
         <span className="marketing-success-icon" aria-hidden="true">
           ✓
         </span>
