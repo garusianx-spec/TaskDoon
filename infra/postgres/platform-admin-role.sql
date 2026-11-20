@@ -35,3 +35,19 @@ BEGIN
 END
 $$;
 GRANT SELECT (id, event_type, aggregate_type, workspace_id, created_at, published_at) ON outbox_events TO taskin_platform_admin;
+
+-- Coupon management reads only. Also supports provisioning the role after migration 0031.
+DO $$
+BEGIN
+  IF to_regclass('public.coupons') IS NOT NULL THEN
+    GRANT SELECT ON coupons, coupon_plans, plan_prices TO taskin_platform_admin;
+  END IF;
+END
+$$;
+
+-- Support desk read pool; writes still use the guarded application transaction.
+DO $$ BEGIN
+  IF to_regclass('public.support_tickets') IS NOT NULL THEN
+    GRANT SELECT ON support_tickets, support_messages, support_uploads TO taskin_platform_admin;
+  END IF;
+END $$;

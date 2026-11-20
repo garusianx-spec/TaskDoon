@@ -105,6 +105,22 @@ calendar_events.title text not null
 calendar_events.updated_at timestamp with time zone not null default now()
 calendar_events.version integer not null default 1
 calendar_events.workspace_id uuid not null
+checkout_orders.command_id uuid not null
+checkout_orders.coupon_code text not null default ''::text
+checkout_orders.coupon_id uuid
+checkout_orders.created_at timestamp with time zone not null default now()
+checkout_orders.discount bigint not null
+checkout_orders.id uuid not null default app.uuidv7()
+checkout_orders.paid_at timestamp with time zone
+checkout_orders.payment_reference text
+checkout_orders.period billing_period not null
+checkout_orders.plan_id text not null
+checkout_orders.reservation_expires_at timestamp with time zone not null
+checkout_orders.status checkout_status not null default 'pending'::checkout_status
+checkout_orders.subtotal bigint not null
+checkout_orders.total bigint not null
+checkout_orders.user_id uuid not null
+checkout_orders.workspace_id uuid not null
 conversation_members.conversation_id uuid not null
 conversation_members.hidden_at timestamp with time zone
 conversation_members.joined_at timestamp with time zone not null default now()
@@ -134,6 +150,25 @@ conversations.tone avatar_tone not null default 'brand'::avatar_tone
 conversations.topic text not null default ''::text
 conversations.updated_at timestamp with time zone not null default now()
 conversations.workspace_id uuid not null
+coupon_plans.coupon_id uuid not null
+coupon_plans.plan_id text not null
+coupon_reservations.consumed_at timestamp with time zone
+coupon_reservations.coupon_id uuid not null
+coupon_reservations.expires_at timestamp with time zone not null
+coupon_reservations.order_id uuid not null
+coupons.code text not null
+coupons.created_at timestamp with time zone not null default now()
+coupons.created_by uuid not null
+coupons.discount_type coupon_discount_type not null
+coupons.discount_value bigint not null
+coupons.expires_at timestamp with time zone
+coupons.id uuid not null default app.uuidv7()
+coupons.is_active boolean not null default true
+coupons.max_discount_amount bigint
+coupons.min_order_amount bigint not null default 0
+coupons.updated_at timestamp with time zone not null default now()
+coupons.usage_limit integer
+coupons.used_count integer not null default 0
 departments.created_at timestamp with time zone not null default now()
 departments.id uuid not null default app.uuidv7()
 departments.name text not null
@@ -266,6 +301,12 @@ password_reset_tokens.id uuid not null default app.uuidv7()
 password_reset_tokens.token_hash bytea not null
 password_reset_tokens.used_at timestamp with time zone
 password_reset_tokens.user_id uuid not null
+plan_prices.amount_toman bigint not null
+plan_prices.is_active boolean not null default true
+plan_prices.period billing_period not null
+plan_prices.plan_id text not null
+plan_prices.updated_at timestamp with time zone not null default now()
+plan_prices.updated_by uuid not null
 plans.created_at timestamp with time zone not null default now()
 plans.id text not null
 plans.limits jsonb not null
@@ -411,6 +452,48 @@ subtasks.task_id uuid not null
 subtasks.title text not null
 subtasks.updated_at timestamp with time zone not null default now()
 subtasks.workspace_id uuid not null
+support_messages.body text not null
+support_messages.command_hash text not null
+support_messages.command_id uuid not null
+support_messages.created_at timestamp with time zone not null default now()
+support_messages.id uuid not null default app.uuidv7()
+support_messages.is_internal boolean not null default false
+support_messages.public_seq integer
+support_messages.sender_id uuid not null
+support_messages.sender_type support_sender_type not null
+support_messages.ticket_id uuid not null
+support_tickets.agent_read_seq integer not null default 0
+support_tickets.assigned_admin_id uuid
+support_tickets.command_hash text not null
+support_tickets.command_id uuid not null
+support_tickets.created_at timestamp with time zone not null default now()
+support_tickets.department ticket_department not null
+support_tickets.id uuid not null default app.uuidv7()
+support_tickets.last_public_seq integer not null default 1
+support_tickets.priority ticket_priority not null
+support_tickets.reference_number bigint not null identity
+support_tickets.related_workspace_id uuid
+support_tickets.status ticket_status not null default 'OPEN'::ticket_status
+support_tickets.subject text not null
+support_tickets.updated_at timestamp with time zone not null default now()
+support_tickets.user_id uuid not null
+support_tickets.user_read_seq integer not null default 1
+support_tickets.version integer not null default 1
+support_tickets.workspace_name text not null
+support_uploads.command_hash text not null
+support_uploads.command_id uuid not null
+support_uploads.created_at timestamp with time zone not null default now()
+support_uploads.expires_at timestamp with time zone not null
+support_uploads.file_name text not null
+support_uploads.id uuid not null default app.uuidv7()
+support_uploads.message_id uuid
+support_uploads.mime_type text not null
+support_uploads.related_workspace_id uuid
+support_uploads.sender_type support_sender_type not null
+support_uploads.size_bytes bigint not null
+support_uploads.status support_upload_status not null default 'pending'::support_upload_status
+support_uploads.ticket_id uuid
+support_uploads.uploader_id uuid not null
 system_broadcasts.archived_at timestamp with time zone
 system_broadcasts.created_at timestamp with time zone not null default now()
 system_broadcasts.created_by uuid not null
@@ -665,6 +748,28 @@ calendar_events calendar_events_version_not_null: NOT NULL version
 calendar_events calendar_events_workspace_id_not_null: NOT NULL workspace_id
 calendar_events calendar_events_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 calendar_events calendar_events_ws_id_uq: UNIQUE (workspace_id, id)
+checkout_orders checkout_orders_amount_ck: CHECK ((((subtotal >= 0) AND (subtotal <= '1000000000000'::bigint)) AND ((discount >= 0) AND (discount <= subtotal)) AND (total = (subtotal - discount))))
+checkout_orders checkout_orders_command_id_not_null: NOT NULL command_id
+checkout_orders checkout_orders_command_uq: UNIQUE (workspace_id, user_id, command_id)
+checkout_orders checkout_orders_coupon_code_not_null: NOT NULL coupon_code
+checkout_orders checkout_orders_coupon_id_coupons_id_fk: FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE RESTRICT
+checkout_orders checkout_orders_created_at_not_null: NOT NULL created_at
+checkout_orders checkout_orders_discount_not_null: NOT NULL discount
+checkout_orders checkout_orders_id_not_null: NOT NULL id
+checkout_orders checkout_orders_paymentReference_unique: UNIQUE (payment_reference)
+checkout_orders checkout_orders_payment_ck: CHECK ((((status = 'pending'::checkout_status) AND (payment_reference IS NULL) AND (paid_at IS NULL)) OR ((status = 'paid'::checkout_status) AND (payment_reference IS NOT NULL) AND (paid_at IS NOT NULL))))
+checkout_orders checkout_orders_period_not_null: NOT NULL period
+checkout_orders checkout_orders_pkey: PRIMARY KEY (id)
+checkout_orders checkout_orders_plan_id_not_null: NOT NULL plan_id
+checkout_orders checkout_orders_plan_id_period_plan_prices_plan_id_period_fk: FOREIGN KEY (plan_id, period) REFERENCES plan_prices(plan_id, period) ON DELETE RESTRICT
+checkout_orders checkout_orders_reservation_expires_at_not_null: NOT NULL reservation_expires_at
+checkout_orders checkout_orders_status_not_null: NOT NULL status
+checkout_orders checkout_orders_subtotal_not_null: NOT NULL subtotal
+checkout_orders checkout_orders_total_not_null: NOT NULL total
+checkout_orders checkout_orders_user_id_not_null: NOT NULL user_id
+checkout_orders checkout_orders_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+checkout_orders checkout_orders_workspace_id_not_null: NOT NULL workspace_id
+checkout_orders checkout_orders_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT
 conversation_members conversation_members_conversation_fk: FOREIGN KEY (workspace_id, conversation_id) REFERENCES conversations(workspace_id, id) ON DELETE CASCADE
 conversation_members conversation_members_conversation_id_not_null: NOT NULL conversation_id
 conversation_members conversation_members_joined_at_not_null: NOT NULL joined_at
@@ -698,6 +803,34 @@ conversations conversations_updated_at_not_null: NOT NULL updated_at
 conversations conversations_workspace_id_not_null: NOT NULL workspace_id
 conversations conversations_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 conversations conversations_ws_id_uq: UNIQUE (workspace_id, id)
+coupon_plans coupon_plans_coupon_id_coupons_id_fk: FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE RESTRICT
+coupon_plans coupon_plans_coupon_id_not_null: NOT NULL coupon_id
+coupon_plans coupon_plans_coupon_id_plan_id_pk: PRIMARY KEY (coupon_id, plan_id)
+coupon_plans coupon_plans_plan_id_not_null: NOT NULL plan_id
+coupon_plans coupon_plans_plan_id_plans_id_fk: FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE RESTRICT
+coupon_reservations coupon_reservations_coupon_id_coupons_id_fk: FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE RESTRICT
+coupon_reservations coupon_reservations_coupon_id_not_null: NOT NULL coupon_id
+coupon_reservations coupon_reservations_expires_at_not_null: NOT NULL expires_at
+coupon_reservations coupon_reservations_order_id_checkout_orders_id_fk: FOREIGN KEY (order_id) REFERENCES checkout_orders(id) ON DELETE RESTRICT
+coupon_reservations coupon_reservations_order_id_not_null: NOT NULL order_id
+coupon_reservations coupon_reservations_pkey: PRIMARY KEY (order_id)
+coupons coupons_amount_ck: CHECK ((((min_order_amount >= 0) AND (min_order_amount <= '1000000000000'::bigint)) AND ((max_discount_amount IS NULL) OR ((discount_type = 'PERCENTAGE'::coupon_discount_type) AND ((max_discount_amount >= 0) AND (max_discount_amount <= '1000000000000'::bigint))))))
+coupons coupons_code_ck: CHECK ((code ~ '^[A-Z0-9]{3,40}$'::text))
+coupons coupons_code_not_null: NOT NULL code
+coupons coupons_code_unique: UNIQUE (code)
+coupons coupons_created_at_not_null: NOT NULL created_at
+coupons coupons_created_by_not_null: NOT NULL created_by
+coupons coupons_created_by_users_id_fk: FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+coupons coupons_discount_type_not_null: NOT NULL discount_type
+coupons coupons_discount_value_not_null: NOT NULL discount_value
+coupons coupons_id_not_null: NOT NULL id
+coupons coupons_is_active_not_null: NOT NULL is_active
+coupons coupons_min_order_amount_not_null: NOT NULL min_order_amount
+coupons coupons_pkey: PRIMARY KEY (id)
+coupons coupons_updated_at_not_null: NOT NULL updated_at
+coupons coupons_usage_ck: CHECK (((used_count >= 0) AND ((usage_limit IS NULL) OR ((usage_limit > 0) AND (used_count <= usage_limit)))))
+coupons coupons_used_count_not_null: NOT NULL used_count
+coupons coupons_value_ck: CHECK ((((discount_value >= 1) AND (discount_value <= '1000000000000'::bigint)) AND ((discount_type <> 'PERCENTAGE'::coupon_discount_type) OR (discount_value <= 100))))
 departments departments_created_at_not_null: NOT NULL created_at
 departments departments_id_not_null: NOT NULL id
 departments departments_name_len: CHECK (((char_length(name) >= 1) AND (char_length(name) <= 60)))
@@ -871,6 +1004,16 @@ password_reset_tokens password_reset_tokens_pkey: PRIMARY KEY (id)
 password_reset_tokens password_reset_tokens_token_hash_not_null: NOT NULL token_hash
 password_reset_tokens password_reset_tokens_user_id_not_null: NOT NULL user_id
 password_reset_tokens password_reset_tokens_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+plan_prices plan_prices_amount_ck: CHECK (((amount_toman >= 0) AND (amount_toman <= '1000000000000'::bigint)))
+plan_prices plan_prices_amount_toman_not_null: NOT NULL amount_toman
+plan_prices plan_prices_is_active_not_null: NOT NULL is_active
+plan_prices plan_prices_period_not_null: NOT NULL period
+plan_prices plan_prices_plan_id_not_null: NOT NULL plan_id
+plan_prices plan_prices_plan_id_period_pk: PRIMARY KEY (plan_id, period)
+plan_prices plan_prices_plan_id_plans_id_fk: FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE RESTRICT
+plan_prices plan_prices_updated_at_not_null: NOT NULL updated_at
+plan_prices plan_prices_updated_by_not_null: NOT NULL updated_by
+plan_prices plan_prices_updated_by_users_id_fk: FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE RESTRICT
 plans plans_created_at_not_null: NOT NULL created_at
 plans plans_id_not_null: NOT NULL id
 plans plans_limits_not_null: NOT NULL limits
@@ -1053,6 +1196,67 @@ subtasks subtasks_updated_at_not_null: NOT NULL updated_at
 subtasks subtasks_workspace_id_not_null: NOT NULL workspace_id
 subtasks subtasks_workspace_id_workspaces_id_fk: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 subtasks subtasks_ws_id_uq: UNIQUE (workspace_id, id)
+support_messages support_message_body_ck: CHECK (((char_length(btrim(body)) >= 1) AND (char_length(btrim(body)) <= 8000)))
+support_messages support_message_command_uq: UNIQUE (ticket_id, sender_id, command_id)
+support_messages support_message_parent_uq: UNIQUE (ticket_id, id)
+support_messages support_message_public_seq_uq: UNIQUE (ticket_id, public_seq)
+support_messages support_message_visibility_ck: CHECK (((is_internal AND (sender_type = 'AGENT'::support_sender_type) AND (public_seq IS NULL)) OR ((NOT is_internal) AND (public_seq IS NOT NULL) AND (public_seq > 0))))
+support_messages support_messages_body_not_null: NOT NULL body
+support_messages support_messages_command_hash_not_null: NOT NULL command_hash
+support_messages support_messages_command_id_not_null: NOT NULL command_id
+support_messages support_messages_created_at_not_null: NOT NULL created_at
+support_messages support_messages_id_not_null: NOT NULL id
+support_messages support_messages_is_internal_not_null: NOT NULL is_internal
+support_messages support_messages_pkey: PRIMARY KEY (id)
+support_messages support_messages_sender_id_not_null: NOT NULL sender_id
+support_messages support_messages_sender_id_users_id_fk: FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE RESTRICT
+support_messages support_messages_sender_type_not_null: NOT NULL sender_type
+support_messages support_messages_ticket_id_not_null: NOT NULL ticket_id
+support_messages support_messages_ticket_id_support_tickets_id_fk: FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE RESTRICT
+support_tickets support_ticket_command_uq: UNIQUE (user_id, command_id)
+support_tickets support_ticket_sequence_ck: CHECK (((version > 0) AND (last_public_seq > 0) AND ((user_read_seq >= 0) AND (user_read_seq <= last_public_seq)) AND ((agent_read_seq >= 0) AND (agent_read_seq <= last_public_seq))))
+support_tickets support_ticket_subject_ck: CHECK (((char_length(btrim(subject)) >= 3) AND (char_length(btrim(subject)) <= 160)))
+support_tickets support_tickets_agent_read_seq_not_null: NOT NULL agent_read_seq
+support_tickets support_tickets_assigned_admin_id_users_id_fk: FOREIGN KEY (assigned_admin_id) REFERENCES users(id) ON DELETE SET NULL
+support_tickets support_tickets_command_hash_not_null: NOT NULL command_hash
+support_tickets support_tickets_command_id_not_null: NOT NULL command_id
+support_tickets support_tickets_created_at_not_null: NOT NULL created_at
+support_tickets support_tickets_department_not_null: NOT NULL department
+support_tickets support_tickets_id_not_null: NOT NULL id
+support_tickets support_tickets_last_public_seq_not_null: NOT NULL last_public_seq
+support_tickets support_tickets_pkey: PRIMARY KEY (id)
+support_tickets support_tickets_priority_not_null: NOT NULL priority
+support_tickets support_tickets_referenceNumber_unique: UNIQUE (reference_number)
+support_tickets support_tickets_reference_number_not_null: NOT NULL reference_number
+support_tickets support_tickets_related_workspace_id_workspaces_id_fk: FOREIGN KEY (related_workspace_id) REFERENCES workspaces(id) ON DELETE SET NULL
+support_tickets support_tickets_status_not_null: NOT NULL status
+support_tickets support_tickets_subject_not_null: NOT NULL subject
+support_tickets support_tickets_updated_at_not_null: NOT NULL updated_at
+support_tickets support_tickets_user_id_not_null: NOT NULL user_id
+support_tickets support_tickets_user_id_users_id_fk: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+support_tickets support_tickets_user_read_seq_not_null: NOT NULL user_read_seq
+support_tickets support_tickets_version_not_null: NOT NULL version
+support_tickets support_tickets_workspace_name_not_null: NOT NULL workspace_name
+support_uploads support_upload_command_uq: UNIQUE (uploader_id, command_id)
+support_uploads support_upload_name_ck: CHECK (((char_length(file_name) >= 1) AND (char_length(file_name) <= 255)))
+support_uploads support_upload_parent_ck: CHECK (((message_id IS NULL) OR (ticket_id IS NOT NULL)))
+support_uploads support_upload_size_ck: CHECK (((size_bytes >= 1) AND (size_bytes <= 10485760)))
+support_uploads support_uploads_command_hash_not_null: NOT NULL command_hash
+support_uploads support_uploads_command_id_not_null: NOT NULL command_id
+support_uploads support_uploads_created_at_not_null: NOT NULL created_at
+support_uploads support_uploads_expires_at_not_null: NOT NULL expires_at
+support_uploads support_uploads_file_name_not_null: NOT NULL file_name
+support_uploads support_uploads_id_not_null: NOT NULL id
+support_uploads support_uploads_mime_type_not_null: NOT NULL mime_type
+support_uploads support_uploads_pkey: PRIMARY KEY (id)
+support_uploads support_uploads_related_workspace_id_workspaces_id_fk: FOREIGN KEY (related_workspace_id) REFERENCES workspaces(id) ON DELETE SET NULL
+support_uploads support_uploads_sender_type_not_null: NOT NULL sender_type
+support_uploads support_uploads_size_bytes_not_null: NOT NULL size_bytes
+support_uploads support_uploads_status_not_null: NOT NULL status
+support_uploads support_uploads_ticket_id_message_id_support_messages_ticket_id: FOREIGN KEY (ticket_id, message_id) REFERENCES support_messages(ticket_id, id) ON DELETE RESTRICT
+support_uploads support_uploads_ticket_id_support_tickets_id_fk: FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE RESTRICT
+support_uploads support_uploads_uploader_id_not_null: NOT NULL uploader_id
+support_uploads support_uploads_uploader_id_users_id_fk: FOREIGN KEY (uploader_id) REFERENCES users(id) ON DELETE RESTRICT
 system_broadcasts system_broadcasts_created_at_not_null: NOT NULL created_at
 system_broadcasts system_broadcasts_created_by_not_null: NOT NULL created_by
 system_broadcasts system_broadcasts_created_by_users_id_fk: FOREIGN KEY (created_by) REFERENCES users(id)
@@ -1283,6 +1487,11 @@ calendar_events CREATE INDEX calendar_events_start_date_idx ON public.calendar_e
 calendar_events CREATE INDEX calendar_events_starts_idx ON public.calendar_events USING btree (workspace_id, starts_at) WHERE (deleted_at IS NULL)
 calendar_events CREATE UNIQUE INDEX calendar_events_pkey ON public.calendar_events USING btree (id)
 calendar_events CREATE UNIQUE INDEX calendar_events_ws_id_uq ON public.calendar_events USING btree (workspace_id, id)
+checkout_orders CREATE INDEX checkout_orders_reservations_idx ON public.checkout_orders USING btree (coupon_id, reservation_expires_at) WHERE (status = 'pending'::checkout_status)
+checkout_orders CREATE INDEX checkout_orders_workspace_idx ON public.checkout_orders USING btree (workspace_id, created_at DESC NULLS LAST)
+checkout_orders CREATE UNIQUE INDEX "checkout_orders_paymentReference_unique" ON public.checkout_orders USING btree (payment_reference)
+checkout_orders CREATE UNIQUE INDEX checkout_orders_command_uq ON public.checkout_orders USING btree (workspace_id, user_id, command_id)
+checkout_orders CREATE UNIQUE INDEX checkout_orders_pkey ON public.checkout_orders USING btree (id)
 conversation_members CREATE INDEX conversation_members_user_idx ON public.conversation_members USING btree (workspace_id, user_id) WHERE (left_at IS NULL)
 conversation_members CREATE UNIQUE INDEX conversation_members_pk ON public.conversation_members USING btree (conversation_id, user_id)
 conversations CREATE INDEX conversations_project_idx ON public.conversations USING btree (workspace_id, project_id) WHERE (project_id IS NOT NULL)
@@ -1291,6 +1500,12 @@ conversations CREATE UNIQUE INDEX conversations_direct_uq ON public.conversation
 conversations CREATE UNIQUE INDEX conversations_pkey ON public.conversations USING btree (id)
 conversations CREATE UNIQUE INDEX conversations_project_uq ON public.conversations USING btree (workspace_id, project_id) WHERE (project_id IS NOT NULL)
 conversations CREATE UNIQUE INDEX conversations_ws_id_uq ON public.conversations USING btree (workspace_id, id)
+coupon_plans CREATE UNIQUE INDEX coupon_plans_coupon_id_plan_id_pk ON public.coupon_plans USING btree (coupon_id, plan_id)
+coupon_reservations CREATE INDEX coupon_reservations_available_idx ON public.coupon_reservations USING btree (coupon_id, expires_at) WHERE (consumed_at IS NULL)
+coupon_reservations CREATE UNIQUE INDEX coupon_reservations_pkey ON public.coupon_reservations USING btree (order_id)
+coupons CREATE INDEX coupons_created_idx ON public.coupons USING btree (created_at DESC NULLS LAST, id DESC NULLS LAST)
+coupons CREATE UNIQUE INDEX coupons_code_unique ON public.coupons USING btree (code)
+coupons CREATE UNIQUE INDEX coupons_pkey ON public.coupons USING btree (id)
 departments CREATE UNIQUE INDEX departments_pkey ON public.departments USING btree (id)
 departments CREATE UNIQUE INDEX departments_ws_id_uq ON public.departments USING btree (workspace_id, id)
 departments CREATE UNIQUE INDEX departments_ws_name_uq ON public.departments USING btree (workspace_id, lower(name))
@@ -1338,6 +1553,7 @@ outbox_events CREATE UNIQUE INDEX outbox_events_pkey ON public.outbox_events USI
 password_reset_tokens CREATE INDEX password_reset_tokens_user_idx ON public.password_reset_tokens USING btree (user_id) WHERE (used_at IS NULL)
 password_reset_tokens CREATE UNIQUE INDEX password_reset_tokens_hash_uq ON public.password_reset_tokens USING btree (token_hash)
 password_reset_tokens CREATE UNIQUE INDEX password_reset_tokens_pkey ON public.password_reset_tokens USING btree (id)
+plan_prices CREATE UNIQUE INDEX plan_prices_plan_id_period_pk ON public.plan_prices USING btree (plan_id, period)
 plans CREATE UNIQUE INDEX plans_pkey ON public.plans USING btree (id)
 platform_audit_logs CREATE INDEX platform_audit_logs_admin_idx ON public.platform_audit_logs USING btree (admin_id, created_at DESC NULLS LAST)
 platform_audit_logs CREATE INDEX platform_audit_logs_target_idx ON public.platform_audit_logs USING btree (target_user_id, created_at DESC NULLS LAST) WHERE (target_user_id IS NOT NULL)
@@ -1383,6 +1599,23 @@ site_submissions CREATE UNIQUE INDEX site_submissions_pkey ON public.site_submis
 subtasks CREATE INDEX subtasks_task_position_idx ON public.subtasks USING btree (task_id, "position")
 subtasks CREATE UNIQUE INDEX subtasks_pkey ON public.subtasks USING btree (id)
 subtasks CREATE UNIQUE INDEX subtasks_ws_id_uq ON public.subtasks USING btree (workspace_id, id)
+support_messages CREATE INDEX support_message_thread_idx ON public.support_messages USING btree (ticket_id, created_at DESC NULLS LAST, id DESC NULLS LAST)
+support_messages CREATE UNIQUE INDEX support_message_command_uq ON public.support_messages USING btree (ticket_id, sender_id, command_id)
+support_messages CREATE UNIQUE INDEX support_message_parent_uq ON public.support_messages USING btree (ticket_id, id)
+support_messages CREATE UNIQUE INDEX support_message_public_seq_uq ON public.support_messages USING btree (ticket_id, public_seq)
+support_messages CREATE UNIQUE INDEX support_messages_pkey ON public.support_messages USING btree (id)
+support_tickets CREATE INDEX support_ticket_assignee_idx ON public.support_tickets USING btree (assigned_admin_id, updated_at DESC NULLS LAST)
+support_tickets CREATE INDEX support_ticket_owner_idx ON public.support_tickets USING btree (user_id, updated_at DESC NULLS LAST, id DESC NULLS LAST)
+support_tickets CREATE INDEX support_ticket_queue_idx ON public.support_tickets USING btree (status, priority, department, updated_at DESC NULLS LAST, id DESC NULLS LAST)
+support_tickets CREATE INDEX support_ticket_rate_idx ON public.support_tickets USING btree (user_id, created_at)
+support_tickets CREATE UNIQUE INDEX "support_tickets_referenceNumber_unique" ON public.support_tickets USING btree (reference_number)
+support_tickets CREATE UNIQUE INDEX support_ticket_command_uq ON public.support_tickets USING btree (user_id, command_id)
+support_tickets CREATE UNIQUE INDEX support_tickets_pkey ON public.support_tickets USING btree (id)
+support_uploads CREATE INDEX support_upload_message_idx ON public.support_uploads USING btree (message_id)
+support_uploads CREATE INDEX support_upload_rate_idx ON public.support_uploads USING btree (uploader_id, created_at)
+support_uploads CREATE INDEX support_upload_ticket_idx ON public.support_uploads USING btree (ticket_id)
+support_uploads CREATE UNIQUE INDEX support_upload_command_uq ON public.support_uploads USING btree (uploader_id, command_id)
+support_uploads CREATE UNIQUE INDEX support_uploads_pkey ON public.support_uploads USING btree (id)
 system_broadcasts CREATE INDEX system_broadcasts_active_starts_idx ON public.system_broadcasts USING btree (starts_at) WHERE ((archived_at IS NULL) AND (is_active = true))
 system_broadcasts CREATE INDEX system_broadcasts_created_by_idx ON public.system_broadcasts USING btree (created_by)
 system_broadcasts CREATE INDEX system_broadcasts_created_idx ON public.system_broadcasts USING btree (created_at DESC NULLS LAST, id DESC NULLS LAST)
@@ -1440,8 +1673,12 @@ auto_reply_log enabled=true forced=true
 board_columns enabled=true forced=true
 calendar_event_attendees enabled=true forced=true
 calendar_events enabled=true forced=true
+checkout_orders enabled=true forced=true
 conversation_members enabled=true forced=true
 conversations enabled=true forced=true
+coupon_plans enabled=false forced=false
+coupon_reservations enabled=false forced=false
+coupons enabled=false forced=false
 departments enabled=true forced=true
 idempotency_keys enabled=false forced=false
 invitations enabled=true forced=true
@@ -1456,6 +1693,7 @@ notifications enabled=true forced=true
 otp_challenges enabled=false forced=false
 outbox_events enabled=false forced=false
 password_reset_tokens enabled=false forced=false
+plan_prices enabled=false forced=false
 plans enabled=false forced=false
 platform_audit_logs enabled=false forced=false
 project_departments enabled=true forced=true
@@ -1473,6 +1711,9 @@ site_redirects enabled=true forced=false
 site_revisions enabled=true forced=false
 site_submissions enabled=true forced=false
 subtasks enabled=true forced=true
+support_messages enabled=true forced=true
+support_tickets enabled=true forced=true
+support_uploads enabled=true forced=true
 system_broadcasts enabled=false forced=false
 task_assignees enabled=true forced=true
 task_attachments enabled=true forced=true
@@ -1497,6 +1738,7 @@ auto_reply_log auto_reply_log_tenant ALL using((workspace_id = ( SELECT app.curr
 board_columns board_columns_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 calendar_event_attendees calendar_event_attendees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 calendar_events calendar_events_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+checkout_orders checkout_orders_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 conversation_members conversation_members_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 conversations conversations_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 departments departments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
@@ -1535,6 +1777,18 @@ site_revisions site_revisions_read SELECT using(app.is_site_admin()) check()
 site_submissions site_submissions_admin ALL using(app.is_site_admin()) check(app.is_site_admin())
 site_submissions site_submissions_public_insert INSERT using() check((((payload ->> 'consent'::text) = 'true'::text) AND (status = 'new'::text) AND (notes = ''::text)))
 subtasks subtasks_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
+support_messages support_message_private ALL using((( SELECT app.is_support_agent() AS is_support_agent) OR ((NOT is_internal) AND (EXISTS ( SELECT 1
+   FROM support_tickets t
+  WHERE ((t.id = support_messages.ticket_id) AND (t.user_id = ( SELECT app.current_user_id() AS current_user_id)))))))) check((( SELECT app.is_support_agent() AS is_support_agent) OR ((sender_id = ( SELECT app.current_user_id() AS current_user_id)) AND (sender_type = 'USER'::support_sender_type) AND (NOT is_internal) AND (EXISTS ( SELECT 1
+   FROM support_tickets t
+  WHERE ((t.id = support_messages.ticket_id) AND (t.user_id = ( SELECT app.current_user_id() AS current_user_id))))))))
+support_tickets support_ticket_private ALL using(((user_id = ( SELECT app.current_user_id() AS current_user_id)) OR ( SELECT app.is_support_agent() AS is_support_agent))) check(((user_id = ( SELECT app.current_user_id() AS current_user_id)) OR ( SELECT app.is_support_agent() AS is_support_agent)))
+support_uploads support_upload_private ALL using((( SELECT app.is_support_agent() AS is_support_agent) OR ((message_id IS NULL) AND (uploader_id = ( SELECT app.current_user_id() AS current_user_id)) AND (sender_type = 'USER'::support_sender_type)) OR (EXISTS ( SELECT 1
+   FROM (support_messages m
+     JOIN support_tickets t ON ((t.id = m.ticket_id)))
+  WHERE ((m.id = support_uploads.message_id) AND (t.user_id = ( SELECT app.current_user_id() AS current_user_id)) AND (NOT m.is_internal)))))) check(((( SELECT app.is_support_agent() AS is_support_agent) OR ((uploader_id = ( SELECT app.current_user_id() AS current_user_id)) AND (sender_type = 'USER'::support_sender_type))) AND ((ticket_id IS NULL) OR (EXISTS ( SELECT 1
+   FROM support_tickets t
+  WHERE (t.id = support_uploads.ticket_id))))))
 task_assignees task_assignees_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_attachments task_attachments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
 task_comments task_comments_tenant ALL using((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id))) check((workspace_id = ( SELECT app.current_workspace_id() AS current_workspace_id)))
@@ -1557,11 +1811,13 @@ board_columns board_columns_categories -> check_workflow_categories
 board_columns board_columns_touch -> touch_updated_at
 calendar_events calendar_events_touch -> touch_updated_at
 conversations conversations_touch -> touch_updated_at
+coupons coupons_touch_updated_at -> touch_updated_at
 departments departments_touch -> touch_updated_at
 idempotency_keys idempotency_keys_touch -> touch_updated_at
 member_working_hours member_working_hours_touch -> touch_updated_at
 notes notes_touch -> touch_updated_at
 outbox_events outbox_events_notify -> notify_outbox
+plan_prices plan_prices_touch_updated_at -> touch_updated_at
 projects projects_sync_primary_department -> sync_project_primary_department
 projects projects_touch -> touch_updated_at
 role_permissions role_permissions_protect_locked -> protect_locked_role_permissions
@@ -1591,6 +1847,7 @@ app.ensure_audit_partitions(months_ahead integer) security definer
 app.find_invitation(p_token_hash bytea) security definer
 app.include_deleted() invoker
 app.is_site_admin() security definer
+app.is_support_agent() security definer
 app.notify_outbox() invoker
 app.projects_due_for_purge(p_days integer, p_limit integer) security definer
 app.protect_locked_role_permissions() invoker
@@ -1617,8 +1874,12 @@ auto_reply_log DELETE,INSERT,SELECT,UPDATE
 board_columns DELETE,INSERT,SELECT,UPDATE
 calendar_event_attendees DELETE,INSERT,SELECT,UPDATE
 calendar_events DELETE,INSERT,SELECT,UPDATE
+checkout_orders INSERT,SELECT,UPDATE
 conversation_members DELETE,INSERT,SELECT,UPDATE
 conversations DELETE,INSERT,SELECT,UPDATE
+coupon_plans INSERT,SELECT,UPDATE
+coupon_reservations INSERT,SELECT,UPDATE
+coupons INSERT,SELECT,UPDATE
 departments DELETE,INSERT,SELECT,UPDATE
 idempotency_keys DELETE,INSERT,SELECT,UPDATE
 invitations DELETE,INSERT,SELECT,UPDATE
@@ -1633,6 +1894,7 @@ notifications DELETE,INSERT,SELECT,UPDATE
 otp_challenges DELETE,INSERT,SELECT,UPDATE
 outbox_events DELETE,INSERT,SELECT,UPDATE
 password_reset_tokens DELETE,INSERT,SELECT,UPDATE
+plan_prices INSERT,SELECT,UPDATE
 plans SELECT
 platform_audit_logs INSERT,SELECT
 project_departments DELETE,INSERT,SELECT,UPDATE
@@ -1650,6 +1912,9 @@ site_redirects DELETE,INSERT,SELECT,UPDATE
 site_revisions INSERT,SELECT
 site_submissions INSERT,SELECT,UPDATE
 subtasks DELETE,INSERT,SELECT,UPDATE
+support_messages INSERT,SELECT
+support_tickets INSERT,SELECT,UPDATE
+support_uploads INSERT,SELECT,UPDATE
 system_broadcasts INSERT,SELECT,UPDATE
 task_assignees DELETE,INSERT,SELECT,UPDATE
 task_attachments DELETE,INSERT,SELECT,UPDATE

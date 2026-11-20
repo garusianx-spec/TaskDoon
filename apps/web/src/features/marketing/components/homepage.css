@@ -142,8 +142,8 @@
 }
 .journey-steps button[aria-selected='true'] {
   color: rgb(var(--fg-brand));
-  border-bottom-color: rgb(var(--brand-600));
-  background: rgb(var(--brand-50));
+  border-bottom-color: rgb(var(--border-brand));
+  background: rgb(var(--bg-brand-subtle));
 }
 .journey-steps strong {
   display: block;
@@ -538,21 +538,21 @@
 }
 .home-closing {
   padding: 54px 32px;
-  background: rgb(var(--brand-600));
+  background: rgb(var(--bg-brand-solid));
   color: rgb(var(--fg-on-brand));
   border-radius: 16px;
   text-align: center;
 }
 .home-closing .home-heading p {
   margin-inline: auto;
-  color: rgb(var(--brand-100));
+  color: rgb(var(--fg-on-brand));
 }
 .home-closing .marketing-button-primary {
-  background: rgb(var(--bg-surface));
-  color: rgb(var(--brand-700));
+  background: rgb(var(--fg-on-brand));
+  color: rgb(var(--brand-ink));
 }
 .home-closing .marketing-button-primary:hover {
-  background: rgb(var(--brand-50));
+  background: rgb(var(--fg-on-brand) / 0.95);
 }
 .home-closing .marketing-button-secondary {
   background: transparent;

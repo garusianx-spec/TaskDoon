@@ -160,9 +160,11 @@ export class StorageService implements OnModuleDestroy {
   }
 
   /** Size and type of an object, or `null` when it does not exist. */
-  async head(key: string): Promise<StoredObject | null> {
+  async head(key: string, signal?: AbortSignal): Promise<StoredObject | null> {
     try {
-      const head = await this.internal.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      const head = await this.internal.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }), {
+        abortSignal: signal,
+      });
       return { size: head.ContentLength ?? 0, contentType: head.ContentType };
     } catch (error) {
       if ((error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
@@ -172,15 +174,16 @@ export class StorageService implements OnModuleDestroy {
   }
 
   /** The first `length` bytes, for sniffing a file's real type from its magic number. */
-  async readPrefix(key: string, length: number): Promise<Buffer> {
+  async readPrefix(key: string, length: number, signal?: AbortSignal): Promise<Buffer> {
     const object = await this.internal.send(
       new GetObjectCommand({ Bucket: this.bucket, Key: key, Range: `bytes=0-${length - 1}` }),
+      { abortSignal: signal },
     );
     const bytes = await object.Body?.transformToByteArray();
     return Buffer.from(bytes ?? []);
   }
 
-  async copy(from: string, to: string, contentType: string): Promise<void> {
+  async copy(from: string, to: string, contentType: string, signal?: AbortSignal): Promise<void> {
     await this.internal.send(
       new CopyObjectCommand({
         Bucket: this.bucket,
@@ -189,6 +192,7 @@ export class StorageService implements OnModuleDestroy {
         ContentType: contentType,
         MetadataDirective: 'REPLACE',
       }),
+      { abortSignal: signal },
     );
   }
 

@@ -16,6 +16,7 @@ import { DomainModule } from './modules/domain.module.js';
 import { SiteModule } from './modules/site/site.module.js';
 import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { MeController } from './modules/users/me.controller.js';
+import { SupportModule } from './modules/support/support.module.js';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module.js';
 import { ContentController, InboxController } from './modules/content/content.controller.js';
 import { AgileController } from './modules/work/agile.controller.js';
@@ -62,6 +63,7 @@ class HttpApiModule {
       imports: [
         DomainModule,
         PlatformAdminModule,
+        SupportModule,
         SiteModule,
         ThrottlerModule.forRootAsync({
           inject: [RedisClients, AppConfig],

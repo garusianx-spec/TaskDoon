@@ -1,4 +1,5 @@
 'use client';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 
 import { useEffect, useState } from 'react';
 import type { Workspace } from '@taskin/contracts';
@@ -82,9 +83,9 @@ export function DeleteWorkspaceModal({
             data-autofocus
           />
           {requirePassword && (
-            <Input
+            <PasswordInput
               label="رمز مدیر"
-              type="password"
+
               autoComplete="current-password"
               dir="ltr"
               value={password}

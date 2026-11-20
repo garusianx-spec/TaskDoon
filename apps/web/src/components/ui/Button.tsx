@@ -67,7 +67,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={isDisabled}
       aria-busy={loading || undefined}
       className={cn(
-        'relative inline-flex select-none items-center justify-center whitespace-nowrap transition-colors duration-150',
+        'relative inline-flex min-h-11 min-w-11 select-none items-center justify-center whitespace-nowrap transition-[color,background-color,border-color,transform] duration-150 enabled:active:scale-[0.98] motion-reduce:transform-none',
         'disabled:cursor-not-allowed',
         VARIANTS[variant],
         variant === 'link' ? 'h-auto gap-1 p-0 text-body font-semibold' : SIZES[size],

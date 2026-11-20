@@ -1,8 +1,13 @@
 'use client';
 
-import { forwardRef, useId, useState } from 'react';
+import { forwardRef, useId } from 'react';
 import { Input, type InputProps } from '@/components/ui/Input';
-import { EyeIcon, EyeSlashIcon } from '@/components/icons';
+import { PasswordInput as SharedPasswordInput, type PasswordInputProps } from '@/components/ui/PasswordInput';
+export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
+  function PasswordInput(props, ref) {
+    return <SharedPasswordInput maxLength={128} {...props} ref={ref} />;
+  },
+);
 import { otpDigits } from '@/features/auth/lib/auth-input';
 
 export function AuthFormError({ message }: { readonly message?: string }) {
@@ -35,33 +40,6 @@ export const AuthInput = forwardRef<HTMLInputElement, InputProps>(function AuthI
         </p>
       )}
     </div>
-  );
-});
-
-export const PasswordInput = forwardRef<HTMLInputElement, InputProps>(function PasswordInput(props, ref) {
-  const [visible, setVisible] = useState(false);
-  return (
-    <AuthInput
-      {...props}
-      ref={ref}
-      type={visible ? 'text' : 'password'}
-      dir="ltr"
-      maxLength={128}
-      iconEnd={
-        <button
-          type="button"
-          data-password-toggle
-          className="auth-password-toggle"
-          aria-label={`${visible ? 'پنهان کردن' : 'نمایش'} ${props.label ?? 'رمز عبور'}`}
-          aria-pressed={visible}
-          disabled={props.disabled}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => setVisible((value) => !value)}
-        >
-          {visible ? <EyeSlashIcon size={19} /> : <EyeIcon size={19} />}
-        </button>
-      }
-    />
   );
 });
 

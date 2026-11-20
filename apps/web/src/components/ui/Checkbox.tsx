@@ -34,7 +34,7 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
     size = 'md',
     tone = 'brand',
     className,
-    touchTarget = false,
+    touchTarget = true,
   },
   ref,
 ) {
@@ -55,7 +55,7 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
       onClick={() => onCheckedChange(!checked)}
       className={
         touchTarget
-          ? 'inline-flex size-11 shrink-0 items-center justify-center rounded-lg sm:size-4'
+          ? cn('inline-flex size-11 shrink-0 items-center justify-center rounded-lg', className)
           : cn(
               'inline-flex shrink-0 items-center justify-center rounded-sm border transition-colors duration-150',
               box,
