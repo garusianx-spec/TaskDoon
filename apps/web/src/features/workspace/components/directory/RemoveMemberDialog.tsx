@@ -1,10 +1,11 @@
 'use client';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 
 import { useState } from 'react';
 import type { User } from '@taskin/contracts';
 import { formatCount } from '@/lib/format';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
-import { Button, Input, Modal } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import { UserIcon } from '@/components/icons';
 
 /** Days a removed member's conversations and projects wait for them (the API's retention). */
@@ -58,9 +59,9 @@ export function RemoveMemberDialog({
           {`پیام‌ها، وظایف، نظرها و فعالیت‌هایش با نام او و نشان «عضو سابق» می‌ماند. اگر تا ${formatCount(RETURN_DAYS)} روز دوباره دعوت شود، گفتگوها و پروژه‌هایش را پس می‌گیرد.`}
         </p>
         {requirePassword && (
-          <Input
+          <PasswordInput
             label="رمز مدیر"
-            type="password"
+
             autoComplete="current-password"
             dir="ltr"
             value={password}

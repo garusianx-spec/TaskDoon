@@ -14,3 +14,7 @@ export * from './platform-admin.js';
 export * from './broadcasts.js';
 
 export * from './site.js';
+
+export * from './coupons.js';
+
+export * from './support.js';

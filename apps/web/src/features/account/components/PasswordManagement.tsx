@@ -4,8 +4,8 @@ import { useState } from 'react';
 import type { User } from '@taskin/contracts';
 import { formatJalali, toPersianDigits } from '@taskin/jalali';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
-import { Button, Input } from '@/components/ui';
-import { CheckCircleIcon, EyeIcon, EyeSlashIcon, KeyIcon } from '@/components/icons';
+import { Button, PasswordInput } from '@/components/ui';
+import { CheckCircleIcon, KeyIcon } from '@/components/icons';
 import { PasswordStrengthMeter } from '@/features/account/components/PasswordStrengthMeter';
 
 interface PasswordManagementProps {
@@ -33,7 +33,6 @@ export function PasswordManagement({
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [reveal, setReveal] = useState(false);
   const [touched, setTouched] = useState(false);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -47,7 +46,6 @@ export function PasswordManagement({
     setCurrent('');
     setNext('');
     setConfirm('');
-    setReveal(false);
     setTouched(false);
     setSaved(false);
   });
@@ -86,19 +84,6 @@ export function PasswordManagement({
     setSaved(true);
   };
 
-  const inputType = reveal ? 'text' : 'password';
-  const revealToggle = (
-    <button
-      type="button"
-      onClick={() => setReveal((value) => !value)}
-      aria-label={reveal ? 'پنهان کردن رمزها' : 'نمایش رمزها'}
-      aria-pressed={reveal}
-      className="flex rounded text-fg-quaternary transition-colors hover:text-fg-secondary"
-    >
-      {reveal ? <EyeSlashIcon size={18} /> : <EyeIcon size={18} />}
-    </button>
-  );
-
   return (
     <section aria-labelledby="security-password" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline gap-2">
@@ -133,30 +118,26 @@ export function PasswordManagement({
         {/* Lets password managers associate the fields with this account. */}
         <input type="text" autoComplete="username" value={user.email || user.phone} readOnly hidden />
         {needsCurrent && (
-          <Input
+          <PasswordInput
             label="رمز عبور فعلی"
-            type={inputType}
             autoComplete="current-password"
             dir="ltr"
             value={current}
             onChange={(event) => setCurrent(event.target.value)}
             error={currentError}
-            iconEnd={revealToggle}
           />
         )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input
+          <PasswordInput
             label="رمز عبور جدید"
-            type={inputType}
             autoComplete="new-password"
             dir="ltr"
             value={next}
             onChange={(event) => setNext(event.target.value)}
             error={nextError}
           />
-          <Input
+          <PasswordInput
             label="تکرار رمز عبور جدید"
-            type={inputType}
             autoComplete="new-password"
             dir="ltr"
             value={confirm}

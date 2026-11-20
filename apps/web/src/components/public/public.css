@@ -1,5 +1,4 @@
 .public-surface {
-  color-scheme: light;
   --logo-front: rgb(var(--brand-600));
   --logo-back: rgb(var(--brand-800));
   --logo-ink: rgb(var(--fg-primary));
@@ -8,13 +7,13 @@
   background: rgb(var(--bg-surface));
   color: rgb(var(--fg-primary));
   font-size: 16px;
-  line-height: 1.85;
+  line-height: 1.8;
   caret-color: rgb(var(--brand-600));
   text-underline-offset: 0.3em;
 }
 .public-surface ::selection {
-  background: rgb(var(--brand-100));
-  color: rgb(var(--brand-900));
+  background: rgb(var(--brand-solid) / 0.25);
+  color: inherit;
 }
 .public-surface h1,
 .public-surface h2,
@@ -35,7 +34,7 @@
   opacity: 1;
 }
 .public-surface :focus-visible {
-  outline: 2px solid rgb(var(--brand-600));
+  outline: 2px solid rgb(var(--ring-brand));
   outline-offset: 4px;
 }
 .public-surface .public-subtle {

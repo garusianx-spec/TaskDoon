@@ -1,4 +1,5 @@
 'use client';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 
 import { useState } from 'react';
 import type { AvatarTone, WorkspaceDraft } from '@taskin/contracts';
@@ -182,9 +183,9 @@ export function CreateWorkspaceModal({
         />
 
         {requirePassword && (
-          <Input
+          <PasswordInput
             label="رمز مدیر"
-            type="password"
+
             autoComplete="new-password"
             dir="ltr"
             value={password}

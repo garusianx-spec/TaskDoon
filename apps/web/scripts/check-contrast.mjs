@@ -26,9 +26,7 @@ const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body
   ),
 }));
 
-const accents = [
-  ...new Set(blocks.map((b) => /^\[data-accent='(\w+)'\]$/.exec(b.selector)?.[1]).filter(Boolean)),
-];
+const accents = ['taskdoon'];
 
 function tokensFor(mode, accent) {
   const appliesOne = (selector) =>

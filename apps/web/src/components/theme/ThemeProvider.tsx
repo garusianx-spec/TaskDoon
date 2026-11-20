@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { AccentId, ResolvedThemeMode, ThemeConfig, ThemeMode } from '@taskin/contracts';
+import type { ResolvedThemeMode, ThemeConfig, ThemeMode } from '@taskin/contracts';
 import { DEFAULT_THEME, THEME_STORAGE_KEY, parseThemeConfig } from '@/lib/theme';
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
 
@@ -9,7 +9,6 @@ interface ThemeContextValue {
   readonly theme: ThemeConfig;
   readonly resolvedMode: ResolvedThemeMode;
   readonly setMode: (mode: ThemeMode) => void;
-  readonly setAccent: (accent: AccentId) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -31,25 +30,31 @@ export function ThemeProvider({ children }: { readonly children: ReactNode }) {
 
   // Adopt whatever the bootstrap script already applied, before the first paint React owns.
   useIsomorphicLayoutEffect(() => {
-    const stored = parseThemeConfig(window.localStorage.getItem(THEME_STORAGE_KEY));
+    let stored = DEFAULT_THEME;
+    try {
+      stored = parseThemeConfig(window.localStorage.getItem(THEME_STORAGE_KEY));
+      window.localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(stored));
+    } catch {
+      /* Storage can be unavailable. */
+    }
     setTheme(stored);
-    setResolvedMode(resolve(stored.mode));
+    setResolvedMode(resolve(stored.theme));
   }, []);
 
   useIsomorphicLayoutEffect(() => {
     const root = document.documentElement;
     root.setAttribute('data-theme', resolvedMode);
-    root.setAttribute('data-accent', theme.accent);
-  }, [resolvedMode, theme.accent]);
+    root.removeAttribute('data-accent');
+  }, [resolvedMode]);
 
   // Follow the OS while the user is on "system".
   useEffect(() => {
-    if (theme.mode !== 'system') return;
+    if (theme.theme !== 'system') return;
     const query = window.matchMedia('(prefers-color-scheme: dark)');
     const onChange = () => setResolvedMode(query.matches ? 'dark' : 'light');
     query.addEventListener('change', onChange);
     return () => query.removeEventListener('change', onChange);
-  }, [theme.mode]);
+  }, [theme.theme]);
 
   // Keep every open tab of the workspace in sync.
   useEffect(() => {
@@ -57,7 +62,7 @@ export function ThemeProvider({ children }: { readonly children: ReactNode }) {
       if (event.key !== THEME_STORAGE_KEY) return;
       const next = parseThemeConfig(event.newValue);
       setTheme(next);
-      setResolvedMode(resolve(next.mode));
+      setResolvedMode(resolve(next.theme));
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
@@ -65,7 +70,7 @@ export function ThemeProvider({ children }: { readonly children: ReactNode }) {
 
   const persist = useCallback((next: ThemeConfig) => {
     setTheme(next);
-    setResolvedMode(resolve(next.mode));
+    setResolvedMode(resolve(next.theme));
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(next));
     } catch {
@@ -78,8 +83,7 @@ export function ThemeProvider({ children }: { readonly children: ReactNode }) {
     () => ({
       theme,
       resolvedMode,
-      setMode: (mode) => persist({ ...theme, mode }),
-      setAccent: (accent) => persist({ ...theme, accent }),
+      setMode: (mode) => persist({ theme: mode }),
     }),
     [theme, resolvedMode, persist],
   );
