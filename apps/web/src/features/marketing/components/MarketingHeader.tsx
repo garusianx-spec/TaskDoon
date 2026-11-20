@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { SiteLink as SiteLinkType } from '@taskin/contracts';
 import { MarketingLogo } from '@/features/marketing/components/MarketingLogo';
 import { SiteLink, Arrow } from '@/features/marketing/components/SiteLink';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
 
 export function MarketingHeader({
   links,
@@ -57,6 +58,7 @@ export function MarketingHeader({
           ))}
         </nav>
         <div className="marketing-header-actions">
+          <ThemeToggle placement="bottom" />
           {cta?.href !== '/feed' && (
             <SiteLink href="/feed" className="marketing-login">
               ورود

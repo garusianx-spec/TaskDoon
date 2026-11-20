@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import './public.css';
 
-/** A light brand surface without mutating the persisted workspace theme or the document. */
+/** Public pages inherit the same resolved theme as the workspace and authentication. */
 export function PublicSurface({
   children,
   className = '',
@@ -9,9 +9,5 @@ export function PublicSurface({
   readonly children: ReactNode;
   readonly className?: string;
 }) {
-  return (
-    <div className={`public-surface ${className}`} data-theme="light" data-accent="indigo">
-      {children}
-    </div>
-  );
+  return <div className={`public-surface ${className}`}>{children}</div>;
 }

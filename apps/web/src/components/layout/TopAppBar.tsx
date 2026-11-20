@@ -10,6 +10,7 @@ import { WorkspaceMenu } from '@/features/workspace/components/WorkspaceMenu';
 import { QuickCreateMenu } from '@/components/layout/QuickCreateMenu';
 import { AddIcon, ChevronDownIcon, NotificationIcon, SearchIcon } from '@/components/icons';
 import { mobilePageTitle } from '@/lib/workspace-navigation';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
 
 /**
  * Mobile top bar: workspace badge + switcher, quick create, global search and the
@@ -22,7 +23,7 @@ export function TopAppBar({ pageTitle }: { readonly pageTitle?: string }) {
   const title = pageTitle ?? mobilePageTitle(pathname);
 
   return (
-    <header className="sticky top-0 z-sticky flex h-14 shrink-0 items-center gap-2 border-b border-secondary bg-surface/95 px-3 backdrop-blur lg:hidden">
+    <header className="sticky top-0 z-sticky flex h-14 shrink-0 items-center gap-1 border-b border-secondary bg-surface/80 px-3 backdrop-blur-md lg:hidden">
       <Dropdown
         label="تعویض فضای کاری"
         align="start"
@@ -53,6 +54,7 @@ export function TopAppBar({ pageTitle }: { readonly pageTitle?: string }) {
         {(close) => <WorkspaceMenu close={close} />}
       </Dropdown>
 
+      <ThemeToggle placement="bottom" />
       <Dropdown
         label="ایجاد سریع"
         align="end"

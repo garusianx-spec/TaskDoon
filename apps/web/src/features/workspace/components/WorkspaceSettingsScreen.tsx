@@ -39,6 +39,7 @@ export function WorkspaceSettingsScreen() {
             </div>
           </section>
           <NavigationList id="workspace-management" title="مدیریت">
+            {isWorkspaceOwner && <NavigationRow href="/checkout" label="اشتراک و سفارش" Icon={GridIcon} />}
             {canViewRoles && (
               <NavigationRow href="/settings/roles" label="نقش‌ها و سطوح دسترسی" Icon={ShieldIcon} />
             )}
@@ -48,8 +49,8 @@ export function WorkspaceSettingsScreen() {
               onClick={() => open({ kind: 'workspace-settings' })}
             />
           </NavigationList>
-          <section aria-label="رنگ و پیش‌نمایش" className="rounded-xl border border-secondary bg-surface p-4">
-            <ThemePicker section="accent" className="w-full p-0" />
+          <section aria-label="حالت نمایش" className="rounded-xl border border-secondary bg-surface p-4">
+            <ThemePicker className="w-full p-0" />
           </section>
         </div>
       </div>
