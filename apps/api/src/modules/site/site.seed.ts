@@ -4,7 +4,7 @@ import type { SiteContent, SiteDocumentKind, SiteSection } from '@taskin/contrac
 /** Editorial defaults only. Existing content is never overwritten when seeds run again. */
 type SeedDocument = SiteContent & { kind: SiteDocumentKind; slug: string; published: boolean };
 
-const start = { label: 'شروع همکاری', href: '/feed' };
+const start = { label: 'ایجاد رایگان فضای کاری', href: '/feed' };
 const demo = { label: 'درخواست دمو', href: '/demo-request' };
 const features = [
   {
@@ -160,20 +160,21 @@ export const SITE_SEED_DOCUMENTS: readonly SeedDocument[] = [
     'settings',
     'global',
     'تنظیمات عمومی تسک‌دون',
-    'مدیریت کارها، پروژه‌ها و ارتباطات تیمی در یک فضای کاری یکپارچه.',
+    'پلتفرم جامع مدیریت پروژه و همکاری تیمی فارسی؛ هماهنگ، چابک و با تقویم شمسی.',
     [],
     {
       siteName: 'تسک‌دون',
-      description: 'مدیریت کارها، پروژه‌ها و ارتباطات تیمی در یک فضای کاری یکپارچه.',
+      description: 'پلتفرم جامع مدیریت پروژه و همکاری تیمی فارسی؛ هماهنگ، چابک و با تقویم شمسی.',
       defaultSeoTitle: 'تسک‌دون | مدیریت پروژه، وظایف و ارتباطات تیمی',
       defaultSeoDescription:
         'با تسک‌دون پروژه‌ها، وظایف، گفت‌وگوها، یادداشت‌ها و تقویم تیم را در یک فضای کاری فارسی و راست‌به‌چپ مدیریت کنید.',
       primaryCta: start,
       headerCta: { label: 'ورود/ثبت‌نام', href: '/feed' },
       copyright: '© ۱۴۰۵ تسک‌دون. تمامی حقوق محفوظ است.',
-      footerCtaTitle: 'همکاری منظم‌تر را از همین امروز آغاز کنید',
+      footerCtaTitle: 'همین امروز همکاری هوشمندانه‌تر را آغاز کنید',
       footerCtaDescription:
-        'فضای کاری خود را در تسک‌دون ایجاد کنید و مدیریت وظایف و پروژه‌های تیمی را در یک محیط یکپارچه تجربه کنید.',
+        'فضای کاری تیم خود را در تسک‌دون بسازید و مدیریت پروژه‌ها را به تجربه‌ای لذت‌بخش و شفاف تبدیل کنید.',
+      footerCtaButton: 'ایجاد رایگان فضای کاری',
     },
   ),
   document('navigation', 'main', 'ناوبری وب‌سایت', 'پیوندهای اصلی وب‌سایت تسک‌دون', [], {
@@ -185,18 +186,17 @@ export const SITE_SEED_DOCUMENTS: readonly SeedDocument[] = [
       { label: 'درباره ما', href: '/about' },
     ],
     footer: [
-      { label: 'بلاگ‌ها', href: '/blog' },
-      { label: 'مرکز راهنما', href: '/help' },
-      { label: 'حریم خصوصی', href: '/privacy' },
-      { label: 'شرایط استفاده', href: '/terms' },
       { label: 'امکانات تسک‌دون', href: '/features' },
-      { label: 'پلن‌ها', href: '/pricing' },
+      { label: 'پلن‌ها و تعرفه‌ها', href: '/pricing' },
+      { label: 'وبلاگ آموزشی', href: '/blog' },
+      { label: 'مرکز راهنما', href: '/help' },
       { label: 'درباره تسک‌دون', href: '/about' },
       { label: 'تماس با ما', href: '/contact' },
-      { label: 'همکاری با ما', href: '/collaborate' },
       { label: 'فرصت‌های شغلی', href: '/careers' },
       { label: 'پرسش‌های متداول', href: '/faq' },
-      { label: 'امنیت', href: '/security' },
+      { label: 'امنیت و دسترسی‌ها', href: '/security' },
+      { label: 'حریم خصوصی', href: '/privacy' },
+      { label: 'شرایط استفاده', href: '/terms' },
       { label: 'درخواست دمو', href: '/demo-request' },
     ],
     social: [],

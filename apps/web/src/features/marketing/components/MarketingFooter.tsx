@@ -34,7 +34,12 @@ export function MarketingFooter({
             <SiteLink href="/" aria-label={name}>
               <MarketingLogo name={name} value={settings.logo} />
             </SiteLink>
-            {asText(settings.description) && <p>{asText(settings.description)}</p>}
+            <p>
+              {asText(
+                settings.description,
+                'پلتفرم جامع مدیریت پروژه و همکاری تیمی فارسی؛ هماهنگ، چابک و با تقویم شمسی.',
+              )}
+            </p>
             {social.length > 0 && (
               <nav aria-label="شبکه‌های اجتماعی" className="marketing-social">
                 {social.map((link, i) => (
@@ -111,22 +116,50 @@ export function MarketingFooter({
           </div>
         </div>
         {cta && (
-          <div className="home-footer-cta">
+          <div
+            className="home-footer-cta"
+            style={{
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '20px',
+              padding: '32px 40px',
+              background: 'rgba(15, 23, 42, 0.45)',
+              boxShadow: '0 4px 24px -2px rgba(0, 0, 0, 0.35)',
+              marginTop: '48px',
+            }}
+          >
             <div>
-              <h2>{asText(settings.footerCtaTitle, 'همکاری منظم‌تر را از همین امروز آغاز کنید')}</h2>
+              <h2>{asText(settings.footerCtaTitle, 'همین امروز همکاری هوشمندانه‌تر را آغاز کنید')}</h2>
               <p>
                 {asText(
                   settings.footerCtaDescription,
-                  'فضای کاری خود را در تسک‌دون ایجاد کنید و مدیریت وظایف و پروژه‌های تیمی را در یک محیط یکپارچه تجربه کنید.',
+                  'فضای کاری تیم خود را در تسک‌دون بسازید و مدیریت پروژه‌ها را به تجربه‌ای لذت‌بخش و شفاف تبدیل کنید.',
                 )}
               </p>
             </div>
-            <SiteLink href={cta.href} className="marketing-button marketing-button-primary">
-              {cta.label}
+            <SiteLink
+              href={cta.href}
+              className="marketing-button marketing-button-primary"
+              style={{
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                borderRadius: '12px',
+                padding: '12px 28px',
+                fontWeight: 600,
+                boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)',
+              }}
+            >
+              {asText(settings.footerCtaButton, cta.label || 'ایجاد رایگان فضای کاری')}
             </SiteLink>
           </div>
         )}
-        <div className="home-footer-bottom">
+        <div
+          className="home-footer-bottom"
+          style={{
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            marginTop: '36px',
+            paddingTop: '24px',
+          }}
+        >
           <p>
             {asText(
               settings.copyright,
