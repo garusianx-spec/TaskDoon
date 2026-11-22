@@ -1,28 +1,35 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { siteHref } from '@/lib/site-utils';
 
 export function SiteLink({
   href,
   children,
   className,
+  style,
   ...rest
 }: {
   href: unknown;
   children: ReactNode;
   className?: string;
   'aria-label'?: string;
+  style?: CSSProperties;
 }) {
   const safe = siteHref(href);
-  if (!safe) return <span className={className}>{children}</span>;
+  if (!safe)
+    return (
+      <span className={className} style={style}>
+        {children}
+      </span>
+    );
   if (safe.startsWith('#'))
     return (
-      <a href={safe} className={className} {...rest}>
+      <a href={safe} className={className} style={style} {...rest}>
         {children}
       </a>
     );
   return (
-    <Link href={safe} className={className} {...rest}>
+    <Link href={safe} className={className} style={style} {...rest}>
       {children}
     </Link>
   );
