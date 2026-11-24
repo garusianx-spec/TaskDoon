@@ -41,7 +41,7 @@ export function ChatSidebar({
   unreadTotal,
 }: ChatSidebarProps) {
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col" dir="rtl">
       <div className="flex flex-col gap-3 border-b border-secondary p-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-title font-bold text-fg-primary">گفتگوها</h2>
@@ -53,6 +53,7 @@ export function ChatSidebar({
             aria-keyshortcuts="M"
             aria-haspopup="dialog"
             onClick={onNewConversation}
+            className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
           />
         </div>
 
@@ -64,6 +65,7 @@ export function ChatSidebar({
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="جستجوی نام، گروه یا پیام…"
           iconStart={<SearchIcon size={18} />}
+          className="text-right"
         />
 
         <SegmentedControl
@@ -76,6 +78,7 @@ export function ChatSidebar({
           value={filter}
           onValueChange={onFilterChange}
           fullWidth
+          className="[&_button]:min-h-[44px] sm:[&_button]:h-7 sm:[&_button]:min-h-0"
         />
       </div>
 

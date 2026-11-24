@@ -36,14 +36,14 @@ export function MessageActionSheet({
       title="اقدام روی پیام"
       description={truncate(messagePreview(message), 80)}
     >
-      <div role="group" aria-label="واکنش سریع" className="mb-2 grid grid-cols-7 gap-1 px-2 pb-2">
+      <div role="group" aria-label="واکنش سریع" className="mb-2 grid grid-cols-7 gap-1 px-2 pb-2" dir="rtl">
         {QUICK_REACTIONS.map(({ emoji, label }) => (
           <button
             key={emoji}
             type="button"
             aria-label={`واکنش ${label}`}
             onClick={() => onToggleReaction(message.id, emoji)}
-            className="flex aspect-square items-center justify-center rounded-full bg-sunken text-heading-sm leading-none transition-colors active:bg-active"
+            className="flex aspect-square min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-sunken text-heading-sm leading-none transition-colors active:bg-active"
           >
             <span aria-hidden="true">{emoji}</span>
           </button>
@@ -54,11 +54,15 @@ export function MessageActionSheet({
         <MenuItem
           icon={<ConvertToTaskIcon size={20} />}
           onSelect={() => onConvertToTask(message)}
-          className="bg-brand-subtle py-3 text-body font-semibold text-fg-brand hover:bg-brand-subtle-hover"
+          className="min-h-[44px] bg-brand-subtle py-3 text-body font-semibold text-fg-brand hover:bg-brand-subtle-hover"
         >
           تبدیل مستقیم به وظیفه
         </MenuItem>
-        <MenuItem icon={<ReplyIcon size={20} />} onSelect={() => onReply(message.id)} className="py-3">
+        <MenuItem
+          icon={<ReplyIcon size={20} />}
+          onSelect={() => onReply(message.id)}
+          className="min-h-[44px] py-3"
+        >
           پاسخ به پیام
         </MenuItem>
         <MenuItem
@@ -67,11 +71,11 @@ export function MessageActionSheet({
             if (message.body.kind === 'text') void navigator.clipboard?.writeText(message.body.text);
             onClose();
           }}
-          className="py-3"
+          className="min-h-[44px] py-3"
         >
           کپی متن پیام
         </MenuItem>
-        <MenuItem icon={<PinIcon size={20} />} onSelect={onClose} className="py-3">
+        <MenuItem icon={<PinIcon size={20} />} onSelect={onClose} className="min-h-[44px] py-3">
           سنجاق کردن در گفتگو
         </MenuItem>
       </MenuList>

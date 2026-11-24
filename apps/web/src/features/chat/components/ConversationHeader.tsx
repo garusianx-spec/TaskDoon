@@ -17,7 +17,10 @@ export function ConversationHeader({
 }) {
   const { members, searchOpen, setSearchOpen, inChatQuery, setInChatQuery, visibleThread } = timeline;
   return (
-    <header className="flex shrink-0 flex-col gap-2 border-b border-secondary bg-surface px-3 py-2.5 sm:px-4">
+    <header
+      className="flex shrink-0 flex-col gap-2 border-b border-secondary bg-surface px-3 py-2.5 sm:px-4"
+      dir="rtl"
+    >
       <div className="flex items-center gap-3">
         {onBack && (
           <IconButton
@@ -25,7 +28,7 @@ export function ConversationHeader({
             icon={<ArrowBackwardIcon size={20} />}
             size="sm"
             onClick={onBack}
-            className="lg:hidden"
+            className="min-h-[44px] min-w-[44px] lg:hidden"
           />
         )}
 
@@ -35,7 +38,7 @@ export function ConversationHeader({
           onClick={onOpenDetails}
           aria-haspopup="dialog"
           aria-label={`${conversation.title} — نمایش جزئیات گفتگو`}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-start transition-colors hover:bg-hover"
+          className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-start transition-colors hover:bg-hover"
         >
           {conversation.kind === 'channel' ? (
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sunken text-fg-secondary">
@@ -44,7 +47,7 @@ export function ConversationHeader({
           ) : (
             <AvatarStack members={members} max={3} size="sm" />
           )}
-          <span className="flex min-w-0 flex-col">
+          <span className="flex min-w-0 flex-col text-right">
             <span className="truncate text-title-sm font-bold text-fg-primary">{conversation.title}</span>
             <span className="truncate text-micro text-fg-tertiary numeric">
               {conversation.kind === 'direct'
@@ -64,6 +67,7 @@ export function ConversationHeader({
               setSearchOpen((open) => !open);
               if (searchOpen) setInChatQuery('');
             }}
+            className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
           />
         </Tooltip>
         <Tooltip content="جزئیات گفتگو">
@@ -72,6 +76,7 @@ export function ConversationHeader({
             icon={<InfoCircleIcon size={20} />}
             size="sm"
             onClick={onOpenDetails}
+            className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
           />
         </Tooltip>
       </div>
@@ -88,6 +93,7 @@ export function ConversationHeader({
             placeholder="جستجو میان پیام‌های این گفتگو…"
             iconStart={<SearchIcon size={18} />}
             containerClassName="flex-1"
+            className="text-right"
           />
           {inChatQuery && (
             <Badge tone="brand" numeric>
