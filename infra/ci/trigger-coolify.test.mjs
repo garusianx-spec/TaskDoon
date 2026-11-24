@@ -188,15 +188,17 @@ test('CLI logs safe outcomes and never repeats subprocess errors or response bod
 });
 
 test('deployment secrets are stripped from the real parent environment before spawning curl', () => {
-  const keys = ['COOLIFY_WEBHOOK_URL', 'COOLIFY_API_TOKEN'];
+  const keys = ['COOLIFY_WEBHOOK_URL', 'COOLIFY_API_TOKEN', 'COOLIFY_IMAGE_TAG'];
   const original = keys.map((key) => process.env[key]);
   try {
     process.env.COOLIFY_WEBHOOK_URL = url;
     process.env.COOLIFY_API_TOKEN = token;
+    process.env.COOLIFY_IMAGE_TAG = 'sha-0123456789abcdef0123456789abcdef01234567';
     const outcome = triggerCoolify({
       spawn(_command, _args, options) {
         assert.ok(!Object.hasOwn(options.env, 'COOLIFY_WEBHOOK_URL'));
         assert.ok(!Object.hasOwn(options.env, 'COOLIFY_API_TOKEN'));
+        assert.ok(!Object.hasOwn(options.env, 'COOLIFY_IMAGE_TAG'));
         return { status: 0, stdout: '204' };
       },
     });
@@ -206,5 +208,20 @@ test('deployment secrets are stripped from the real parent environment before sp
       if (original[index] === undefined) delete process.env[key];
       else process.env[key] = original[index];
     });
+  }
+});
+
+test('optional image tag is validated and sanitized', () => {
+  const valid = validateConfiguration({
+    ...credentials,
+    COOLIFY_IMAGE_TAG: 'sha-0123456789abcdef0123456789abcdef01234567',
+  });
+  assert.equal(valid.tag, 'sha-0123456789abcdef0123456789abcdef01234567');
+
+  for (const badTag of ['latest', 'v1.0.0', 'sha-invalid!', '; rm -rf /', 'sha-12345']) {
+    assert.throws(
+      () => validateConfiguration({ ...credentials, COOLIFY_IMAGE_TAG: badTag }),
+      /Invalid Coolify/,
+    );
   }
 });
