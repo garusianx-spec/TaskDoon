@@ -278,8 +278,8 @@ export function PricingPlans({
                             ✓
                           </span>
                         ) : (
-                          <span aria-label="در اطلاعات این پلن ذکر نشده" className="text-xs text-zinc-500">
-                            ذکر نشده
+                          <span aria-label="ندارد" className="font-bold text-zinc-600">
+                            —
                           </span>
                         )}
                       </td>
@@ -289,10 +289,6 @@ export function PricingPlans({
               ))}
             </tbody>
           </table>
-          <p className="marketing-comparison-note mt-4 text-xs leading-relaxed text-zinc-400">
-            «ذکر نشده» به معنی نبودن این قابلیت در اطلاعات منتشرشدهٔ پلن است؛ دربارهٔ ارائه یا عدم ارائهٔ آن
-            نتیجه‌گیری نمی‌کند. شرایط نهایی را پیش از انتخاب پلن بررسی کنید.
-          </p>
         </div>
       )}
     </div>
