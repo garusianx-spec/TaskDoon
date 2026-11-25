@@ -275,7 +275,7 @@ export function PricingPlans({
                 className="marketing-plan-badge-dot size-2 animate-pulse rounded-full bg-white"
                 aria-hidden="true"
               />
-              پیشنهاد تسک‌دون · ۴۰٪ زیر قیمت میزیتو
+              پیشنهاد تسک‌دون · تا ۴۰٪ اقتصادی‌تر از ابزارهای مشابه
             </span>
           </div>
 
@@ -369,7 +369,7 @@ export function PricingPlans({
               <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400">
                 ✓
               </span>
-              <span>تاریخچه نامحدود پیام‌ها و فایل‌ها</span>
+              <span>تاریخچه نامحدود پیام‌های متنی + فایل‌ها در سهمیه ابری</span>
             </li>
             <li className="flex items-center gap-2.5">
               <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400">

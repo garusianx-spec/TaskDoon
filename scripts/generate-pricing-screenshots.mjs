@@ -38,7 +38,7 @@ const htmlContent = `<!DOCTYPE html>
     <!-- Header -->
     <div class="text-center mb-10">
       <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-3">پلن‌های شفاف و منعطف تسک‌دون</h1>
-      <p class="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">متناسب با رشد تیم شما؛ ۴۰٪ زیر قیمت میزیتو همراه با سهمیه اختصاصی فضای ابری.</p>
+      <p class="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">متناسب با رشد تیم شما؛ تا ۴۰٪ اقتصادی‌تر از ابزارهای مشابه همراه با سهمیه اختصاصی فضای ابری.</p>
     </div>
 
     <!-- Toggle -->
@@ -121,7 +121,7 @@ const htmlContent = `<!DOCTYPE html>
         <div class="absolute -top-3.5 start-6">
           <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-solid px-3.5 py-1 text-xs font-bold text-white shadow-lg">
             <span class="size-2 rounded-full bg-white animate-pulse" aria-hidden="true"></span>
-            پیشنهاد تسک‌دون · ۴۰٪ زیر قیمت میزیتو
+            پیشنهاد تسک‌دون · تا ۴۰٪ اقتصادی‌تر از ابزارهای مشابه
           </span>
         </div>
 
@@ -172,7 +172,7 @@ const htmlContent = `<!DOCTYPE html>
           </li>
           <li class="flex items-center gap-2.5">
             <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">✓</span>
-            <span>تاریخچه نامحدود پیام‌ها و فایل‌ها</span>
+            <span>تاریخچه نامحدود پیام‌های متنی + فایل‌ها در سهمیه ابری</span>
           </li>
           <li class="flex items-center gap-2.5">
             <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">✓</span>
@@ -338,7 +338,9 @@ async function run() {
     path: '/Users/Mehdi/OpenBot/Shared/screenshots/pricing-desktop-yearly.png',
     fullPage: true,
   });
-  console.log('Yearly desktop screenshot saved: /Users/Mehdi/OpenBot/Shared/screenshots/pricing-desktop-yearly.png');
+  console.log(
+    'Yearly desktop screenshot saved: /Users/Mehdi/OpenBot/Shared/screenshots/pricing-desktop-yearly.png',
+  );
 
   await browser.close();
 }
