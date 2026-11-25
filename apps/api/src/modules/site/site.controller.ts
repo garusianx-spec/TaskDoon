@@ -19,6 +19,7 @@ import type { Request, Response } from 'express';
 import { Public } from '../../platform/http/public.js';
 import { RequireCsrf } from '../auth/guards.js';
 import { NoStoreInterceptor } from '../platform-admin/platform-admin.controller.js';
+import { requireRole } from '../platform-admin/admin-roles.guard.js';
 import {
   CurrentPlatformAdmin,
   type PlatformAdmin,
@@ -120,6 +121,7 @@ export class AdminSiteController {
   }
   @Post('documents')
   @RequireCsrf()
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @ApiBody({ schema: siteDocumentInputSchema })
   @ApiCreatedResponse({ schema: adminSiteDocumentSchema })
   create(@CurrentPlatformAdmin() admin: PlatformAdmin, @Body() body: unknown) {
@@ -127,6 +129,7 @@ export class AdminSiteController {
   }
   @Put('documents/:id')
   @RequireCsrf()
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @ApiBody({ schema: siteDocumentInputSchema })
   @ApiOkResponse({ schema: adminSiteDocumentSchema })
   save(
@@ -136,19 +139,19 @@ export class AdminSiteController {
   ) {
     return this.site.save(admin, id, body);
   }
-  @Post('documents/:id/publish') @HttpCode(200) @RequireCsrf() publish(
+  @Post('documents/:id/publish') @HttpCode(200) @RequireCsrf() @requireRole('SUPER_ADMIN', 'ADMIN') publish(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.site.transition(admin, id, 'publish');
   }
-  @Post('documents/:id/unpublish') @HttpCode(200) @RequireCsrf() unpublish(
+  @Post('documents/:id/unpublish') @HttpCode(200) @RequireCsrf() @requireRole('SUPER_ADMIN', 'ADMIN') unpublish(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.site.transition(admin, id, 'unpublish');
   }
-  @Post('documents/:id/archive') @HttpCode(200) @RequireCsrf() archive(
+  @Post('documents/:id/archive') @HttpCode(200) @RequireCsrf() @requireRole('SUPER_ADMIN', 'ADMIN') archive(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
@@ -160,7 +163,7 @@ export class AdminSiteController {
   ) {
     return this.site.revisions(admin, id);
   }
-  @Post('documents/:id/restore') @HttpCode(200) @RequireCsrf() restore(
+  @Post('documents/:id/restore') @HttpCode(200) @RequireCsrf() @requireRole('SUPER_ADMIN', 'ADMIN') restore(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,
@@ -189,13 +192,13 @@ export class AdminSiteController {
   @Get('redirects') redirects(@CurrentPlatformAdmin() admin: PlatformAdmin) {
     return this.site.redirects(admin);
   }
-  @Post('redirects') @RequireCsrf() redirect(
+  @Post('redirects') @RequireCsrf() @requireRole('SUPER_ADMIN', 'ADMIN') redirect(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
     @Body() body: unknown,
   ) {
     return this.site.addRedirect(admin, body);
   }
-  @Delete('redirects/:id') @HttpCode(204) @RequireCsrf() deleteRedirect(
+  @Delete('redirects/:id') @HttpCode(204) @RequireCsrf() @requireRole('SUPER_ADMIN', 'ADMIN') deleteRedirect(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
@@ -207,19 +210,19 @@ export class AdminSiteController {
   @Get('media') media(@CurrentPlatformAdmin() admin: PlatformAdmin, @Query('q') q?: string) {
     return this.site.mediaList(admin, q);
   }
-  @Post('media') @RequireCsrf() mediaUpload(
+  @Post('media') @RequireCsrf() @requireRole('SUPER_ADMIN', 'ADMIN') mediaUpload(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
     @Body() body: unknown,
   ) {
     return this.site.mediaUpload(admin, body);
   }
-  @Post('media/:id/complete') @HttpCode(200) @RequireCsrf() mediaComplete(
+  @Post('media/:id/complete') @HttpCode(200) @RequireCsrf() @requireRole('SUPER_ADMIN', 'ADMIN') mediaComplete(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.site.mediaComplete(admin, id);
   }
-  @Patch('media/:id') @RequireCsrf() updateMedia(
+  @Patch('media/:id') @RequireCsrf() @requireRole('SUPER_ADMIN', 'ADMIN') updateMedia(
     @CurrentPlatformAdmin() admin: PlatformAdmin,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,

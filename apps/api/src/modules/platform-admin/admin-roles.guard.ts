@@ -23,25 +23,37 @@ export class PlatformRoleGuard implements CanActivate {
     private readonly uow: UnitOfWork,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const role = this.reflector.getAllAndOverride<PlatformAdminRole>(ROLE, [
+    const roleMeta = this.reflector.getAllAndOverride<PlatformAdminRole | readonly PlatformAdminRole[]>(ROLE, [
       context.getHandler(),
       context.getClass(),
     ]);
+    if (!roleMeta) return true;
+    const allowed = Array.isArray(roleMeta) ? roleMeta : [roleMeta];
     const auth = context.switchToHttp().getRequest<AuthenticatedRequest>().auth;
     if (!auth) throw new ApiError('UNAUTHENTICATED');
     const [user] = await this.uow.run({ workspaceId: null, userId: auth.userId }, ({ tx }) =>
       tx.select().from(users).where(eq(users.id, auth.userId)),
     );
+    const userRole = user ? platformRole(user) : null;
     if (
       !user ||
       user.deletedAt ||
       user.status !== 'active' ||
       user.platformAdminStatus !== 'ACTIVE' ||
-      platformRole(user) !== role
+      !userRole ||
+      !allowed.includes(userRole)
     )
-      throw ApiError.forbidden('A super administrator is required.');
+      throw ApiError.forbidden(
+        allowed.length === 1 && allowed.includes('SUPER_ADMIN')
+          ? 'A super administrator is required.'
+          : 'Higher platform administrative privileges are required.',
+      );
     return true;
   }
 }
-export const requireRole = (role: PlatformAdminRole) =>
-  applyDecorators(PlatformAdminOnly(), SetMetadata(ROLE, role), UseGuards(PlatformRoleGuard));
+export const requireRole = (...roles: PlatformAdminRole[]) =>
+  applyDecorators(
+    PlatformAdminOnly(),
+    SetMetadata(ROLE, roles.length === 1 ? roles[0] : roles),
+    UseGuards(PlatformRoleGuard),
+  );
