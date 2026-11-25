@@ -29,13 +29,15 @@ export function SummaryCard({ label, value, tone, Icon }: SummaryCardProps) {
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-secondary bg-surface p-3.5 shadow-xs">
-      <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-lg', tones[tone])}>
+    <div className="flex items-center gap-2.5 rounded-xl border border-secondary bg-surface p-3 shadow-xs sm:gap-3 sm:p-3.5">
+      <span
+        className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg sm:size-10', tones[tone])}
+      >
         <Icon size={20} variant="twotone" />
       </span>
-      <span className="flex min-w-0 flex-col">
-        <span className="text-heading font-extrabold leading-tight text-fg-primary numeric">{value}</span>
-        <span className="truncate text-caption text-fg-tertiary">{label}</span>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-heading font-bold leading-tight text-fg-primary numeric">{value}</span>
+        <span className="text-micro leading-snug text-fg-tertiary sm:text-caption">{label}</span>
       </span>
     </div>
   );
