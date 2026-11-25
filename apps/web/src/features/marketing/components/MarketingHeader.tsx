@@ -65,7 +65,7 @@ export function MarketingHeader({
           {cta && (
             <SiteLink
               href={cta.href}
-              className="marketing-button marketing-button-primary marketing-header-cta"
+              className="marketing-button marketing-button-primary marketing-header-cta shrink-0 whitespace-nowrap"
             >
               {cta.label}
               <Arrow />
