@@ -4,18 +4,26 @@ import type { ReactNode } from 'react';
 import type { AdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { Button } from '@/components/ui';
 import { WarningIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
 
 export function PageHeader({
   title,
   description,
   actions,
+  className,
 }: {
   readonly title: string;
   readonly description?: string;
   readonly actions?: ReactNode;
+  readonly className?: string;
 }) {
   return (
-    <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <header
+      className={cn(
+        'mb-6 flex flex-wrap items-start justify-between gap-3',
+        className,
+      )}
+    >
       <div className="flex min-w-0 flex-col gap-1">
         <h1 className="text-heading-sm font-bold text-fg-primary">{title}</h1>
         {description && <p className="text-body-sm text-fg-tertiary">{description}</p>}
@@ -89,13 +97,38 @@ export function Loaded<T>({
     );
   }
   if (empty?.(load.data))
-    return <p className="py-4 text-center text-body-sm text-fg-tertiary">موردی پیدا نشد.</p>;
+    return <EmptyState title="موردی پیدا نشد." hint="فیلترها را تغییر دهید یا مورد تازه‌ای ایجاد کنید." />;
   return <>{children(load.data)}</>;
+}
+
+/** A shared empty state: an icon, a title, a hint and an optional action, centred in its panel. */
+export function EmptyState({
+  title,
+  hint,
+  action,
+}: {
+  readonly title: string;
+  readonly hint?: string;
+  readonly action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+      <span className="flex size-11 items-center justify-center rounded-full bg-sunken text-fg-tertiary">
+        <WarningIcon size={20} />
+      </span>
+      <p className="font-semibold text-fg-secondary">{title}</p>
+      {hint && <p className="max-w-sm text-body-sm text-fg-tertiary">{hint}</p>}
+      {action && <div className="mt-2">{action}</div>}
+    </div>
+  );
 }
 
 export const TH =
   'border-b border-secondary px-3 py-2 text-start text-caption font-semibold text-fg-tertiary';
 export const TD = 'border-b border-secondary px-3 py-2.5 align-top text-fg-primary';
+/** The inline-end actions column, kept visible while the wide table scrolls horizontally. */
+export const TH_ACTIONS = cn(TH, 'sticky end-0 bg-surface border-s border-secondary');
+export const TD_ACTIONS = cn(TD, 'sticky end-0 bg-surface border-s border-secondary');
 
 /** A label/value pair in a profile header. */
 export function Fact({ label, children }: { readonly label: string; readonly children: ReactNode }) {

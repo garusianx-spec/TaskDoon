@@ -8,7 +8,7 @@ import { adminApi, type UserFilters } from '@/features/admin/api/admin-api';
 import { phoneLabel, USER_STATUS } from '@/features/admin/lib/format';
 import { useAdmin, useAdminMe } from '@/features/admin/hooks/AdminSession';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
-import { Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { Loaded, PageHeader, Panel, TD, TD_ACTIONS, TH, TH_ACTIONS } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { ForcePasswordResetDialog } from '@/features/admin/components/ForcePasswordResetDialog';
 import { SessionsDrawer } from '@/features/admin/components/SessionsDrawer';
@@ -192,7 +192,7 @@ export default function AdminUsersPage() {
                       <th className={TH}>ورک‌اسپیس</th>
                       <th className={TH}>نشست فعال</th>
                       <th className={TH}>آخرین فعالیت</th>
-                      <th className={TH}>اقدام‌ها</th>
+                      <th className={TH_ACTIONS}>اقدام‌ها</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -234,7 +234,7 @@ export default function AdminUsersPage() {
                           <td className={TD}>
                             {user.lastActiveAt ? <RelativeTime iso={user.lastActiveAt} /> : '—'}
                           </td>
-                          <td className={TD}>
+                          <td className={TD_ACTIONS}>
                             <UserActionsMenu
                               user={user}
                               selfId={self.userId}

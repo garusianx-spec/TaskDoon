@@ -156,6 +156,7 @@ function Editor({ original, onSaved }: { original: SiteDocument; onSaved: () => 
       <PageHeader
         title={content.title || 'ویرایش محتوا'}
         description={`${KINDS[document.kind]} · نسخه ${document.version} · تغییر پیش‌نویس مستقل از محتوای منتشرشده`}
+        className="max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:-mx-4 max-lg:mb-4 max-lg:border-b max-lg:border-secondary max-lg:bg-canvas max-lg:px-4 max-lg:py-3"
         actions={
           <>
             <Link
