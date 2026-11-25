@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { codeMessage } from '@/lib/api-problem';
 import { Button } from '@/components/ui';
 import { AuthFormError as FormError, AuthInput as Input } from '@/features/auth/components/AuthFields';
@@ -21,6 +22,15 @@ export function SuspendedAccountNotice() {
 }
 
 export function PhoneSignInStep({ flow }: { readonly flow: SignInFlow }) {
+  const [isSignupIntent, setIsSignupIntent] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setIsSignupIntent(params.get('intent') === 'signup');
+    }
+  }, []);
+
   const {
     adminPanel,
     invited,
@@ -36,16 +46,35 @@ export function PhoneSignInStep({ flow }: { readonly flow: SignInFlow }) {
     formError,
     goTo,
   } = flow;
+
+  const showSignupVariant = isSignupIntent && !adminPanel && !invited;
+
   return (
     <AuthCard
       labelledBy="sign-in-title"
-      title={adminPanel ? 'ورود به پنل مدیریت پلتفرم' : invited ? 'پیوستن به فضای کاری' : 'ورود به تسک‌دون'}
+      title={
+        adminPanel
+          ? 'ورود به پنل مدیریت پلتفرم'
+          : invited
+            ? 'پیوستن به فضای کاری'
+            : showSignupVariant
+              ? 'ساخت رایگان حساب و فضای کاری تیم'
+              : 'ورود به تسک‌دون'
+      }
       description={
         invited
           ? 'به یک فضای کاری دعوت شده‌اید. با شماره موبایلی که دعوت‌نامه به آن رسیده وارد شوید.'
-          : 'با شماره موبایل خود وارد شوید؛ کد ورود پیامک می‌شود.'
+          : showSignupVariant
+            ? 'شماره همراه خود را وارد کنید؛ فضای کاری تیم شما بلافاصله ساخته می‌شود.'
+            : 'با شماره موبایل خود وارد شوید؛ کد ورود پیامک می‌شود.'
       }
     >
+      {showSignupVariant && (
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-400">
+          <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+          <span>بدون نیاز به کارت بانکی • تا ۵ کاربر رایگان</span>
+        </div>
+      )}
       <form aria-busy={busy} className="flex flex-col gap-4" onSubmit={onPhone} noValidate>
         <fieldset disabled={busy} className="auth-fields">
           {suspended && <SuspendedAccountNotice />}
@@ -80,8 +109,19 @@ export function PhoneSignInStep({ flow }: { readonly flow: SignInFlow }) {
           />
           <FormError message={formError} />
           <Button type="submit" fullWidth size="lg" loading={busy}>
-            دریافت کد ورود
+            {showSignupVariant ? 'دریافت کد و شروع رایگان' : 'دریافت کد ورود'}
           </Button>
+          {showSignupVariant && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignupIntent(false)}
+                className="text-xs text-fg-tertiary transition-colors hover:text-fg-primary hover:underline"
+              >
+                قبلاً ثبت‌نام کرده‌اید؟ ورود اعضا
+              </button>
+            </div>
+          )}
           {!adminPanel && (
             <Button
               variant="link"

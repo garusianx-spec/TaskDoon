@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PublishedSiteDocument } from '@taskin/contracts';
 import { asText, siteLinks } from '@/lib/site-utils';
 import { Arrow, SiteLink } from '@/features/marketing/components/SiteLink';
+import {
+  trackBillingToggle,
+  trackInitiateCheckout,
+  trackSelectProPlan,
+  trackTeamSizeSelect,
+  trackViewPricing,
+} from '@/lib/analytics';
 
 function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
@@ -41,6 +48,10 @@ export function PricingPlans({
   const [yearly, setYearly] = useState(false);
   const [selectedTierIndex, setSelectedTierIndex] = useState(0);
   const currentTier: TeamTier = TEAM_TIERS[selectedTierIndex] ?? DEFAULT_TIER;
+
+  useEffect(() => {
+    trackViewPricing({ pageUrl: typeof window !== 'undefined' ? window.location.href : '/pricing' });
+  }, []);
 
   // Test suite detection (e.g. marketing-copy.test.ts passes plan('one'), plan('two'))
   const isCustomTest = documents.length > 0 && documents.some((d) => d.id === 'one' || d.id === 'two');
@@ -149,7 +160,10 @@ export function PricingPlans({
           <button
             type="button"
             aria-pressed={!yearly}
-            onClick={() => setYearly(false)}
+            onClick={() => {
+              setYearly(false);
+              trackBillingToggle('monthly');
+            }}
             className={`min-h-[44px] rounded-lg px-5 py-2 text-sm font-bold transition-all duration-200 ${
               !yearly ? 'bg-brand-solid text-white shadow-md' : 'text-zinc-400 hover:text-white'
             }`}
@@ -159,7 +173,10 @@ export function PricingPlans({
           <button
             type="button"
             aria-pressed={yearly}
-            onClick={() => setYearly(true)}
+            onClick={() => {
+              setYearly(true);
+              trackBillingToggle('yearly');
+            }}
             className={`flex min-h-[44px] items-center gap-2 rounded-lg px-5 py-2 text-sm font-bold transition-all duration-200 ${
               yearly ? 'bg-brand-solid text-white shadow-md' : 'text-zinc-400 hover:text-white'
             }`}
@@ -189,7 +206,10 @@ export function PricingPlans({
           </div>
 
           <SiteLink
-            href="/auth/sign-up"
+            href="/feed?intent=signup"
+            onClick={() => {
+              trackInitiateCheckout({ planId: 'free', planName: 'رایگان (استارتر)', price: 0 });
+            }}
             className="marketing-button marketing-button-secondary mb-8 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-6 font-semibold text-white transition-all duration-200 hover:bg-white/15"
           >
             <span>شروع رایگان</span>
@@ -282,7 +302,11 @@ export function PricingPlans({
                   <button
                     key={tier.users}
                     type="button"
-                    onClick={() => setSelectedTierIndex(idx)}
+                    onClick={() => {
+                      setSelectedTierIndex(idx);
+                      const calculatedPrice = yearly ? tier.yearlyPrice : tier.monthlyPrice;
+                      trackTeamSizeSelect(tier.users, calculatedPrice, yearly ? 'yearly' : 'monthly');
+                    }}
                     aria-pressed={selected}
                     className={`min-h-[42px] rounded-lg text-xs font-bold transition-all duration-150 ${
                       selected
@@ -306,7 +330,16 @@ export function PricingPlans({
           </div>
 
           <SiteLink
-            href={`/auth/sign-up?plan=pro&users=${currentTier.users}`}
+            href={`/feed?intent=signup&plan=pro&users=${currentTier.users}`}
+            onClick={() => {
+              trackSelectProPlan({
+                planId: 'team',
+                planName: `حرفه‌ای (${currentTier.label})`,
+                price: proAmount,
+                currency: 'IRT',
+                billingCycle: yearly ? 'yearly' : 'monthly',
+              });
+            }}
             className="marketing-button marketing-button-primary mb-8 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-brand-solid px-6 font-semibold text-white shadow-md transition-all duration-200 hover:bg-brand-solid-hover hover:shadow-lg"
           >
             <span>ارتقا آنلاین ({currentTier.label})</span>

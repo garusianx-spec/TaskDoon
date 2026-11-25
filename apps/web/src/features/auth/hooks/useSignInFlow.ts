@@ -10,6 +10,7 @@ import type { LiveStore } from '@/store/live/live-store';
 import { challengeTiming } from '@/features/auth/lib/auth-input';
 import type { ErrorTarget, Step } from '@/features/auth/types/sign-in';
 import { MIN_PASSWORD } from '@/features/auth/lib/auth-input';
+import { trackSignupCompleted } from '@/lib/analytics';
 
 export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, adminPanel: boolean) {
   const [step, setStep] = useState<Step>({ kind: 'phone' });
@@ -214,6 +215,11 @@ export function useSignInFlow(store: Pick<LiveStore, 'signedIn' | 'invited'>, ad
     }
     void attempt(async () => {
       await session.signUp(step.signupToken, fullName);
+      trackSignupCompleted({
+        userId: session.current?.user.id ?? 'unknown',
+        method: 'sms_otp',
+        workspaceCreated: false,
+      });
       await store.signedIn();
     });
   };
