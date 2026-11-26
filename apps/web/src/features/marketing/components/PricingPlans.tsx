@@ -273,13 +273,13 @@ export function PricingPlans({
 
         {/* Professional Plan with Team Size Selector */}
         <article className="marketing-plan is-recommended relative flex flex-col rounded-2xl border-2 border-brand-solid bg-[#0d121f] p-6 shadow-[0_0_40px_rgba(37,99,235,0.18)] transition-all duration-300 hover:shadow-[0_0_55px_rgba(37,99,235,0.28)] sm:p-8">
-          <div className="absolute -top-3.5 start-6">
-            <span className="marketing-plan-badge inline-flex items-center gap-1.5 rounded-full bg-brand-solid px-3.5 py-1 text-caption font-bold text-white shadow-lg">
+          <div className="absolute -top-3.5 start-6 z-10">
+            <span className="inline-flex items-center gap-2 rounded-full bg-brand-solid px-3.5 py-1 text-caption font-bold text-white shadow-lg">
               <span
-                className="marketing-plan-badge-dot size-2 animate-pulse rounded-full bg-white"
+                className="size-2 animate-pulse rounded-full bg-white"
                 aria-hidden="true"
               />
-              پیشنهاد تسک‌دون · تا ۴۰٪ اقتصادی‌تر از ابزارهای مشابه
+              پیشنهاد ویژه برای تیم‌های در حال رشد
             </span>
           </div>
 
