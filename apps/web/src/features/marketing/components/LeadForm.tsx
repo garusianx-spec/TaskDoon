@@ -5,6 +5,7 @@ import type { SiteSubmissionInput, SiteSubmissionKind } from '@taskin/contracts'
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { leadFieldError } from '@/features/marketing/lib/lead-validation';
+import { trackDemoFormSubmit } from '@/lib/analytics';
 
 function focusResult(element: HTMLElement) {
   element.focus({ preventScroll: true });
@@ -112,6 +113,12 @@ export function LeadForm({ kind = 'contact', jobId }: { kind?: SiteSubmissionKin
         if (response.status === 400 || response.status === 422)
           throw new Error('اطلاعات فرم معتبر نیست. شماره تماس، ایمیل و متن پیام را بررسی کنید.');
         throw new Error('ثبت درخواست انجام نشد. کمی بعد دوباره تلاش کنید.');
+      }
+      if (kind === 'demo') {
+        trackDemoFormSubmit({
+          teamSize: payload.teamSize,
+          companyName: payload.company,
+        });
       }
       setSuccess(true);
       form.reset();

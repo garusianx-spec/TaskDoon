@@ -9,6 +9,7 @@ import { PricingPlans } from '@/features/marketing/components/PricingPlans';
 import { ProductJourney } from '@/features/marketing/components/ProductJourney';
 import { WorkspacePreview } from '@/features/marketing/components/WorkspacePreview';
 import { BlogCard } from './BlogCard';
+import { trackCtaClick } from '@/lib/analytics';
 
 const FEATURE_PREVIEWS = new Map([
   ['tasks', '/marketing/tasks.png'],
@@ -35,7 +36,17 @@ function Actions({ section, isHero = false }: { section: SiteSection; isHero?: b
     <div className="home-actions-wrap">
       <div className="marketing-actions home-actions">
         {section.cta && (
-          <SiteLink href={section.cta.href} className="marketing-button marketing-button-primary">
+          <SiteLink
+            href={section.cta.href === '/feed' ? '/feed?intent=signup' : section.cta.href}
+            className="marketing-button marketing-button-primary"
+            onClick={() => {
+              trackCtaClick(
+                isHero ? 'hero' : 'features',
+                section.cta?.label ?? '',
+                section.cta?.href === '/feed' ? '/feed?intent=signup' : (section.cta?.href ?? ''),
+              );
+            }}
+          >
             {section.cta.label}
             <ArrowLeftIcon size={18} />
           </SiteLink>

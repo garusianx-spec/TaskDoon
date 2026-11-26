@@ -92,7 +92,7 @@ function ChatsShell() {
     <AppShell
       mobileShowsDetail={mobileDetail}
       sidebar={
-        <div className="flex h-full min-h-0 flex-col">
+        <div className="flex h-full min-h-0 flex-col" dir="rtl">
           <div role="group" className="flex gap-2 border-b border-secondary p-3" aria-label="بخش گفتگوها">
             <Button
               size="sm"

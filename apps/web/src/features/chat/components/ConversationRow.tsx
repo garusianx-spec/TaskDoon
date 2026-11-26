@@ -39,10 +39,10 @@ export function ConversationRow({
       : conversation.title.slice(0, 2);
 
   return (
-    <li className="group/row">
+    <li className="group/row" dir="rtl">
       <div
         className={cn(
-          'flex items-start gap-1 rounded-xl p-2.5 transition-colors',
+          'flex min-h-[56px] items-center gap-1.5 rounded-xl p-2.5 transition-colors',
           active ? 'bg-brand-subtle' : 'hover:bg-hover',
         )}
       >
@@ -50,7 +50,7 @@ export function ConversationRow({
           type="button"
           onClick={() => onSelect(conversation.id)}
           aria-current={active ? 'true' : undefined}
-          className="flex min-w-0 flex-1 items-start gap-2.5 text-start"
+          className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 text-start"
         >
           {conversation.kind === 'channel' ? (
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-sunken text-fg-secondary">
@@ -66,7 +66,7 @@ export function ConversationRow({
             />
           )}
 
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="flex min-w-0 flex-1 flex-col gap-1 text-right">
             <span className="flex items-center gap-1.5">
               <span
                 className={cn(
@@ -111,10 +111,10 @@ export function ConversationRow({
           size="xs"
           onClick={() => onTogglePin(conversation.id)}
           className={cn(
-            // Always occupies its slot so the row never reflows on hover; only its
-            // opacity changes. A pinned conversation keeps it lit as the pin indicator.
-            'shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/row:opacity-100',
-            pinned && 'text-fg-brand opacity-100',
+            'flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center transition-opacity focus-visible:opacity-100 group-hover/row:opacity-100',
+            pinned
+              ? 'text-fg-brand opacity-100'
+              : 'opacity-0 max-sm:opacity-60 max-sm:hover:opacity-100 sm:opacity-0',
           )}
         />
       </div>
