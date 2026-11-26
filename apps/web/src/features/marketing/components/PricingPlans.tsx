@@ -21,6 +21,10 @@ function price(value: unknown): string {
   return asText(value, 'استعلام قیمت');
 }
 
+function faNumber(value: number): string {
+  return new Intl.NumberFormat('fa-IR').format(value);
+}
+
 export interface TeamTier {
   readonly users: number;
   readonly storage: string;
@@ -351,7 +355,7 @@ export function PricingPlans({
               <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400">
                 ✓
               </span>
-              <span className="font-bold text-white">تا {currentTier.users} کاربر فعال</span>
+              <span className="font-bold text-white">تا {faNumber(currentTier.users)} کاربر فعال</span>
             </li>
             <li className="flex items-center gap-2.5">
               <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400">
@@ -394,7 +398,7 @@ export function PricingPlans({
           <dl className="marketing-plan-limits mt-6 space-y-2 border-t border-white/10 pt-4 text-xs text-zinc-400">
             <div className="flex items-center justify-between py-0.5">
               <dt className="text-zinc-400">تعداد اعضای مجاز</dt>
-              <dd className="font-semibold text-zinc-200">تا {currentTier.users} کاربر</dd>
+              <dd className="font-semibold text-zinc-200">تا {faNumber(currentTier.users)} کاربر</dd>
             </div>
             <div className="flex items-center justify-between py-0.5">
               <dt className="text-zinc-400">فضای ذخیره‌سازی ابری</dt>
