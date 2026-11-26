@@ -27,6 +27,7 @@ import {
   WarningIcon,
 } from '@/components/icons';
 import { TodayLabel, SummaryCard } from '@/features/workspace/components/feed/FeedSummary';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 const ACTIVITY_ICONS: Readonly<Record<ActivityKind, typeof TaskSquareIcon>> = {
   'task-assigned': TaskSquareIcon,
@@ -140,9 +141,25 @@ function FeedContent() {
           </div>
 
           {actionable.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-primary px-4 py-6 text-center text-body-sm text-fg-tertiary">
-              وظیفه بازی به شما ارجاع نشده است.
-            </p>
+            <div className="rounded-xl border border-dashed border-primary bg-surface">
+              <EmptyState
+                compact
+                icon={<CheckCircleIcon size={22} variant="twotone" />}
+                title="وظیفه بازی به شما ارجاع نشده است"
+                description="کارهای دارای سررسید و ارجاع‌شده به شما اینجا نمایش داده می‌شوند."
+                action={
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    iconStart={<AddIcon size={16} />}
+                    className="min-h-11"
+                    onClick={() => openTaskComposer(null)}
+                  >
+                    ایجاد وظیفه جدید
+                  </Button>
+                }
+              />
+            </div>
           ) : (
             groups.map(
               ({ label, tasks }) =>
@@ -250,7 +267,23 @@ function FeedContent() {
               </p>
             </div>
           ) : (
-            <p className="text-caption text-fg-secondary">رویداد آینده‌ای در تقویم فعلی نیست.</p>
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-3">
+                <span
+                  className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sunken text-fg-quaternary"
+                  aria-hidden="true"
+                >
+                  <CalendarIcon size={18} variant="twotone" />
+                </span>
+                <p className="text-body-sm text-fg-secondary">رویداد آینده‌ای در تقویم فعلی نیست.</p>
+              </div>
+              <Link
+                href="/calendar"
+                className="inline-flex min-h-11 items-center rounded-lg px-2 text-caption font-semibold text-fg-brand hover:underline"
+              >
+                ثبت رویداد در تقویم
+              </Link>
+            </div>
           )}
         </section>
 
@@ -306,9 +339,14 @@ function FeedContent() {
         <section aria-label="فعالیت‌های اخیر" className="flex flex-col gap-3">
           <h2 className="text-title font-bold text-fg-primary">فعالیت‌های اخیر سازمان</h2>
           {state.activity.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-secondary px-4 py-6 text-center text-body-sm text-fg-tertiary">
-              هنوز فعالیتی در این فضای کاری ثبت نشده است.
-            </p>
+            <div className="rounded-xl border border-dashed border-secondary bg-surface">
+              <EmptyState
+                compact
+                icon={<MessagesIcon size={22} variant="twotone" />}
+                title="هنوز فعالیتی در این فضای کاری ثبت نشده است"
+                description="با ثبت وظایف، گفت‌وگوها و تغییرات پروژه‌ها، گزارش فعالیت‌های تیم اینجا نمایش داده می‌شود."
+              />
+            </div>
           ) : (
             <ul className="flex flex-col gap-1">
               {state.activity.map((item) => {

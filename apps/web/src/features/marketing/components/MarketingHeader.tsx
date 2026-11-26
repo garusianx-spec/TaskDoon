@@ -66,7 +66,7 @@ export function MarketingHeader({
           {cta && (
             <SiteLink
               href={cta.href === '/feed' ? '/feed?intent=signup' : cta.href}
-              className="marketing-button marketing-button-primary marketing-header-cta"
+              className="marketing-button marketing-button-primary marketing-header-cta shrink-0 whitespace-nowrap"
               onClick={() => {
                 trackCtaClick(
                   'header',
