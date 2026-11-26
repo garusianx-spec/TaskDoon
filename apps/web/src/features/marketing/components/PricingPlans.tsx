@@ -220,7 +220,7 @@ export function PricingPlans({
             <Arrow />
           </SiteLink>
 
-          <ul className="marketing-plan-features flex-1 space-y-3.5 text-sm text-zinc-300">
+          <ul className="flex-1 space-y-3.5 text-sm text-zinc-200">
             <li className="flex items-center gap-2.5">
               <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400">
                 ✓
@@ -350,7 +350,7 @@ export function PricingPlans({
             <Arrow />
           </SiteLink>
 
-          <ul className="marketing-plan-features flex-1 space-y-3.5 text-sm text-zinc-300">
+          <ul className="flex-1 space-y-3.5 text-sm text-zinc-200">
             <li className="flex items-center gap-2.5">
               <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-400">
                 ✓
