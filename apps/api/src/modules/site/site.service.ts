@@ -80,6 +80,13 @@ const pathOf = (kind: SiteDocumentKind, slug: string) =>
           : kind === 'job'
             ? `/careers/${slug}`
             : null;
+
+export const assertCanModifySite = (admin: PlatformAdmin) => {
+  if (admin.role === 'OPERATOR') {
+    throw ApiError.forbidden('Higher platform administrative privileges are required.');
+  }
+};
+
 type PublicRow = {
   id: string;
   kind: SiteDocumentKind;
@@ -163,6 +170,7 @@ export class SiteService {
   }
 
   async create(admin: PlatformAdmin, body: unknown): Promise<SiteDocument> {
+    assertCanModifySite(admin);
     const input = validateSiteDocument(body);
     return this.uow.run(scope(admin), async ({ tx }) => {
       const [row] = await tx
@@ -182,6 +190,7 @@ export class SiteService {
   }
 
   async save(admin: PlatformAdmin, id: string, body: unknown): Promise<SiteDocument> {
+    assertCanModifySite(admin);
     const input = validateSiteDocument(body);
     return this.uow.run(scope(admin), async ({ tx }) => {
       const previous = await this.get(tx, id, true);
@@ -213,6 +222,7 @@ export class SiteService {
     id: string,
     action: 'publish' | 'unpublish' | 'archive',
   ): Promise<SiteDocument> {
+    assertCanModifySite(admin);
     return this.uow.run(scope(admin), async ({ tx }) => {
       const previous = await this.get(tx, id, true);
       const now = new Date();
@@ -269,6 +279,7 @@ export class SiteService {
   }
 
   async restore(admin: PlatformAdmin, id: string, body: unknown): Promise<SiteDocument> {
+    assertCanModifySite(admin);
     const { revisionId } = validateRevision(body);
     return this.uow.run(scope(admin), async ({ tx }) => {
       const previous = await this.get(tx, id, true);
@@ -390,6 +401,7 @@ export class SiteService {
   }
 
   async addRedirect(admin: PlatformAdmin, body: unknown): Promise<SiteRedirect> {
+    assertCanModifySite(admin);
     const input = validateRedirect(body);
     return this.uow.run(scope(admin), async ({ tx }) => {
       const docs = await tx
@@ -422,6 +434,7 @@ export class SiteService {
   }
 
   async deleteRedirect(admin: PlatformAdmin, id: string): Promise<void> {
+    assertCanModifySite(admin);
     await this.uow.run(scope(admin), async ({ tx }) => {
       await tx.delete(siteRedirects).where(eq(siteRedirects.id, id));
       await this.audit(tx, admin, 'site.redirect.delete');
@@ -461,6 +474,7 @@ export class SiteService {
     admin: PlatformAdmin,
     body: unknown,
   ): Promise<{ media: SiteMedia; upload: { url: string; fields: Record<string, string> } }> {
+    assertCanModifySite(admin);
     const input = validateMediaInput(body);
     const id = randomUUID();
     const storageKey = `site-media-pending/${id}/upload`;
@@ -485,6 +499,7 @@ export class SiteService {
   }
 
   async mediaComplete(admin: PlatformAdmin, id: string): Promise<SiteMedia> {
+    assertCanModifySite(admin);
     const row = await this.uow.run(scope(admin), async ({ tx }) => {
       const [row] = await tx.select().from(siteMedia).where(eq(siteMedia.id, id));
       if (!row) throw ApiError.notFound();
@@ -529,6 +544,7 @@ export class SiteService {
   }
 
   async updateMedia(admin: PlatformAdmin, id: string, body: unknown): Promise<SiteMedia> {
+    assertCanModifySite(admin);
     const input = validateMediaUpdate(body);
     return this.uow.run(scope(admin), async ({ tx }) => {
       if (input.archive) {

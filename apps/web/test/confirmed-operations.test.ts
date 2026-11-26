@@ -99,6 +99,39 @@ describe('confirmed workspace operations', () => {
     expect(fixture.state().announcement).toBe(announcement);
   });
 
+  it('replaces an optimistic calendar event when server confirms event creation to prevent duplicates', async () => {
+    const fixture = connectedStore();
+    const draft = {
+      kind: event.kind,
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      projectId: null,
+      attendeeIds: [],
+    };
+    // Simulate optimistic calendar event already in local state
+    const optimisticEvent = {
+      ...event,
+      id: 'ev-12345',
+    };
+    (fixture.store as unknown as { apply: (action: unknown) => void }).apply({
+      type: 'sync/upsert-event',
+      event: optimisticEvent,
+    });
+    expect(fixture.state().calendarEvents).toMatchObject([{ id: 'ev-12345', title: event.title }]);
+
+    const operation = { type: 'create-calendar-event', draft } satisfies ConfirmedOperation;
+    vi.spyOn(api.calendar, 'create').mockResolvedValue(event);
+
+    await fixture.store.confirmOperation(operation, 'cmd-1');
+
+    // The optimistic event ev-12345 should have been replaced with event-1, no duplicate
+    expect(fixture.state().calendarEvents).toHaveLength(1);
+    expect(fixture.state().calendarEvents[0]!.id).toBe('event-1');
+  });
+
   it('keeps one schedule across a retry and removes it only when cancellation is confirmed', async () => {
     const fixture = connectedStore();
     const scheduled: ScheduledMessageView = {
