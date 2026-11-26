@@ -1,4 +1,4 @@
-import { isPrimaryOwner } from '../../platform/security/platform-role-policy.js';
+import { isProtectedAdminTarget } from '../../platform/security/platform-role-policy.js';
 import { Injectable } from '@nestjs/common';
 import { and, desc, eq, isNotNull, isNull, gt, type SQL, sql } from 'drizzle-orm';
 import type {
@@ -370,13 +370,14 @@ export class PlatformUsersService {
           email: users.email,
           fullName: users.fullName,
           status: users.status,
+          isPlatformAdmin: users.isPlatformAdmin,
           deletedAt: users.deletedAt,
         })
         .from(users)
         .where(eq(users.id, userId))
         .for('update');
       if (!user || user.deletedAt || user.status === 'deleted') throw ApiError.notFound('The user');
-      if (isPrimaryOwner(user.phone)) throw new ApiError('ADMIN_TARGET_PROTECTED');
+      if (isProtectedAdminTarget(user)) throw new ApiError('ADMIN_TARGET_PROTECTED');
       if (channel === 'email' && !user.email)
         throw ApiError.validation([{ field: 'channel', message: 'the user has no email address' }]);
 
@@ -449,8 +450,11 @@ export class PlatformUsersService {
   }
 
   private async protectOwner(tx: Tx, userId: string): Promise<void> {
-    const [target] = await tx.select({ phone: users.phone }).from(users).where(eq(users.id, userId));
-    if (target && isPrimaryOwner(target.phone)) throw new ApiError('ADMIN_TARGET_PROTECTED');
+    const [target] = await tx
+      .select({ phone: users.phone, isPlatformAdmin: users.isPlatformAdmin })
+      .from(users)
+      .where(eq(users.id, userId));
+    if (target && isProtectedAdminTarget(target)) throw new ApiError('ADMIN_TARGET_PROTECTED');
   }
 
   private async requireUser(tx: Tx, userId: string): Promise<void> {

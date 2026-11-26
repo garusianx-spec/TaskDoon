@@ -98,6 +98,7 @@ import {
   UnsuspendWorkspaceDto,
   WorkspaceLimitsDto,
 } from './platform-admin.dto.js';
+import { requireRole } from './admin-roles.guard.js';
 import {
   CurrentPlatformAdmin,
   type PlatformAdmin,
@@ -185,6 +186,7 @@ export class PlatformAdminController {
   }
 
   @Post('broadcasts')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @ApiOperation({ summary: 'Create a platform announcement (audited and delivered through the outbox)' })
   @ApiCreatedResponse({ type: SystemBroadcastViewDto })
   createBroadcast(
@@ -195,6 +197,7 @@ export class PlatformAdminController {
   }
 
   @Patch('broadcasts/:broadcastId')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @ApiOperation({ summary: 'Edit or activate a platform announcement' })
   @ApiOkResponse({ type: SystemBroadcastViewDto })
   updateBroadcast(
@@ -206,6 +209,7 @@ export class PlatformAdminController {
   }
 
   @Delete('broadcasts/:broadcastId')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Soft archive a platform announcement' })
   @ApiNoContentResponse()
@@ -271,6 +275,7 @@ export class PlatformAdminController {
   }
 
   @Post('sessions/:sessionId/revoke')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'End one session now (its tokens and sockets stop working)' })
   @ApiNoContentResponse()
@@ -282,6 +287,7 @@ export class PlatformAdminController {
   }
 
   @Post('users/:userId/sessions/revoke-all')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'End every session of a person' })
   @ApiOkResponse({ type: PlatformSessionsRevokedDto })
@@ -293,6 +299,7 @@ export class PlatformAdminController {
   }
 
   @Post('users/:userId/password-reset')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @ApiOperation({
     summary: 'Issue a single-use password reset code: sent as a link, or shown once to hand over',
   })
@@ -308,6 +315,7 @@ export class PlatformAdminController {
   /* ---------------------------------------------------------------- moderation (phase 2) */
 
   @Post('users/:userId/suspend')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -323,6 +331,7 @@ export class PlatformAdminController {
   }
 
   @Post('users/:userId/unsuspend')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lift a suspension: the person may sign in again' })
   @ApiOkResponse({ type: PlatformModerationResultDto })
@@ -335,6 +344,7 @@ export class PlatformAdminController {
   }
 
   @Put('users/:userId/password-reset-required')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @ApiOperation({
     summary: 'Require (or stop requiring) a new password; requiring it signs every session out by default',
   })
@@ -417,6 +427,7 @@ export class PlatformAdminController {
   /* ---------------------------------------------------------------- workspace moderation (phase 3) */
 
   @Post('workspaces/:workspaceId/suspend')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Suspend a workspace: every member is refused (WORKSPACE_SUSPENDED) until it is lifted',
@@ -431,6 +442,7 @@ export class PlatformAdminController {
   }
 
   @Post('workspaces/:workspaceId/unsuspend')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lift a workspace suspension' })
   @ApiOkResponse({ type: PlatformWorkspaceModerationResultDto })
@@ -443,6 +455,7 @@ export class PlatformAdminController {
   }
 
   @Post('workspaces/:workspaceId/transfer-ownership')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Emergency override: make an active member the owner (the previous owner becomes an admin)',
@@ -457,6 +470,7 @@ export class PlatformAdminController {
   }
 
   @Put('workspaces/:workspaceId/limits')
+  @requireRole('SUPER_ADMIN', 'ADMIN')
   @ApiOperation({ summary: "Move a workspace to another plan and/or override its plan's limits" })
   @ApiOkResponse({ type: PlatformWorkspaceModerationResultDto })
   setWorkspaceLimits(

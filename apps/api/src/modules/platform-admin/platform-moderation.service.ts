@@ -1,4 +1,4 @@
-import { isPrimaryOwner } from '../../platform/security/platform-role-policy.js';
+import { isProtectedAdminTarget } from '../../platform/security/platform-role-policy.js';
 import { Injectable } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import type { PasswordResetRequiredBody, PlatformModerationResult } from '@taskin/contracts';
@@ -166,7 +166,7 @@ export class PlatformModerationService {
       .where(eq(users.id, userId))
       .for('update');
     if (!target || target.deletedAt || target.status === 'deleted') throw ApiError.notFound('The user');
-    if (isPrimaryOwner(target.phone)) throw new ApiError('ADMIN_TARGET_PROTECTED');
+    if (isProtectedAdminTarget(target)) throw new ApiError('ADMIN_TARGET_PROTECTED');
     return target;
   }
 
