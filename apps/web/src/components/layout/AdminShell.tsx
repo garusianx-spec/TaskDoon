@@ -54,7 +54,7 @@ export function AdminShell({ children }: { readonly children: ReactNode }) {
         </div>
         <nav
           aria-label="بخش‌های پنل مدیریت"
-          className="-mx-1 flex gap-1 overflow-x-auto lg:mx-0 lg:flex-col lg:overflow-visible"
+          className="-mx-1 flex snap-x snap-mandatory gap-1 overflow-x-auto scroll-smooth [mask-image:linear-gradient(to_left,transparent,black_14px,black_calc(100%-14px),transparent)] lg:mx-0 lg:flex-col lg:snap-none lg:overflow-visible lg:[mask-image:none]"
         >
           {SECTIONS.filter((section) => section.href !== '/admin/roles' || admin.role === 'SUPER_ADMIN').map(
             ({ href, label, icon: Icon }) => {
@@ -67,7 +67,7 @@ export function AdminShell({ children }: { readonly children: ReactNode }) {
                   prefetch={href === '/admin/site' ? false : undefined}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-body-sm font-medium transition-colors',
+                    'flex shrink-0 snap-start items-center gap-2 rounded-lg px-3 py-2 text-body-sm font-medium transition-colors',
                     active
                       ? 'bg-brand-subtle text-fg-brand'
                       : 'text-fg-secondary hover:bg-hover hover:text-fg-primary',
