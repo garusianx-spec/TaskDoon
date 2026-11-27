@@ -8,7 +8,7 @@ import { session } from '@/features/auth/api/session';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { AuthCard } from '@/features/auth/components/AuthCard';
 import { Button, Input } from '@/components/ui';
-import { KeyIcon, LockIcon } from '@/components/icons';
+import { EyeIcon, EyeSlashIcon, KeyIcon, LockIcon } from '@/components/icons';
 
 /**
  * A session opened with a password shows the phone too before the panel opens: a code texted to
@@ -133,6 +133,7 @@ export function StepUpPrompt({ name }: { readonly name: string }) {
   const { steppedUp, signOut } = useAdmin();
   const needsPassword = session.current?.user.hasPassword === false;
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fieldRef = useRef<HTMLInputElement>(null);
@@ -173,12 +174,25 @@ export function StepUpPrompt({ name }: { readonly name: string }) {
           ref={fieldRef}
           label="رمز عبور"
           name="password"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           dir="ltr"
           autoComplete={needsPassword ? 'new-password' : 'current-password'}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           iconStart={<LockIcon size={18} />}
+          iconEnd={
+            <button
+              type="button"
+              className="flex size-9 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:text-fg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              aria-label={showPassword ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'}
+              aria-pressed={showPassword}
+              disabled={busy}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setShowPassword((prev) => !prev)}
+            >
+              {showPassword ? <EyeSlashIcon size={18} /> : <EyeIcon size={18} />}
+            </button>
+          }
           error={error ?? undefined}
         />
         <Button type="submit" fullWidth size="lg" loading={busy} disabled={!password}>
