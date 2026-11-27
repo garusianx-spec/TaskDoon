@@ -92,6 +92,7 @@ export function OverlayHost() {
         draft={active?.kind === 'task-composer' ? active.draft : null}
         columns={state.boardColumns}
         timeZone={activeWorkspace.timeZone}
+        currentUserId={currentUser?.id}
         {...(fixedProjectId ? { fixedProjectId } : {})}
         onCreateProject={() => open({ kind: 'project-composer' })}
         onClose={close}

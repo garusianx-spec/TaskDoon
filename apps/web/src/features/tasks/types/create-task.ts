@@ -9,6 +9,8 @@ export interface CreateTaskModalProps {
   readonly timeZone?: string;
   /** A project view locks placement; global entry points keep the project selector. */
   readonly fixedProjectId?: string;
+  /** Current user id for quick self-assignment (اختیاری). */
+  readonly currentUserId?: string;
   readonly onClose: () => void;
   readonly onSubmit: (draft: TaskDraft, files: readonly File[], commandId: string) => Promise<void> | void;
   /** Offered when there is no project yet: every task belongs to one. */

@@ -1,9 +1,8 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { directory } from '@/store/directory';
 import { formatJalali, fromISODate } from '@taskin/jalali';
-import { Avatar, Badge, Button, Checkbox, IconButton, Input, Modal, Textarea } from '@/components/ui';
+import { Badge, Button, IconButton, Input, Modal, Textarea } from '@/components/ui';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -22,8 +21,10 @@ import { type CreateTaskModalProps } from '@/features/tasks/types/create-task';
  */
 import { useCreateTaskForm } from '@/features/tasks/hooks/useCreateTaskForm';
 import {
+  TaskAssigneeSelector,
   TaskDeadlineField,
   TaskPlanningFields,
+  TaskPrioritySelector,
   TaskProjectField,
 } from '@/features/tasks/components/TaskPlanningFields';
 import { TaskCreateFiles } from '@/features/tasks/components/TaskCreateFiles';
@@ -33,6 +34,7 @@ export function CreateTaskModal({
   draft,
   columns,
   fixedProjectId,
+  currentUserId,
   timeZone,
   onClose,
   onSubmit,
@@ -55,6 +57,13 @@ export function CreateTaskModal({
     submit,
   } = model;
 
+  const handleGlobalKeyDown = (event: React.KeyboardEvent) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      event.preventDefault();
+      void submit();
+    }
+  };
+
   return (
     <Modal
       open={open}
@@ -63,7 +72,7 @@ export function CreateTaskModal({
       title={fromMessage ? 'تبدیل پیام به وظیفه' : fromNote ? 'تبدیل یادداشت به وظیفه' : 'تعریف وظیفه جدید'}
       description={
         fromMessage
-          ? 'متن و پیوست پیام انتخاب‌شده به‌صورت خودکار در فرم قرار گرفت. جزئیات را تکمیل کنید.'
+          ? 'متن و پیوست پیام به‌صورت خودکار در فرم قرار گرفت. جزئیات را تکمیل کنید.'
           : fromNote
             ? 'عنوان و متن یادداشت در فرم قرار گرفت و موارد تیک‌نخورده به زیروظیفه تبدیل می‌شوند.'
             : presetDate && form.dueDate
@@ -99,6 +108,15 @@ export function CreateTaskModal({
               {submitError}
             </p>
           )}
+
+          {/* Desktop keyboard shortcut hint */}
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-micro text-fg-tertiary me-auto">
+            <kbd className="rounded border border-secondary bg-sunken px-1.5 py-0.5 font-mono text-[11px] text-fg-secondary">
+              Enter ↵
+            </kbd>
+            <span>ثبت سریع</span>
+          </span>
+
           <Button variant="secondary" className="max-sm:min-h-11" onClick={close} disabled={saving}>
             انصراف
           </Button>
@@ -114,160 +132,157 @@ export function CreateTaskModal({
         </>
       }
     >
-      <fieldset disabled={saving} aria-busy={saving || undefined} className="flex min-w-0 flex-col gap-4">
-        {projects.length === 0 && (
-          <div
-            role="note"
-            className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-secondary bg-sunken p-3 text-body-sm text-fg-secondary"
-          >
-            <span className="flex-1">
-              هنوز پروژه‌ای در این فضای کاری نیست؛ هر وظیفه در یک پروژه ثبت می‌شود.
-            </span>
-            {onCreateProject && (
-              <Button size="sm" variant="secondary" onClick={onCreateProject}>
-                ساخت پروژه
-              </Button>
-            )}
-          </div>
-        )}
-        <Input
-          ref={titleRef}
-          label="عنوان وظیفه"
-          maxLength={200}
-          hint="نام کوتاهی برای وظیفه بنویسید."
-          required
-          value={form.title}
-          onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-          onFocus={() => setTouched(false)}
-          onBlur={() => setTouched(true)}
-          placeholder="مثلاً: بازبینی جریان ورود کاربران"
-          error={titleError}
-          data-autofocus
-        />
-
-        <TaskProjectField model={model} fixedProjectId={fixedProjectId} columns={columns} />
-
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-body-sm font-medium text-fg-secondary">مسئولان</legend>
-          <div className="grid max-h-36 grid-cols-1 gap-1.5 overflow-y-auto scrollbar-thin sm:max-h-48 sm:grid-cols-2">
-            {directory.users().map((user) => {
-              const checked = form.assigneeIds.includes(user.id);
-              return (
-                <label
-                  key={user.id}
-                  className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-secondary px-2.5 py-2 transition-colors hover:bg-hover has-[[aria-checked=true]]:border-brand"
-                >
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(next) =>
-                      setForm((current) => ({
-                        ...current,
-                        assigneeIds: next
-                          ? [...current.assigneeIds, user.id]
-                          : current.assigneeIds.filter((id) => id !== user.id),
-                      }))
-                    }
-                    ariaLabel={user.fullName}
-                    size="sm"
-                  />
-                  <Avatar
-                    name={user.fullName}
-                    initials={user.initials}
-                    tone={user.avatarTone}
-                    size="sm"
-                    decorative
-                  />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-caption font-semibold text-fg-primary">
-                      {user.fullName}
-                    </span>
-                    <span className="truncate text-micro text-fg-tertiary">{user.jobTitle}</span>
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <TaskDeadlineField model={model} timeZone={timeZone} />
-
-        <TaskMoreDetails>
-          <Textarea
-            label="توضیحات"
-            value={form.description}
-            onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-            placeholder="جزئیات، معیار پذیرش یا زمینه وظیفه را بنویسید…"
-            className="min-h-28"
-          />
-          <TaskPlanningFields model={model} timeZone={timeZone} />
-
-          {form.subtaskTitles.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="text-body-sm font-medium text-fg-secondary">
-                زیروظیفه‌ها از چک‌لیست یادداشت
+      <div onKeyDown={handleGlobalKeyDown} className="flex min-w-0 flex-col gap-4">
+        <fieldset disabled={saving} aria-busy={saving || undefined} className="flex min-w-0 flex-col gap-4">
+          {projects.length === 0 && (
+            <div
+              role="note"
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-secondary bg-sunken p-3 text-body-sm text-fg-secondary"
+            >
+              <span className="flex-1">
+                هنوز پروژه‌ای در این فضای کاری نیست؛ هر وظیفه در یک پروژه ثبت می‌شود.
               </span>
-              <ul className="flex flex-col gap-1.5">
-                {form.subtaskTitles.map((title, index) => (
-                  <li
-                    key={`${index}-${title}`}
-                    className="flex items-center gap-2.5 rounded-lg border border-secondary bg-sunken p-2"
-                  >
-                    <SubtaskIcon size={16} className="shrink-0 text-fg-quaternary" />
-                    <span className="flex-1 truncate text-caption font-medium text-fg-primary">{title}</span>
-                    <IconButton
-                      label={`حذف «${title}» از زیروظیفه‌ها`}
-                      icon={<CloseIcon size={14} />}
-                      size="xs"
-                      onClick={() =>
-                        setForm((current) => ({
-                          ...current,
-                          subtaskTitles: current.subtaskTitles.filter((_, position) => position !== index),
-                        }))
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
+              {onCreateProject && (
+                <Button size="sm" variant="secondary" onClick={onCreateProject}>
+                  ساخت پروژه
+                </Button>
+              )}
             </div>
           )}
 
-          <TaskCreateFiles model={model} />
-        </TaskMoreDetails>
+          {/* Hero Task Title with quick Enter-to-submit */}
+          <Input
+            ref={titleRef}
+            label="عنوان وظیفه"
+            maxLength={200}
+            required
+            value={form.title}
+            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+            onFocus={() => setTouched(false)}
+            onBlur={() => setTouched(true)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                void submit();
+              }
+            }}
+            placeholder="چه کاری باید انجام شود؟ (مثلاً: بازبینی و بهبود جریان ثبت‌نام)"
+            error={titleError}
+            data-autofocus
+          />
 
-        {fromMessage && (
-          <Badge tone="brand" size="md" iconStart={<ConvertToTaskIcon size={13} />}>
-            این وظیفه به پیام مبدأ در گفتگو پیوند داده می‌شود.
-          </Badge>
-        )}
-        {fromNote && (
-          <Badge tone="brand" size="md" iconStart={<NotebookIcon size={13} />}>
-            این وظیفه به یادداشت مبدأ پیوند داده می‌شود.
-          </Badge>
-        )}
-      </fieldset>
+          <TaskProjectField model={model} fixedProjectId={fixedProjectId} columns={columns} />
+
+          {/* Fast Priority Segmented Control */}
+          <TaskPrioritySelector model={model} />
+
+          {/* Compact, clean Assignee Selector with "Assign to me" */}
+          <TaskAssigneeSelector model={model} currentUserId={currentUserId} />
+
+          {/* Smart Deadline with 1-click presets */}
+          <TaskDeadlineField model={model} timeZone={timeZone} />
+
+          {/* Collapsible details for description, subtasks, files & agile settings */}
+          <TaskMoreDetails
+            hasContent={
+              Boolean(form.description.trim()) ||
+              form.attachments.length > 0 ||
+              model.files.length > 0 ||
+              form.subtaskTitles.length > 0 ||
+              form.type === 'bug' ||
+              form.isBacklog === true
+            }
+          >
+            <Textarea
+              label="توضیحات و زمینه وظیفه"
+              value={form.description}
+              onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+              placeholder="معیار پذیرش، نیازمندی‌ها یا جزئیات تکمیلی را بنویسید…"
+              className="min-h-24"
+            />
+
+            <TaskPlanningFields model={model} timeZone={timeZone} />
+
+            {form.subtaskTitles.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="text-body-sm font-medium text-fg-secondary">
+                  زیروظیفه‌ها از چک‌لیست یادداشت
+                </span>
+                <ul className="flex flex-col gap-1.5">
+                  {form.subtaskTitles.map((title, index) => (
+                    <li
+                      key={`${index}-${title}`}
+                      className="flex items-center gap-2.5 rounded-lg border border-secondary bg-sunken p-2"
+                    >
+                      <SubtaskIcon size={16} className="shrink-0 text-fg-quaternary" />
+                      <span className="flex-1 truncate text-caption font-medium text-fg-primary">{title}</span>
+                      <IconButton
+                        label={`حذف «${title}» از زیروظیفه‌ها`}
+                        icon={<CloseIcon size={14} />}
+                        size="xs"
+                        onClick={() =>
+                          setForm((current) => ({
+                            ...current,
+                            subtaskTitles: current.subtaskTitles.filter((_, position) => position !== index),
+                          }))
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <TaskCreateFiles model={model} />
+          </TaskMoreDetails>
+
+          {fromMessage && (
+            <Badge tone="brand" size="md" iconStart={<ConvertToTaskIcon size={13} />}>
+              این وظیفه به پیام مبدأ در گفتگو پیوند داده می‌شود.
+            </Badge>
+          )}
+          {fromNote && (
+            <Badge tone="brand" size="md" iconStart={<NotebookIcon size={13} />}>
+              این وظیفه به یادداشت مبدأ پیوند داده می‌شود.
+            </Badge>
+          )}
+        </fieldset>
+      </div>
     </Modal>
   );
 }
 
-function TaskMoreDetails({ children }: { readonly children: ReactNode }) {
+function TaskMoreDetails({
+  children,
+  hasContent = false,
+}: {
+  readonly children: ReactNode;
+  readonly hasContent?: boolean;
+}) {
   const id = useId();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(hasContent);
+
   return (
-    <>
+    <div className="flex flex-col gap-2 pt-1 border-t border-secondary/50">
       <Button
-        variant="secondary"
+        variant="ghost"
         fullWidth
         aria-expanded={expanded}
         aria-controls={id}
         iconEnd={expanded ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16} />}
-        className="min-h-11 justify-between sm:hidden"
+        className="min-h-10 max-sm:min-h-11 justify-between text-fg-secondary hover:text-fg-primary text-caption"
         onClick={() => setExpanded((value) => !value)}
       >
-        جزئیات بیشتر
+        <span>توضیحات، پیوست و جزئیات تکمیلی</span>
+        {hasContent && !expanded && (
+          <span className="ms-2 rounded-full bg-brand-subtle px-2 py-0.5 text-micro text-fg-brand">
+            دارای محتوا
+          </span>
+        )}
       </Button>
-      <div id={id} className={`${expanded ? 'flex' : 'hidden'} min-w-0 flex-col gap-4 sm:flex`}>
+      <div id={id} className={`${expanded ? 'flex' : 'hidden'} min-w-0 flex-col gap-4 pt-1`}>
         {children}
       </div>
-    </>
+    </div>
   );
 }
