@@ -25,8 +25,48 @@ const nextConfig = {
   outputFileTracingRoot: monorepoRoot,
   // Socket.IO's path ends in a slash (`/rt/`); redirecting it to `/rt` would break the handshake.
   skipTrailingSlashRedirect: true,
+  async redirects() {
+    return [
+      {
+        source: '/login',
+        destination: '/feed',
+        permanent: true,
+      },
+      {
+        source: '/signup',
+        destination: '/feed',
+        permanent: true,
+      },
+      {
+        source: '/register',
+        destination: '/feed',
+        permanent: true,
+      },
+      {
+        source: '/signin',
+        destination: '/feed',
+        permanent: true,
+      },
+      {
+        source: '/auth/sign-up',
+        destination: '/feed',
+        permanent: true,
+      },
+      {
+        source: '/auth/sign-in',
+        destination: '/feed',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
+      {
+        source: '/fonts/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
       {
         source: '/:path*',
         headers: [

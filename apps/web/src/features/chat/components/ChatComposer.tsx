@@ -116,7 +116,13 @@ export function ChatComposer({
             </span>
             <span className="truncate text-caption text-fg-tertiary">{replyPreview.preview}</span>
           </span>
-          <IconButton label="لغو پاسخ" icon={<CloseIcon size={16} />} size="xs" onClick={onCancelReply} />
+          <IconButton
+            label="لغو پاسخ"
+            icon={<CloseIcon size={16} />}
+            size="xs"
+            onClick={onCancelReply}
+            className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+          />
         </div>
       )}
 
@@ -129,6 +135,7 @@ export function ChatComposer({
               size="sm"
               onClick={() => setEmojiOpen((open) => !open)}
               aria-expanded={emojiOpen}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
             />
           </Tooltip>
           {emojiOpen && (
@@ -159,6 +166,7 @@ export function ChatComposer({
             size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={recording !== null}
+            className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
           />
         </Tooltip>
         <input
@@ -195,7 +203,13 @@ export function ChatComposer({
                 style={{ width: `${Math.min(100, Math.round(recording.level * 300))}%` }}
               />
             </span>
-            <IconButton label="لغو ضبط" icon={<CloseIcon size={18} />} size="xs" onClick={recorder.cancel} />
+            <IconButton
+              label="لغو ضبط"
+              icon={<CloseIcon size={18} />}
+              size="xs"
+              onClick={recorder.cancel}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
+            />
           </div>
         )}
         <textarea
@@ -230,6 +244,7 @@ export function ChatComposer({
                 setFileError(null);
                 if (onVoice) void recorder.start();
               }}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
             />
           </Tooltip>
         )}
@@ -243,7 +258,10 @@ export function ChatComposer({
               aria-haspopup="dialog"
               onClick={openScheduler}
               disabled={draft.trim().length === 0}
-              className={cn(draft.trim().length === 0 && 'opacity-50')}
+              className={cn(
+                'min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0',
+                draft.trim().length === 0 && 'opacity-50',
+              )}
             />
           </Tooltip>
         )}
@@ -255,6 +273,7 @@ export function ChatComposer({
             size="sm"
             variant="primary"
             onClick={() => void finishRecording()}
+            className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
           />
         ) : (
           <IconButton
@@ -270,7 +289,10 @@ export function ChatComposer({
               openScheduler();
             }}
             disabled={draft.trim().length === 0}
-            className={cn(draft.trim().length === 0 && 'opacity-50')}
+            className={cn(
+              'min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0',
+              draft.trim().length === 0 && 'opacity-50',
+            )}
           />
         )}
       </div>

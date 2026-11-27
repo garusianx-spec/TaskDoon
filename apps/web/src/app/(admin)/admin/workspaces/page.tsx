@@ -14,7 +14,7 @@ import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { WORKSPACE_STATUS } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
-import { Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { Loaded, PageHeader, Panel, TD, TD_ACTIONS, TH, TH_ACTIONS } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { SuspendWorkspaceDialog } from '@/features/admin/components/SuspendWorkspaceDialog';
 import { TransferOwnershipDialog } from '@/features/admin/components/TransferOwnershipDialog';
@@ -154,7 +154,7 @@ export default function AdminWorkspacesPage() {
                       <th className={TH}>مالک</th>
                       <th className={TH}>اعضا</th>
                       <th className={TH}>ساخته‌شده</th>
-                      <th className={TH}>اقدام‌ها</th>
+                      <th className={TH_ACTIONS}>اقدام‌ها</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -193,7 +193,7 @@ export default function AdminWorkspacesPage() {
                           </td>
                           <td className={TD}>{toPersianDigits(workspace.memberCount)}</td>
                           <td className={TD}>{formatJalali(workspace.createdAt, 'medium')}</td>
-                          <td className={TD}>
+                          <td className={TD_ACTIONS}>
                             <WorkspaceActionsMenu
                               workspace={workspace}
                               onAction={(action) => onAction(workspace, action)}

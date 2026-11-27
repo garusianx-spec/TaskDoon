@@ -30,8 +30,9 @@ it('keeps exact published feature labels, deduplicates matrix rows and does not 
     }),
   );
   expect(html.match(/<th scope="row">وظایف<\/th>/g)).toHaveLength(1);
-  expect(html).toContain('ذکر نشده');
-  expect(html).not.toContain('>—<');
+  expect(html).toContain('ندارد');
+  expect(html).toContain('>—<');
+  expect(html).not.toContain('ذکر نشده');
   expect(html).toContain('نیازمند تأیید');
   expect(html).toContain('رایگان');
 });

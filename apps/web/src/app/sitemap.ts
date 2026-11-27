@@ -14,5 +14,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (safeCanonical(document.seo.canonical, origin, path) !== url) continue;
     unique.set(url, { url, lastModified: document.updatedAt });
   }
+  const blogUrl = new URL('/blog', origin).href;
+  if (!unique.has(blogUrl)) {
+    const latestArticle = documents
+      .filter((d) => d.kind === 'article')
+      .sort((a, b) => (b.updatedAt > a.updatedAt ? 1 : -1))[0];
+    unique.set(blogUrl, {
+      url: blogUrl,
+      lastModified: latestArticle?.updatedAt ?? new Date(),
+    });
+  }
   return [...unique.values()];
 }

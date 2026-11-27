@@ -7,6 +7,7 @@ export function SiteLink({
   children,
   className,
   style,
+  onClick,
   ...rest
 }: {
   href: unknown;
@@ -14,22 +15,23 @@ export function SiteLink({
   className?: string;
   'aria-label'?: string;
   style?: CSSProperties;
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
 }) {
   const safe = siteHref(href);
   if (!safe)
     return (
-      <span className={className} style={style}>
+      <span className={className} style={style} onClick={onClick}>
         {children}
       </span>
     );
   if (safe.startsWith('#'))
     return (
-      <a href={safe} className={className} style={style} {...rest}>
+      <a href={safe} className={className} style={style} onClick={onClick} {...rest}>
         {children}
       </a>
     );
   return (
-    <Link href={safe} className={className} style={style} {...rest}>
+    <Link href={safe} className={className} style={style} onClick={onClick} {...rest}>
       {children}
     </Link>
   );

@@ -194,6 +194,9 @@ export function MarketingFooter({
             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
             marginTop: '36px',
             paddingTop: '24px',
+            display: 'flex',
+            justifyContent: 'center',
+            textAlign: 'center',
           }}
         >
           <p>

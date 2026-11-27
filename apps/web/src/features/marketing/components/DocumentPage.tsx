@@ -188,9 +188,16 @@ export async function DocumentPage({
               {sourceDocuments.length ? (
                 <DocumentCards documents={sourceDocuments} />
               ) : (
-                <p className="marketing-empty">
-                  در حال حاضر {sourceKind === 'job' ? 'فرصت شغلی فعالی' : 'محتوایی'} منتشر نشده است.
-                </p>
+                <div className="marketing-empty mx-auto flex max-w-2xl flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-[#090d16] px-6 py-12 text-center shadow-xl sm:px-10 sm:py-16">
+                  <p className="text-base font-semibold text-white">
+                    در حال حاضر {sourceKind === 'job' ? 'فرصت شغلی فعالی' : 'محتوایی'} منتشر نشده است.
+                  </p>
+                  <p className="max-w-md text-sm leading-7 text-zinc-400">
+                    {sourceKind === 'job'
+                      ? 'به‌محض باز شدن موقعیت شغلی جدید، شرح نیازها در این صفحه قرار می‌گیرد.'
+                      : 'محتوای این بخش در حال تکمیل و آماده‌سازی برای انتشار است.'}
+                  </p>
+                </div>
               )}
             </div>
           </section>

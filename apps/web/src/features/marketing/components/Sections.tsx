@@ -305,7 +305,13 @@ export function SectionRenderer({
       tabIndex={section.type === 'contact-form' ? -1 : undefined}
       className={className}
     >
-      <div className="marketing-container">
+      <div
+        className={
+          section.type === 'contact-form'
+            ? 'marketing-container mx-auto max-w-[800px]'
+            : 'marketing-container'
+        }
+      >
         <SectionHeading section={section} />
         {section.type === 'rich-text' && <RichText text={section.body ?? ''} article={article} />}
         {section.type === 'feature-grid' &&

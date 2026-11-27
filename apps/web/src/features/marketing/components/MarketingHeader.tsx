@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { SiteLink as SiteLinkType } from '@taskin/contracts';
 import { MarketingLogo } from '@/features/marketing/components/MarketingLogo';
 import { SiteLink, Arrow } from '@/features/marketing/components/SiteLink';
+import { trackCtaClick } from '@/lib/analytics';
 
 export function MarketingHeader({
   links,
@@ -64,8 +65,15 @@ export function MarketingHeader({
           )}
           {cta && (
             <SiteLink
-              href={cta.href}
-              className="marketing-button marketing-button-primary marketing-header-cta"
+              href={cta.href === '/feed' ? '/feed?intent=signup' : cta.href}
+              className="marketing-button marketing-button-primary marketing-header-cta shrink-0 whitespace-nowrap"
+              onClick={() => {
+                trackCtaClick(
+                  'header',
+                  cta.label,
+                  cta.href === '/feed' ? '/feed?intent=signup' : cta.href,
+                );
+              }}
             >
               {cta.label}
               <Arrow />

@@ -1,0 +1,55 @@
+groups:
+  - name: taskdoon_infrastructure_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "سرویس {{ $labels.job }} از دسترس خارج شده است"
+          description: "کانتینر یا سرویس مانیتورینگ پاسخگو نیست بیش از ۱ دقیقه."
+
+      - alert: HighMemoryUsage
+        expr: (container_memory_working_set_bytes / container_spec_memory_limit_bytes) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "مصرف حافظه کانتینر {{ $labels.name }} بالای ۸۵٪"
+          description: "خطر فعال شدن OOM Killer در صورت ادامه افزایش مصرف."
+
+      - alert: PostgresHighConnections
+        expr: (pg_stat_activity_count / pg_settings_max_connections) * 100 > 80
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "اشباع شدن اتصالات پایگاه داده (بالای ۸۰٪)"
+          description: "اتصالات باز دیتابیس به سقف مجاز نزدیک شده است."
+
+      - alert: PostgresDeadlocksDetected
+        expr: rate(pg_stat_database_deadlocks[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "بن‌بست تراکنش (Deadlock) در دیتابیس رخ داده است"
+          description: "نرخ ددلاک در دیتابیس تسک‌دون غیر صفر است."
+
+      - alert: RedisCoreMemorySaturation
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 80
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "اشباع حافظه Redis Core بالای ۸۰٪"
+          description: "ردیس به سقف حافظه خود نزدیک می‌شود."
+
+      - alert: HighHttp5xxRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > 2
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "نرخ خطای سرور HTTP 5xx بیش از ۲٪ در ۵ دقیقه اخیر"
+          description: "کاربران در حال دریافت پاسخ ۵۰۰ از API هستند."

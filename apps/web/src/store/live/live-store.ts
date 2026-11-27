@@ -798,7 +798,17 @@ export class LiveStore {
           const view = await api.calendar.create(workspaceId, operation.draft, commandId);
           if (!current()) return;
           const event = eventFromView(view);
-          this.apply({ type: 'sync/upsert-event', event });
+          const state = this.getState();
+          const local = state.calendarEvents.find(
+            (e) =>
+              e.id === event.id ||
+              (e.id.startsWith('ev-') && e.title === event.title && e.date === event.date),
+          );
+          this.apply({
+            type: 'sync/upsert-event',
+            event,
+            ...(local ? { replaceId: local.id } : {}),
+          });
           this.apply({ type: 'sync/merge', patch: { calendarFocusDate: event.date } });
           return;
         }

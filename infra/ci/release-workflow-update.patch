@@ -1,0 +1,55 @@
+commit 54fad26ddd43e1fad91d84be263966de81223776
+Author: M  E H D I <Mehdi@Alis-Mac-mini.local>
+Date:   Tue Nov 24 18:36:29 2026 +0330
+
+    feat(devops): implement phase 1 stabilization, backup sidecar, and release gating
+    
+    - Separate redis-core persistent volume to redis-core-data and isolate redis-rt tmpfs
+    - Increase postgres memory limit to 2048m and redis-core to 512m to prevent OOM
+    - Add migration ledger reconcile guard for historical ghost migrations in migrate.ts
+    - Create automated database backup script and sidecar container with 7-day retention
+    - Require production environment approval for image promotion and Coolify deployment
+    - Pass validated immutable commit SHA to Coolify deployment and add post-deploy health check
+    
+    Co-authored-by: OpenBot <335604065+openbotgit[bot]@users.noreply.github.com>
+
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index 8364349..7b412c5 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -160,6 +160,7 @@ jobs:
+     needs: [prepare, publish]
+     runs-on: ubuntu-24.04
+     timeout-minutes: 10
++    environment: production
+     permissions:
+       contents: read
+       packages: write
+@@ -241,4 +242,27 @@ jobs:
+         env:
+           COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
+           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
++          COOLIFY_IMAGE_TAG: sha-${{ github.sha }}
+         run: node infra/ci/trigger-coolify.mjs
++      - name: Verify production deployment health
++        run: |
++          node --input-type=module <<'NODE'
++          const endpoint = 'https://taskdoone.ir/api/health';
++          const maxAttempts = 20;
++          const delayMs = 3000;
++          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
++            try {
++              const res = await fetch(endpoint, { signal: AbortSignal.timeout(5000) });
++              if (res.ok) {
++                console.log(`Production health verified (attempt ${attempt}): HTTP ${res.status}`);
++                process.exit(0);
++              }
++              console.log(`Health check returned ${res.status}, retrying...`);
++            } catch (err) {
++              console.log(`Health check attempt ${attempt} failed: ${err.message}`);
++            }
++            if (attempt < maxAttempts) await new Promise(r => setTimeout(r, delayMs));
++          }
++          console.error('Production health check timed out. Deployment may be unhealthy.');
++          process.exit(1);
++          NODE

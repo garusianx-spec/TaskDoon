@@ -8,6 +8,7 @@ const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
 export function validateConfiguration(env) {
   const url = env.COOLIFY_WEBHOOK_URL;
   const token = env.COOLIFY_API_TOKEN;
+  const tag = env.COOLIFY_IMAGE_TAG;
   if (
     typeof url !== 'string' ||
     typeof token !== 'string' ||
@@ -18,6 +19,12 @@ export function validateConfiguration(env) {
     CONTROL_CHARACTERS.test(token)
   ) {
     throw new Error(INVALID_CONFIGURATION);
+  }
+
+  if (tag !== undefined && tag !== null && tag !== '') {
+    if (typeof tag !== 'string' || !/^sha-[0-9a-f]{7,40}$/.test(tag.trim())) {
+      throw new Error(INVALID_CONFIGURATION);
+    }
   }
 
   let parsed;
@@ -37,7 +44,7 @@ export function validateConfiguration(env) {
   ) {
     throw new Error(INVALID_CONFIGURATION);
   }
-  return { url: parsed.href, token };
+  return { url: parsed.href, token, tag: tag ? tag.trim() : undefined };
 }
 
 function quoteConfig(value) {
@@ -66,6 +73,7 @@ export function triggerCoolify({ env = process.env, spawn = spawnSync } = {}) {
   const childEnv = { ...process.env };
   delete childEnv.COOLIFY_WEBHOOK_URL;
   delete childEnv.COOLIFY_API_TOKEN;
+  delete childEnv.COOLIFY_IMAGE_TAG;
 
   let result;
   try {
