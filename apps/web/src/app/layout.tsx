@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import Script from 'next/script';
 import './globals.css';
 import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme';
 import { DATA_SOURCE } from '@/lib/data-source';
@@ -8,6 +9,7 @@ import { ThemeProvider } from '@/components/theme/ThemeProvider';
 const BRAND_TITLE = 'تسک‌دون | TaskDoon';
 const DESCRIPTION =
   'تسک‌دون (TaskDoon)، پلتفرم یکپارچه گفتگو، مدیریت پروژه و وظایف سازمانی با تقویم هجری شمسی، طراحی راست‌به‌چپ و موتور چندپوسته‌ای.';
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 // Icons come from the files beside this one: favicon.ico, icon.svg and apple-icon.png.
 export const metadata: Metadata = {
@@ -53,6 +55,24 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
           flashes the default palette. Runs ahead of hydration; ThemeProvider adopts it.
         */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+        {GA_MEASUREMENT_ID ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_MEASUREMENT_ID}', {
+                  page_path: window.location.pathname,
+                });
+              `}
+            </Script>
+          </>
+        ) : null}
       </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>
