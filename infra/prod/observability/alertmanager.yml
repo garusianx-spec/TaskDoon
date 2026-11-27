@@ -1,0 +1,32 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'severity', 'job']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default-log-receiver'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts-receiver'
+      continue: true
+
+receivers:
+  - name: 'default-log-receiver'
+    webhook_configs:
+      - url: 'http://127.0.0.1:4000/api/v1/internal/alerts/webhook'
+        send_resolved: true
+
+  - name: 'critical-alerts-receiver'
+    webhook_configs:
+      - url: 'http://127.0.0.1:4000/api/v1/internal/alerts/critical'
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'job']
