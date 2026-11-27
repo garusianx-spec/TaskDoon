@@ -308,9 +308,15 @@ services:
         NEXT_PUBLIC_DATA_SOURCE: api
         NEXT_PUBLIC_RT_URL: ''
         TASKIN_API_ORIGIN: http://api:4000
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
     user: node
     read_only: true
-    environment: { NODE_ENV: production, PORT: '3000', HOSTNAME: 0.0.0.0 }
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      HOSTNAME: 0.0.0.0
+      TASKIN_API_ORIGIN: http://api:4000
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m,uid=1000,gid=1000
       - /app/apps/web/.next/cache:rw,noexec,nosuid,size=64m,uid=1000,gid=1000

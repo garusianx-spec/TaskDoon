@@ -56,9 +56,11 @@ ARG NEXT_PUBLIC_DATA_SOURCE=api
 ARG NEXT_PUBLIC_RT_URL=
 # Next rewrites are serialized during build; this is a nonsecret network address.
 ARG TASKIN_API_ORIGIN=http://api:4000
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID=
 ENV NEXT_PUBLIC_DATA_SOURCE=${NEXT_PUBLIC_DATA_SOURCE} \
     NEXT_PUBLIC_RT_URL=${NEXT_PUBLIC_RT_URL} \
     TASKIN_API_ORIGIN=${TASKIN_API_ORIGIN} \
+    NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID} \
     NODE_ENV=production
 RUN npm run build --workspace=@taskin/web
 
