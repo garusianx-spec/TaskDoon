@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import type { SiteContent, SiteDocumentKind } from '@taskin/contracts';
+import { toPersianDigits } from '@taskin/jalali';
 import { siteApi } from '@/features/admin/api/site-api';
 import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
-import { Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { Loaded, PageHeader, Panel, TD, TD_NUMERIC, TH, TH_NUMERIC } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { Badge, Button, Input, Modal, RelativeTime, Select, Textarea } from '@/components/ui';
 import { KINDS } from '@/features/admin/components/site/SiteFields';
@@ -77,22 +78,24 @@ export function SiteDocuments({ kind, title }: { kind?: SiteDocumentKind; title:
             label="عنوان یا نامک"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            containerClassName="min-w-48 flex-1"
+            containerClassName="w-full min-w-48 sm:flex-1"
           />
-          <Select
-            className="w-44"
-            label="وضعیت انتشار"
-            hideLabel={false}
-            value={status}
-            onValueChange={setStatus}
-            options={[
-              { value: 'all', label: 'همه وضعیت‌ها' },
-              { value: 'published', label: 'منتشرشده' },
-              { value: 'draft', label: 'پیش‌نویس' },
-              { value: 'archived', label: 'بایگانی' },
-            ]}
-          />
-          <Button type="submit" variant="secondary">
+          <div className="w-full sm:w-44">
+            <Select
+              className="w-full"
+              label="وضعیت انتشار"
+              hideLabel={false}
+              value={status}
+              onValueChange={setStatus}
+              options={[
+                { value: 'all', label: 'همه وضعیت‌ها' },
+                { value: 'published', label: 'منتشرشده' },
+                { value: 'draft', label: 'پیش‌نویس' },
+                { value: 'archived', label: 'بایگانی' },
+              ]}
+            />
+          </div>
+          <Button type="submit" variant="secondary" className="w-full sm:w-auto">
             جستجو
           </Button>
         </form>
@@ -110,8 +113,8 @@ export function SiteDocuments({ kind, title }: { kind?: SiteDocumentKind; title:
                       <th className={TH}>نامک</th>
                       <th className={TH}>نوع</th>
                       <th className={TH}>وضعیت</th>
-                      <th className={TH}>آخرین تغییر</th>
-                      <th className={TH}>نسخه</th>
+                      <th className={TH_NUMERIC}>آخرین تغییر</th>
+                      <th className={TH_NUMERIC}>نسخه</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -149,10 +152,10 @@ export function SiteDocuments({ kind, title }: { kind?: SiteDocumentKind; title:
                                 : 'پیش‌نویس'}
                           </Badge>
                         </td>
-                        <td className={TD}>
+                        <td className={TD_NUMERIC}>
                           <RelativeTime iso={document.updatedAt} />
                         </td>
-                        <td className={TD}>{document.version}</td>
+                        <td className={TD_NUMERIC}>{toPersianDigits(document.version)}</td>
                       </tr>
                     ))}
                   </tbody>

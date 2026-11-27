@@ -8,7 +8,7 @@ import { adminApi, type UserFilters } from '@/features/admin/api/admin-api';
 import { phoneLabel, USER_STATUS } from '@/features/admin/lib/format';
 import { useAdmin, useAdminMe } from '@/features/admin/hooks/AdminSession';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
-import { Loaded, PageHeader, Panel, TD, TD_ACTIONS, TH, TH_ACTIONS } from '@/features/admin/components/AdminUi';
+import { Loaded, PageHeader, Panel, TD, TD_ACTIONS, TD_NUMERIC, TH, TH_ACTIONS, TH_NUMERIC } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { ForcePasswordResetDialog } from '@/features/admin/components/ForcePasswordResetDialog';
 import { SessionsDrawer } from '@/features/admin/components/SessionsDrawer';
@@ -151,13 +151,14 @@ export default function AdminUsersPage() {
               { value: 'user', label: 'کاربر عادی' },
             ]}
           />
-          <div className="flex gap-2 sm:col-span-2 xl:col-span-5">
-            <Button type="submit" iconStart={<SearchIcon size={16} />}>
+          <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-5">
+            <Button type="submit" className="w-full sm:w-auto" iconStart={<SearchIcon size={16} />}>
               جستجو
             </Button>
             <Button
               type="button"
               variant="ghost"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setDraft(EMPTY);
                 setMore(null);
@@ -186,12 +187,12 @@ export default function AdminUsersPage() {
                   <thead>
                     <tr>
                       <th className={TH}>نام</th>
-                      <th className={TH}>موبایل</th>
+                      <th className={TH_NUMERIC}>موبایل</th>
                       <th className={TH}>ایمیل</th>
                       <th className={TH}>وضعیت</th>
-                      <th className={TH}>ورک‌اسپیس</th>
-                      <th className={TH}>نشست فعال</th>
-                      <th className={TH}>آخرین فعالیت</th>
+                      <th className={TH_NUMERIC}>ورک‌اسپیس</th>
+                      <th className={TH_NUMERIC}>نشست فعال</th>
+                      <th className={TH_NUMERIC}>آخرین فعالیت</th>
                       <th className={TH_ACTIONS}>اقدام‌ها</th>
                     </tr>
                   </thead>
@@ -220,7 +221,7 @@ export default function AdminUsersPage() {
                               )}
                             </div>
                           </td>
-                          <td className={TD}>
+                          <td className={TD_NUMERIC}>
                             <span dir="ltr">{phoneLabel(user.phone)}</span>
                           </td>
                           <td className={TD}>{user.email ? <span dir="ltr">{user.email}</span> : '—'}</td>
@@ -229,9 +230,9 @@ export default function AdminUsersPage() {
                               {USER_STATUS[user.status].label}
                             </Badge>
                           </td>
-                          <td className={TD}>{toPersianDigits(user.workspaceCount)}</td>
-                          <td className={TD}>{toPersianDigits(user.activeSessionCount)}</td>
-                          <td className={TD}>
+                          <td className={TD_NUMERIC}>{toPersianDigits(user.workspaceCount)}</td>
+                          <td className={TD_NUMERIC}>{toPersianDigits(user.activeSessionCount)}</td>
+                          <td className={TD_NUMERIC}>
                             {user.lastActiveAt ? <RelativeTime iso={user.lastActiveAt} /> : '—'}
                           </td>
                           <td className={TD_ACTIONS}>

@@ -10,7 +10,7 @@ import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
 import { Badge, Button, Modal, SegmentedControl } from '@/components/ui';
 import { LogoutIcon, MonitorIcon, MobileIcon } from '@/components/icons';
-import { Loaded, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { Loaded, Panel, TD, TD_ACTIONS, TD_NUMERIC, TH, TH_ACTIONS, TH_NUMERIC } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 
 type Filter = 'active' | 'revoked' | 'all';
@@ -100,11 +100,11 @@ export function SessionsPanel({
               <thead>
                 <tr>
                   <th className={TH}>دستگاه</th>
-                  <th className={TH}>نشانی IP</th>
-                  <th className={TH}>شروع</th>
-                  <th className={TH}>آخرین فعالیت</th>
+                  <th className={TH_NUMERIC}>نشانی IP</th>
+                  <th className={TH_NUMERIC}>شروع</th>
+                  <th className={TH_NUMERIC}>آخرین فعالیت</th>
                   <th className={TH}>وضعیت</th>
-                  <th className={TH}>
+                  <th className={TH_ACTIONS}>
                     <span className="sr-only">اقدام</span>
                   </th>
                 </tr>
@@ -145,7 +145,7 @@ export function SessionsPanel({
                         </div>
                       </div>
                     </td>
-                    <td className={TD}>
+                    <td className={TD_NUMERIC}>
                       <div className="flex flex-col gap-0.5" dir="ltr">
                         <span className="text-start">{session.ip ?? '—'}</span>
                         {session.lastIp && session.lastIp !== session.ip && (
@@ -155,8 +155,8 @@ export function SessionsPanel({
                         )}
                       </div>
                     </td>
-                    <td className={TD}>{dateTimeLabel(session.createdAt)}</td>
-                    <td className={TD}>{dateTimeLabel(session.lastActiveAt)}</td>
+                    <td className={TD_NUMERIC}>{dateTimeLabel(session.createdAt)}</td>
+                    <td className={TD_NUMERIC}>{dateTimeLabel(session.lastActiveAt)}</td>
                     <td className={TD}>
                       <Badge tone={SESSION_STATUS[session.status].tone} size="sm">
                         {SESSION_STATUS[session.status].label}
@@ -167,7 +167,7 @@ export function SessionsPanel({
                         </p>
                       )}
                     </td>
-                    <td className={TD}>
+                    <td className={TD_ACTIONS}>
                       {session.status === 'active' && (
                         <Button
                           variant="secondary"

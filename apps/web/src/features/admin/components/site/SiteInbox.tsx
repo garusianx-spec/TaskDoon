@@ -9,7 +9,7 @@ import { siteApi } from '@/features/admin/api/site-api';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
 import { Badge, Button, Input, Modal, Select, Textarea } from '@/components/ui';
-import { Fact, Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { Fact, Loaded, PageHeader, Panel, TD, TD_ACTIONS, TD_NUMERIC, TH, TH_ACTIONS, TH_NUMERIC } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 
 type SubmissionStatus = SiteSubmission['status'];
@@ -88,7 +88,7 @@ export function SiteInbox({ kind, title }: { readonly kind: SiteSubmissionKind; 
               setPage(1);
             }}
           />
-          <Button type="submit" variant="secondary">
+          <Button type="submit" variant="secondary" className="w-full sm:w-auto">
             جستجو
           </Button>
         </form>
@@ -101,9 +101,9 @@ export function SiteInbox({ kind, title }: { readonly kind: SiteSubmissionKind; 
                     <tr>
                       <th className={TH}>فرستنده</th>
                       <th className={TH}>موضوع و پیام</th>
-                      <th className={TH}>تاریخ</th>
+                      <th className={TH_NUMERIC}>تاریخ</th>
                       <th className={TH}>وضعیت</th>
-                      <th className={TH}>
+                      <th className={TH_ACTIONS}>
                         <span className="sr-only">اقدام</span>
                       </th>
                     </tr>
@@ -124,7 +124,7 @@ export function SiteInbox({ kind, title }: { readonly kind: SiteSubmissionKind; 
                             {item.message}
                           </p>
                         </td>
-                        <td className={TD}>{dateTimeLabel(item.createdAt)}</td>
+                        <td className={TD_NUMERIC}>{dateTimeLabel(item.createdAt)}</td>
                         <td className={TD}>
                           <Badge
                             tone={
@@ -140,7 +140,7 @@ export function SiteInbox({ kind, title }: { readonly kind: SiteSubmissionKind; 
                             {STATUS_LABELS[item.status]}
                           </Badge>
                         </td>
-                        <td className={TD}>
+                        <td className={TD_ACTIONS}>
                           <Button
                             variant="secondary"
                             size="sm"

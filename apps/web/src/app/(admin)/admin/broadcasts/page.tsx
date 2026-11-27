@@ -8,7 +8,7 @@ import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { dateTimeLabel } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
-import { Loaded, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { Loaded, Panel, TD, TD_ACTIONS, TD_NUMERIC, TH, TH_ACTIONS, TH_NUMERIC } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { BroadcastDialog } from '@/features/admin/components/BroadcastDialog';
 import { BROADCAST_LEVEL_LABELS } from '@/components/layout/BroadcastStrip';
@@ -208,9 +208,9 @@ export default function AdminBroadcastsPage() {
                       <tr>
                         <th className={TH}>متن و اهمیت</th>
                         <th className={TH}>وضعیت</th>
-                        <th className={TH}>بازه نمایش</th>
+                        <th className={TH_NUMERIC}>بازه نمایش</th>
                         <th className={TH}>سازنده</th>
-                        <th className={TH}>اقدام‌ها</th>
+                        <th className={TH_ACTIONS}>اقدام‌ها</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -247,7 +247,7 @@ export default function AdminBroadcastsPage() {
                               </button>
                             )}
                           </td>
-                          <td className={`${TD} whitespace-nowrap`}>
+                          <td className={`${TD_NUMERIC} whitespace-nowrap`}>
                             <p>{dateTimeLabel(item.startsAt)}</p>
                             <p className="mt-1 text-fg-secondary">
                               {item.expiresAt ? `تا ${dateTimeLabel(item.expiresAt)}` : 'بدون زمان پایان'}
@@ -257,7 +257,7 @@ export default function AdminBroadcastsPage() {
                             {item.createdByName}
                             <p className="mt-1 text-xs text-fg-tertiary">{dateTimeLabel(item.createdAt)}</p>
                           </td>
-                          <td className={TD}>
+                          <td className={TD_ACTIONS}>
                             {!item.archivedAt && (
                               <div className="flex flex-wrap gap-2">
                                 <Button

@@ -5,7 +5,7 @@ import { toPersianDigits } from '@taskin/jalali';
 import { adminApi } from '@/features/admin/api/admin-api';
 import { bytesLabel, dateTimeLabel } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
-import { Loaded, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { Loaded, Panel, TD, TD_NUMERIC, TH, TH_NUMERIC } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { Badge, Button } from '@/components/ui';
 import { RefreshIcon } from '@/components/icons';
@@ -34,8 +34,8 @@ function Kpi({
   return (
     <article className="min-w-0 rounded-xl border border-secondary bg-surface p-4">
       <h2 className="text-sm font-medium text-fg-secondary">{title}</h2>
-      <p className="my-3 break-words text-2xl font-semibold leading-tight text-fg-primary">{value}</p>
-      <div className="text-sm leading-relaxed text-fg-secondary">{children}</div>
+      <p className="my-3 break-words text-2xl font-semibold leading-tight text-fg-primary tabular-nums">{value}</p>
+      <div className="text-sm leading-relaxed text-fg-secondary tabular-nums">{children}</div>
     </article>
   );
 }
@@ -96,7 +96,7 @@ export default function AdminOverviewPage() {
                 <p>{toPersianDigits(data.content.messagesLast7Days)} پیام در ۷ روز اخیر</p>
               </Kpi>
             </div>
-            <p className="mb-6 text-xs text-fg-tertiary">
+            <p className="mb-6 text-xs text-fg-tertiary tabular-nums">
               زمان آمار: {dateTimeLabel(data.generatedAt)}
               {data.cached ? '؛ نسخه ذخیره‌شده با اعتبار ۶۰ ثانیه' : ''}.{' '}
               {toPersianDigits(data.users.activeLast7Days)} کاربر در ۷ روز اخیر فعال بوده‌اند؛{' '}
@@ -122,7 +122,7 @@ export default function AdminOverviewPage() {
                         <Badge size="md" tone={service.ok ? 'success' : 'error'} dot>
                           {service.ok ? 'آماده' : 'نیاز به بررسی'}
                         </Badge>
-                        <span className="text-xs text-fg-tertiary">
+                        <span className="text-xs text-fg-tertiary tabular-nums">
                           {toPersianDigits(Math.round(service.latencyMs))} میلی‌ثانیه
                         </span>
                         {service.error && (
@@ -151,11 +151,11 @@ export default function AdminOverviewPage() {
                           <Badge size="md" tone={provider.openUntil ? 'warning' : 'success'}>
                             {provider.openUntil ? 'موقتاً متوقف' : 'فعال'}
                           </Badge>
-                          <span className="text-fg-secondary">
+                          <span className="text-fg-secondary tabular-nums">
                             {toPersianDigits(provider.failures)} خطای متوالی
                           </span>
                           {provider.openUntil && (
-                            <span className="text-xs text-fg-tertiary">
+                            <span className="text-xs text-fg-tertiary tabular-nums">
                               تا {dateTimeLabel(provider.openUntil)}
                             </span>
                           )}
@@ -164,7 +164,7 @@ export default function AdminOverviewPage() {
                     ))}
                   </ul>
                 )}
-                <p className="mt-3 text-sm text-fg-secondary">
+                <p className="mt-3 text-sm text-fg-secondary tabular-nums">
                   کارهای ناموفق پیامکی:{' '}
                   {data.sms.failedJobs === null
                     ? 'وضعیت در دسترس نیست'
@@ -180,7 +180,7 @@ export default function AdminOverviewPage() {
         <Loaded load={outbox}>
           {(data) => (
             <>
-              <p className="mb-4 text-sm text-fg-secondary">
+              <p className="mb-4 text-sm text-fg-secondary tabular-nums">
                 {toPersianDigits(data.pending.count)} رویداد در انتظار انتشار
                 {data.pending.oldestAgeSeconds !== null
                   ? `؛ قدیمی‌ترین: ${toPersianDigits(Math.round(data.pending.oldestAgeSeconds))} ثانیه`
@@ -191,11 +191,11 @@ export default function AdminOverviewPage() {
                   <thead>
                     <tr>
                       <th className={TH}>صف</th>
-                      <th className={TH}>منتظر</th>
-                      <th className={TH}>در حال اجرا</th>
-                      <th className={TH}>زمان‌بندی‌شده</th>
-                      <th className={TH}>ناموفق</th>
-                      <th className={TH}>متوقف</th>
+                      <th className={TH_NUMERIC}>منتظر</th>
+                      <th className={TH_NUMERIC}>در حال اجرا</th>
+                      <th className={TH_NUMERIC}>زمان‌بندی‌شده</th>
+                      <th className={TH_NUMERIC}>ناموفق</th>
+                      <th className={TH_NUMERIC}>متوقف</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -206,7 +206,7 @@ export default function AdminOverviewPage() {
                           {queue.error && <p className="mt-1 text-sm text-status-blocked">{queue.error}</p>}
                         </td>
                         {(['waiting', 'active', 'delayed', 'failed', 'paused'] as const).map((state) => (
-                          <td key={state} className={TD}>
+                          <td key={state} className={TD_NUMERIC}>
                             {queue.error ? '—' : toPersianDigits(queue.counts[state])}
                           </td>
                         ))}

@@ -9,7 +9,7 @@ import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { AUDIT_ACTIONS, dateTimeLabel } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
-import { Loaded, PageHeader, Panel, TD, TH } from '@/features/admin/components/AdminUi';
+import { Loaded, PageHeader, Panel, TD, TD_NUMERIC, TH, TH_NUMERIC } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { Button, Select } from '@/components/ui';
 
@@ -90,18 +90,18 @@ export default function AdminAuditPage() {
                 <DataTable>
                   <thead>
                     <tr>
-                      <th className={TH}>زمان</th>
+                      <th className={TH_NUMERIC}>زمان</th>
                       <th className={TH}>مدیر</th>
                       <th className={TH}>اقدام</th>
                       <th className={TH}>کاربر هدف</th>
-                      <th className={TH}>IP</th>
-                      <th className={TH}>شناسه درخواست / ردیابی</th>
+                      <th className={TH_NUMERIC}>IP</th>
+                      <th className={TH_NUMERIC}>شناسه درخواست / ردیابی</th>
                     </tr>
                   </thead>
                   <tbody>
                     {[...data.items, ...(more?.items ?? [])].map((entry) => (
                       <tr key={entry.id}>
-                        <td className={TD}>{dateTimeLabel(entry.createdAt)}</td>
+                        <td className={TD_NUMERIC}>{dateTimeLabel(entry.createdAt)}</td>
                         <td className={TD}>{entry.adminName}</td>
                         <td className={TD}>
                           <span className="block">{AUDIT_ACTIONS[entry.action] ?? entry.action}</span>
@@ -126,10 +126,10 @@ export default function AdminAuditPage() {
                             '—'
                           )}
                         </td>
-                        <td className={TD}>
+                        <td className={TD_NUMERIC}>
                           <span dir="ltr">{entry.ip ?? '—'}</span>
                         </td>
-                        <td className={TD}>
+                        <td className={TD_NUMERIC}>
                           <span dir="ltr" className="font-mono text-caption">
                             {entry.requestId ?? '—'}
                           </span>

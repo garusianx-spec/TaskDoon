@@ -124,8 +124,11 @@ export function EmptyState({
 }
 
 export const TH =
-  'border-b border-secondary px-3 py-2 text-start text-caption font-semibold text-fg-tertiary';
+  'border-b border-secondary px-3 py-2 text-start text-caption font-semibold text-fg-secondary';
 export const TD = 'border-b border-secondary px-3 py-2.5 align-top text-fg-primary';
+/** Tabular numeric cells for numbers, counts, dates, and codes to prevent layout jitter. */
+export const TD_NUMERIC = cn(TD, 'tabular-nums');
+export const TH_NUMERIC = cn(TH, 'tabular-nums');
 /** The inline-end actions column, kept visible while the wide table scrolls horizontally. */
 export const TH_ACTIONS = cn(TH, 'sticky end-0 bg-surface border-s border-secondary');
 export const TD_ACTIONS = cn(TD, 'sticky end-0 bg-surface border-s border-secondary');

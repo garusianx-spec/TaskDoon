@@ -14,7 +14,7 @@ import { useAdmin } from '@/features/admin/hooks/AdminSession';
 import { WORKSPACE_STATUS } from '@/features/admin/lib/format';
 import { useAdminLoad } from '@/features/admin/hooks/use-admin-load';
 import { problemMessage } from '@/lib/api-problem';
-import { Loaded, PageHeader, Panel, TD, TD_ACTIONS, TH, TH_ACTIONS } from '@/features/admin/components/AdminUi';
+import { Loaded, PageHeader, Panel, TD, TD_ACTIONS, TD_NUMERIC, TH, TH_ACTIONS, TH_NUMERIC } from '@/features/admin/components/AdminUi';
 import { DataTable, TableFrame } from '@/components/shared/DataTable';
 import { SuspendWorkspaceDialog } from '@/features/admin/components/SuspendWorkspaceDialog';
 import { TransferOwnershipDialog } from '@/features/admin/components/TransferOwnershipDialog';
@@ -109,14 +109,15 @@ export default function AdminWorkspacesPage() {
           className="flex flex-wrap items-end gap-2"
         >
           <Input
-            containerClassName="min-w-[16rem] flex-1"
+            containerClassName="w-full min-w-[16rem] sm:flex-1"
             label="نام یا نشانی ورک‌اسپیس"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             iconStart={<SearchIcon size={16} />}
           />
-          <div className="w-44">
+          <div className="w-full sm:w-44">
             <Select
+              className="w-full"
               label="وضعیت"
               hideLabel={false}
               value={draftStatus || 'any'}
@@ -129,7 +130,9 @@ export default function AdminWorkspacesPage() {
               ]}
             />
           </div>
-          <Button type="submit">جستجو</Button>
+          <Button type="submit" className="w-full sm:w-auto">
+            جستجو
+          </Button>
         </form>
       </Panel>
       <Panel title="ورک‌اسپیس‌ها">
@@ -152,8 +155,8 @@ export default function AdminWorkspacesPage() {
                       <th className={TH}>وضعیت</th>
                       <th className={TH}>طرح</th>
                       <th className={TH}>مالک</th>
-                      <th className={TH}>اعضا</th>
-                      <th className={TH}>ساخته‌شده</th>
+                      <th className={TH_NUMERIC}>اعضا</th>
+                      <th className={TH_NUMERIC}>ساخته‌شده</th>
                       <th className={TH_ACTIONS}>اقدام‌ها</th>
                     </tr>
                   </thead>
@@ -191,8 +194,8 @@ export default function AdminWorkspacesPage() {
                               {workspace.ownerName}
                             </Link>
                           </td>
-                          <td className={TD}>{toPersianDigits(workspace.memberCount)}</td>
-                          <td className={TD}>{formatJalali(workspace.createdAt, 'medium')}</td>
+                          <td className={TD_NUMERIC}>{toPersianDigits(workspace.memberCount)}</td>
+                          <td className={TD_NUMERIC}>{formatJalali(workspace.createdAt, 'medium')}</td>
                           <td className={TD_ACTIONS}>
                             <WorkspaceActionsMenu
                               workspace={workspace}
