@@ -6,7 +6,6 @@ import type { LiveStatus, LiveStore } from '@/store/live/live-store';
 import { Button, IconButton } from '@/components/ui';
 import { CloseIcon, WarningIcon } from '@/components/icons';
 import { SystemBroadcastBanner } from '@/components/layout/SystemBroadcastBanner';
-import { AuthCard } from '@/features/auth/components/AuthCard';
 import { FirstWorkspace } from '@/features/auth/components/FirstWorkspace';
 import { SignInScreen } from '@/features/auth/components/SignInScreen';
 
@@ -47,13 +46,10 @@ export function LiveGate({
   if (phase === 'signed-out') body = <SignInScreen store={store} />;
   else if (phase === 'restore-error')
     body = (
-      <AuthCard
-        labelledBy="restore-error-title"
-        title="وضعیت ورود بررسی نشد."
-        description="دوباره تلاش کنید."
-      >
+      <WorkspaceStatus>
+        <h1 className="text-body font-semibold">وضعیت ورود بررسی نشد.</h1>
         <Button onClick={() => void store.retryRestore()}>تلاش دوباره</Button>
-      </AuthCard>
+      </WorkspaceStatus>
     );
   else if (phase === 'no-workspace')
     body = (
@@ -62,7 +58,18 @@ export function LiveGate({
         <FirstWorkspace store={store} user={status.user} />
       </>
     );
-  else if (phase === 'restoring' || !ready) body = <Loading />;
+  else if (phase === 'restoring' || !ready)
+    body = (
+      <WorkspaceStatus>
+        <div role="status" className="flex flex-col items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="size-6 rounded-full border-2 border-fg-brand border-t-transparent motion-safe:animate-spin"
+          />
+          <p className="text-body">در حال بارگذاری فضای کاری…</p>
+        </div>
+      </WorkspaceStatus>
+    );
   else body = children;
 
   return (
@@ -101,18 +108,10 @@ export function LiveGate({
   );
 }
 
-function Loading() {
+function WorkspaceStatus({ children }: { readonly children: ReactNode }) {
   return (
-    <AuthCard
-      labelledBy="loading-title"
-      title="در حال آماده‌سازی…"
-      description="فضای کاری شما بارگذاری می‌شود."
-    >
-      <div
-        role="progressbar"
-        aria-label="بارگذاری"
-        className="mx-auto size-8 animate-spin rounded-full border-2 border-brand border-t-transparent"
-      />
-    </AuthCard>
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
+      {children}
+    </main>
   );
 }

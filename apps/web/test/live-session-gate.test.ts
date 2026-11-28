@@ -1,11 +1,39 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { session } from '@/features/auth/api/session';
 import { api } from '@/api/endpoints';
+import { LiveGate } from '@/features/auth/components/LiveGate';
 import { LiveStore } from '@/store/live/live-store';
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/tasks',
+  useRouter: () => ({}),
+}));
 
 afterEach(() => vi.restoreAllMocks());
 
 describe('workspace session gate', () => {
+  it.each([
+    ['restoring', false, 'در حال بارگذاری فضای کاری'],
+    ['loading', false, 'در حال بارگذاری فضای کاری'],
+    ['ready', false, 'در حال بارگذاری فضای کاری'],
+    ['restore-error', false, 'تلاش دوباره'],
+  ] as const)('renders a workspace status surface in phase %s', (phase, ready, message) => {
+    const store = new LiveStore();
+    const html = renderToStaticMarkup(
+      createElement(LiveGate, {
+        status: { ...store.current, phase },
+        store,
+        ready,
+        children: 'workspace content',
+      }),
+    );
+    expect(html).toContain(message);
+    expect(html).not.toContain('ناوبری ورود');
+    expect(html).not.toContain('workspace content');
+  });
+
   it('stays on the loading screen until restoration completes and then loads the workspace', async () => {
     let resolve!: (value: NonNullable<typeof session.current>) => void;
     const pending = new Promise<NonNullable<typeof session.current>>((done) => {
