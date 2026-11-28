@@ -69,12 +69,6 @@ export function PhoneSignInStep({ flow }: { readonly flow: SignInFlow }) {
             : 'با شماره موبایل خود وارد شوید؛ کد ورود پیامک می‌شود.'
       }
     >
-      {showSignupVariant && (
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-400">
-          <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-          <span>بدون نیاز به کارت بانکی • تا ۵ کاربر رایگان</span>
-        </div>
-      )}
       <form aria-busy={busy} className="flex flex-col gap-4" onSubmit={onPhone} noValidate>
         <fieldset disabled={busy} className="auth-fields">
           {suspended && <SuspendedAccountNotice />}
